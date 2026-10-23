@@ -235,6 +235,10 @@ CW (Morse code). See [CW: reading in Morse code](cw.md).
 - `volume`, default `50`: the tone's level, 0 to 100 percent of full scale, before the speech volume.
 - `prosigns`, default `true`: send structure as prosigns (BT after headings and paragraphs, AR at the end of the document), and send prosigns written in angle brackets, such as `<BT>`.
 - `status_line`, default `true`: show the characters being sent on the status line, so a screen reader can show them on a Braille display. Nothing extra is announced.
+- `practice_threshold`, default `90`: in Morse code practice, the score of a Koch round, in percent (50 to 100), that adds the next character.
+- `practice_group`, default `5`: the characters in each practice group, 2 to 10.
+- `practice_groups`, default `10`: the groups in a practice round, 1 to 50.
+- `practice_delay_ms`, default `1000`: the quiet before each practice group is sent, 0 to 5000 milliseconds, after the time textweaver's spoken message is expected to take. See [Practice and training](cw.md#practice-and-training).
 
 Keying Morse code with a key or paddle ([CW keying](cw.md#key-morse-code-into-a-document)):
 
@@ -324,7 +328,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `wrap_width`, default `0`: wrap lines at this many columns. 0 means the width of the terminal.
 - `measure`, default `66`: the line length in the graphical version, in characters, from 25 to 90. The column is this many average characters of the reading font at its size and spacing, so it grows with the text; 0 fills the width of the app's window. The terminal uses `wrap_width` instead.
 - `tab_width`, default `4`: columns per tab.
-- `show_line_numbers`, default `false`: show line numbers. F6 turns them on and off.
+- `show_line_numbers`, default `false`: show line numbers, in the terminal reader's gutter and in the app's left margin. F6 turns them on and off in the terminal; in the app, View, Line numbers ([Scrolling and line numbers](gui.md#scrolling-and-line-numbers)).
 - `scroll_margin`, default `3`: lines kept visible above and below the cursor.
 - `hints`, default `"auto"`: the terminal reader's key hint line at the bottom of the screen. While reading, it begins with the toolbar's buttons from `gui.toolbar_buttons`, each by its short name, then the terminal's own keys. `"auto"` shows it when textweaver speaks for itself and hides it in hybrid and screen-reader modes, where the Braille display reads the screen; `"on"` always shows it; `"off"` never does. A prompt still uses that line. Stays on this computer. See [Braille-first layout](reading.md#braille-first-layout).
 

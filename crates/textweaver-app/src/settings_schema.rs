@@ -152,7 +152,6 @@ impl Frontend {
 pub const TERMINAL_ONLY: &[&str] = &[
     "display.wrap_width",
     "display.tab_width",
-    "display.show_line_numbers",
     "display.scroll_margin",
     "display.hints",
     "keyboard.digit_row",
@@ -536,7 +535,7 @@ pub const INFO: &[Info] = &[
     number(
         "speech.cw.effective_wpm",
         "CW effective speed",
-        "The overall speed, with Farnsworth spacing. The gaps between characters and words stretch so the text goes this fast; at or above the character speed, the spacing is standard.",
+        "The overall speed, set by stretching the gaps between characters and words (Farnsworth spacing). At or above the character speed, the spacing is standard.",
         (5.0, 50.0, 1.0),
         "words per minute",
     ),
@@ -557,12 +556,40 @@ pub const INFO: &[Info] = &[
     toggle(
         "speech.cw.prosigns",
         "CW prosigns",
-        "Send document structure as prosigns. BT follows headings and paragraphs, and AR ends the document. Prosigns written in angle brackets, such as <BT>, are sent too.",
+        "Send structure as prosigns: BT after headings and paragraphs, AR at the end. Prosigns written in angle brackets, such as <BT>, are sent too.",
     ),
     toggle(
         "speech.cw.status_line",
         "CW characters on the status line",
-        "Show each character on the status line as it is sent. A screen reader can then show it on a Braille display; nothing extra is said.",
+        "Show each character on the status line as it is sent, for a Braille display. Nothing extra is said.",
+    ),
+    number(
+        "speech.cw.practice_threshold",
+        "CW practice pass mark",
+        "The score in a Koch practice round, in percent, that adds the next character. The Koch method uses 90.",
+        (50.0, 100.0, 5.0),
+        "percent",
+    ),
+    number(
+        "speech.cw.practice_group",
+        "CW practice group size",
+        "How many characters each practice group has.",
+        (2.0, 10.0, 1.0),
+        "characters",
+    ),
+    number(
+        "speech.cw.practice_groups",
+        "CW practice round length",
+        "How many groups a practice round has. After the last, the round's score is said and kept.",
+        (1.0, 50.0, 1.0),
+        "groups",
+    ),
+    number(
+        "speech.cw.practice_delay_ms",
+        "CW practice start delay",
+        "The quiet before each group is sent. It comes after the time textweaver's own spoken messages are expected to take.",
+        (0.0, 5000.0, 250.0),
+        "milliseconds",
     ),
     choice(
         "speech.cw.keyer",

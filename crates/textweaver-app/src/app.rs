@@ -342,6 +342,9 @@ pub(crate) enum ListKind {
     /// A note's properties, the notes that link to it, its unresolved
     /// links, or tags and the notes carrying one (crate::vault).
     Vault(crate::vault::VaultList),
+    /// Edit mode's Obsidian aids: notes and their headings to link to,
+    /// or callout types (crate::obsidian_edit).
+    EditAid(crate::obsidian_edit::EditAidList),
 }
 
 /// The application: the only owner of mutable state.
@@ -565,6 +568,8 @@ pub struct App {
     pub(crate) cw: crate::cw::CwState,
     /// CW keying while it is on (crate::cw_keying).
     pub(crate) cw_keying: Option<crate::cw_keying::Keying>,
+    /// CW practice (crate::cw_practice).
+    pub(crate) cw_practice: crate::cw_practice::CwPracticeState,
     /// The file browser's place, rows, and preview (crate::browse).
     pub(crate) browse: crate::browse::BrowseState,
     /// Batch conversion: its questions and the run (File, Batch convert).
@@ -725,6 +730,7 @@ impl App {
             dictation: crate::dictation::DictationSlot::default(),
             cw: crate::cw::CwState::default(),
             cw_keying: None,
+            cw_practice: crate::cw_practice::CwPracticeState::default(),
             browse: crate::browse::BrowseState::new(),
             batch: crate::batch::BatchState::default(),
             audio: crate::audio_export::AudioState::default(),
@@ -1714,6 +1720,10 @@ impl App {
                 if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::DocumentDetails {
                     return self.cancel_details();
                 }
+                if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::CwCopy {
+                    self.leave_prompt();
+                    return self.cw_practice_stop();
+                }
                 if self.mode.is_prompt() || self.list.is_some() {
                     let list = self.list.take();
                     self.leave_prompt();
@@ -1780,6 +1790,7 @@ impl App {
         effects.extend(self.font_download_tick());
         effects.extend(self.components_tick());
         effects.extend(self.updates_tick());
+        effects.extend(self.cw_practice_tick(now));
         self.reading_timer_tick(now);
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now) | self.cw_tick();
         effects.extend(self.authoring_tick(now));
@@ -1926,6 +1937,7 @@ impl App {
             PromptPurpose::CommentReply => return self.answer_comment_reply(text),
             PromptPurpose::CommentText => return self.answer_new_comment(text),
             PromptPurpose::ImportCards => return self.answer_import_cards(text),
+            PromptPurpose::CwCopy => return self.answer_cw_copy(text),
             PromptPurpose::GitHubToken => return self.answer_github_token(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
@@ -1999,6 +2011,7 @@ impl App {
             Some(ListKind::HelpSearch(topics)) => return self.choose_help_topic(&topics, n),
             Some(ListKind::Buttons(l)) => return self.choose_buttons(l, n),
             Some(ListKind::Vault(l)) => return self.choose_vault(l, n),
+            Some(ListKind::EditAid(l)) => return self.choose_edit_aid(l, n),
             Some(ListKind::Info) | Some(ListKind::Help) | None => {}
         }
         vec![Effect::Redraw]
@@ -2376,6 +2389,10 @@ impl App {
             | A::GradeEasy
             | A::ExportCardsAnki
             | A::ImportCardsAnki => return self.cards_action(a),
+            A::CwPracticeKoch
+            | A::CwPracticeCharacters
+            | A::CwPracticeWords
+            | A::CwPracticeProgress => return self.cw_practice_action(a),
             A::AcceptAllChanges => return self.decide_all(true, None),
             A::RejectAllChanges => return self.decide_all(false, None),
             A::AddComment => return self.prompt(PromptPurpose::CommentText),
@@ -2506,6 +2523,10 @@ impl App {
             | A::InsertTable
             | A::AddTableRow
             | A::InsertImage
+            | A::InsertWikiLink
+            | A::ToggleTask
+            | A::CycleTaskStatus
+            | A::InsertCallout
             | A::Replace => return self.edit_action(a),
             A::ChooseVoice => return self.choose_voice(),
             A::RestartSpeech => return self.restart_speech_command(),

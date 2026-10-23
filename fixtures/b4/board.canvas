@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    {"id": "week", "type": "group", "x": 0, "y": 0, "width": 900, "height": 500, "label": "Week 1"},
+    {"id": "goal", "type": "text", "x": 40, "y": 60, "width": 300, "height": 160, "text": "# Study plan\n\nRead the chapter on **cells**, then summarize it.", "color": "4"},
+    {"id": "note", "type": "file", "x": 420, "y": 60, "width": 300, "height": 160, "file": "Notes/Cell.md", "subpath": "#Parts"},
+    {"id": "quiz", "type": "text", "x": 40, "y": 300, "width": 300, "height": 120, "text": "Practice quiz\n\n- [ ] ten questions\n- [x] answer key"},
+    {"id": "web", "type": "link", "x": 1000, "y": 60, "width": 300, "height": 160, "url": "https://example.com/cells"}
+  ],
+  "edges": [
+    {"id": "e1", "fromNode": "goal", "toNode": "note", "label": "start here"},
+    {"id": "e2", "fromNode": "note", "toNode": "quiz"},
+    {"id": "e3", "fromNode": "web", "toNode": "goal", "fromEnd": "arrow", "toEnd": "arrow"}
+  ]
+}

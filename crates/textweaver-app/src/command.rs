@@ -368,6 +368,9 @@ pub enum PromptPurpose {
     /// Answer is an Anki package (`.apkg`) whose cards to import into the
     /// open document's cards.
     ImportCards,
+    /// Answer is what the learner copied of the CW practice group just
+    /// sent; empty sends it again (crate::cw_practice).
+    CwCopy,
 }
 
 impl PromptPurpose {
@@ -411,6 +414,8 @@ impl PromptPurpose {
             PromptPurpose::CommentText => "Comment",
             PromptPurpose::GitHubToken => "GitHub token for your components source, Enter skips",
             PromptPurpose::ImportCards => "Import study cards from Anki package",
+            // The app labels each group from the message catalog.
+            PromptPurpose::CwCopy => "Type what you heard",
         }
     }
 

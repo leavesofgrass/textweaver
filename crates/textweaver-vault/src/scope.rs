@@ -113,6 +113,24 @@ impl LinkScope {
 
 /// `path` relative to `root` with `/` between folders, when inside it;
 /// nothing is resolved (the walk's paths already are).
+/// `path` with `.` and `..` folded away by text, without touching the
+/// disk; a `..` above the start is kept.
+fn lexical(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for c in path.components() {
+        match c {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !out.pop() {
+                    out.push("..");
+                }
+            }
+            other => out.push(other.as_os_str()),
+        }
+    }
+    out
+}
+
 fn rel_str(root: &Path, path: &Path) -> Option<String> {
     let rel = path.strip_prefix(root).ok()?;
     Some(
@@ -261,6 +279,17 @@ pub fn resolve(
         })
     };
     if let Some(found) = direct(&bases) {
+        return Some(found);
+    }
+    // The same paths, matched without regard to case, as Obsidian does:
+    // on Linux and macOS `../Projects/B.md` must still find `b.md`.
+    if let Some(found) = bases.iter().find_map(|base| {
+        let wanted = rel_str(&scope.root, &lexical(&base.join(&name)))?.to_lowercase();
+        files.files.iter().find_map(|p| {
+            let r = rel_str(&scope.root, p)?.to_lowercase();
+            (r == wanted || r == format!("{wanted}.md")).then(|| one(p.clone()))
+        })
+    }) {
         return Some(found);
     }
     // By name: only plain names and paths inside the scope.

@@ -83,6 +83,8 @@ pub(crate) fn gui_keys(action: ActionId) -> Option<&'static [&'static str]> {
         A::ReadingStatistics => &["g:Cmd+Alt+Y"],
         // Cmd+Shift+Q logs out.
         A::BlockQuote => &["e:Cmd+Alt+Q"],
+        // Cmd+Enter is Read from the cursor.
+        A::ToggleTask => &["e:Cmd+Alt+Enter"],
         // Option+Backspace deletes a word, as everywhere on a Mac.
         A::DeleteWordBefore => &["e:Alt+Backspace"],
         A::DeleteWordAfter => &["e:Alt+Delete"],

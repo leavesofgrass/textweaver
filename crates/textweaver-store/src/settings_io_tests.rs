@@ -78,6 +78,10 @@ fn everything_changed() -> Settings {
         dah_note: 97,
         straight_note: 98,
         midi_channel: 1,
+        practice_threshold: 80,
+        practice_group: 4,
+        practice_groups: 5,
+        practice_delay_ms: 2000,
         ..crate::CwSettings::default()
     };
     sp.voice_params = BTreeMap::from([(

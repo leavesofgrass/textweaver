@@ -61,6 +61,10 @@ tone_hz = 600
 volume = 50
 prosigns = true
 status_line = true
+practice_threshold = 90
+practice_group = 5
+practice_groups = 10
+practice_delay_ms = 1000
 ```
 
 - `wpm`: the character speed, 5 to 50 words per minute.
@@ -69,6 +73,7 @@ status_line = true
 - `volume`: the tone level, 0 to 100 percent of full scale, before the speech volume.
 - `prosigns`: send structure as prosigns (BT, AR) and read prosigns written as `<BT>`.
 - `status_line`: show the characters being sent on the status line.
+- `practice_threshold`, `practice_group`, `practice_groups`, `practice_delay_ms`: Morse code practice (see [Practice and training](#practice-and-training)).
 
 A change applies from the next sentence; while CW is reading, the reading goes on from the last word with the new value. These settings are the same on every computer you sync.
 
@@ -142,6 +147,57 @@ These adapters are keyboards: dit is Left Control and dah Right Control. While k
 - **CW MIDI channel** (`midi_channel`): 0 for any channel (the default), or 1 to 16.
 
 A new speed, keyer, note, channel, or swap applies at once while keying. The notes and the channel belong to the adapter on each computer, so they are not synced. See [Settings](settings.md#speechcw).
+
+## Practice and training
+
+textweaver teaches Morse code by ear. It sends a group of characters, you type what you heard, and it tells you in words how you did. Nothing is shown before you answer: there are no dots and dashes on screen, and neither the status line nor RSVP shows a practice group while it is sent.
+
+The commands are in the **Morse code practice** submenu of the **Tools** menu, and in the command palette (F2):
+
+- **Koch practice** (`cw_practice_koch`): groups of the characters of your Koch lesson.
+- **Random character practice** (`cw_practice_characters`): groups drawn evenly from every character the Koch course teaches.
+- **Random word practice** (`cw_practice_words`): common English words and the abbreviations of a contact (CQ, DE, RST, 73, QTH and others), at least as many letters a group as the group size.
+- **Practice progress** (`cw_practice_progress`): says your Koch lesson, its newest character, and your latest three rounds: "Koch lesson 3 of 40, newest R. Latest rounds: 92, 84, 78 percent."
+
+### A round
+
+A round is ten groups of five characters by default. Each group opens a prompt, "Group 1 of 10", and the group is sent. Type what you heard and press Enter. Case and spacing do not matter, and you may type while the group is still being sent, as you would copy on the air.
+
+textweaver then says the score, count first, and the next group's number: "5 of 5, all correct. Group 2 of 10." When something was missed, it says what, and then what was sent: "4 of 5. Missed: K as R. Sent: K M R K M." A miss is a character copied as another ("K as R"), one not copied ("M not copied"), or one typed that was not sent ("E extra"). Your answer is lined up with the group by the fewest changes, so one missed character does not count every later one wrong. Punctuation is named in words: "period", "comma", "equals" (the BT sign), "slash", and "question mark".
+
+- **Enter with nothing typed** sends the group again: "Again, group 2 of 10."
+- **Escape** stops the round: "Practice stopped." An unfinished round is not kept.
+
+After the last group, textweaver says the round's score: "Round: 46 of 50, 92 percent."
+
+### The Koch method
+
+The Koch method sends characters at full character speed from the start, so you learn each one by its sound rather than by counting dots and dashes, and adds one character at a time. Lesson 1 is K and M. When a Koch round scores 90 percent or better, the next character is added and said: "Lesson 2: added U." Below that, textweaver says what is needed: "90 percent adds the next character." Lesson 40 has all 41 characters, and a round passed there says "Every character learned."
+
+The order is the one Learn CW Online (LCWO) teaches, taken from its source code:
+
+K M U R E S N A P T L W I . J Z = F O Y , V G 5 / Q 9 2 H 3 8 B ? 4 7 C 1 D 6 0 X
+
+The newest character of a lesson comes up about one time in three, so it is heard often while it is new.
+
+Practice uses the CW settings. The usual Koch setup is the default: characters at 20 words per minute, with Farnsworth spacing for an effective 10. As you improve, raise the effective speed toward the character speed.
+
+### Practice settings
+
+- **CW practice pass mark** (`practice_threshold`, default 90, 50 to 100 percent): the round score that adds the next Koch character.
+- **CW practice group size** (`practice_group`, default 5, 2 to 10 characters).
+- **CW practice round length** (`practice_groups`, default 10, 1 to 50 groups).
+- **CW practice start delay** (`practice_delay_ms`, default 1000, 0 to 5000 milliseconds): the quiet before each group, described below.
+
+### Which engine sends the groups
+
+With CW as your speech engine and textweaver speaking its own messages, everything is in Morse code: the prompt's message is sent, and the group follows it. With a screen reader speaking the messages, the group waits for the message as described next.
+
+With another engine, which is the usual way to practice, textweaver's messages are spoken and the groups go to a CW engine started for practice alone. So that speech and Morse code do not overlap, each group waits for the message before it to be spoken, at your speech rate, and then for the start delay. With a screen reader speaking instead, the wait follows textweaver's speech rate setting, not the screen reader's; if a group starts before your screen reader finishes, raise the start delay.
+
+### Progress
+
+Your Koch lesson and your latest 20 rounds are kept in `cw-practice.json` in textweaver's data folder, so each person on a computer has their own. Practice progress is not synced between computers; the practice settings are, like the other CW settings.
 
 ## Record what a key adapter sends: tw cw monitor
 

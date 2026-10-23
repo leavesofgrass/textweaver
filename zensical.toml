@@ -63,6 +63,7 @@ nav = [
     ] },
     { "Speech" = [
       { "Speech engines and voices" = "speech.md" },
+      { "CW: reading in Morse code" = "cw.md" },
       { "Getting ETI-Eloquence" = "eloquence.md" },
       { "Using DECtalk" = "dectalk.md" },
       { "Audio export" = "audio-export.md" },

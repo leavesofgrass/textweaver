@@ -52,6 +52,7 @@ const FIXTURES: &[(&str, &str, usize)] = &[
     ("archive", "fixtures/w3d/course.7z", 0),
     ("json", "fixtures/o/profile.json", 1),
     ("notebook", "fixtures/o/growth.ipynb", 1),
+    ("canvas", "fixtures/b4/board.canvas", 3),
     ("mathml", "fixtures/o/growth.mml", 0),
     ("svg", "fixtures/o/chart.svg", 0),
     #[cfg(feature = "carta")]

@@ -16,6 +16,15 @@
 //! | Insert table | leading newline unless at a line start, a blank line, the skeleton, a newline | same text; selects the first header cell's text |
 //! | Add table row | a row after the current line, even on the header line (which breaks the table) | on the header or separator line, the row goes after the separator; the caret goes to the new row's first cell |
 //! | Insert image | `![stem](relative path)`, nothing selected | same text; selects the alt text; a path with spaces or parentheses is written as `<path>` |
+//!
+//! Obsidian editing aids (beta 4), which star did not have:
+//!
+//! | Command | textweaver |
+//! |---|---|
+//! | Insert wiki link ([`wiki_link`]) | `[[Note]]`, `[[Note#Heading]]`, or `[[Note#^block]]` at the caret; a selection becomes the shown text, `[[Note\|selection]]`; the caret ends after the link |
+//! | Toggle task | on each selected line: `[ ]` becomes `[x]`, `[x]` becomes `[ ]`, and any other status becomes `[x]`; a list item gains `[ ] `, and a plain line becomes `- [ ] ` |
+//! | Cycle task status | on each selected line, the status after the one there, in the order `[ ]`, `[/]` in progress, `[x]`, `[-]` cancelled, `[>]` forwarded, `[!]` important, `[?]` question, then `[ ]` again ([`TASK_CYCLE`]); a line that is not a task becomes one, as with Toggle task |
+//! | Insert callout ([`insert_callout`]) | `> [!type]` and a body line `> ` at the start of the caret's line (the line's text becomes the body) or after it; selected lines become the body, quoted |
 
 use std::path::{Component, Path, PathBuf};
 
@@ -62,7 +71,19 @@ pub enum MarkdownOp {
     },
     /// A new empty row in the table at the caret.
     AddTableRow,
+    /// Checks or unchecks the task on each selected line (`- [ ]`,
+    /// `- [x]`), making a line that is not a task into one.
+    ToggleTask,
+    /// Moves the task on each selected line to the next status in
+    /// [`TASK_CYCLE`].
+    CycleTaskStatus,
 }
+
+/// The task statuses Cycle Task Status steps through, in order: not
+/// done, in progress, done, cancelled, forwarded, important, question.
+/// The statuses of Obsidian's Tasks plugin and popular themes, which the
+/// reader names in words.
+pub const TASK_CYCLE: [char; 7] = [' ', '/', 'x', '-', '>', '!', '?'];
 
 /// The edits for one command and the selection afterwards.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -567,6 +588,193 @@ fn code_block(text: &Rope, sel: Selection) -> Formatted {
     }
 }
 
+/// Where a line's list item text starts, in chars (after `- `, `* `,
+/// `+ `, `1. ` or `1) `), past indentation and quote marks (`> - item`).
+fn list_body_start(line: &[char]) -> Option<usize> {
+    let mut i = lead_len(line);
+    match line.get(i)? {
+        '-' | '*' | '+' => i += 1,
+        c if c.is_ascii_digit() => {
+            let digits = line[i..].iter().take_while(|c| c.is_ascii_digit()).count();
+            if digits > 9 {
+                return None;
+            }
+            i += digits;
+            if !matches!(line.get(i), Some('.' | ')')) {
+                return None;
+            }
+            i += 1;
+        }
+        _ => return None,
+    }
+    (line.get(i) == Some(&' ')).then_some(i + 1)
+}
+
+/// Indentation and quote marks (`> > `) at the start of a line, in chars.
+fn lead_len(line: &[char]) -> usize {
+    line.iter()
+        .take_while(|c| matches!(c, ' ' | '\t' | '>'))
+        .count()
+}
+
+/// A task line's status box: where its status character is, in chars,
+/// and the character (`' '` for `- [ ]`).
+fn task_box(line: &[char]) -> Option<(usize, char)> {
+    let body = list_body_start(line)?;
+    let at = |i: usize| line.get(body + i).copied();
+    if at(0) != Some('[') || at(2) != Some(']') {
+        return None;
+    }
+    let status = at(1)?;
+    if matches!(status, '[' | ']' | '\n' | '\r') {
+        return None;
+    }
+    match at(3) {
+        None | Some(' ' | '\t' | '\r' | '\n') => Some((body + 1, status)),
+        _ => None,
+    }
+}
+
+/// The task status of a line (`' '` for `- [ ] item`, `'x'` for done,
+/// `'/'` and the like for custom statuses), or `None` when the line is
+/// not a task.
+pub fn task_status(line: &str) -> Option<char> {
+    let chars: Vec<char> = line.chars().collect();
+    task_box(&chars).map(|(_, c)| c)
+}
+
+/// Toggle Task and Cycle Task Status: each selected line (blank lines
+/// left alone in a multi-line selection) gets its next status from
+/// `next`, or becomes a task when it is not one.
+fn task_lines(text: &Rope, sel: Selection, next: impl Fn(char) -> char) -> Formatted {
+    let r = sel.range().clamp_to(text.len_chars());
+    let (first, last) = line_span(text, r);
+    let multi = last > first;
+    let mut edits = Vec::new();
+    // Characters inserted so far: later positions move by this much.
+    let mut delta = 0usize;
+    let (mut anchor, mut head) = (sel.anchor.0, sel.head.0);
+    for line in first..=last {
+        let t: Vec<char> = line_text(text, line).chars().collect();
+        if multi && t.iter().all(|c| c.is_whitespace()) {
+            continue;
+        }
+        let start = text.line_to_char(line) + delta;
+        let (at, remove, insert) = match task_box(&t) {
+            Some((i, c)) => (start + i, 1, next(c).to_string()),
+            None => match list_body_start(&t) {
+                Some(body) => (start + body, 0, "[ ] ".to_owned()),
+                None => (start + lead_len(&t), 0, "- [ ] ".to_owned()),
+            },
+        };
+        edits.push(Edit::replace(
+            CharRange::new(at, at + remove),
+            insert.clone(),
+        ));
+        if remove == 0 {
+            // Text inserted at or before the caret pushes it along.
+            let n = len(&insert);
+            if anchor >= at {
+                anchor += n;
+            }
+            if head >= at {
+                head += n;
+            }
+            delta += n;
+        }
+    }
+    Formatted {
+        edits,
+        selection: Selection {
+            anchor: CharPos(anchor),
+            head: CharPos(head),
+        },
+    }
+}
+
+/// The status after `c` in [`TASK_CYCLE`]; an unknown status starts over.
+fn next_in_cycle(c: char) -> char {
+    let c = if c == 'X' { 'x' } else { c };
+    TASK_CYCLE
+        .iter()
+        .position(|&s| s == c)
+        .map_or(' ', |i| TASK_CYCLE[(i + 1) % TASK_CYCLE.len()])
+}
+
+/// An Obsidian wiki link to `target` (`Note`, `Note#Heading`,
+/// `Note#^block`, or `#Heading` in the same note) at the caret, replacing
+/// the selection, which becomes the link's shown text
+/// (`[[Note|selection]]`). The caret ends after the link.
+pub fn wiki_link(text: &Rope, sel: Selection, target: &str) -> Formatted {
+    let r = sel.range().clamp_to(text.len_chars());
+    let shown = slice(text, r);
+    let shown = shown.trim();
+    let inserted = if shown.is_empty() || shown == target {
+        format!("[[{target}]]")
+    } else {
+        format!("[[{target}|{shown}]]")
+    };
+    let end = r.start.0 + len(&inserted);
+    Formatted {
+        edits: vec![Edit::replace(r, inserted)],
+        selection: Selection::caret(CharPos(end)),
+    }
+}
+
+/// An Obsidian callout of type `kind` (`note`, `tip`, `warning`, ...).
+///
+/// - With nothing selected and the caret at the start of a line,
+///   `> [!kind]` goes before the line and the line's text becomes the
+///   body (`> text`); on an empty line, the body is empty. Elsewhere on a
+///   line, the callout starts on a new line after it. The caret ends on
+///   the body line, after its text.
+/// - With lines selected, they become the body, each quoted (`>` alone
+///   on a blank line), and the whole callout is selected.
+pub fn insert_callout(text: &Rope, sel: Selection, kind: &str) -> Formatted {
+    let kind = kind.trim().to_lowercase();
+    let head = format!("> [!{kind}]");
+    let r = sel.range().clamp_to(text.len_chars());
+    if r.is_empty() {
+        let s = r.start.0;
+        let line = text.char_to_line(s);
+        let line_start = text.line_to_char(line);
+        let line_end = line_start + len(&line_text(text, line));
+        if s == line_start {
+            let inserted = format!("{head}\n> ");
+            let caret = line_end + len(&inserted);
+            return Formatted {
+                edits: vec![Edit::insert(s, inserted)],
+                selection: Selection::caret(CharPos(caret)),
+            };
+        }
+        let inserted = format!("\n{head}\n> ");
+        let caret = line_end + len(&inserted);
+        return Formatted {
+            edits: vec![Edit::insert(line_end, inserted)],
+            selection: Selection::caret(CharPos(caret)),
+        };
+    }
+    let (first, last) = line_span(text, r);
+    let start = text.line_to_char(first);
+    let end = text.line_to_char(last) + len(&line_text(text, last));
+    let mut inserted = head;
+    for l in first..=last {
+        let t = line_text(text, l);
+        inserted.push('\n');
+        if t.trim().is_empty() {
+            inserted.push('>');
+        } else {
+            inserted.push_str("> ");
+            inserted.push_str(&t);
+        }
+    }
+    let total = len(&inserted);
+    Formatted {
+        edits: vec![Edit::replace(CharRange::new(start, end), inserted)],
+        selection: Selection::new(start, start + total),
+    }
+}
+
 /// The edits that apply `op` to `sel` in `text`. A command that cannot run
 /// (Add Table Row outside a table) returns no edits; use [`try_apply`] for
 /// the reason.
@@ -593,6 +801,11 @@ pub fn try_apply(text: &Rope, sel: Selection, op: MarkdownOp) -> Result<Formatte
             insert_table(text, sel, usize::from(rows), usize::from(cols))
         }
         MarkdownOp::AddTableRow => return add_table_row(text, sel),
+        MarkdownOp::ToggleTask => task_lines(text, sel, |c| match c {
+            'x' | 'X' => ' ',
+            _ => 'x',
+        }),
+        MarkdownOp::CycleTaskStatus => task_lines(text, sel, next_in_cycle),
     })
 }
 
@@ -743,6 +956,114 @@ mod tests {
             run("x = 1\ny = 2", sel(1, 8), MarkdownOp::CodeBlock).0,
             "```\nx = 1\ny = 2\n```"
         );
+    }
+
+    #[test]
+    fn toggle_task_checks_unchecks_and_makes_tasks() {
+        let caret = |n| Selection::caret(CharPos(n));
+        // Caret anywhere on the line; it stays where it was.
+        let (t, s) = run("- [ ] milk", caret(8), MarkdownOp::ToggleTask);
+        assert_eq!((t.as_str(), s), ("- [x] milk", caret(8)));
+        assert_eq!(
+            run("- [X] milk", caret(0), MarkdownOp::ToggleTask).0,
+            "- [ ] milk"
+        );
+        // A custom status is done.
+        assert_eq!(
+            run("  * [/] draft", caret(3), MarkdownOp::ToggleTask).0,
+            "  * [x] draft"
+        );
+        // A list item gains a box; the caret after it moves along.
+        let (t, s) = run("1. eggs", caret(5), MarkdownOp::ToggleTask);
+        assert_eq!((t.as_str(), s), ("1. [ ] eggs", caret(9)));
+        // A plain line, in a quote too, becomes a task.
+        let (t, s) = run("> bread", caret(2), MarkdownOp::ToggleTask);
+        assert_eq!((t.as_str(), s), ("> - [ ] bread", caret(8)));
+        let (t, s) = run("", caret(0), MarkdownOp::ToggleTask);
+        assert_eq!((t.as_str(), s), ("- [ ] ", caret(6)));
+        // Several lines, each by itself; blank lines left alone.
+        let (t, s) = run("- [ ] a\n\n- [x] b\nc", sel(0, 18), MarkdownOp::ToggleTask);
+        assert_eq!(t, "- [x] a\n\n- [ ] b\n- [ ] c");
+        assert_eq!(s, sel(0, 24));
+        // Not a box: `[link]` text, or no space after the marker.
+        assert_eq!(
+            run("- [a]b", caret(0), MarkdownOp::ToggleTask).0,
+            "- [ ] [a]b"
+        );
+        assert_eq!(task_status("- [/] x"), Some('/'));
+        assert_eq!(task_status("-[ ] x"), None);
+    }
+
+    #[test]
+    fn cycle_task_status_steps_through_the_statuses() {
+        let caret = Selection::caret(CharPos(0));
+        let mut text = "- [ ] plan".to_owned();
+        let mut seen = Vec::new();
+        for _ in 0..TASK_CYCLE.len() {
+            text = run(&text, caret, MarkdownOp::CycleTaskStatus).0;
+            seen.push(task_status(&text).unwrap());
+        }
+        assert_eq!(seen, ['/', 'x', '-', '>', '!', '?', ' ']);
+        assert_eq!(
+            run("- [X] a", caret, MarkdownOp::CycleTaskStatus).0,
+            "- [-] a"
+        );
+        assert_eq!(
+            run("- [i] a", caret, MarkdownOp::CycleTaskStatus).0,
+            "- [ ] a"
+        );
+        assert_eq!(
+            run("plain", caret, MarkdownOp::CycleTaskStatus).0,
+            "- [ ] plain"
+        );
+    }
+
+    #[test]
+    fn wiki_links_take_the_selection_as_shown_text() {
+        let apply_link = |text: &str, s: Selection, target: &str| {
+            let mut ed = Editor::new(text);
+            ed.set_selection(s);
+            let f = wiki_link(ed.text(), s, target);
+            ed.apply_formatted(&f).unwrap();
+            (ed.text().to_string(), ed.selection())
+        };
+        let (t, s) = apply_link("See .", Selection::caret(CharPos(4)), "Cell");
+        assert_eq!(t, "See [[Cell]].");
+        assert_eq!(s, Selection::caret(CharPos(12)));
+        let (t, s) = apply_link("See the cell.", sel(4, 12), "Cell#Parts");
+        assert_eq!(t, "See [[Cell#Parts|the cell]].");
+        assert_eq!(s, Selection::caret(CharPos(27)));
+        let (t, _) = apply_link("Cell", sel(0, 4), "Cell");
+        assert_eq!(t, "[[Cell]]");
+        let (t, _) = apply_link("", Selection::caret(CharPos(0)), "#^atp-fact");
+        assert_eq!(t, "[[#^atp-fact]]");
+    }
+
+    #[test]
+    fn callouts_at_a_line_start_after_a_line_and_around_lines() {
+        let apply_callout = |text: &str, s: Selection, kind: &str| {
+            let mut ed = Editor::new(text);
+            ed.set_selection(s);
+            let f = insert_callout(ed.text(), s, kind);
+            ed.apply_formatted(&f).unwrap();
+            // One undo step.
+            let after = (ed.text().to_string(), ed.selection());
+            ed.undo();
+            assert_eq!(ed.text().to_string(), text);
+            after
+        };
+        let (t, s) = apply_callout("", Selection::caret(CharPos(0)), "Tip");
+        assert_eq!(t, "> [!tip]\n> ");
+        assert_eq!(s, Selection::caret(CharPos(11)));
+        let (t, s) = apply_callout("Keep this.", Selection::caret(CharPos(0)), "note");
+        assert_eq!(t, "> [!note]\n> Keep this.");
+        assert_eq!(s, Selection::caret(CharPos(22)));
+        let (t, s) = apply_callout("Intro text\nnext", Selection::caret(CharPos(3)), "warning");
+        assert_eq!(t, "Intro text\n> [!warning]\n> \nnext");
+        assert_eq!(s, Selection::caret(CharPos(26)));
+        let (t, s) = apply_callout("a\n\nb\nrest", sel(0, 4), "info");
+        assert_eq!(t, "> [!info]\n> a\n>\n> b\nrest");
+        assert_eq!(s, sel(0, 19));
     }
 
     #[test]

@@ -917,6 +917,10 @@ action-volume-down = أخفض صوتًا
 action-cycle-speed-preset = التنقل بين إعدادات السرعة الجاهزة (سريعة، عادية، دراسة، بطيئة)
 action-choose-voice = اختيار صوت
 action-restart-speech = إعادة تشغيل الكلام بالإعدادات الحالية (بعد توقف محرك الكلام عن العمل)
+action-cw-practice-koch = تمرين شفرة مورس بطريقة كوخ: انسخ مجموعات من الأحرف التي تعلمتها حتى الآن
+action-cw-practice-characters = تمرين شفرة مورس: انسخ مجموعات من أحرف عشوائية
+action-cw-practice-words = تمرين شفرة مورس: انسخ كلمات عشوائية
+action-cw-practice-progress = اذكر تقدم تمرين شفرة مورس: درس كوخ وآخر النتائج
 action-cycle-verbosity = التنقل بين مستويات ما يقوله textweaver: منخفض، عادي، مرتفع
 action-cycle-punctuation = التنقل بين مقدار علامات الترقيم المنطوقة: لا شيء، بعضها، كلها
 action-find = البحث عن نص في المستند
@@ -997,6 +1001,10 @@ action-horizontal-rule = إدراج خط أفقي
 action-insert-table = إدراج جدول
 action-add-table-row = إضافة صف إلى الجدول عند المؤشر
 action-insert-image = إدراج صورة
+action-insert-wiki-link = إدراج رابط ويكي إلى ملاحظة في المخزن، أو إلى عنوان أو كتلة فيها
+action-toggle-task = تحديد المهمة في السطر الحالي أو إلغاء تحديدها، أو جعل السطر مهمة
+action-cycle-task-status = نقل المهمة في السطر الحالي إلى حالتها التالية: قيد التنفيذ، منجزة، ملغاة، محوّلة، مهمة، سؤال
+action-insert-callout = إدراج تنبيه (callout) من نوع تختاره؛ تصبح الأسطر المحددة نصه
 action-replace = بحث واستبدال
 action-copy = نسخ التحديد، أو الجملة عند المؤشر، إلى الحافظة
 action-cut = قص التحديد إلى الحافظة
@@ -2849,6 +2857,14 @@ settings-unit-columns =
         [zero] أعمدة
        *[other] عمود
     }
+settings-unit-groups =
+    { $n ->
+        [one] مجموعة
+        [two] مجموعتان
+        [few] مجموعات
+        [zero] مجموعات
+       *[other] مجموعة
+    }
 settings-unit-characters =
     { $n ->
         [one] حرف
@@ -3108,6 +3124,40 @@ edit-not-a-table-size = ليس حجم جدول: { $text }. اكتب أعمدة �
 # $name is the image's file name.
 edit-image-inserted = أُدرجت الصورة { $name }. وصفها محدَّد؛ اكتب لاستبداله.
 edit-image-failed = تعذّر إدراج الصورة: { $error } لم يتغيّر النص.
+# Edit mode's Obsidian aids: a wiki link, tasks, callouts.
+edit-wikilink-title = رابط إلى ملاحظة
+edit-wikilink-intro =
+    { $n ->
+        [one] رابط إلى ملاحظة، ملاحظة واحدة. يختارها مفتاح الإدخال.
+       *[other] رابط إلى ملاحظة، { $n } ملاحظات. يختار مفتاح الإدخال واحدة.
+    }
+edit-wikilink-no-notes = لا توجد ملاحظات في هذا المخزن يمكن الربط إليها.
+edit-wikilink-anchor-title = رابط إلى جزء من { $note }
+edit-wikilink-anchor-intro = رابط إلى الملاحظة { $note } كلها، أو إلى عنوان أو كتلة فيها. يختار مفتاح الإدخال.
+edit-wikilink-whole = الملاحظة كلها
+edit-wikilink-heading = عنوان { $level }: { $text }
+edit-wikilink-block = كتلة { $id }: { $text }
+edit-wikilink-inserted = أُدرج رابط إلى { $target }.
+edit-callout-title = نوع التنبيه
+edit-callout-intro = أنواع التنبيه، { $n }. يدرج مفتاح الإدخال واحدًا.
+edit-callout-inserted = أُدرج تنبيه من نوع { $type }. اكتب نصه.
+edit-task-status =
+    { $status ->
+        [done] محددة.
+        [open] غير محددة.
+        [in-progress] قيد التنفيذ.
+        [cancelled] ملغاة.
+        [forwarded] محوّلة.
+        [important] مهمة.
+        [question] سؤال.
+       *[other] معلّمة بـ { $mark }.
+    }
+edit-task-new = مهمة جديدة، غير محددة.
+edit-tasks-changed =
+    { $n ->
+        [one] تغيّرت مهمة في سطر واحد.
+       *[other] تغيّرت المهام في { $n } أسطر.
+    }
 # $query is the text to find.
 common-no-matches = لا تطابقات لـ{ $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -3874,6 +3924,14 @@ setting-speech-cw-prosigns = الإشارات الإجرائية في CW
 setting-speech-cw-prosigns-help = إرسال البنية إشاراتٍ إجرائية: BT بعد العناوين والفقرات، وAR في نهاية المستند. وتُرسل أيضًا الإشارات المكتوبة بين قوسين زاويين مثل <BT>.
 setting-speech-cw-status-line = أحرف CW في سطر الحالة
 setting-speech-cw-status-line-help = إظهار كل حرف في سطر الحالة عند إرساله، ليعرضه قارئ الشاشة على سطر برايل. لا يُقال شيء إضافي.
+setting-speech-cw-practice-threshold = تمرين CW: درجة النجاح
+setting-speech-cw-practice-threshold-help = النتيجة في جولة تمرين كوخ، بالنسبة المئوية، التي تضيف الحرف التالي. تستخدم طريقة كوخ 90.
+setting-speech-cw-practice-group = تمرين CW: حجم المجموعة
+setting-speech-cw-practice-group-help = عدد الأحرف في كل مجموعة تمرين.
+setting-speech-cw-practice-groups = تمرين CW: طول الجولة
+setting-speech-cw-practice-groups-help = عدد المجموعات في جولة التمرين. بعد آخر مجموعة تُذكر نتيجة الجولة وتُحفظ.
+setting-speech-cw-practice-delay-ms = تمرين CW: مهلة البدء
+setting-speech-cw-practice-delay-ms-help = الصمت قبل إرسال كل مجموعة. يأتي بعد الوقت المتوقع لرسائل { -brand } المنطوقة.
 setting-speech-cw-keyer = مُبرِق CW
 setting-speech-cw-keyer-help = كيف تصبح تلامسات مفتاح المجداف نقاطًا وشرطات عند الإبراق بشفرة مورس. الوضع B المتناوب يضيف العنصر المقابل عند ترك الضغط المزدوج أثناء عنصر؛ والوضع A لا يضيفه؛ وكلاهما يتذكر تلامسًا ضُغط أثناء عنصر. المفتاح المستقيم يُصدر النغمة من أي تلامس.
 choice-speech-cw-keyer-iambic-b = متناوب B
@@ -4137,6 +4195,7 @@ gui-updated-to = تم التحديث إلى { $version }. مساعدة، الت�
 ## each starts in lower case.
 opening-damaged-json = ليس ملف JSON قابلًا للقراءة؛ قد يكون كبيرًا جدًا.
 opening-damaged-notebook = ليس دفتر Jupyter قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
+opening-damaged-canvas = ليس ملف لوحة (canvas) قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-svg = ليس رسمًا بصيغة SVG قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-mathml = ليست صيغة MathML قابلة للقراءة؛ قد تكون تالفة أو كبيرة جدًا.
 
@@ -4285,6 +4344,10 @@ name-volume-down = صوت أخفض
 name-cycle-speed-preset = سرعة مسبقة
 name-choose-voice = الأصوات
 name-restart-speech = إعادة تشغيل النطق
+name-cw-practice-koch = تمرين كوخ
+name-cw-practice-characters = تمرين الأحرف العشوائية
+name-cw-practice-words = تمرين الكلمات العشوائية
+name-cw-practice-progress = تقدم التمرين
 name-cycle-verbosity = مستوى التفصيل
 name-cycle-punctuation = علامات الترقيم
 name-find = بحث
@@ -4369,6 +4432,10 @@ name-horizontal-rule = خط أفقي
 name-insert-table = إدراج جدول
 name-add-table-row = إضافة صف إلى الجدول
 name-insert-image = إدراج صورة
+name-insert-wiki-link = إدراج رابط ويكي
+name-toggle-task = تحديد المهمة
+name-cycle-task-status = تغيير حالة المهمة
+name-insert-callout = إدراج تنبيه
 name-replace = استبدال
 name-copy = نسخ
 name-cut = قص
@@ -4941,6 +5008,7 @@ sync-stopped = أُوقفت المزامنة هنا. يبقى المجلد كم�
 prompt-sync-computer-name = اسم هذا الحاسوب، Enter يبقيه
 menu-sync = المزامنة
 menu-cards = بطاقات الدراسة
+menu-cw-practice = تمرين شفرة مورس
 name-sync-setup = إعداد المزامنة
 name-sync-status = حالة المزامنة
 name-sync-now = المزامنة الآن
@@ -5306,6 +5374,7 @@ prompt-comment-reply = الرد
 prompt-comment-text = التعليق
 prompt-github-token = رمز GitHub لمصدر المكونات، Enter للتخطي
 prompt-import-cards = استيراد بطاقات الدراسة من حزمة Anki
+prompt-cw-copy = اكتب ما سمعته
 changes-title = التغييرات والتعليقات
 changes-intro =
     { $n ->
@@ -5508,6 +5577,31 @@ cw-skipped =
         [one] حرف واحد لم يُرسل بشفرة مورس.
        *[other] { $count } من الأحرف لم تُرسل بشفرة مورس.
     }
+## Beta 4: CW practice (Koch method, random drills, copy checking).
+cw-practice-koch-start = درس كوخ { $lesson } من 40، { $count } حرفًا، الجديد: { $new }.
+cw-practice-characters-start = أحرف عشوائية، { $groups } مجموعات.
+cw-practice-words-start = كلمات عشوائية، { $groups } مجموعات.
+cw-practice-group = المجموعة { $n } من { $groups }.
+cw-practice-again = مرة أخرى، المجموعة { $n } من { $groups }.
+cw-practice-perfect = { $correct } من { $total }، كلها صحيحة.
+cw-practice-score = { $correct } من { $total }. الأخطاء: { $missed }. المرسل: { $sent }.
+cw-practice-wrong = { $sent } كُتب { $typed }
+cw-practice-missing = { $sent } لم يُنسخ
+cw-practice-extra = { $typed } زائد
+cw-practice-round = الجولة: { $correct } من { $total }، { $percent } بالمئة.
+cw-practice-added = الدرس { $lesson }: أضيف { $new }.
+cw-practice-not-yet = { $threshold } بالمئة تضيف الحرف التالي.
+cw-practice-all-learned = تم تعلم كل الأحرف.
+cw-practice-stopped = توقف التمرين.
+cw-practice-progress = درس كوخ { $lesson } من 40، الجديد: { $new }. { $recent }
+cw-practice-recent = آخر الجولات: { $scores } بالمئة.
+cw-practice-no-rounds = لا جولات بعد.
+cw-practice-unavailable = لم يبدأ محرك CW، لذا لا يمكن للتمرين الإرسال.
+cw-char-period = نقطة
+cw-char-comma = فاصلة
+cw-char-equals = يساوي
+cw-char-slash = شرطة مائلة
+cw-char-question = علامة استفهام
 ## Beta 4: CW keying, Morse code typed with a key or paddle. $key is a
 ## key name, $name a MIDI input's name.
 name-cw-keying = الإبراق بـCW

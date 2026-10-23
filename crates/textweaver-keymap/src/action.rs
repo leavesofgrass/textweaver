@@ -417,6 +417,17 @@ actions! {
     RestartSpeech = "restart_speech", Voice,
         "Restart speech with the current settings (after the speech engine stopped working)",
         gui ["g:Shift+F8"], term ["g:Shift+F8"], shared [];
+    CwPracticeKoch = "cw_practice_koch", Voice,
+        "Morse code practice, Koch method: copy groups of the characters learned so far",
+        gui [], term [], shared [];
+    CwPracticeCharacters = "cw_practice_characters", Voice,
+        "Morse code practice: copy groups of random characters",
+        gui [], term [], shared [];
+    CwPracticeWords = "cw_practice_words", Voice, "Morse code practice: copy random words",
+        gui [], term [], shared [];
+    CwPracticeProgress = "cw_practice_progress", Voice,
+        "Say the Morse code practice progress: the Koch lesson and the latest scores",
+        gui [], term [], shared [];
     CycleVerbosity = "cycle_verbosity", Voice, "Cycle how much textweaver says: low, normal, high",
         gui ["g:Alt+Shift+V"], term ["g:Alt+Shift+V"], shared [];
     CyclePunctuation = "cycle_punctuation", Voice, "Cycle how much punctuation is spoken: none, some, all",
@@ -671,6 +682,24 @@ actions! {
         gui ["e:Ctrl+Shift+A"], term ["e:Alt+T"], shared [];
     AddTableRow = "add_table_row", Editing, "Add a row to the table at the cursor",
         gui ["e:Ctrl+Shift+Enter"], term ["e:Alt+W"], shared [];
+    // Obsidian editing aids (beta 4). Toggle task is Obsidian's own keys:
+    // Ctrl+Enter in the window (Obsidian's Mod+Enter on a list item), and
+    // Ctrl+L, Obsidian's Toggle checkbox status, in the terminal, where
+    // Ctrl+Enter cannot be sent and Ctrl+L is free. NVDA, JAWS and Windows
+    // leave both to the application. The other three are palette and
+    // menu commands: no free key is natural for them.
+    InsertWikiLink = "insert_wiki_link", Editing,
+        "Insert a wiki link to a note in the vault, or to a heading or block in it",
+        gui [], term [], shared [];
+    ToggleTask = "toggle_task", Editing,
+        "Check or uncheck the task on the current line, or make the line a task",
+        gui ["e:Ctrl+Enter"], term ["e:Ctrl+L"], shared [];
+    CycleTaskStatus = "cycle_task_status", Editing,
+        "Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question",
+        gui [], term [], shared [];
+    InsertCallout = "insert_callout", Editing,
+        "Insert a callout of a type you choose; selected lines become its text",
+        gui [], term [], shared [];
     InsertImage = "insert_image", Editing, "Insert an image",
         gui ["e:Ctrl+Shift+I"], term ["e:Alt+G"], shared [];
     Replace = "replace", Editing, "Find and replace",
@@ -975,10 +1004,11 @@ impl ActionId {
     }
 
     /// True for commands only the terminal reader has keys for: line
-    /// numbers, which are the terminal's gutter, and the preview inside
-    /// edit mode, which the window shows as a pane beside the editor
-    /// instead. They have terminal keys and no window keys, so F6 is the
-    /// window's, for its regions; the window's palette leaves them out.
+    /// numbers (F6 there), and the preview inside edit mode, which the
+    /// window shows as a pane beside the editor instead. They have
+    /// terminal keys and no window keys, so F6 is the window's, for its
+    /// regions; the window still runs line numbers from its View menu and
+    /// its command palette.
     pub fn is_terminal_only(self) -> bool {
         matches!(self, ActionId::ToggleLineNumbers | ActionId::TogglePreview)
     }

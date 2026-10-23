@@ -94,7 +94,7 @@ The Applications key (beside the right Ctrl key), Shift+F10, or a right-click op
 
 On Windows the context menu is a standard one, which NVDA and JAWS announce as a menu; each item is read with its key, and its underlined letter chooses it. Opened from the keyboard it appears at the cursor; opened by a right-click it appears at the pointer, and the cursor moves there unless you clicked on the selection, which the menu then acts on. Escape closes it and leaves the focus where it was. On macOS and Linux the same items appear as a list in the window's list dialog, as the terminal reader shows them.
 
-Choosing a command in a menu runs it exactly as its key would, and it joins the recent commands that the command palette lists first (F2 with nothing typed). A few commands that only make sense in a terminal are left out of the app's menus (see [What only the terminal reader does](#what-only-the-terminal-reader-does)). File, Browse files opens textweaver's file browser in the window's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion, audio export, and dictation are in the menus in the default build.
+Choosing a command in a menu runs it exactly as its key would, and it joins the recent commands that the command palette lists first (F2 with nothing typed). Every command is in the app's menus, including scrolling and line numbers ([Scrolling and line numbers](#scrolling-and-line-numbers)). File, Browse files opens textweaver's file browser in the window's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion, audio export, and dictation are in the menus in the default build.
 
 ## Opening a document
 
@@ -358,12 +358,14 @@ The study and marking commands are the same in the app as in the terminal reader
 - **Files.** Browse files in the File menu walks folders and archives as one list ([Reading](reading.md#from-the-file-browser-file-browse-files)). The formats added in beta 1 (Org, reStructuredText, MediaWiki, DokuWiki, and Jira markup; braille files; DAISY books with their recorded narration) open in the app as in the terminal reader.
 - **Help.** Help, then Documentation, opens the full guides inside the app, and Search help searches commands, keys, settings, and the guides together ([Reading](reading.md#help--and-f1)).
 
-## What only the terminal reader does
+## Scrolling and line numbers
 
-Every command works in the app as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. A few commands are meaningful only in a terminal, and the app's menus and command palette omit them. If a key for one is pressed in the app (`j` or Shift+J, say), the app says "This command works in the terminal reader." and does nothing else:
+Every command works in the app as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. Scrolling by line and line numbers, which were once the terminal reader's alone, work in the app as well.
 
-- `scroll_down` and `scroll_up`: the terminal scrolls its screen by lines. The app scrolls with the mouse wheel and keeps the cursor in view.
-- `toggle_line_numbers`: line numbers are the terminal's margin, on F6 there. In the app, the status bar says the line, and Say Position (Shift+W) says it too; F6 moves between the app's regions instead.
+- **Scroll down and Scroll up** (`j` and Shift+J, or Reading, Go to, Scroll down and Scroll up; `scroll_down` and `scroll_up`) move the document by one drawn line and leave the cursor where it is, as they move the terminal's screen. A paragraph that wraps over several lines scrolls one drawn line at a time. What is said matches the terminal reader: at high verbosity the line now at the top ("Line 12 at top."), and at the start or the end "Top of document." or "Bottom of document." The view keeps its place until the cursor moves or reading moves on, and then brings the cursor or the spoken word back into view. In a very long document the app holds the text around the cursor, about 120,000 characters, so scrolling far away from the cursor stops at the end of that text; moving the cursor brings in the rest. The mouse wheel scrolls as before.
+- **Line numbers** (View, Line numbers, or "toggle line numbers" in the command palette; `toggle_line_numbers`, `show_line_numbers` in `[display]`) number the document's lines in the left margin, beside the first drawn line of each, in the dimmed text color. The setting is the terminal reader's, so turning numbers on in one turns them on in the other, and "Line numbers on." or "Line numbers off." is said once. The numbers are drawn only: a screen reader and a Braille display get the text without them, as with syllable marks, and the status bar and Say Position (Shift+W) say the line. In the app the command has no key, because F6 moves between the app's regions; it is F6 in the terminal reader. The setting is also in Settings, under Display.
+
+Focus mode hides neither: the line numbers belong to the document, not to the bars, and scrolling from the keyboard never brings the faded bars back.
 
 The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) are the same for both readers.
 

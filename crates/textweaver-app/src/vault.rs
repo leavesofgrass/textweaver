@@ -47,7 +47,7 @@ pub(crate) enum VaultList {
 impl App {
     /// Makes the index the one for `note`'s vault, up to date, and
     /// returns it.
-    fn index_for(&mut self, note: &Path) -> &VaultIndex {
+    pub(crate) fn index_for(&mut self, note: &Path) -> &VaultIndex {
         let scope = LinkScope::for_note(note);
         let current = self
             .vault
@@ -92,7 +92,7 @@ impl App {
 
     /// The open document's path, or "This document has not been saved"
     /// said and `None`.
-    fn note_path(&mut self) -> Option<PathBuf> {
+    pub(crate) fn note_path(&mut self) -> Option<PathBuf> {
         let path = self.session.as_ref()?.doc.meta.path.clone();
         if path.is_none() {
             let msg = self.msg("vault-no-file");
@@ -117,7 +117,7 @@ impl App {
 
     /// " Only part of the vault was searched; it is very large." when the
     /// index hit a limit, else nothing.
-    fn partial_note(&self) -> String {
+    pub(crate) fn partial_note(&self) -> String {
         let partial = self
             .vault
             .index
@@ -160,7 +160,7 @@ impl App {
     }
 
     /// A note's row: its title, then the folder it is in.
-    fn note_row(&self, path: &Path, links: Option<usize>) -> String {
+    pub(crate) fn note_row(&self, path: &Path, links: Option<usize>) -> String {
         let (title, rel) = match &self.vault.index {
             Some(index) => (index.title_of(path), index.scope().relative(path)),
             None => (crate::authoring_state::file_name(path), String::new()),

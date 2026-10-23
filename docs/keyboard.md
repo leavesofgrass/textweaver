@@ -5,7 +5,7 @@ The in-app keyboard help shows the same table with your own overrides applied.
 
 ## What changed
 
-In 0.1.0-beta.4: **Enter on a link follows it** in reading mode, as in the browse mode of NVDA and JAWS (the `activate` command); elsewhere Enter still reads from the cursor. `Ctrl+Space` always reads from the cursor, and in the terminal on macOS, where Enter alone was the read key, `Option+Space` does. `Alt+Left` and `Alt+Right` go back and forward across the documents links open.
+In 0.1.0-beta.4: **Enter on a link follows it** in reading mode, as in the browse mode of NVDA and JAWS (the `activate` command); elsewhere Enter still reads from the cursor. `Ctrl+Space` always reads from the cursor, and in the terminal on macOS, where Enter alone was the read key, `Option+Space` does. `Alt+Left` and `Alt+Right` go back and forward across the documents links open. In the textweaver app, `j` and `Shift+J` now scroll the document by one line, as in the terminal, and line numbers are in the View menu and the command palette; they have no key there, because `F6` moves between the app's regions.
 
 In 0.1.0-alpha.6: **F10 opens the menus** in the terminal, as F10 does in Windows programs (File, Edit, View, Reading, Speech, Tools, and Help). Previous chapter keeps `Alt+PageUp` and `Shift+D`; next chapter keeps `F11`, `Alt+PageDown`, and `d`. **On macOS the GUI uses Mac keys**, not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends of the line and the document, Command runs commands, and nothing takes VoiceOver's Ctrl+Option (see the GUI on macOS column). New keys: `Ctrl+F9` cycles the interface announcements (off, minimal, normal, full), `Ctrl+Shift+F9` starts and stops dictation, and `Shift+F1` says what the next key does.
 
@@ -237,6 +237,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Cycle the speed presets (skim, normal, study, slow) | `F8` | `F8` | `F8` | `cycle_speed_preset` |
 | Choose a voice | `Alt+V`, `Ctrl+Alt+V` | `Ctrl+Alt+V` | `Cmd+Option+V` | `choose_voice` |
 | Restart speech with the current settings (after the speech engine stopped working) | `Shift+F8` | `Shift+F8` | `Shift+F8` | `restart_speech` |
+| Morse code practice, Koch method: copy groups of the characters learned so far | palette | palette | palette | `cw_practice_koch` |
+| Morse code practice: copy groups of random characters | palette | palette | palette | `cw_practice_characters` |
+| Morse code practice: copy random words | palette | palette | palette | `cw_practice_words` |
+| Say the Morse code practice progress: the Koch lesson and the latest scores | palette | palette | palette | `cw_practice_progress` |
 | Cycle how much textweaver says: low, normal, high | `Alt+Shift+V` | `Alt+Shift+V` | `Cmd+Option+Shift+V` | `cycle_verbosity` |
 | Cycle how much punctuation is spoken: none, some, all | `Alt+Shift+N` | `Alt+Shift+N` | `Cmd+Option+Shift+N` | `cycle_punctuation` |
 
@@ -356,6 +360,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Insert a horizontal rule | `Alt+R` (edit) | `Ctrl+Shift+R` (edit) | `Cmd+Shift+R` (edit) | `horizontal_rule` |
 | Insert a table | `Alt+T` (edit) | `Ctrl+Shift+A` (edit) | `Cmd+Shift+A` (edit) | `insert_table` |
 | Add a row to the table at the cursor | `Alt+W` (edit) | `Ctrl+Shift+Enter` (edit) | `Cmd+Shift+Enter` (edit) | `add_table_row` |
+| Insert a wiki link to a note in the vault, or to a heading or block in it | palette | palette | palette | `insert_wiki_link` |
+| Check or uncheck the task on the current line, or make the line a task | `Ctrl+L` (edit) | `Ctrl+Enter` (edit) | `Cmd+Option+Enter` (edit) | `toggle_task` |
+| Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | palette | palette | palette | `cycle_task_status` |
+| Insert a callout of a type you choose; selected lines become its text | palette | palette | palette | `insert_callout` |
 | Insert an image | `Alt+G` (edit) | `Ctrl+Shift+I` (edit) | `Cmd+Shift+I` (edit) | `insert_image` |
 | Find and replace | `Alt+F` (edit) | `Ctrl+Shift+F` (edit) | `Cmd+Shift+F` (edit) | `replace` |
 | Copy the selection, or the sentence at the cursor, to the clipboard | `Ctrl+C` | `Ctrl+C` | `Cmd+C` | `copy` |
@@ -588,6 +596,10 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | List this note's links to notes that don't exist | `unresolved_links` |
 | List the tags in this note; Enter lists the notes in the vault with that tag | `note_tags` |
 | List every tag in the vault with how many notes carry it; Enter lists those notes | `vault_tags` |
+| Morse code practice, Koch method: copy groups of the characters learned so far | `cw_practice_koch` |
+| Morse code practice: copy groups of random characters | `cw_practice_characters` |
+| Morse code practice: copy random words | `cw_practice_words` |
+| Say the Morse code practice progress: the Koch lesson and the latest scores | `cw_practice_progress` |
 | Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
 | Highlight the selection or the sentence with a name chosen from the highlight palette | `highlight_as` |
 | Write the highlights of one name as a Markdown list | `collect_highlights` |
@@ -630,6 +642,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | List the other computers' places in this document; Enter goes to one | `sync_go_to_place` |
 | List notes replaced by another computer's newer edit; Enter puts one back | `sync_replaced_notes` |
 | Stop syncing on this computer; the sync folder is left as it is | `sync_stop` |
+| Insert a wiki link to a note in the vault, or to a heading or block in it | `insert_wiki_link` |
+| Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | `cycle_task_status` |
+| Insert a callout of a type you choose; selected lines become its text | `insert_callout` |
 | Insert the bibliography of the works cited, at the cursor | `insert_bibliography` |
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |

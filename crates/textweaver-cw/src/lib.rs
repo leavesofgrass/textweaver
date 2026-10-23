@@ -22,6 +22,8 @@
 //!   platform.
 //! - [`mod@sending`]: what is being sent now, for the status line (and so for
 //!   a Braille display through the screen reader).
+//! - [`training`]: practice, with the Koch method's lessons, random
+//!   character and word drills from a seed, and checking what was copied.
 //!
 //! Keying, Morse code typed with a key or paddle:
 //!
@@ -42,6 +44,7 @@ pub mod sending;
 pub mod sidetone;
 pub mod table;
 pub mod timing;
+pub mod training;
 
 pub use decode::{Decoded, Decoder, Keyed, decode};
 pub use input::{AdapterKey, MidiMap};

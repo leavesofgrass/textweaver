@@ -822,6 +822,10 @@ action-volume-down = Mais baixo
 action-cycle-speed-preset = Alternar os presets de velocidade (rápida, normal, estudo, lenta)
 action-choose-voice = Escolher uma voz
 action-restart-speech = Reiniciar a fala com as configurações atuais (depois que o motor de fala parou de funcionar)
+action-cw-practice-koch = Praticar código Morse, método Koch: copiar grupos dos caracteres aprendidos até agora
+action-cw-practice-characters = Praticar código Morse: copiar grupos de caracteres aleatórios
+action-cw-practice-words = Praticar código Morse: copiar palavras aleatórias
+action-cw-practice-progress = Dizer o progresso da prática de código Morse: a lição Koch e as últimas pontuações
 action-cycle-verbosity = Alternar quanto o textweaver diz: baixo, normal, alto
 action-cycle-punctuation = Alternar quanta pontuação é falada: nenhuma, alguma, toda
 action-find = Localizar texto no documento
@@ -902,6 +906,10 @@ action-horizontal-rule = Inserir uma linha horizontal
 action-insert-table = Inserir uma tabela
 action-add-table-row = Adicionar uma linha à tabela no cursor
 action-insert-image = Inserir uma imagem
+action-insert-wiki-link = Inserir um link wiki para uma nota do cofre, ou para um título ou bloco dela
+action-toggle-task = Marcar ou desmarcar a tarefa da linha atual, ou transformar a linha numa tarefa
+action-cycle-task-status = Passar a tarefa da linha atual para o próximo estado: em andamento, concluída, cancelada, encaminhada, importante, pergunta
+action-insert-callout = Inserir um destaque (callout) do tipo escolhido; as linhas selecionadas tornam-se o seu texto
 action-replace = Localizar e substituir
 action-copy = Copiar a seleção, ou a frase no cursor, para a área de transferência
 action-cut = Recortar a seleção para a área de transferência
@@ -2642,6 +2650,11 @@ settings-unit-columns =
         [one] coluna
        *[other] colunas
     }
+settings-unit-groups =
+    { $n ->
+        [one] grupo
+       *[other] grupos
+    }
 settings-unit-characters =
     { $n ->
         [one] caractere
@@ -2869,6 +2882,40 @@ edit-not-a-table-size = Não é um tamanho de tabela: { $text }. Digite colunas 
 # $name is the image's file name.
 edit-image-inserted = Inseriu a imagem { $name }. A descrição dela está selecionada; digite para substituí-la.
 edit-image-failed = Não foi possível inserir a imagem: { $error } O texto não foi alterado.
+# Edit mode's Obsidian aids: a wiki link, tasks, callouts.
+edit-wikilink-title = Link para uma nota
+edit-wikilink-intro =
+    { $n ->
+        [one] Link para uma nota, 1 nota. Enter a escolhe.
+       *[other] Link para uma nota, { $n } notas. Enter escolhe uma.
+    }
+edit-wikilink-no-notes = Não há notas neste cofre para as quais criar um link.
+edit-wikilink-anchor-title = Link para uma parte de { $note }
+edit-wikilink-anchor-intro = Link para a nota { $note } inteira, ou para um título ou bloco dela. Enter escolhe.
+edit-wikilink-whole = A nota inteira
+edit-wikilink-heading = Título { $level }: { $text }
+edit-wikilink-block = Bloco { $id }: { $text }
+edit-wikilink-inserted = Link para { $target } inserido.
+edit-callout-title = Tipo de destaque
+edit-callout-intro = Tipos de destaque, { $n }. Enter insere um.
+edit-callout-inserted = Destaque do tipo { $type } inserido. Digite o seu texto.
+edit-task-status =
+    { $status ->
+        [done] Marcada.
+        [open] Não marcada.
+        [in-progress] Em andamento.
+        [cancelled] Cancelada.
+        [forwarded] Encaminhada.
+        [important] Importante.
+        [question] Pergunta.
+       *[other] Marcada com { $mark }.
+    }
+edit-task-new = Nova tarefa, não marcada.
+edit-tasks-changed =
+    { $n ->
+        [one] Tarefa alterada em 1 linha.
+       *[other] Tarefas alteradas em { $n } linhas.
+    }
 # $query is the text to find.
 common-no-matches = Nenhuma ocorrência de { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -3538,6 +3585,14 @@ setting-speech-cw-prosigns = Pró-sinais CW
 setting-speech-cw-prosigns-help = Enviar a estrutura como pró-sinais: BT depois de títulos e parágrafos, AR no fim do documento. Pró-sinais escritos entre colchetes angulares, como <BT>, também são enviados.
 setting-speech-cw-status-line = Caracteres CW na linha de status
 setting-speech-cw-status-line-help = Mostrar cada caractere na linha de status ao ser enviado, para que um leitor de tela o mostre num display braille. Nada mais é dito.
+setting-speech-cw-practice-threshold = Prática CW: nota para avançar
+setting-speech-cw-practice-threshold-help = A pontuação de uma rodada de prática Koch, em porcentagem, que acrescenta o próximo caractere. O método Koch usa 90.
+setting-speech-cw-practice-group = Prática CW: tamanho do grupo
+setting-speech-cw-practice-group-help = Quantos caracteres cada grupo de prática tem.
+setting-speech-cw-practice-groups = Prática CW: duração da rodada
+setting-speech-cw-practice-groups-help = Quantos grupos uma rodada de prática tem. Depois do último, a pontuação da rodada é dita e guardada.
+setting-speech-cw-practice-delay-ms = Prática CW: espera inicial
+setting-speech-cw-practice-delay-ms-help = O silêncio antes de cada grupo ser enviado. Ele vem depois do tempo que as mensagens faladas do { -brand } devem levar.
 setting-speech-cw-keyer = Manipulador CW
 setting-speech-cw-keyer-help = Como os contactos de um manipulador de pás se tornam pontos e traços ao manipular Morse. Iâmbico B acrescenta o elemento oposto quando um aperto é solto durante um elemento; iâmbico A não; ambos lembram um contacto premido durante um elemento. Vertical manipula o tom com qualquer contacto.
 choice-speech-cw-keyer-iambic-b = iâmbico B
@@ -3776,6 +3831,7 @@ gui-updated-to = Atualizado para { $version }. Ajuda, Documentação descreve as
 ## each starts in lower case.
 opening-damaged-json = não é um arquivo JSON legível; pode ser grande demais.
 opening-damaged-notebook = não é um notebook Jupyter legível; pode estar danificado ou ser grande demais.
+opening-damaged-canvas = não é uma tela (canvas) legível; pode estar danificada ou ser grande demais.
 opening-damaged-svg = não é um desenho SVG legível; pode estar danificado ou ser grande demais.
 opening-damaged-mathml = não é uma fórmula MathML legível; pode estar danificada ou ser grande demais.
 
@@ -3924,6 +3980,10 @@ name-volume-down = Mais baixo
 name-cycle-speed-preset = Velocidade predefinida
 name-choose-voice = Vozes
 name-restart-speech = Reiniciar a fala
+name-cw-practice-koch = Prática Koch
+name-cw-practice-characters = Prática com caracteres aleatórios
+name-cw-practice-words = Prática com palavras aleatórias
+name-cw-practice-progress = Progresso da prática
 name-cycle-verbosity = Detalhamento
 name-cycle-punctuation = Pontuação
 name-find = Localizar
@@ -4008,6 +4068,10 @@ name-horizontal-rule = Linha horizontal
 name-insert-table = Inserir tabela
 name-add-table-row = Adicionar linha à tabela
 name-insert-image = Inserir imagem
+name-insert-wiki-link = Inserir link wiki
+name-toggle-task = Marcar tarefa
+name-cycle-task-status = Mudar estado da tarefa
+name-insert-callout = Inserir destaque
 name-replace = Substituir
 name-copy = Copiar
 name-cut = Recortar
@@ -4588,6 +4652,7 @@ sync-stopped = Sincronização desligada aqui. A pasta fica como está.
 prompt-sync-computer-name = Nome deste computador, Enter o mantém
 menu-sync = Sincronização
 menu-cards = Cartões de estudo
+menu-cw-practice = Prática de código Morse
 name-sync-setup = Configurar a sincronização
 name-sync-status = Estado da sincronização
 name-sync-now = Sincronizar agora
@@ -4947,6 +5012,7 @@ prompt-comment-reply = Resposta
 prompt-comment-text = Comentário
 prompt-github-token = Token do GitHub da origem de componentes, Enter pula
 prompt-import-cards = Importar cartões de estudo de um pacote do Anki
+prompt-cw-copy = Digite o que você ouviu
 changes-title = Alterações e comentários
 changes-intro =
     { $n ->
@@ -5143,6 +5209,31 @@ cw-skipped =
         [one] 1 caractere não enviado em código Morse.
        *[other] { $count } caracteres não enviados em código Morse.
     }
+## Beta 4: CW practice (Koch method, random drills, copy checking).
+cw-practice-koch-start = Lição Koch { $lesson } de 40, { $count } caracteres, o novo: { $new }.
+cw-practice-characters-start = Caracteres aleatórios, { $groups } grupos.
+cw-practice-words-start = Palavras aleatórias, { $groups } grupos.
+cw-practice-group = Grupo { $n } de { $groups }.
+cw-practice-again = De novo, grupo { $n } de { $groups }.
+cw-practice-perfect = { $correct } de { $total }, tudo certo.
+cw-practice-score = { $correct } de { $total }. Erros: { $missed }. Enviado: { $sent }.
+cw-practice-wrong = { $sent } como { $typed }
+cw-practice-missing = { $sent } não copiado
+cw-practice-extra = { $typed } a mais
+cw-practice-round = Rodada: { $correct } de { $total }, { $percent } por cento.
+cw-practice-added = Lição { $lesson }: { $new } acrescentado.
+cw-practice-not-yet = Com { $threshold } por cento entra o próximo caractere.
+cw-practice-all-learned = Todos os caracteres aprendidos.
+cw-practice-stopped = Prática interrompida.
+cw-practice-progress = Lição Koch { $lesson } de 40, o novo: { $new }. { $recent }
+cw-practice-recent = Últimas rodadas: { $scores } por cento.
+cw-practice-no-rounds = Nenhuma rodada ainda.
+cw-practice-unavailable = O motor CW não iniciou, então a prática não pode enviar.
+cw-char-period = ponto
+cw-char-comma = vírgula
+cw-char-equals = igual
+cw-char-slash = barra
+cw-char-question = ponto de interrogação
 ## Beta 4: CW keying, Morse code typed with a key or paddle. $key is a
 ## key name, $name a MIDI input's name.
 name-cw-keying = Manipulação CW

@@ -823,6 +823,10 @@ action-volume-down = Quieter
 action-cycle-speed-preset = Cycle the speed presets (skim, normal, study, slow)
 action-choose-voice = Choose a voice
 action-restart-speech = Restart speech with the current settings (after the speech engine stopped working)
+action-cw-practice-koch = Morse code practice, Koch method: copy groups of the characters learned so far
+action-cw-practice-characters = Morse code practice: copy groups of random characters
+action-cw-practice-words = Morse code practice: copy random words
+action-cw-practice-progress = Say the Morse code practice progress: the Koch lesson and the latest scores
 action-cycle-verbosity = Cycle how much textweaver says: low, normal, high
 action-cycle-punctuation = Cycle how much punctuation is spoken: none, some, all
 action-find = Find text in the document
@@ -903,6 +907,10 @@ action-horizontal-rule = Insert a horizontal rule
 action-insert-table = Insert a table
 action-add-table-row = Add a row to the table at the cursor
 action-insert-image = Insert an image
+action-insert-wiki-link = Insert a wiki link to a note in the vault, or to a heading or block in it
+action-toggle-task = Check or uncheck the task on the current line, or make the line a task
+action-cycle-task-status = Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question
+action-insert-callout = Insert a callout of a type you choose; selected lines become its text
 action-replace = Find and replace
 action-copy = Copy the selection, or the sentence at the cursor, to the clipboard
 action-cut = Cut the selection to the clipboard
@@ -2665,6 +2673,11 @@ settings-unit-columns =
         [one] column
        *[other] columns
     }
+settings-unit-groups =
+    { $n ->
+        [one] group
+       *[other] groups
+    }
 settings-unit-characters =
     { $n ->
         [one] character
@@ -2892,6 +2905,45 @@ edit-not-a-table-size = Not a table size: { $text }. Type columns and rows, for 
 # $name is the image's file name.
 edit-image-inserted = Inserted image { $name }. Its description is selected; type to replace it.
 edit-image-failed = Could not insert the image: { $error } The text is unchanged.
+# Edit mode's Obsidian aids: a wiki link, tasks, callouts.
+edit-wikilink-title = Link to a note
+edit-wikilink-intro =
+    { $n ->
+        [one] Link to a note, 1 note. Enter chooses it.
+       *[other] Link to a note, { $n } notes. Enter chooses one.
+    }
+edit-wikilink-no-notes = There are no notes in this vault to link to.
+# $note is the chosen note's title.
+edit-wikilink-anchor-title = Link to part of { $note }
+edit-wikilink-anchor-intro = Link to all of { $note }, or to a heading or block in it. Enter chooses.
+edit-wikilink-whole = The whole note
+edit-wikilink-heading = Heading { $level }: { $text }
+edit-wikilink-block = Block { $id }: { $text }
+# $target is the link as written, such as Cell#Parts.
+edit-wikilink-inserted = Inserted a link to { $target }.
+edit-callout-title = Callout type
+edit-callout-intro = Callout types, { $n }. Enter inserts one.
+# $type is the callout type as written, such as tip.
+edit-callout-inserted = Inserted a { $type } callout. Type its text.
+# The task's status on the current line after Toggle task or Cycle task
+# status; $mark is the status character when it has no name.
+edit-task-status =
+    { $status ->
+        [done] Checked.
+        [open] Not checked.
+        [in-progress] In progress.
+        [cancelled] Cancelled.
+        [forwarded] Forwarded.
+        [important] Important.
+        [question] Question.
+       *[other] Marked { $mark }.
+    }
+edit-task-new = New task, not checked.
+edit-tasks-changed =
+    { $n ->
+        [one] Task changed on 1 line.
+       *[other] Tasks changed on { $n } lines.
+    }
 # $query is the text to find.
 common-no-matches = No matches for { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -3570,15 +3622,23 @@ choice-speech-piper-phonemizer-rust = textweaver's own
 setting-speech-cw-wpm = CW character speed
 setting-speech-cw-wpm-help = How fast each Morse character is sent, in words per minute. While CW is the engine, the rate keys change it by one, and the effective speed with it.
 setting-speech-cw-effective-wpm = CW effective speed
-setting-speech-cw-effective-wpm-help = The overall speed, with Farnsworth spacing. The gaps between characters and words stretch so the text goes this fast; at or above the character speed, the spacing is standard.
+setting-speech-cw-effective-wpm-help = The overall speed, set by stretching the gaps between characters and words (Farnsworth spacing). At or above the character speed, the spacing is standard.
 setting-speech-cw-tone-hz = CW tone
 setting-speech-cw-tone-hz-help = The pitch of the Morse tone. The pitch keys move it by semitones.
 setting-speech-cw-volume = CW tone level
 setting-speech-cw-volume-help = How loud the Morse tone is, before the speech volume.
 setting-speech-cw-prosigns = CW prosigns
-setting-speech-cw-prosigns-help = Send document structure as prosigns. BT follows headings and paragraphs, and AR ends the document. Prosigns written in angle brackets, such as <BT>, are sent too.
+setting-speech-cw-prosigns-help = Send structure as prosigns: BT after headings and paragraphs, AR at the end. Prosigns written in angle brackets, such as <BT>, are sent too.
 setting-speech-cw-status-line = CW characters on the status line
-setting-speech-cw-status-line-help = Show each character on the status line as it is sent. A screen reader can then show it on a Braille display; nothing extra is said.
+setting-speech-cw-status-line-help = Show each character on the status line as it is sent, for a Braille display. Nothing extra is said.
+setting-speech-cw-practice-threshold = CW practice pass mark
+setting-speech-cw-practice-threshold-help = The score in a Koch practice round, in percent, that adds the next character. The Koch method uses 90.
+setting-speech-cw-practice-group = CW practice group size
+setting-speech-cw-practice-group-help = How many characters each practice group has.
+setting-speech-cw-practice-groups = CW practice round length
+setting-speech-cw-practice-groups-help = How many groups a practice round has. After the last, the round's score is said and kept.
+setting-speech-cw-practice-delay-ms = CW practice start delay
+setting-speech-cw-practice-delay-ms-help = The quiet before each group is sent. It comes after the time { -brand }'s own spoken messages are expected to take.
 setting-speech-cw-keyer = CW keyer
 setting-speech-cw-keyer-help = How a paddle's contacts become dits and dahs when keying Morse code. Iambic B adds the opposite element when a squeeze is released during an element; iambic A does not; both remember a contact pressed during an element. Straight keys the tone from either contact.
 choice-speech-cw-keyer-iambic-b = iambic B
@@ -3821,6 +3881,7 @@ gui-updated-to = Updated to { $version }. Help, Documentation describes what is 
 ## each starts in lower case.
 opening-damaged-json = it is not a readable JSON file; it may be too large.
 opening-damaged-notebook = it is not a readable Jupyter notebook; it may be damaged or too large.
+opening-damaged-canvas = it is not a readable canvas; it may be damaged or too large.
 opening-damaged-svg = it is not a readable SVG drawing; it may be damaged or too large.
 opening-damaged-mathml = it is not a readable MathML formula; it may be damaged or too large.
 
@@ -3969,6 +4030,10 @@ name-volume-down = Quieter
 name-cycle-speed-preset = Speed preset
 name-choose-voice = Voices
 name-restart-speech = Restart speech
+name-cw-practice-koch = Koch practice
+name-cw-practice-characters = Random character practice
+name-cw-practice-words = Random word practice
+name-cw-practice-progress = Practice progress
 name-cycle-verbosity = Verbosity
 name-cycle-punctuation = Punctuation
 name-find = Find
@@ -4053,6 +4118,10 @@ name-horizontal-rule = Horizontal rule
 name-insert-table = Insert table
 name-add-table-row = Add table row
 name-insert-image = Insert image
+name-insert-wiki-link = Insert wiki link
+name-toggle-task = Toggle task
+name-cycle-task-status = Cycle task status
+name-insert-callout = Insert callout
 name-replace = Replace
 name-copy = Copy
 name-cut = Cut
@@ -4645,6 +4714,7 @@ sync-stopped = Sync off here. The folder is left as it is.
 prompt-sync-computer-name = Name this computer, Enter keeps it
 menu-sync = Sync
 menu-cards = Study cards
+menu-cw-practice = Morse code practice
 name-sync-setup = Set up sync
 name-sync-status = Sync status
 name-sync-now = Sync now
@@ -5022,6 +5092,7 @@ prompt-comment-reply = Reply
 prompt-comment-text = Comment
 prompt-github-token = GitHub token for your components source, Enter skips
 prompt-import-cards = Import study cards from Anki package
+prompt-cw-copy = Type what you heard
 changes-title = Changes and comments
 # Said when the list opens; $title is changes-title, $n how many rows.
 changes-intro =
@@ -5227,6 +5298,31 @@ cw-skipped =
         [one] 1 character not sent in Morse code.
        *[other] { $count } characters not sent in Morse code.
     }
+## Beta 4: CW practice (Koch method, random drills, copy checking).
+cw-practice-koch-start = Koch lesson { $lesson } of 40, { $count } characters, newest { $new }.
+cw-practice-characters-start = Random characters, { $groups } groups.
+cw-practice-words-start = Random words, { $groups } groups.
+cw-practice-group = Group { $n } of { $groups }.
+cw-practice-again = Again, group { $n } of { $groups }.
+cw-practice-perfect = { $correct } of { $total }, all correct.
+cw-practice-score = { $correct } of { $total }. Missed: { $missed }. Sent: { $sent }.
+cw-practice-wrong = { $sent } as { $typed }
+cw-practice-missing = { $sent } not copied
+cw-practice-extra = { $typed } extra
+cw-practice-round = Round: { $correct } of { $total }, { $percent } percent.
+cw-practice-added = Lesson { $lesson }: added { $new }.
+cw-practice-not-yet = { $threshold } percent adds the next character.
+cw-practice-all-learned = Every character learned.
+cw-practice-stopped = Practice stopped.
+cw-practice-progress = Koch lesson { $lesson } of 40, newest { $new }. { $recent }
+cw-practice-recent = Latest rounds: { $scores } percent.
+cw-practice-no-rounds = No rounds yet.
+cw-practice-unavailable = The CW engine did not start, so practice cannot send.
+cw-char-period = period
+cw-char-comma = comma
+cw-char-equals = equals
+cw-char-slash = slash
+cw-char-question = question mark
 ## Beta 4: CW keying, Morse code typed with a key or paddle. $key is a
 ## key name, $name a MIDI input's name.
 name-cw-keying = CW keying

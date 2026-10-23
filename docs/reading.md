@@ -457,7 +457,7 @@ Press **Ctrl+G**. In a document with pages (a PDF, or any other paged format), t
 
 You hear the page or the percentage, the line, and a preview. Anything else gives, in a paged document: "Not a go-to target:", your text, then "Type a page number, line and a number, a percentage such as 50%, start, or end." Elsewhere: "Type a line number, a percentage such as 50%, start, or end."
 
-Line numbers are lines of the document's text, as in Speech Cursor mode. Press **F6** to show them on screen.
+Line numbers are lines of the document's text, as in Speech Cursor mode. Press **F6** to show them on screen in the terminal reader, or choose View, Line numbers in the app.
 
 ### Pages in a PDF
 

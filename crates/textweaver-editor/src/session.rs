@@ -653,6 +653,22 @@ impl EditSession {
         Ok(ed.apply_formatted(&f)?)
     }
 
+    /// Inserts an Obsidian wiki link to `target` at the caret (see
+    /// [`markdown::wiki_link`]), as one undo step.
+    pub fn insert_wiki_link(&mut self, target: &str) -> Result<Vec<EditOutcome>, SessionError> {
+        let ed = self.editing("insert a link")?;
+        let f = markdown::wiki_link(ed.text(), ed.selection(), target);
+        Ok(ed.apply_formatted(&f)?)
+    }
+
+    /// Inserts an Obsidian callout of type `kind` (see
+    /// [`markdown::insert_callout`]), as one undo step.
+    pub fn insert_callout(&mut self, kind: &str) -> Result<Vec<EditOutcome>, SessionError> {
+        let ed = self.editing("insert a callout")?;
+        let f = markdown::insert_callout(ed.text(), ed.selection(), kind);
+        Ok(ed.apply_formatted(&f)?)
+    }
+
     /// Replaces the match at the caret (see [`find::replace_one`]).
     pub fn replace_one(
         &mut self,

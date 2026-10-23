@@ -430,6 +430,22 @@ impl Builder {
         std::mem::take(&mut self.pauses)
     }
 
+    /// How many markers are closed so far (a mark for
+    /// [`deepen_headings_from`](Self::deepen_headings_from)).
+    pub(crate) fn closed_markers(&self) -> usize {
+        self.markers.len()
+    }
+
+    /// Moves the headings closed since `mark` down `by` levels, to level
+    /// 6 at most: a canvas card's own headings sit below the card's.
+    pub(crate) fn deepen_headings_from(&mut self, mark: usize, by: u8) {
+        for m in self.markers.iter_mut().skip(mark) {
+            if m.kind == MarkerKind::Heading {
+                m.level = m.level.saturating_add(by).min(6);
+            }
+        }
+    }
+
     /// The canonical text and its markers; open markers are closed.
     pub(crate) fn finish(self) -> (String, Vec<Marker>) {
         let (text, markers, _) = self.finish_with_anchors();

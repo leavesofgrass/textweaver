@@ -28,6 +28,7 @@
 //! | [`ArchiveLoader`]: a list of the files inside, or the DAISY book (3 or 2.02) or EPUB it holds | `zip`, and (feature `archives`) `tar`, `tgz`, `gz`, `7z` | [`NATIVE_PRIORITY`] (10) |
 //! | [`JsonLoader`]: JSON with a heading per key, and JSON Lines with a heading per line | `json`, `jsonl`, `ndjson`, `geojson`, `webmanifest` | [`NATIVE_PRIORITY`] (10) |
 //! | [`NotebookLoader`]: Jupyter notebooks, cell by cell | `ipynb` | [`NATIVE_PRIORITY`] (10) |
+//! | [`CanvasLoader`]: Obsidian canvases (JSON Canvas 1.0), card by card, groups as sections, then the connections | `canvas` | [`NATIVE_PRIORITY`] (10) |
 //! | [`SvgLoader`]: a drawing's title, description, titled parts, and text | `svg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`MathMlLoader`]: one formula, presentation or content MathML | `mml`, `mathml` | [`NATIVE_PRIORITY`] (10) |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
@@ -82,6 +83,7 @@ pub mod brf;
 mod builder;
 pub mod cache;
 pub mod callout;
+pub mod canvas;
 #[cfg(feature = "carta")]
 pub mod carta;
 mod counter;
@@ -128,6 +130,7 @@ pub use archive::ArchiveLoader;
 pub use book_audio::{AudioClip, AudioPar, BookAudio, book_audio};
 pub use brf::{BrfCode, BrfLoader};
 pub use cache::{CacheKey, DocumentCache};
+pub use canvas::CanvasLoader;
 #[cfg(feature = "carta")]
 pub use carta::CartaLoader;
 pub use daisy::DaisyLoader;
@@ -493,6 +496,7 @@ impl Registry {
         r.register(Box::new(ArchiveLoader));
         r.register(Box::new(JsonLoader));
         r.register(Box::new(NotebookLoader));
+        r.register(Box::new(CanvasLoader));
         r.register(Box::new(SvgLoader));
         r.register(Box::new(MathMlLoader));
         #[cfg(feature = "carta")]
@@ -776,7 +780,8 @@ mod tests {
             ids.push("image");
         }
         ids.extend([
-            "daisy", "brf", "pptx", "sheet", "archive", "json", "notebook", "svg", "mathml",
+            "daisy", "brf", "pptx", "sheet", "archive", "json", "notebook", "canvas", "svg",
+            "mathml",
         ]);
         if cfg!(feature = "carta") {
             ids.push("carta");

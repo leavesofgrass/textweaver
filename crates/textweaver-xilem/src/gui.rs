@@ -255,6 +255,9 @@ struct Shown {
     mark_names: Vec<String>,
     /// The caret keys the view leaves to the keymap in the app's mode.
     yielded: Option<Vec<textweaver_app::keymap::KeyChord>>,
+    /// Line numbers as the view draws them: the window's first line, or
+    /// `None` when `[display] show_line_numbers` is off.
+    line_numbers: Option<usize>,
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
@@ -1871,6 +1874,19 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         host.edit(DOC, |mut d| DocumentView::set_font(&mut d, font.clone()));
         shown.font = Some(font);
     }
+    // Line numbers (`[display] show_line_numbers`, View, Line numbers):
+    // the document line the window starts on, drawn in the margin.
+    let numbers = app
+        .settings()
+        .display
+        .show_line_numbers
+        .then(|| app.session().zip(shown.window.as_ref()))
+        .flatten()
+        .map(|(s, w)| s.doc.line_of(w.range().start));
+    if numbers != shown.line_numbers {
+        host.edit(DOC, |mut d| DocumentView::set_line_numbers(&mut d, numbers));
+        shown.line_numbers = numbers;
+    }
     // Text spacing and the ruler, drawn by the view.
     let aids = DocAids {
         spacing: (&app.settings().reading_aids.spacing).into(),
@@ -2303,8 +2319,8 @@ impl Gui {
         // it, the window's own commands too.
         let (command, from_menu) = window_command_of(&cmd, self.app.describing_next_key())
             .map_or((None, false), |(a, m)| (Some(a), m));
-        // A command only the terminal reader has (`j` and Shift+J scroll a
-        // screen the window does not draw): said, not run in silence.
+        // A command only the terminal reader has: said, with the reason,
+        // not run in silence ([`crate::parity`]; none at present).
         if let Some(a) = command
             && !crate::menus::in_window(a)
         {
@@ -2356,6 +2372,8 @@ impl Gui {
             | ActionId::ShowPreview
             | ActionId::NextRegion
             | ActionId::PreviousRegion => true,
+            // The view lays out its own lines, so it scrolls itself.
+            ActionId::ScrollDown | ActionId::ScrollUp => self.app.session().is_some(),
             ActionId::Menu => self.native.is_some() && cfg!(windows),
             // The native context menu where the menus are native
             // (Windows); elsewhere the app's list of the same items.
@@ -2583,6 +2601,8 @@ impl Gui {
             ActionId::ShowPreview => self.preview_key(ctx),
             ActionId::NextRegion => self.region_key(ctx, true),
             ActionId::PreviousRegion => self.region_key(ctx, false),
+            ActionId::ScrollDown => self.scroll_key(ctx, true),
+            ActionId::ScrollUp => self.scroll_key(ctx, false),
             ActionId::Replace => self.open_find(ctx, FindState::default()),
             ActionId::ContextMenu => {
                 if !self.show_context_menu(ctx, None) {
@@ -2600,6 +2620,23 @@ impl Gui {
             _ => return false,
         }
         true
+    }
+
+    /// Scroll Down (`j`) or Scroll Up (Shift+J): the document view moves
+    /// one drawn line and the caret stays; the app says what the terminal
+    /// reader's scrolling says ([`App::scrolled_to`]).
+    fn scroll_key(&mut self, ctx: &mut DriverCtx<'_>, down: bool) {
+        let top = ctx
+            .render_root(self.window_id)
+            .edit_widget_with_tag(DOC, |mut d| DocumentView::scroll_line(&mut d, down));
+        if self.log {
+            crate::log::line(&format!(
+                "scroll {}: {top:?}",
+                if down { "down" } else { "up" }
+            ));
+        }
+        self.app.scrolled_to(top, down);
+        self.refresh(ctx);
     }
 
     /// The native context menu (Windows), from the app's model for where

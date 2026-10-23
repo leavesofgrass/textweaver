@@ -46,6 +46,7 @@
 
 mod atomic;
 pub mod cards;
+pub mod cw_practice;
 mod doc_state;
 pub mod fulltext;
 pub mod graph;
@@ -68,6 +69,7 @@ pub mod time;
 
 pub use atomic::atomic_write;
 pub use cards::{Card, CardDeck, CardKind, CardSource, CardStore, Grade, Imported, Review};
+pub use cw_practice::{CwPractice, PracticeScore};
 pub use doc_state::{
     Anchor, Bookmark, ClockStamp, DEFAULT_DEBOUNCE, Deletion, Deletions, DocKey, DocState,
     LEGACY_STATE_FORMAT, MarkKind, MergeReport, NOTE_BACKUPS_MAX, NoteBackup, STATE_FORMAT,
@@ -88,7 +90,8 @@ pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AfterEnd, AppleBackend, AppleSettings, AudioExportFormat,
     AuthoringSettings, BookAudio, BrailleGrade, BrailleSettings, BrailleTableFormat, BrfCode,
-    CW_MAX_WPM, CW_MIN_WPM, CW_TONE_RANGE_HZ, CitationReading, ColorSettings,
+    CW_MAX_WPM, CW_MIN_WPM, CW_PRACTICE_DELAY_MS, CW_PRACTICE_GROUP, CW_PRACTICE_GROUPS,
+    CW_PRACTICE_THRESHOLD, CW_TONE_RANGE_HZ, CitationReading, ColorSettings,
     CommunityLexiconSettings, ComponentsSettings, CursorPlacement, CwKeyer, CwSettings,
     DEFAULT_HEADER_BUTTONS, DEFAULT_TOOLBAR_BUTTONS, DISPLAY_CELLS_RANGE, DectalkSettings,
     DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
