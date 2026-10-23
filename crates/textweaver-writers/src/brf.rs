@@ -1145,6 +1145,12 @@ fn center(braille: &str, width: usize) -> Vec<String> {
         .collect()
 }
 
+/// [`crate::louis_unicode`].
+#[cfg(feature = "liblouis")]
+pub(crate) fn louis_unicode(texts: &[&str], table: &str) -> Result<Vec<String>, String> {
+    louis::translate_unicode(texts, table)
+}
+
 /// Grade 2 through liblouis's `lou_translate`.
 mod louis {
     /// One text as one line of `lou_translate`'s input.
@@ -1159,15 +1165,30 @@ mod louis {
         text.replace(['\n', '\r'], " ").replace('\\', "\\\\")
     }
 
-    /// Translates each text (one per line) with `table`.
+    /// Translates each text (one per line) with `table`, in braille ASCII.
     #[cfg(feature = "liblouis")]
     pub(super) fn translate(texts: &[&str], table: &str) -> Result<Vec<String>, String> {
+        Ok(run(texts, &format!("en-us-brf.dis,{table}"))?
+            .into_iter()
+            .map(|l| crate::ueb::from_unicode(&l).to_ascii_uppercase())
+            .collect())
+    }
+
+    /// Translates each text (one per line) with `table`, in Unicode
+    /// braille patterns, dots 7 and 8 kept.
+    #[cfg(feature = "liblouis")]
+    pub(crate) fn translate_unicode(texts: &[&str], table: &str) -> Result<Vec<String>, String> {
+        run(texts, &format!("unicode.dis,{table}"))
+    }
+
+    /// Runs `lou_translate` with `tables` over the texts, one per line.
+    #[cfg(feature = "liblouis")]
+    fn run(texts: &[&str], tables: &str) -> Result<Vec<String>, String> {
         use std::io::Write;
         use std::process::Stdio;
 
-        let tables = format!("en-us-brf.dis,{table}");
         let mut child = textweaver_store::lou_translate()
-            .args(["--forward", &tables])
+            .args(["--forward", tables])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -1191,10 +1212,7 @@ mod louis {
             ));
         }
         let text = textweaver_core::process::decode_output(&output.stdout);
-        let lines: Vec<String> = text
-            .lines()
-            .map(|l| crate::ueb::from_unicode(l).to_ascii_uppercase())
-            .collect();
+        let lines: Vec<String> = text.lines().map(str::to_owned).collect();
         if lines.len() < texts.len() {
             return Err("lou_translate returned fewer lines than it was given".to_owned());
         }
