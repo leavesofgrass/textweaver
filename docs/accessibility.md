@@ -13,6 +13,13 @@ textweaver is in beta. This statement describes release 0.1.0-beta.3.
 - Lines are short and plainly worded, so that a 40-cell Braille display can show each one without panning.
 - Text size, fonts, spacing, and themes are user-configurable, including a high contrast theme.
 
+## Newer features and how they treat assistive technology
+
+- **The Braille view** (beta 4, the textweaver app) is for sighted learners, teachers, and transcribers. It is one image named "Braille view" with a description saying it is visual only. Its braille is never in the accessibility tree and is never announced, because a screen reader already sends braille to the display. Its dots differ by shape (a disc or a ring), never by color alone. See [The Braille view](reading-aids.md#the-braille-view).
+- **CW** (beta 4) sends text as Morse code. A Braille display user reads the characters sent, or keyed, on the status line, which holds 40 cells with the newest character last; nothing extra is announced. With CW as the engine, textweaver's own messages are also sent in Morse code, so a screen reader is the way to hear them as speech. See [CW](cw.md).
+- **Links between documents** (beta 4) say where you arrived and how to go back, in words, in both forms.
+- The keying adapters were checked from their manuals and not yet with the hardware; see [Known limits](known-limits.md).
+
 ## What has been tested
 
 - **Windows, by listening.** A person who is blind has used the app and the terminal reader with NVDA and JAWS, and with a 40-cell Braille display. The app had two such sessions. The terminal reader's newest Braille layout is waiting for the checklist in [the screen reader guide](screen-readers.md).

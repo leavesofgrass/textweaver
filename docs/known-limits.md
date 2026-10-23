@@ -27,6 +27,18 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 
 - **Scrolling stops near the cursor in a very long document.** `j` and Shift+J scroll within the text the app holds around the cursor, about 120,000 characters; moving the cursor brings in the rest ([Scrolling and line numbers](gui.md#scrolling-and-line-numbers)).
 
+## Braille
+
+- **The Braille view is for looking, not for a Braille display.** It draws braille dots on the screen in the textweaver app, for learning and teaching, and sends nothing to a display or to a screen reader. In the terminal reader it shows Unicode braille in self-voicing mode only.
+- **Contracted braille needs liblouis.** Without it, the Braille view and BRF files from the reader show uncontracted braille and say so ([The Braille view](reading-aids.md#the-braille-view)).
+- **The print line under contracted braille is approximate.** liblouis does not say which print each cell came from, so textweaver pairs them word by word; a contraction that takes shape only at the end of a word is shown over the whole word.
+
+## Obsidian notes and vaults
+
+- **Obsidian Bases are not supported, and plugins are not run.** A Bases file is not opened as a database, and a plugin's query block is read as the text it is. Dataview `key::` fields are read by the `tw vault` commands (import and `properties`), not by the reader.
+- **A vault is the nearest folder holding `.obsidian`.** A note in no vault resolves links only in its own folder and below, and a link never leaves its vault ([Obsidian vaults](vault.md#read-vault-notes-in-textweaver)).
+- **The vault index is bounded:** at most 20,000 notes, 4 MB a note, and 256 MB in all. A canvas is read up to 5,000 cards and 20,000 connections.
+
 ## Reading and speech
 
 - **Cloud voices, Coqui, Festival, and Qt Speech** are not offered.

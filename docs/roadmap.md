@@ -48,6 +48,21 @@ These were planned for earlier betas and arrive in beta 3:
 - The shortcut name "textweaver app".
 - The full rewrite of the guides. Beta 1 and beta 2 correct wording and keep every guide current; beta 3 rewrites them for a university-level reader throughout.
 
+## What beta 4 adds
+
+- **Following links** to other documents, with Back and Forward across them ([Follow a link or a footnote](reading.md#follow-a-link-or-a-footnote-enter-or-altshiftf)).
+- **Every command in the app.** Scrolling by line and line numbers, once the terminal reader's alone, work in the textweaver app ([Scrolling and line numbers](gui.md#scrolling-and-line-numbers)).
+- **Obsidian notes read as Obsidian writes them.** Highlights, comments, task statuses, inline footnotes, embeds, and Mermaid diagrams; links and embeds resolved across the whole vault, block links, properties, backlinks, unresolved links, tags, and canvases; and in edit mode, insert wiki link, toggle task, cycle task status, and insert callout ([Obsidian vaults](vault.md), [Writing and editing](editing.md#obsidian-notes-wiki-links-tasks-and-callouts)).
+- **The Braille view,** braille dots drawn in the app for learning and teaching, with the braille grade setting that also decides contracted braille in BRF files ([The Braille view](reading-aids.md#the-braille-view)).
+- **CW (Morse code).** A speech engine, keying Morse code from a key or paddle into a document, Koch-method practice, and `tw cw monitor` and `tw cw ports` ([CW](cw.md)).
+
+## Shelved
+
+Two pieces of planned beta 4 work are set aside for later. They are not in beta 4 and have no date. The research and a spike are kept for when the work is taken up again.
+
+- **Live data from MQTT:** subscribing to a stream of JSON data and showing each field's current value, in words, on the screen and on a Braille display.
+- **Live captions (CART):** receiving and sending streamed captions for deafblind readers, with a built-in broker, discovery, and pairing.
+
 ## Being built next
 
 - **Stabilization:** fixes from hands-on test sessions, a long soak test, a clean run of the nightly workflow, and native-speaker review of the German, French, Portuguese, and Arabic translations (English and Spanish are checked).
@@ -57,6 +72,7 @@ These were planned for earlier betas and arrive in beta 3:
 The 0.1 series ends with a feature-complete final alpha or beta. None of these is in it, and none is promised for later. The [known limits](known-limits.md) page lists what does not work yet.
 
 - Document translation.
+- Obsidian Bases.
 - Quick-open for feeds, Wikipedia, and PubMed.
 - More speech engines (Coqui, Festival, Qt Speech).
 - Pauses written as speech markup (SSML). Pauses after headings, paragraphs, and list items, and the break tag, already work.
