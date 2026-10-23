@@ -24,7 +24,8 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use textweaver_core::{Utterance, UtteranceId};
 use textweaver_cw::{Options, RenderOptions, Schedule, Timing, schedule, sending, to_samples};
@@ -404,6 +405,49 @@ impl SpeechBackend for CwBackend {
                 })
                 .collect(),
         })
+    }
+}
+
+/// The sidetone heard while keying Morse code: the CW tone at the
+/// `[speech.cw]` pitch and level, on the audio device, following the key
+/// ([`Sidetone::set`]). It plays apart from speech, with the output's
+/// small buffer as its only delay. Tests never start one: it has no
+/// silent output.
+pub struct Sidetone {
+    key: Arc<AtomicBool>,
+    _player: textweaver_enginehost::Player,
+}
+
+impl std::fmt::Debug for Sidetone {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Sidetone").finish_non_exhaustive()
+    }
+}
+
+impl Sidetone {
+    /// Opens the audio device for the sidetone of `options`.
+    pub fn start(options: &CwOptions) -> Result<Self, SpeechError> {
+        let key = Arc::new(AtomicBool::new(false));
+        let mut tone = textweaver_cw::Sidetone::new(
+            SAMPLE_RATE,
+            f64::from(options.tone_hz),
+            f64::from(options.volume.min(100)) / 100.0,
+            RenderOptions::default().edge_ms,
+        );
+        let down = Arc::clone(&key);
+        let player =
+            textweaver_enginehost::Player::start_generator(BACKEND_ID, SAMPLE_RATE, move || {
+                tone.next(down.load(Ordering::Relaxed))
+            })?;
+        Ok(Sidetone {
+            key,
+            _player: player,
+        })
+    }
+
+    /// The key went down (true) or up: the tone rises or falls.
+    pub fn set(&self, down: bool) {
+        self.key.store(down, Ordering::Relaxed);
     }
 }
 

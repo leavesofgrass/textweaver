@@ -440,6 +440,49 @@ impl Player {
     /// [`lost`](Self::lost).
     #[cfg(feature = "playback")]
     fn device(backend: BackendId, feed: Arc<Feed>, sample_rate: u32) -> Result<Self, SpeechError> {
+        Self::open_device(backend, sample_rate, move |rate| FeedSource {
+            reader: FeedReader::new(feed),
+            rate,
+        })
+    }
+
+    /// Starts the device (the chosen one, or the default) playing
+    /// `next()`, one mono sample from -1 to 1 at `sample_rate` Hz each
+    /// call, from the audio system's thread, until the player is dropped:
+    /// a sound made as it plays (the keying sidetone, whose length is
+    /// not known in advance). `next` must be quick and must not block.
+    /// Device output only; there is no silent output for it, so tests
+    /// never start one.
+    pub fn start_generator(
+        backend: BackendId,
+        sample_rate: u32,
+        next: impl FnMut() -> f32 + Send + 'static,
+    ) -> Result<Self, SpeechError> {
+        #[cfg(feature = "playback")]
+        {
+            Self::open_device(backend, sample_rate, move |rate| GeneratorSource {
+                next,
+                rate,
+            })
+        }
+        #[cfg(not(feature = "playback"))]
+        {
+            let _ = (sample_rate, next);
+            Err(SpeechError::Unavailable(
+                backend,
+                "built without the playback feature".into(),
+            ))
+        }
+    }
+
+    /// Opens the device on its own thread with the source `make` builds,
+    /// and returns at once (see [`Player::device`]).
+    #[cfg(feature = "playback")]
+    fn open_device<S: rodio::Source + Send + 'static>(
+        backend: BackendId,
+        sample_rate: u32,
+        make: impl FnOnce(rodio::SampleRate) -> S + Send + 'static,
+    ) -> Result<Self, SpeechError> {
         let rate = std::num::NonZero::new(sample_rate)
             .ok_or_else(|| SpeechError::Engine("sample rate 0".into()))?;
         let (answer_tx, answer) = std::sync::mpsc::channel();
@@ -461,10 +504,7 @@ impl Player {
                     }
                 };
                 sink.log_on_drop(false);
-                sink.mixer().add(FeedSource {
-                    reader: FeedReader::new(feed),
-                    rate,
-                });
+                sink.mixer().add(make(rate));
                 let _ = answer_tx.send(Ok(sink.mixer().clone()));
                 // Open until the player is dropped (its sender closes).
                 let _ = closed.recv();
@@ -804,6 +844,38 @@ impl FeedReader {
         let real = self.pos < self.real;
         self.pos += 1;
         real.then_some(v)
+    }
+}
+
+/// An endless rodio source made sample by sample ([`Player::start_generator`]).
+#[cfg(feature = "playback")]
+struct GeneratorSource<F> {
+    next: F,
+    rate: rodio::SampleRate,
+}
+
+#[cfg(feature = "playback")]
+impl<F: FnMut() -> f32> Iterator for GeneratorSource<F> {
+    type Item = rodio::Sample;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some((self.next)())
+    }
+}
+
+#[cfg(feature = "playback")]
+impl<F: FnMut() -> f32> rodio::Source for GeneratorSource<F> {
+    fn current_span_len(&self) -> Option<usize> {
+        None
+    }
+    fn channels(&self) -> rodio::ChannelCount {
+        rodio::ChannelCount::MIN
+    }
+    fn sample_rate(&self) -> rodio::SampleRate {
+        self.rate
+    }
+    fn total_duration(&self) -> Option<Duration> {
+        None
     }
 }
 
