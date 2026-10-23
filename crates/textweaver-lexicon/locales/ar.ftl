@@ -810,6 +810,7 @@ keyname-end = End
 action-play-pause = تشغيل أو إيقاف مؤقت للقراءة من الكلمة الحالية
 action-stop = إيقاف القراءة، أو إنهاء التحرير إن لم تكن هناك قراءة
 action-read-from-cursor = القراءة المتواصلة من المؤشر
+action-activate = اتباع الرابط أو الحاشية عند المؤشر، أو القراءة المتواصلة من المؤشر في أي مكان آخر
 action-read-document = قراءة المستند كاملًا من البداية
 action-read-current-character = نطق الحرف عند المؤشر
 action-read-current-word = نطق الكلمة عند المؤشر
@@ -1948,9 +1949,14 @@ links-heading-label = عنوان
 links-no-heading = لا عنوان باسم { $anchor } في هذا المستند.
 # $file is the file the link names.
 links-file-not-found = الرابط يذهب إلى { $file }، الذي لم يُعثر عليه.
-# $file is the file's name; $key names the History Back command's keys.
-links-followed = اتُّبع الرابط إلى { $file }. الرجوع: { $key }.
-links-back-in = الرجوع في { $file }.
+# $title is the document's title; $heading is the heading arrived at, $anchor
+# the heading a link names; $key names the History Back command's keys;
+# $text is the first words at the position arrived at.
+links-opened = فُتح { $title }. الرجوع: { $key }.
+links-opened-at = فُتح { $title }، عند { $heading }. الرجوع: { $key }.
+links-opened-no-heading = فُتح { $title }، في البداية: لا عنوان باسم { $anchor }. الرجوع: { $key }.
+links-back-in = الرجوع في { $title }: { $text }
+links-forward-in = التقدّم في { $title }: { $text }
 # $label is the footnote's label, such as 1.
 links-back-to-footnote-reference = الرجوع إلى مرجع الحاشية { $label }، السطر { $line }.
 # $text is the start of the note.

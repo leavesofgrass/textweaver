@@ -1070,7 +1070,8 @@ mod tests {
             ("j", ActionId::ScrollDown),
             ("k", ActionId::ScrollUp),
             ("Space", ActionId::PlayPause),
-            ("Enter", ActionId::ReadFromCursor),
+            // Enter follows a link, and reads from the cursor elsewhere.
+            ("Enter", ActionId::Activate),
             ("+", ActionId::RateUp),
             ("=", ActionId::RateUp),
             ("-", ActionId::RateDown),
