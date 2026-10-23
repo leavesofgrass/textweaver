@@ -1132,6 +1132,9 @@ impl App {
     }
 
     pub(crate) fn change_rate(&mut self, delta: i32) {
+        if self.cw_engine() {
+            return self.cw_change_rate(delta);
+        }
         let old = self.settings.speech.rate;
         let new = old.step(delta);
         if new == old {

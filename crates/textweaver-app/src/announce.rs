@@ -269,6 +269,9 @@ mod tests {
             // (they are said at the pause through announce_as): content
             // for the Braille display, like the screen say all.
             ("dictation.rs", "fn show_dictation_line"),
+            // The characters CW is sending, on the status line for the
+            // Braille display: content being read, shown and never said.
+            ("cw.rs", "fn cw_tick"),
         ];
         let mut bad = Vec::new();
         for entry in std::fs::read_dir(&dir).unwrap() {

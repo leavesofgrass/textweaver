@@ -334,6 +334,7 @@ pub const INFO: &[Info] = &[
             ("avspeech", "Apple AVSpeech"),
             ("dectalk", "DECtalk"),
             ("omnivox", "Omnivox"),
+            ("cw", "CW (Morse code)"),
             ("null", "silent"),
         ],
     ),
@@ -524,6 +525,44 @@ pub const INFO: &[Info] = &[
             ("library", "espeak-ng library"),
             ("rust", "textweaver's own"),
         ],
+    ),
+    number(
+        "speech.cw.wpm",
+        "CW character speed",
+        "How fast each Morse character is sent, in words per minute. While CW is the engine, the rate keys change it by one, and the effective speed with it.",
+        (5.0, 50.0, 1.0),
+        "words per minute",
+    ),
+    number(
+        "speech.cw.effective_wpm",
+        "CW effective speed",
+        "The overall speed: the gaps between characters and words stretch so the text goes this fast (Farnsworth spacing). At or above the character speed, the spacing is standard.",
+        (5.0, 50.0, 1.0),
+        "words per minute",
+    ),
+    number(
+        "speech.cw.tone_hz",
+        "CW tone",
+        "The pitch of the Morse tone. The pitch keys move it by semitones.",
+        (200.0, 1500.0, 10.0),
+        "hertz",
+    ),
+    number(
+        "speech.cw.volume",
+        "CW tone level",
+        "How loud the Morse tone is, before the speech volume.",
+        (0.0, 100.0, 5.0),
+        "percent",
+    ),
+    toggle(
+        "speech.cw.prosigns",
+        "CW prosigns",
+        "Send structure as prosigns: BT after headings and paragraphs, AR at the end of the document. Prosigns written in angle brackets, such as <BT>, are sent too.",
+    ),
+    toggle(
+        "speech.cw.status_line",
+        "CW characters on the status line",
+        "Show each character on the status line as it is sent, so a screen reader can show it on a Braille display. Nothing extra is said.",
     ),
     table(
         "speech.voice_params",
@@ -2558,6 +2597,9 @@ impl App {
                 // Open outputs move to the new device on their next look.
                 textweaver_engines::apply_output_device(&self.settings);
             }
+        }
+        if path.starts_with("speech.cw") && self.settings.speech.cw != old.speech.cw {
+            self.apply_cw_settings();
         }
         if self.settings.keyboard.character_keys != old.keyboard.character_keys {
             self.keymap

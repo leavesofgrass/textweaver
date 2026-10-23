@@ -2278,6 +2278,7 @@ choice-speech-backend-nsspeech = Apple NSSpeech
 choice-speech-backend-avspeech = Apple AVSpeech
 choice-speech-backend-dectalk = DECtalk
 choice-speech-backend-omnivox = Omnivox
+choice-speech-backend-cw = CW (شفرة مورس)
 choice-speech-backend-null = صامت
 setting-speech-rate = السرعة
 setting-speech-rate-help = سرعة كلام textweaver.
@@ -2736,6 +2737,11 @@ choice-gui-sidebar-notes = الملاحظات
 ## الوحدات، تُقال بعد رقم.
 
 settings-unit-words-per-minute = كلمة في الدقيقة
+settings-unit-hertz =
+    { $n ->
+        [one] هرتز
+       *[other] هرتز
+    }
 settings-unit-percent = بالمئة
 settings-unit-semitones = نصف نغمة
 settings-unit-milliseconds =
@@ -3782,6 +3788,18 @@ setting-speech-piper-phonemizer-help = كيف يحوّل Piper النص إلى �
 choice-speech-piper-phonemizer-auto = تلقائي
 choice-speech-piper-phonemizer-library = مكتبة espeak-ng
 choice-speech-piper-phonemizer-rust = محوِّل textweaver
+setting-speech-cw-wpm = سرعة أحرف CW
+setting-speech-cw-wpm-help = سرعة إرسال كل حرف مورس، بالكلمات في الدقيقة. ما دام CW هو المحرك، تغيرها مفاتيح السرعة بمقدار واحد، وتتغير السرعة الفعلية معها.
+setting-speech-cw-effective-wpm = السرعة الفعلية لـ CW
+setting-speech-cw-effective-wpm-help = السرعة الإجمالية: تطول الفواصل بين الأحرف والكلمات حتى يسير النص بهذه السرعة (تباعد فارنزورث). عند سرعة الأحرف أو فوقها يكون التباعد قياسيًا.
+setting-speech-cw-tone-hz = نغمة CW
+setting-speech-cw-tone-hz-help = طبقة نغمة مورس. تحركها مفاتيح الطبقة بأنصاف النغمات.
+setting-speech-cw-volume = مستوى نغمة CW
+setting-speech-cw-volume-help = مدى ارتفاع نغمة مورس، قبل مستوى صوت الكلام.
+setting-speech-cw-prosigns = الإشارات الإجرائية في CW
+setting-speech-cw-prosigns-help = إرسال البنية إشاراتٍ إجرائية: BT بعد العناوين والفقرات، وAR في نهاية المستند. وتُرسل أيضًا الإشارات المكتوبة بين قوسين زاويين مثل <BT>.
+setting-speech-cw-status-line = أحرف CW في سطر الحالة
+setting-speech-cw-status-line-help = إظهار كل حرف في سطر الحالة عند إرساله، ليعرضه قارئ الشاشة على سطر برايل. لا يُقال شيء إضافي.
 setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
 setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة. اختيار الصوت مجددًا يعيدهما.
 setting-authoring-author = المؤلف
@@ -5349,3 +5367,11 @@ changes-tracked-refused =
        *[other] لم يُحفظ: { $n } تغييرات في { $file } تعبر فقرة أو تقع في رابط أو حقل، فلا يمكن تتبعها. الحفظ باسم يحتفظ بتعديلاتك بصيغة Markdown.
     }
 ## End of B1-t2
+## Beta 4: CW (Morse code) as a speech engine.
+cw-sending = CW: { $text }
+cw-speed = سرعة الأحرف { $wpm }، والسرعة الفعلية { $effective } كلمة في الدقيقة.
+cw-skipped =
+    { $count ->
+        [one] حرف واحد لم يُرسل بشفرة مورس.
+       *[other] { $count } من الأحرف لم تُرسل بشفرة مورس.
+    }

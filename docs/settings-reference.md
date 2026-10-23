@@ -6,7 +6,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Speech: the `[speech]` section
 
-- `speech.backend`: default automatic (`"auto"`). Speech engine. The speech engine: auto picks the best one available. A change restarts speech. Choices: `"auto"` (automatic), `"eci"` (Eloquence), `"sapi"` (SAPI 5 voices), `"espeak"` (eSpeak NG), `"speechd"` (Speech Dispatcher), `"nsspeech"` (Apple NSSpeech), `"avspeech"` (Apple AVSpeech), `"dectalk"` (DECtalk), `"omnivox"` (Omnivox), `"null"` (silent). Other values may be written too. Stays on this computer.
+- `speech.backend`: default automatic (`"auto"`). Speech engine. The speech engine: auto picks the best one available. A change restarts speech. Choices: `"auto"` (automatic), `"eci"` (Eloquence), `"sapi"` (SAPI 5 voices), `"espeak"` (eSpeak NG), `"speechd"` (Speech Dispatcher), `"nsspeech"` (Apple NSSpeech), `"avspeech"` (Apple AVSpeech), `"dectalk"` (DECtalk), `"omnivox"` (Omnivox), `"cw"` (CW (Morse code)), `"null"` (silent). Other values may be written too. Stays on this computer.
 - `speech.rate`: default 265 words per minute. Rate. How fast textweaver speaks. From 50 to 900 words per minute, in steps of 20. Syncs between computers.
 - `speech.volume`: default 100 percent. Volume. How loud textweaver speaks. From 0 to 100 percent, in steps of 10. Stays on this computer.
 - `speech.pitch`: default 0 semitones. Pitch. Higher or lower than the voice's own pitch. From -12 to 12 semitones, in steps of 1. Syncs between computers.
@@ -37,6 +37,12 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.piper.voices`: default not set. Piper voices folder. The folder of Piper voices; not set uses the piper folder in textweaver's data folder. Text; empty means not set. Stays on this computer.
 - `speech.piper.voice`: default not set. Piper voice. The Piper voice to start with, by id; not set takes the first installed. Text; empty means not set. Stays on this computer.
 - `speech.piper.phonemizer`: default automatic (`"auto"`). Piper phonemizer. How Piper turns text into sounds. The espeak-ng library when installed, that library, or textweaver's own. Choices: `"auto"` (automatic), `"library"` (espeak-ng library), `"rust"` (textweaver's own). Stays on this computer.
+- `speech.cw.wpm`: default 20 words per minute. CW character speed. How fast each Morse character is sent, in words per minute. While CW is the engine, the rate keys change it by one, and the effective speed with it. From 5 to 50 words per minute, in steps of 1. Syncs between computers.
+- `speech.cw.effective_wpm`: default 10 words per minute. CW effective speed. The overall speed: the gaps between characters and words stretch so the text goes this fast (Farnsworth spacing). At or above the character speed, the spacing is standard. From 5 to 50 words per minute, in steps of 1. Syncs between computers.
+- `speech.cw.tone_hz`: default 600 hertz. CW tone. The pitch of the Morse tone. The pitch keys move it by semitones. From 200 to 1500 hertz, in steps of 10. Syncs between computers.
+- `speech.cw.volume`: default 50 percent. CW tone level. How loud the Morse tone is, before the speech volume. From 0 to 100 percent, in steps of 5. Syncs between computers.
+- `speech.cw.prosigns`: default on (`true`). CW prosigns. Send structure as prosigns: BT after headings and paragraphs, AR at the end of the document. Prosigns written in angle brackets, such as <BT>, are sent too. On or off: `true` or `false`. Syncs between computers.
+- `speech.cw.status_line`: default on (`true`). CW characters on the status line. Show each character on the status line as it is sent, so a screen reader can show it on a Braille display. Nothing extra is said. On or off: `true` or `false`. Syncs between computers.
 - `speech.voice_params`: default none. Rate and pitch per voice. The rate and pitch each voice was last used at. Choosing a voice again brings them back. A table of names and values, edited in the file. Stays on this computer.
 
 ## Highlight: the `[highlight]` section

@@ -84,6 +84,8 @@ textweaver-a11y.workspace = true
 textweaver-editor.workspace = true
 # The backend registry and every engine crate, through one crate.
 textweaver-engines.workspace = true
+# What CW is sending, for the status line (crate::cw).
+textweaver-cw.workspace = true
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
 # Downloading Lexend on first choice (W7l); HTTP only with `publish`.
