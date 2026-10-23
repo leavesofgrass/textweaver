@@ -215,6 +215,10 @@ pub fn speak(
         .collect();
     let (engine, config) = started.value;
     let pipeline = |caps: Caps| {
+        // CW sends the text exactly as written.
+        if caps.contains(Caps::RAW_TEXT) {
+            return Pipeline::new();
+        }
         Pipeline::for_settings(
             &config.normalize,
             config.punctuation,

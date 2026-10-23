@@ -442,6 +442,7 @@ enum Command {
     SetPacing(PacingConfig),
     SetPauses(PauseConfig),
     SetRecorded(Option<Arc<RecordedPlan>>),
+    Respeak,
     SpeakChar(char, Option<CharPos>),
     Preview(String, String),
     Tone(f32, u32),
@@ -754,6 +755,13 @@ impl SpeechService {
     /// uses it. See [`crate::recorded`].
     pub fn set_recorded(&self, plan: Option<Arc<RecordedPlan>>) {
         self.post(Command::SetRecorded(plan));
+    }
+    /// Engine options changed outside the voice parameters (CW's speeds
+    /// and tone, which the engine reads at each utterance): the reading
+    /// in progress restarts from the last confirmed word, so the change is
+    /// heard at once, as a new rate is.
+    pub fn respeak(&self) {
+        self.post(Command::Respeak);
     }
     /// Speaks one character (scaled rate, caps indication), optionally
     /// mapped to a document position.
@@ -1323,6 +1331,7 @@ impl ServiceCore {
             Command::SetPacing(p) => self.set_pacing(p),
             Command::SetPauses(p) => self.set_pauses(p),
             Command::SetRecorded(plan) => self.set_recorded(plan),
+            Command::Respeak => self.respeak_with_new_params(),
             Command::SpeakChar(c, at) => self.speak_char(c, at),
             Command::Preview(voice, text) => self.preview(&voice, &text),
             Command::Tone(hz, ms) => self.tone(hz, ms),
