@@ -52,6 +52,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 ### Speech
 
 - [Speech engines and voices](speech.md): the engines, choosing a voice, rate, pitch, and volume.
+- [CW: reading in Morse code](cw.md): Morse code as a speech engine, Farnsworth speeds, prosigns, the characters on a Braille display, and `tw cw monitor` for key adapters.
 - [Getting ETI-Eloquence](eloquence.md): Eloquence on macOS, Linux, and Windows.
 - [Using DECtalk](dectalk.md): a DECtalk you have installed and licensed.
 - [Audio export](audio-export.md): `tw export-audio`, audiobooks with chapters, and subtitles.
@@ -83,7 +84,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [The polish checklist and its tests](dev/checklist-tests.md): each row of the consistency, accessibility, visual, and documentation checklist, with the test that holds it or the owner's session that covers it.
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
 - [The eSpeak NG helper](dev/espeak-helper.md): how eSpeak NG runs in its own helper program, how textweaver chooses between it and the in-process backend, and the measurement behind the choice.
-- [The crates](dev/architecture.md#the-crates): what each of the 39 crates does, with its ADRs.
+- [The crates](dev/architecture.md#the-crates): what each of the 40 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the 35 cargo-fuzz targets, run by the nightly workflow when started by hand: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, and the engine-host protocol.

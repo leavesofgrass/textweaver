@@ -108,6 +108,7 @@ CRATE_ADRS = {
     "espeak": ["0012"],
     "host": ["0007", "0012"],
     "piper": ["0023", "0012"],
+    "cw": [],  # no ADR; beta 4, the design is in the CW guide
     "fonts": ["0017", "0022"],
     "lexicon": ["0025"],
     "engines": ["0001", "0012"],
@@ -120,6 +121,7 @@ CRATE_NO_ADR_NOTE = {
     "sync": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
     "components": ("Optional components", "../components.md#for-developers"),
     "launcher": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
+    "cw": ("CW: reading in Morse code", "../cw.md"),
 }
 
 # ---------------------------------------------------------------------------
@@ -139,7 +141,7 @@ LAYERS = [
     ("state", "State and input", "Settings, saved positions, sync between computers, keys, announcements, and editing.",
      ["store", "sync", "keymap", "a11y", "editor"]),
     ("speech", "Speech", "The speech service, its backends, and audio export.",
-     ["speech", "engines", "enginehost", "host", "eci", "sapi", "apple", "dectalk", "espeak", "piper", "export"]),
+     ["speech", "engines", "enginehost", "host", "eci", "sapi", "apple", "dectalk", "espeak", "piper", "cw", "export"]),
     ("document", "Document", "The document model and what loads, speaks, and cites it.",
      ["text", "formats", "ocr", "math", "mathcat", "cite"]),
     ("foundation", "Foundation", "Shared types that everything else builds on, and the one downloader.", ["core", "components"]),

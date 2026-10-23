@@ -4,6 +4,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### CW (Morse code)
+
+- **New: CW as a speech engine** (`[speech] backend = "cw"`, "CW (Morse code)" in Settings). Play sends the document in International Morse code (ITU-R M.1677-1) as a tone, exactly as written: the text normalizer is skipped, and a character Morse code does not have is skipped and counted on the status line when the reading ends. Word times come from the computed schedule, so the highlight and RSVP follow the word being sent exactly and stop with the audio when it pauses; audio export writes CW with the same word times. Speeds are PARIS words per minute with Farnsworth spacing by the ARRL formula. The rate keys change the character speed by one word per minute and the effective speed in proportion; the pitch keys move the tone by semitones. Each element rises and falls on a 5 ms raised cosine, so it does not click. CW is opt-in: it is never a fallback engine ([CW](docs/cw.md)).
+- **New: `[speech.cw]` settings**: `wpm` (20) and `effective_wpm` (10), each 5 to 50; `tone_hz` (600, 200 to 1500); `volume` (50 percent); `prosigns` (on: BT after headings and paragraphs, AR at the end of the document, and `<BT>` written in a text sent as a prosign); `status_line` (on: the characters being sent shown on the status line, newest last, in 40 cells, so a screen reader shows them on a Braille display; nothing extra is announced).
+- **New: `tw cw monitor`** prints MIDI messages (notes on and off with their number and channel, controllers) and key presses and releases in words, with the time each arrived, for recording what a Morse key adapter sends. It only prints. MIDI comes through midir (MIT), on Windows through its WinRT backend so Bluetooth LE MIDI devices such as the N6ARA TinyMIDI are listed; `--port`, `--no-keys`, `--no-midi` and `--seconds` choose what it listens to, and `tw cw ports` lists the MIDI inputs.
+- New crate `textweaver-cw`: the Morse tables, timing, schedule and tone renderer, pure, with tests of the tables, PARIS and Farnsworth timing, and a golden hash of a rendered clip. The speech crate gains `Caps::RAW_TEXT` for engines that take the text exactly as written, and `SpeechService::respeak`.
+
 ### Reading and speech
 
 - "Paused." is said at every interface announcement level, minimal and off included, so pausing is always confirmed with a screen reader running.

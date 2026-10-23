@@ -15,6 +15,7 @@ Each speech engine has a short id, used by `--backend` and by the `backend` sett
 - `espeak`: eSpeak NG, from a copy you installed. It runs in one of two ways. On Linux and macOS it runs inside textweaver, in builds made with it (the Linux AppImage and tarball, and the Linux install script); install the `espeak-ng` package to use it. On Windows it runs in an engine host: install eSpeak NG with its Windows installer, 64-bit or 32-bit, and textweaver starts the host that matches that copy. Without eSpeak NG, the backend is not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead, and a copy in textweaver's components folder, from your own components source, is loaded first (see [Optional components](components.md#your-own-components-source)). The setting `[speech.espeak] helper` chooses between the two ways; see [below](#speechespeak-espeak-ng).
 - `speechd`: Speech Dispatcher, the speech service Orca uses on Linux. In builds made with it; the Linux install script includes it.
 - `omnivox`: an Omnivox speech server, a separate program found on your `PATH`. It supports rate and tones, but not pitch, volume, or voice selection.
+- `cw`: CW, Morse code sent as a tone, character by character, exactly as written. Every platform. It is used only when you choose it, never as a fallback. See [CW: reading in Morse code](cw.md).
 - `null`: silent. It is used when no other engine works, and by `--no-speech`.
 
 A further engine, `recording`, is silent and exists for automated tests; it is used only when named.
@@ -301,6 +302,10 @@ phonemizer = "auto"
 - `voices`: the folder of Piper voices. Default: `<data>/piper/voices`. `TEXTWEAVER_PIPER_VOICES` overrides it for one run.
 - `voice`: the voice Piper starts with when `[speech] voice` does not name one of its voices. Default: the first English voice.
 - `phonemizer`: `auto` (the installed eSpeak NG, else the built-in one), `library`, or `rust`.
+
+### [speech.cw]: Morse code
+
+The character speed, the effective (Farnsworth) speed, the tone, its level, prosigns for structure, and the characters on the status line. See [CW: reading in Morse code](cw.md#the-settings).
 
 ### [speech.espeak]: eSpeak NG
 

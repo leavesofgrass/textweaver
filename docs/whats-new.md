@@ -2,6 +2,12 @@
 
 This page summarizes what each release brought, for readers who want the changes without the full record. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-beta.4
+
+Not yet released.
+
+- **CW: reading in Morse code.** CW is a speech engine beside the others: choose it, and Play sends the document as a tone in Morse code, exactly as written. The highlight and RSVP follow each word as it is sent, the rate keys change the character speed, and audio export writes Morse code. Speeds use Farnsworth spacing (20 words per minute characters at an effective 10 by default, 5 to 50), the tone is 600 Hz with soft edges that do not click, and structure is sent as prosigns: BT around headings and between paragraphs, AR at the end. For a Braille display, the status line shows each character as it is sent. `tw cw monitor` prints what a Morse key adapter sends, MIDI or keys, in words. See [CW: reading in Morse code](cw.md).
+
 ## 0.1.0-beta.3
 
 Released on Saturday, October 17, 2026.
