@@ -886,6 +886,10 @@ action-horizontal-rule = Insertar una línea horizontal
 action-insert-table = Insertar una tabla
 action-add-table-row = Agregar una fila a la tabla en el cursor
 action-insert-image = Insertar una imagen
+action-insert-wiki-link = Insertar un enlace wiki a una nota de la bóveda, o a un encabezado o bloque de ella
+action-toggle-task = Marcar o desmarcar la tarea de la línea actual, o convertir la línea en una tarea
+action-cycle-task-status = Pasar la tarea de la línea actual a su siguiente estado: en curso, hecha, cancelada, reenviada, importante, pregunta
+action-insert-callout = Insertar un aviso (callout) del tipo que elija; las líneas seleccionadas pasan a ser su texto
 action-replace = Buscar y reemplazar
 action-copy = Copiar la selección, o la oración en el cursor, al portapapeles
 action-cut = Cortar la selección al portapapeles
@@ -2853,6 +2857,40 @@ edit-not-a-table-size = No es un tamaño de tabla: { $text }. Escriba columnas y
 # $name is the image's file name.
 edit-image-inserted = Se insertó la imagen { $name }. Su descripción está seleccionada; escriba para reemplazarla.
 edit-image-failed = No se pudo insertar la imagen: { $error } El texto no ha cambiado.
+# Edit mode's Obsidian aids: a wiki link, tasks, callouts.
+edit-wikilink-title = Enlazar a una nota
+edit-wikilink-intro =
+    { $n ->
+        [one] Enlazar a una nota, 1 nota. Intro la elige.
+       *[other] Enlazar a una nota, { $n } notas. Intro elige una.
+    }
+edit-wikilink-no-notes = No hay notas en esta bóveda a las que enlazar.
+edit-wikilink-anchor-title = Enlazar a una parte de { $note }
+edit-wikilink-anchor-intro = Enlazar a toda la nota { $note }, o a un encabezado o bloque de ella. Intro elige.
+edit-wikilink-whole = La nota completa
+edit-wikilink-heading = Encabezado { $level }: { $text }
+edit-wikilink-block = Bloque { $id }: { $text }
+edit-wikilink-inserted = Se insertó un enlace a { $target }.
+edit-callout-title = Tipo de aviso
+edit-callout-intro = Tipos de aviso, { $n }. Intro inserta uno.
+edit-callout-inserted = Se insertó un aviso de tipo { $type }. Escriba su texto.
+edit-task-status =
+    { $status ->
+        [done] Marcada.
+        [open] Sin marcar.
+        [in-progress] En curso.
+        [cancelled] Cancelada.
+        [forwarded] Reenviada.
+        [important] Importante.
+        [question] Pregunta.
+       *[other] Marcada con { $mark }.
+    }
+edit-task-new = Nueva tarea, sin marcar.
+edit-tasks-changed =
+    { $n ->
+        [one] Tarea cambiada en 1 línea.
+       *[other] Tareas cambiadas en { $n } líneas.
+    }
 # $query is the text to find.
 common-no-matches = Sin coincidencias para { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -3743,6 +3781,7 @@ gui-updated-to = Actualizado a { $version }. Ayuda, Documentación describe las 
 ## each starts in lower case.
 opening-damaged-json = no es un archivo JSON legible; puede ser demasiado grande.
 opening-damaged-notebook = no es un cuaderno de Jupyter legible; puede estar dañado o ser demasiado grande.
+opening-damaged-canvas = no es un lienzo legible; puede estar dañado o ser demasiado grande.
 opening-damaged-svg = no es un dibujo SVG legible; puede estar dañado o ser demasiado grande.
 opening-damaged-mathml = no es una fórmula MathML legible; puede estar dañada o ser demasiado grande.
 
@@ -3975,6 +4014,10 @@ name-horizontal-rule = Línea horizontal
 name-insert-table = Insertar tabla
 name-add-table-row = Añadir fila a la tabla
 name-insert-image = Insertar imagen
+name-insert-wiki-link = Insertar enlace wiki
+name-toggle-task = Marcar tarea
+name-cycle-task-status = Cambiar estado de la tarea
+name-insert-callout = Insertar aviso
 name-replace = Reemplazar
 name-copy = Copiar
 name-cut = Cortar

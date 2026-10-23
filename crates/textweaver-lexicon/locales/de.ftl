@@ -922,6 +922,10 @@ action-horizontal-rule = Eine horizontale Linie einfügen
 action-insert-table = Eine Tabelle einfügen
 action-add-table-row = Eine Zeile zur Tabelle am Cursor hinzufügen
 action-insert-image = Ein Bild einfügen
+action-insert-wiki-link = Einen Wiki-Link zu einer Notiz im Vault einfügen, oder zu einer Überschrift oder einem Block darin
+action-toggle-task = Die Aufgabe in der aktuellen Zeile abhaken oder das Häkchen entfernen, oder die Zeile zu einer Aufgabe machen
+action-cycle-task-status = Die Aufgabe in der aktuellen Zeile auf den nächsten Status setzen: in Arbeit, erledigt, abgebrochen, weitergeleitet, wichtig, Frage
+action-insert-callout = Einen Hinweisblock (Callout) eines gewählten Typs einfügen; markierte Zeilen werden sein Text
 action-replace = Suchen und ersetzen
 action-copy = Die Auswahl oder den Satz am Cursor in die Zwischenablage kopieren
 action-cut = Die Auswahl in die Zwischenablage ausschneiden
@@ -2877,6 +2881,40 @@ edit-not-a-table-size = Keine Tabellengröße: { $text }. Geben Sie Spalten und 
 # $name is the image's file name.
 edit-image-inserted = Bild { $name } eingefügt. Seine Beschreibung ist ausgewählt; tippen Sie, um sie zu ersetzen.
 edit-image-failed = Das Bild konnte nicht eingefügt werden: { $error } Der Text ist unverändert.
+# Edit mode's Obsidian aids: a wiki link, tasks, callouts.
+edit-wikilink-title = Link zu einer Notiz
+edit-wikilink-intro =
+    { $n ->
+        [one] Link zu einer Notiz, 1 Notiz. Die Eingabetaste wählt sie.
+       *[other] Link zu einer Notiz, { $n } Notizen. Die Eingabetaste wählt eine.
+    }
+edit-wikilink-no-notes = In diesem Vault gibt es keine Notizen, auf die verlinkt werden kann.
+edit-wikilink-anchor-title = Link zu einem Teil von { $note }
+edit-wikilink-anchor-intro = Link zur ganzen Notiz { $note }, oder zu einer Überschrift oder einem Block darin. Die Eingabetaste wählt.
+edit-wikilink-whole = Die ganze Notiz
+edit-wikilink-heading = Überschrift { $level }: { $text }
+edit-wikilink-block = Block { $id }: { $text }
+edit-wikilink-inserted = Link zu { $target } eingefügt.
+edit-callout-title = Callout-Typ
+edit-callout-intro = Callout-Typen, { $n }. Die Eingabetaste fügt einen ein.
+edit-callout-inserted = Callout vom Typ { $type } eingefügt. Geben Sie seinen Text ein.
+edit-task-status =
+    { $status ->
+        [done] Abgehakt.
+        [open] Nicht abgehakt.
+        [in-progress] In Arbeit.
+        [cancelled] Abgebrochen.
+        [forwarded] Weitergeleitet.
+        [important] Wichtig.
+        [question] Frage.
+       *[other] Markiert mit { $mark }.
+    }
+edit-task-new = Neue Aufgabe, nicht abgehakt.
+edit-tasks-changed =
+    { $n ->
+        [one] Aufgabe in 1 Zeile geändert.
+       *[other] Aufgaben in { $n } Zeilen geändert.
+    }
 # $query is the text to find.
 common-no-matches = Keine Treffer für { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -3767,6 +3805,7 @@ gui-updated-to = Aktualisiert auf { $version }. Hilfe, Dokumentation beschreibt 
 ## each starts in lower case.
 opening-damaged-json = es ist keine lesbare JSON-Datei; sie ist möglicherweise zu groß.
 opening-damaged-notebook = es ist kein lesbares Jupyter-Notebook; es ist möglicherweise beschädigt oder zu groß.
+opening-damaged-canvas = es ist keine lesbare Canvas-Datei; sie ist möglicherweise beschädigt oder zu groß.
 opening-damaged-svg = es ist keine lesbare SVG-Zeichnung; sie ist möglicherweise beschädigt oder zu groß.
 opening-damaged-mathml = es ist keine lesbare MathML-Formel; sie ist möglicherweise beschädigt oder zu groß.
 
@@ -3999,6 +4038,10 @@ name-horizontal-rule = Trennlinie
 name-insert-table = Tabelle einfügen
 name-add-table-row = Tabellenzeile hinzufügen
 name-insert-image = Bild einfügen
+name-insert-wiki-link = Wiki-Link einfügen
+name-toggle-task = Aufgabe abhaken
+name-cycle-task-status = Aufgabenstatus wechseln
+name-insert-callout = Callout einfügen
 name-replace = Ersetzen
 name-copy = Kopieren
 name-cut = Ausschneiden

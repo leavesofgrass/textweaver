@@ -356,6 +356,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Insert a horizontal rule | `Alt+R` (edit) | `Ctrl+Shift+R` (edit) | `Cmd+Shift+R` (edit) | `horizontal_rule` |
 | Insert a table | `Alt+T` (edit) | `Ctrl+Shift+A` (edit) | `Cmd+Shift+A` (edit) | `insert_table` |
 | Add a row to the table at the cursor | `Alt+W` (edit) | `Ctrl+Shift+Enter` (edit) | `Cmd+Shift+Enter` (edit) | `add_table_row` |
+| Insert a wiki link to a note in the vault, or to a heading or block in it | palette | palette | palette | `insert_wiki_link` |
+| Check or uncheck the task on the current line, or make the line a task | `Ctrl+L` (edit) | `Ctrl+Enter` (edit) | `Cmd+Option+Enter` (edit) | `toggle_task` |
+| Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | palette | palette | palette | `cycle_task_status` |
+| Insert a callout of a type you choose; selected lines become its text | palette | palette | palette | `insert_callout` |
 | Insert an image | `Alt+G` (edit) | `Ctrl+Shift+I` (edit) | `Cmd+Shift+I` (edit) | `insert_image` |
 | Find and replace | `Alt+F` (edit) | `Ctrl+Shift+F` (edit) | `Cmd+Shift+F` (edit) | `replace` |
 | Copy the selection, or the sentence at the cursor, to the clipboard | `Ctrl+C` | `Ctrl+C` | `Cmd+C` | `copy` |
@@ -629,6 +633,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | List the other computers' places in this document; Enter goes to one | `sync_go_to_place` |
 | List notes replaced by another computer's newer edit; Enter puts one back | `sync_replaced_notes` |
 | Stop syncing on this computer; the sync folder is left as it is | `sync_stop` |
+| Insert a wiki link to a note in the vault, or to a heading or block in it | `insert_wiki_link` |
+| Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | `cycle_task_status` |
+| Insert a callout of a type you choose; selected lines become its text | `insert_callout` |
 | Insert the bibliography of the works cited, at the cursor | `insert_bibliography` |
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |

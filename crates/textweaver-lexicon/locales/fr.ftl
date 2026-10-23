@@ -914,6 +914,10 @@ action-horizontal-rule = Insérer une ligne horizontale
 action-insert-table = Insérer un tableau
 action-add-table-row = Ajouter une ligne au tableau au curseur
 action-insert-image = Insérer une image
+action-insert-wiki-link = Insérer un lien wiki vers une note du coffre, ou vers un titre ou un bloc de cette note
+action-toggle-task = Cocher ou décocher la tâche de la ligne actuelle, ou faire de la ligne une tâche
+action-cycle-task-status = Passer la tâche de la ligne actuelle à son état suivant : en cours, faite, annulée, transférée, importante, question
+action-insert-callout = Insérer un encadré (callout) du type choisi ; les lignes sélectionnées deviennent son texte
 action-replace = Rechercher et remplacer
 action-copy = Copier la sélection, ou la phrase au curseur, dans le presse-papiers
 action-cut = Couper la sélection dans le presse-papiers
@@ -2881,6 +2885,40 @@ edit-not-a-table-size = Ce n'est pas une taille de tableau : { $text }. Tapez co
 # $name is the image's file name.
 edit-image-inserted = Image { $name } insérée. Sa description est sélectionnée ; tapez pour la remplacer.
 edit-image-failed = Impossible d'insérer l'image : { $error } Le texte n'a pas changé.
+# Edit mode's Obsidian aids: a wiki link, tasks, callouts.
+edit-wikilink-title = Lier à une note
+edit-wikilink-intro =
+    { $n ->
+        [one] Lier à une note, 1 note. Entrée la choisit.
+       *[other] Lier à une note, { $n } notes. Entrée en choisit une.
+    }
+edit-wikilink-no-notes = Ce coffre ne contient aucune note vers laquelle créer un lien.
+edit-wikilink-anchor-title = Lier à une partie de { $note }
+edit-wikilink-anchor-intro = Lier à toute la note { $note }, ou à un titre ou un bloc de celle-ci. Entrée choisit.
+edit-wikilink-whole = La note entière
+edit-wikilink-heading = Titre { $level } : { $text }
+edit-wikilink-block = Bloc { $id } : { $text }
+edit-wikilink-inserted = Lien vers { $target } inséré.
+edit-callout-title = Type d'encadré
+edit-callout-intro = Types d'encadré, { $n }. Entrée en insère un.
+edit-callout-inserted = Encadré de type { $type } inséré. Tapez son texte.
+edit-task-status =
+    { $status ->
+        [done] Cochée.
+        [open] Non cochée.
+        [in-progress] En cours.
+        [cancelled] Annulée.
+        [forwarded] Transférée.
+        [important] Importante.
+        [question] Question.
+       *[other] Marquée { $mark }.
+    }
+edit-task-new = Nouvelle tâche, non cochée.
+edit-tasks-changed =
+    { $n ->
+        [one] Tâche modifiée sur 1 ligne.
+       *[other] Tâches modifiées sur { $n } lignes.
+    }
 # $query is the text to find.
 common-no-matches = Aucune correspondance pour { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -3771,6 +3809,7 @@ gui-updated-to = Mis à jour vers { $version }. Aide, Documentation décrit les 
 ## each starts in lower case.
 opening-damaged-json = ce n'est pas un fichier JSON lisible, il est peut-être trop volumineux.
 opening-damaged-notebook = ce n'est pas un carnet Jupyter lisible, il est peut-être endommagé ou trop volumineux.
+opening-damaged-canvas = ce n'est pas un canevas lisible, il est peut-être endommagé ou trop volumineux.
 opening-damaged-svg = ce n'est pas un dessin SVG lisible, il est peut-être endommagé ou trop volumineux.
 opening-damaged-mathml = ce n'est pas une formule MathML lisible, elle est peut-être endommagée ou trop volumineuse.
 
@@ -4003,6 +4042,10 @@ name-horizontal-rule = Ligne horizontale
 name-insert-table = Insérer un tableau
 name-add-table-row = Ajouter une ligne au tableau
 name-insert-image = Insérer une image
+name-insert-wiki-link = Insérer un lien wiki
+name-toggle-task = Cocher la tâche
+name-cycle-task-status = Changer l'état de la tâche
+name-insert-callout = Insérer un encadré
 name-replace = Remplacer
 name-copy = Copier
 name-cut = Couper

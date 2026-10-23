@@ -671,6 +671,24 @@ actions! {
         gui ["e:Ctrl+Shift+A"], term ["e:Alt+T"], shared [];
     AddTableRow = "add_table_row", Editing, "Add a row to the table at the cursor",
         gui ["e:Ctrl+Shift+Enter"], term ["e:Alt+W"], shared [];
+    // Obsidian editing aids (beta 4). Toggle task is Obsidian's own keys:
+    // Ctrl+Enter in the window (Obsidian's Mod+Enter on a list item), and
+    // Ctrl+L, Obsidian's Toggle checkbox status, in the terminal, where
+    // Ctrl+Enter cannot be sent and Ctrl+L is free. NVDA, JAWS and Windows
+    // leave both to the application. The other three are palette and
+    // menu commands: no free key is natural for them.
+    InsertWikiLink = "insert_wiki_link", Editing,
+        "Insert a wiki link to a note in the vault, or to a heading or block in it",
+        gui [], term [], shared [];
+    ToggleTask = "toggle_task", Editing,
+        "Check or uncheck the task on the current line, or make the line a task",
+        gui ["e:Ctrl+Enter"], term ["e:Ctrl+L"], shared [];
+    CycleTaskStatus = "cycle_task_status", Editing,
+        "Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question",
+        gui [], term [], shared [];
+    InsertCallout = "insert_callout", Editing,
+        "Insert a callout of a type you choose; selected lines become its text",
+        gui [], term [], shared [];
     InsertImage = "insert_image", Editing, "Insert an image",
         gui ["e:Ctrl+Shift+I"], term ["e:Alt+G"], shared [];
     Replace = "replace", Editing, "Find and replace",

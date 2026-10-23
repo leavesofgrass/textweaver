@@ -34,6 +34,8 @@ fn op() -> impl Strategy<Value = Op> {
         Just(MarkdownOp::CodeBlock),
         Just(MarkdownOp::InsertTable { rows: 1, cols: 2 }),
         Just(MarkdownOp::AddTableRow),
+        Just(MarkdownOp::ToggleTask),
+        Just(MarkdownOp::CycleTaskStatus),
     ];
     prop_oneof![
         6 => proptest::char::ranges(vec!['a'..='e', ' '..=' ', '\n'..='\n', '.'..='.', 'é'..='é'].into())

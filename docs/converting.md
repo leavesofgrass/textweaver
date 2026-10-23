@@ -313,6 +313,7 @@ textweaver reads these formats itself:
 - Web pages: `tw open https://example.org/page` and `tw text https://...` fetch the page and read it. A PDF or other file at the address is saved in the cache and opened from there.
 - Obsidian notes, with their callouts, embedded notes, tags, highlights, and block links. See [Obsidian notes](#obsidian-notes).
 - JSON and JSON Lines, as headings and lists you can move through by key, and Jupyter notebooks (IPYNB), cell by cell. See [JSON and notebooks](#json-and-notebooks).
+- Obsidian canvases (CANVAS, the JSON Canvas format), card by card, with their groups as sections and their connections in words. See [Canvases](vault.md#canvases).
 - SVG drawings, by their title, description, labeled parts, and text. See [Drawings and formulas](#drawings-and-formulas).
 - MathML formulas (MML), presentation or content MathML, as one formula.
 - Org mode (ORG), reStructuredText (RST and REST), MediaWiki (WIKI and MEDIAWIKI), DokuWiki, and Jira markup, read by carta, a converter written in Rust that runs inside textweaver. See [Org, reStructuredText, and wiki markup](#org-restructuredtext-and-wiki-markup).

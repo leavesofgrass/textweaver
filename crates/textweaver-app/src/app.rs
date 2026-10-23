@@ -342,6 +342,9 @@ pub(crate) enum ListKind {
     /// A note's properties, the notes that link to it, its unresolved
     /// links, or tags and the notes carrying one (crate::vault).
     Vault(crate::vault::VaultList),
+    /// Edit mode's Obsidian aids: notes and their headings to link to,
+    /// or callout types (crate::obsidian_edit).
+    EditAid(crate::obsidian_edit::EditAidList),
 }
 
 /// The application: the only owner of mutable state.
@@ -1995,6 +1998,7 @@ impl App {
             Some(ListKind::HelpSearch(topics)) => return self.choose_help_topic(&topics, n),
             Some(ListKind::Buttons(l)) => return self.choose_buttons(l, n),
             Some(ListKind::Vault(l)) => return self.choose_vault(l, n),
+            Some(ListKind::EditAid(l)) => return self.choose_edit_aid(l, n),
             Some(ListKind::Info) | Some(ListKind::Help) | None => {}
         }
         vec![Effect::Redraw]
@@ -2501,6 +2505,10 @@ impl App {
             | A::InsertTable
             | A::AddTableRow
             | A::InsertImage
+            | A::InsertWikiLink
+            | A::ToggleTask
+            | A::CycleTaskStatus
+            | A::InsertCallout
             | A::Replace => return self.edit_action(a),
             A::ChooseVoice => return self.choose_voice(),
             A::RestartSpeech => return self.restart_speech_command(),
