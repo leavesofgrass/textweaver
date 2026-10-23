@@ -317,6 +317,24 @@ actions! {
     FollowLink = "follow_link", Navigation,
         "Follow the link at the cursor, or go between a footnote and its note",
         gui ["g:Alt+Shift+F"], term ["g:Alt+Shift+F"], shared [];
+    // Obsidian vaults (beta 4). `f` is free in both frontends and both
+    // presets; in NVDA and JAWS it finds form fields, and a note's
+    // properties are its form. The lists are palette commands.
+    NoteProperties = "note_properties", Navigation,
+        "List the open note's properties (its front matter), each name with its value",
+        gui [], term [], shared ["b:f"];
+    Backlinks = "backlinks", Navigation,
+        "List the notes in the vault that link to this note; Enter opens one",
+        gui [], term [], shared [];
+    UnresolvedLinks = "unresolved_links", Navigation,
+        "List this note's links to notes that don't exist",
+        gui [], term [], shared [];
+    NoteTags = "note_tags", Navigation,
+        "List the tags in this note; Enter lists the notes in the vault with that tag",
+        gui [], term [], shared [];
+    VaultTags = "vault_tags", Navigation,
+        "List every tag in the vault with how many notes carry it; Enter lists those notes",
+        gui [], term [], shared [];
     TableNextRow = "table_next_row", Navigation, "In a table, move down a row in the same column",
         gui ["g:Ctrl+Alt+Down"], term ["g:Ctrl+Alt+Down"], shared [];
     TablePreviousRow = "table_previous_row", Navigation, "In a table, move up a row in the same column",

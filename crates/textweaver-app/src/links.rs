@@ -6,8 +6,12 @@
 //!   to the heading whose id or text matches.
 //! - On a link to a local file (`chapter-2.md`, `notes/a.md#part`, an
 //!   Obsidian `[[wiki link]]`), the file opens (asking about unsaved edits
-//!   first), at the heading when the link names one. Alt+Left, before any
-//!   other jump there, goes back to the link.
+//!   first), at the heading or block when the link names one
+//!   (`[[Note#Heading]]`, `[[Note#A#B]]`, `[[Note#^id]]`). Alt+Left, before
+//!   any other jump there, goes back to the link. Wiki links resolve
+//!   anywhere in the note's Obsidian vault and never outside it, by path,
+//!   name, title, or alias (`textweaver_vault`); when two notes share the
+//!   name, the nearest opens and "2 notes named X" is said once.
 //! - A web or mail link is said, with an offer to open it in the browser.
 
 use std::path::{Path, PathBuf};
@@ -77,46 +81,32 @@ pub(crate) fn heading_for_anchor(doc: &Document, anchor: &str) -> Option<CharPos
         .or_else(|| textweaver_formats::pdf::page_anchor(doc, want))
 }
 
-/// The local file a link target names, relative to `folder`, if it exists:
-/// the path as written, else with `.md` added (wiki links), else a file of
-/// that name anywhere under the folder (Obsidian resolves by name).
-pub(crate) fn resolve_local(folder: &Path, target: &str) -> Option<PathBuf> {
-    let direct = folder.join(target);
-    // A file, or a file inside an archive (`book.zip!chapter.xml`, the links
-    // an archive's listing holds).
-    if direct.is_file() || textweaver_formats::archive::exists(&direct) {
-        return Some(direct);
+/// Where an anchor of `doc` points: a block (`^id`, from the Markdown
+/// loader's block ids), a heading by id or text (the whole anchor, then
+/// the last heading of a nested path `A#B`), or a PDF page.
+pub(crate) fn anchor_position(doc: &Document, anchor: &str) -> Option<CharPos> {
+    let a = anchor.trim().trim_start_matches('#').trim();
+    if let Some(id) = a.strip_prefix('^') {
+        return textweaver_formats::obsidian::block_position(&doc.meta, id);
     }
-    let with_md = folder.join(format!("{target}.md"));
-    if Path::new(target).extension().is_none() && with_md.is_file() {
-        return Some(with_md);
-    }
-    let name = Path::new(target)
-        .file_name()?
-        .to_string_lossy()
-        .to_lowercase();
-    let wanted = [name.clone(), format!("{name}.md")];
-    find_by_name(folder, &wanted, 4)
+    textweaver_vault::Anchor::Heading(a.to_owned())
+        .heading_candidates()
+        .into_iter()
+        .find_map(|h| heading_for_anchor(doc, h))
 }
 
-fn find_by_name(dir: &Path, wanted: &[String], depth: usize) -> Option<PathBuf> {
-    let entries = std::fs::read_dir(dir).ok()?;
-    let mut dirs = Vec::new();
-    for e in entries.flatten() {
-        let path = e.path();
-        let name = e.file_name().to_string_lossy().to_lowercase();
-        if path.is_file() && wanted.contains(&name) {
-            return Some(path);
-        }
-        if path.is_dir() && !name.starts_with('.') {
-            dirs.push(path);
-        }
+/// The local file a link target names, for a document in `folder`, if
+/// it exists: a file inside an archive (`book.zip!chapter.xml`), else the
+/// vault resolver's answer (a path from the folder, then from the vault
+/// root, then by name, nearest first), with how many files share the name.
+pub(crate) fn resolve_local(folder: &Path, target: &str) -> Option<(PathBuf, usize)> {
+    let direct = folder.join(target);
+    if !direct.is_file() && textweaver_formats::archive::exists(&direct) {
+        return Some((direct, 1));
     }
-    if depth == 0 {
-        return None;
-    }
-    dirs.sort();
-    dirs.iter().find_map(|d| find_by_name(d, wanted, depth - 1))
+    let scope = textweaver_vault::LinkScope::for_folder(folder);
+    let files = scope.files();
+    textweaver_vault::resolve(&scope, &files, folder, target).map(|r| (r.path, r.same_name))
 }
 
 impl App {
@@ -190,12 +180,13 @@ impl App {
         self.follow_local(&percent_decode(&target))
     }
 
-    /// Goes to the heading `anchor` names in this document.
+    /// Goes to the heading or block `anchor` names in this document.
     fn go_to_anchor(&mut self, anchor: &str) {
         let found = self
             .session
             .as_ref()
-            .and_then(|s| heading_for_anchor(&s.doc, anchor));
+            .and_then(|s| anchor_position(&s.doc, anchor));
+        let block = anchor.trim().trim_start_matches('#').strip_prefix('^');
         match found {
             Some(pos) => {
                 let text = self
@@ -213,6 +204,7 @@ impl App {
                     Some(page) => {
                         self.msg_args("links-page-label", &args!["page" => page.as_str()])
                     }
+                    None if block.is_some() => self.msg("links-block-label"),
                     None => self.msg("links-heading-label"),
                 };
                 let msg = self.nav_message(Some(&label), pos, &text);
@@ -220,7 +212,10 @@ impl App {
             }
             None => {
                 self.speech.earcon(Earcon::Error);
-                let msg = self.msg_args("links-no-heading", &args!["anchor" => anchor]);
+                let msg = match block {
+                    Some(id) => self.msg_args("links-no-block", &args!["id" => id]),
+                    None => self.msg_args("links-no-heading", &args!["anchor" => anchor]),
+                };
                 self.tell(&msg);
             }
         }
@@ -247,12 +242,26 @@ impl App {
             }
             return vec![Effect::Redraw];
         }
-        let Some(path) = resolve_local(&folder, file) else {
+        let found = resolve_local(&folder, file).or_else(|| {
+            // A note's title or alias, from the vault index.
+            let from = here.clone().unwrap_or_else(|| folder.join("_"));
+            self.vault_resolve(&from, file)
+                .map(|r| (r.path, r.same_name))
+        });
+        let Some((path, same_name)) = found else {
             self.speech.earcon(Earcon::Error);
-            let msg = self.msg_args("links-file-not-found", &args!["file" => file]);
+            let note = Path::new(file)
+                .extension()
+                .is_none_or(|e| e.eq_ignore_ascii_case("md"));
+            let msg = if note {
+                self.msg_args("links-note-not-found", &args!["name" => file])
+            } else {
+                self.msg_args("links-file-not-found", &args!["file" => file])
+            };
             self.tell(&msg);
             return vec![Effect::Redraw];
         };
+        let same_name = self.same_name_once(file, same_name);
         let same = here
             .as_ref()
             .is_some_and(|h| std::fs::canonicalize(h).ok() == std::fs::canonicalize(&path).ok());
@@ -277,7 +286,7 @@ impl App {
                 let found = self
                     .session
                     .as_ref()
-                    .and_then(|s| heading_for_anchor(&s.doc, a));
+                    .and_then(|s| anchor_position(&s.doc, a));
                 if let Some(p) = found
                     && let Some(s) = self.session.as_mut()
                 {
@@ -301,6 +310,10 @@ impl App {
                     "links-followed",
                     &args!["file" => file_name(&path), "key" => back],
                 );
+                let msg = match &same_name {
+                    Some(dup) => format!("{msg} {dup}"),
+                    None => msg,
+                };
                 self.tell(&msg);
             }
         }

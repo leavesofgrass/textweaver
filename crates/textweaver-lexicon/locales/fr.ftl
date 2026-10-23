@@ -791,6 +791,11 @@ action-previous-separator = Passer au séparateur précédent (ligne horizontale
 action-next-graphic = Passer à l'image suivante
 action-previous-graphic = Passer à l'image précédente
 action-follow-link = Suivre le lien au curseur, ou aller entre une note de bas de page et sa note
+action-note-properties = Lister les propriétés de la note ouverte (son en-tête YAML), chaque nom avec sa valeur
+action-backlinks = Lister les notes du coffre qui renvoient à cette note ; Entrée en ouvre une
+action-unresolved-links = Lister les liens de cette note vers des notes qui n’existent pas
+action-note-tags = Lister les étiquettes de cette note ; Entrée liste les notes du coffre portant cette étiquette
+action-vault-tags = Lister toutes les étiquettes du coffre avec le nombre de notes qui les portent ; Entrée liste ces notes
 action-table-next-row = Dans un tableau, descendre d'une ligne dans la même colonne
 action-table-previous-row = Dans un tableau, monter d'une ligne dans la même colonne
 action-table-next-column = Dans un tableau, passer à la cellule suivante de la ligne
@@ -1780,6 +1785,65 @@ links-heading-label = Titre
 links-no-heading = Aucun titre appelé { $anchor } dans ce document.
 # $file is the file the link names.
 links-file-not-found = Le lien va vers { $file }, qui est introuvable.
+links-block-label = Bloc
+links-no-block = Aucun bloc { $id } dans ce document.
+links-note-not-found = Lien vers une note qui n’existe pas : { $name }.
+vault-same-name = { $count } notes s’appellent { $name } ; la plus proche a été ouverte.
+vault-properties-count = Propriétés : { $n }.
+vault-properties-title = Propriétés
+vault-no-properties = Ce document n’a pas de propriétés.
+vault-property-row = { $name } : { $value }
+vault-property-checked = cochée
+vault-property-not-checked = non cochée
+vault-no-file = Ce document n’est pas enregistré dans un dossier, il n’a donc pas de coffre.
+vault-partial = Seule une partie du coffre a été parcourue ; il est très grand.
+vault-top-folder = dossier principal
+vault-backlink-row =
+    { $links ->
+        [one] { $title }, 1 lien, dans { $folder }
+       *[other] { $title }, { $links } liens, dans { $folder }
+    }
+vault-note-row = { $title }, dans { $folder }
+vault-backlinks-title = Notes qui renvoient ici
+vault-backlinks-intro =
+    { $n ->
+        [one] Notes qui renvoient ici, 1 note. Entrée l’ouvre.
+       *[other] Notes qui renvoient ici, { $n } notes. Entrée en ouvre une.
+    }
+vault-no-backlinks = Aucune note ne renvoie ici.
+vault-unresolved-title = Liens vers des notes inexistantes
+vault-unresolved-intro =
+    { $n ->
+        [one] Liens vers des notes inexistantes, 1 lien.
+       *[other] Liens vers des notes inexistantes, { $n } liens.
+    }
+vault-no-unresolved = Chaque lien de cette note mène à une note.
+vault-note-tags-title = Étiquettes de cette note
+vault-note-tags-intro =
+    { $n ->
+        [one] Étiquettes de cette note, 1 étiquette. Entrée liste les notes qui la portent.
+       *[other] Étiquettes de cette note, { $n } étiquettes. Entrée liste les notes d’une étiquette.
+    }
+vault-no-note-tags = Cette note n’a pas d’étiquettes.
+vault-tags-title = Étiquettes du coffre
+vault-tags-intro =
+    { $n ->
+        [one] Étiquettes du coffre, 1 étiquette. Entrée liste ses notes.
+       *[other] Étiquettes du coffre, { $n } étiquettes. Entrée liste les notes d’une étiquette.
+    }
+vault-no-tags = Aucune étiquette dans ce coffre.
+vault-tag-row =
+    { $n ->
+        [one] { $tag }, 1 note
+       *[other] { $tag }, { $n } notes
+    }
+vault-tag-notes-title = Notes portant une étiquette
+vault-tag-notes-intro =
+    { $n ->
+        [one] Étiquette { $tag }, 1 note. Entrée l’ouvre.
+       *[other] Étiquette { $tag }, { $n } notes. Entrée en ouvre une.
+    }
+vault-tag-no-notes = Aucune note ne porte l’étiquette { $tag }.
 # $file is the file's name; $key names the History Back command's keys.
 links-followed = Lien suivi vers { $file }. Précédent : { $key }.
 links-back-in = Retour dans { $file }.
@@ -3785,6 +3849,11 @@ name-previous-separator = Séparateur précédent
 name-next-graphic = Image suivante
 name-previous-graphic = Image précédente
 name-follow-link = Suivre le lien
+name-note-properties = Propriétés de la note
+name-backlinks = Notes qui renvoient ici
+name-unresolved-links = Liens vers des notes inexistantes
+name-note-tags = Étiquettes de cette note
+name-vault-tags = Étiquettes du coffre
 name-table-next-row = Ligne suivante du tableau
 name-table-previous-row = Ligne précédente du tableau
 name-table-next-column = Colonne suivante du tableau

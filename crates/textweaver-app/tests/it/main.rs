@@ -30,6 +30,7 @@ mod keys_from_keymap;
 mod language;
 mod list_contract;
 mod markup_pauses;
+mod obsidian_vault;
 mod path_choosers;
 mod pseudo_locale;
 mod quick_wins;

@@ -799,6 +799,11 @@ action-previous-separator = Zum vorherigen Trenner bewegen (horizontale Linie)
 action-next-graphic = Zur nächsten Grafik bewegen (Bild)
 action-previous-graphic = Zur vorherigen Grafik bewegen (Bild)
 action-follow-link = Dem Link am Cursor folgen, oder zwischen einer Fußnote und ihrer Notiz wechseln
+action-note-properties = Die Eigenschaften der offenen Notiz (ihre Front Matter) auflisten, jeden Namen mit seinem Wert
+action-backlinks = Die Notizen im Vault auflisten, die auf diese Notiz verlinken; die Eingabetaste öffnet eine
+action-unresolved-links = Die Links dieser Notiz auf Notizen auflisten, die es nicht gibt
+action-note-tags = Die Tags dieser Notiz auflisten; die Eingabetaste listet die Notizen im Vault mit diesem Tag
+action-vault-tags = Jeden Tag im Vault auflisten, mit der Zahl der Notizen, die ihn tragen; die Eingabetaste listet diese Notizen
 action-table-next-row = In einer Tabelle eine Zeile nach unten in derselben Spalte bewegen
 action-table-previous-row = In einer Tabelle eine Zeile nach oben in derselben Spalte bewegen
 action-table-next-column = In einer Tabelle zur nächsten Zelle in der Zeile bewegen
@@ -1788,6 +1793,65 @@ links-heading-label = Überschrift
 links-no-heading = Keine Überschrift namens { $anchor } in diesem Dokument.
 # $file is the file the link names.
 links-file-not-found = Der Link führt zu { $file }, was nicht gefunden wurde.
+links-block-label = Block
+links-no-block = Kein Block { $id } in diesem Dokument.
+links-note-not-found = Link auf eine Notiz, die es nicht gibt: { $name }.
+vault-same-name = { $count } Notizen heißen { $name }; die nächstgelegene wurde geöffnet.
+vault-properties-count = Eigenschaften: { $n }.
+vault-properties-title = Eigenschaften
+vault-no-properties = Dieses Dokument hat keine Eigenschaften.
+vault-property-row = { $name }: { $value }
+vault-property-checked = aktiviert
+vault-property-not-checked = nicht aktiviert
+vault-no-file = Dieses Dokument ist in keinem Ordner gespeichert und hat daher keinen Vault.
+vault-partial = Nur ein Teil des Vaults wurde durchsucht; er ist sehr groß.
+vault-top-folder = oberster Ordner
+vault-backlink-row =
+    { $links ->
+        [one] { $title }, 1 Link, in { $folder }
+       *[other] { $title }, { $links } Links, in { $folder }
+    }
+vault-note-row = { $title }, in { $folder }
+vault-backlinks-title = Notizen, die hierher verlinken
+vault-backlinks-intro =
+    { $n ->
+        [one] Notizen, die hierher verlinken, 1 Notiz. Die Eingabetaste öffnet sie.
+       *[other] Notizen, die hierher verlinken, { $n } Notizen. Die Eingabetaste öffnet eine.
+    }
+vault-no-backlinks = Keine Notiz verlinkt hierher.
+vault-unresolved-title = Links auf Notizen, die es nicht gibt
+vault-unresolved-intro =
+    { $n ->
+        [one] Links auf Notizen, die es nicht gibt, 1 Link.
+       *[other] Links auf Notizen, die es nicht gibt, { $n } Links.
+    }
+vault-no-unresolved = Jeder Link in dieser Notiz führt zu einer Notiz.
+vault-note-tags-title = Tags in dieser Notiz
+vault-note-tags-intro =
+    { $n ->
+        [one] Tags in dieser Notiz, 1 Tag. Die Eingabetaste listet die Notizen damit.
+       *[other] Tags in dieser Notiz, { $n } Tags. Die Eingabetaste listet die Notizen mit einem.
+    }
+vault-no-note-tags = Diese Notiz hat keine Tags.
+vault-tags-title = Tags im Vault
+vault-tags-intro =
+    { $n ->
+        [one] Tags im Vault, 1 Tag. Die Eingabetaste listet seine Notizen.
+       *[other] Tags im Vault, { $n } Tags. Die Eingabetaste listet die Notizen eines Tags.
+    }
+vault-no-tags = Keine Tags in diesem Vault.
+vault-tag-row =
+    { $n ->
+        [one] { $tag }, 1 Notiz
+       *[other] { $tag }, { $n } Notizen
+    }
+vault-tag-notes-title = Notizen mit einem Tag
+vault-tag-notes-intro =
+    { $n ->
+        [one] Tag { $tag }, 1 Notiz. Die Eingabetaste öffnet sie.
+       *[other] Tag { $tag }, { $n } Notizen. Die Eingabetaste öffnet eine.
+    }
+vault-tag-no-notes = Keine Notiz trägt den Tag { $tag }.
 # $file is the file's name; $key names the History Back command's keys.
 links-followed = Dem Link zu { $file } gefolgt. Zurück: { $key }.
 links-back-in = Zurück in { $file }.
@@ -3781,6 +3845,11 @@ name-previous-separator = Vorherige Trennlinie
 name-next-graphic = Nächste Grafik
 name-previous-graphic = Vorherige Grafik
 name-follow-link = Link folgen
+name-note-properties = Eigenschaften der Notiz
+name-backlinks = Notizen, die hierher verlinken
+name-unresolved-links = Links auf Notizen, die es nicht gibt
+name-note-tags = Tags in dieser Notiz
+name-vault-tags = Tags im Vault
 name-table-next-row = Nächste Tabellenzeile
 name-table-previous-row = Vorherige Tabellenzeile
 name-table-next-column = Nächste Tabellenspalte

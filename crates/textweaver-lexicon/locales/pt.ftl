@@ -779,6 +779,11 @@ action-previous-separator = Mover para o separador anterior (linha horizontal)
 action-next-graphic = Mover para a próxima imagem
 action-previous-graphic = Mover para a imagem anterior
 action-follow-link = Seguir o link no cursor, ou ir entre uma nota de rodapé e sua nota
+action-note-properties = Listar as propriedades da nota aberta (seus metadados iniciais), cada nome com seu valor
+action-backlinks = Listar as notas do cofre que têm link para esta nota; Enter abre uma
+action-unresolved-links = Listar os links desta nota para notas que não existem
+action-note-tags = Listar as tags desta nota; Enter lista as notas do cofre com essa tag
+action-vault-tags = Listar todas as tags do cofre com quantas notas as têm; Enter lista essas notas
 action-table-next-row = Em uma tabela, mover uma linha para baixo na mesma coluna
 action-table-previous-row = Em uma tabela, mover uma linha para cima na mesma coluna
 action-table-next-column = Em uma tabela, mover para a próxima célula na linha
@@ -1768,6 +1773,65 @@ links-heading-label = Cabeçalho
 links-no-heading = Nenhum cabeçalho chamado { $anchor } neste documento.
 # $file is the file the link names.
 links-file-not-found = O link vai para { $file }, que não foi encontrado.
+links-block-label = Bloco
+links-no-block = Nenhum bloco { $id } neste documento.
+links-note-not-found = Link para uma nota que não existe: { $name }.
+vault-same-name = { $count } notas se chamam { $name }; a mais próxima foi aberta.
+vault-properties-count = Propriedades: { $n }.
+vault-properties-title = Propriedades
+vault-no-properties = Este documento não tem propriedades.
+vault-property-row = { $name }: { $value }
+vault-property-checked = marcada
+vault-property-not-checked = não marcada
+vault-no-file = Este documento não está salvo numa pasta, então não tem cofre.
+vault-partial = Só parte do cofre foi pesquisada; ele é muito grande.
+vault-top-folder = pasta principal
+vault-backlink-row =
+    { $links ->
+        [one] { $title }, 1 link, em { $folder }
+       *[other] { $title }, { $links } links, em { $folder }
+    }
+vault-note-row = { $title }, em { $folder }
+vault-backlinks-title = Notas com link para cá
+vault-backlinks-intro =
+    { $n ->
+        [one] Notas com link para cá, 1 nota. Enter abre.
+       *[other] Notas com link para cá, { $n } notas. Enter abre uma.
+    }
+vault-no-backlinks = Nenhuma nota tem link para cá.
+vault-unresolved-title = Links para notas que não existem
+vault-unresolved-intro =
+    { $n ->
+        [one] Links para notas que não existem, 1 link.
+       *[other] Links para notas que não existem, { $n } links.
+    }
+vault-no-unresolved = Todo link desta nota leva a uma nota.
+vault-note-tags-title = Tags desta nota
+vault-note-tags-intro =
+    { $n ->
+        [one] Tags desta nota, 1 tag. Enter lista as notas com ela.
+       *[other] Tags desta nota, { $n } tags. Enter lista as notas com uma.
+    }
+vault-no-note-tags = Esta nota não tem tags.
+vault-tags-title = Tags do cofre
+vault-tags-intro =
+    { $n ->
+        [one] Tags do cofre, 1 tag. Enter lista suas notas.
+       *[other] Tags do cofre, { $n } tags. Enter lista as notas de uma tag.
+    }
+vault-no-tags = Nenhuma tag neste cofre.
+vault-tag-row =
+    { $n ->
+        [one] { $tag }, 1 nota
+       *[other] { $tag }, { $n } notas
+    }
+vault-tag-notes-title = Notas com uma tag
+vault-tag-notes-intro =
+    { $n ->
+        [one] Tag { $tag }, 1 nota. Enter abre.
+       *[other] Tag { $tag }, { $n } notas. Enter abre uma.
+    }
+vault-tag-no-notes = Nenhuma nota tem a tag { $tag }.
 # $file is the file's name; $key names the History Back command's keys.
 links-followed = Seguiu o link até { $file }. Voltar: { $key }.
 links-back-in = De volta em { $file }.
@@ -3773,6 +3837,11 @@ name-previous-separator = Separador anterior
 name-next-graphic = Próxima imagem
 name-previous-graphic = Imagem anterior
 name-follow-link = Seguir link
+name-note-properties = Propriedades da nota
+name-backlinks = Notas com link para cá
+name-unresolved-links = Links para notas que não existem
+name-note-tags = Tags desta nota
+name-vault-tags = Tags do cofre
 name-table-next-row = Próxima linha da tabela
 name-table-previous-row = Linha anterior da tabela
 name-table-next-column = Próxima coluna da tabela

@@ -256,6 +256,7 @@ pub mod testing;
 pub mod text_util;
 mod themes;
 pub mod updates;
+mod vault;
 mod view;
 mod voice;
 pub mod voice_manager;
