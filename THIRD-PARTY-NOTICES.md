@@ -2530,7 +2530,7 @@ Used by:
 - as-raw-xcb-connection 1.0.1, https://github.com/psychon/as-raw-xcb-connection
 - cmov 0.5.4, https://github.com/RustCrypto/utils
 - codepage 0.1.3, https://github.com/hsivonen/codepage
-- ctutils 0.4.3, https://github.com/RustCrypto/utils
+- ctutils 0.4.5, https://github.com/RustCrypto/utils
 - encoding_rs 0.8.42, https://github.com/hsivonen/encoding_rs
 - flacenc 0.5.1, https://github.com/yotarok/flacenc-rs/
 - kurbo 0.13.1, https://github.com/linebender/kurbo
@@ -19498,7 +19498,7 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- clipboard-win 5.4.1, https://github.com/DoumanAsh/clipboard-win
+- clipboard-win 5.4.3, https://github.com/DoumanAsh/clipboard-win
 
 ```text
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -19826,7 +19826,7 @@ express Statement of Purpose.
 
 Used by:
 
-- webpki-roots 1.0.9, https://github.com/rustls/webpki-roots
+- webpki-roots 1.0.11, https://github.com/rustls/webpki-roots
 
 ```text
 # Community Data License Agreement - Permissive - Version 2.0
@@ -20802,7 +20802,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 Used by:
 
-- rustls-webpki 0.103.15, https://github.com/rustls/webpki
+- rustls-webpki 0.103.16, https://github.com/rustls/webpki
 
 ```text
 Except as otherwise noted, this project is licensed under the following
