@@ -351,7 +351,7 @@ two-face = { version = "0.5.2", default-features = false, features = ["syntect-f
 # Grammar checking in edit mode, offline (Automattic's Harper). Pinned
 # exactly: it releases about every two weeks. Default features off:
 # `thesaurus` (a large word list) and `concurrent` are not used.
-harper-core = { version = "=2.11.0", default-features = false }
+harper-core = { version = "=2.13.0", default-features = false }
 
 # Wave 4, Agent W4b: word and sentence boundaries through ICU4X, about
 # twice (words) and three times (sentences) as fast as
