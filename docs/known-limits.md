@@ -33,7 +33,8 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 - **Eloquence and DECtalk** need your own licensed copy. textweaver does not include them.
 - **DAISY audio timing in MP3 books is untested on real books.** The playback of a talking book's recorded narration is tested with built files and with WAV clips. How accurately the highlight follows the clips in a real DAISY book whose audio is MP3 has not been checked. If the highlight drifts, set **Book audio** to **speech only** ([Talking books](reading.md#talking-books-the-recorded-narration)) and report the book's source and format.
 - **Source code** opens as plain text. It is not read as a structured document.
-- **CW sends messages in Morse code too.** With CW as the engine, textweaver's own messages are sent in Morse code; use a screen reader for messages in speech. Repeat sentence slower does not slow CW down, and keying Morse code into textweaver with a key or paddle is not yet offered: `tw cw monitor` only prints what an adapter sends ([CW](cw.md)).
+- **CW sends messages in Morse code too.** With CW as the engine, textweaver's own messages are sent in Morse code; use a screen reader for messages in speech. Repeat sentence slower does not slow CW down ([CW](cw.md)).
+- **CW keying in the terminal reader is MIDI only.** Keyboard key adapters (VBand, Vail, the TinyMIDI in keyboard mode) need each key's release, which most terminals never report; they work in the textweaver app. The sidetone plays only when the speech engine plays its own audio (not with the silent engine), and the keying adapters were tested from their manuals, not yet with the hardware ([CW keying](cw.md#key-morse-code-into-a-document)).
 
 ## Documents
 

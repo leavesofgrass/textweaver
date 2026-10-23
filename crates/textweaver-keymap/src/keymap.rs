@@ -1175,6 +1175,8 @@ mod tests {
                         | ActionId::Dictate
                         // A spoken answer records in any mode.
                         | ActionId::PauseDictation
+                        // Outside edit mode, keying says it needs it.
+                        | ActionId::CwKeying
                 ) {
                     continue;
                 }

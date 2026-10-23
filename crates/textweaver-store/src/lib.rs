@@ -92,7 +92,7 @@ pub use settings::{
     AuthoringSettings, BookAudio, BrailleGrade, BrailleSettings, BrailleTableFormat, BrfCode,
     CW_MAX_WPM, CW_MIN_WPM, CW_PRACTICE_DELAY_MS, CW_PRACTICE_GROUP, CW_PRACTICE_GROUPS,
     CW_PRACTICE_THRESHOLD, CW_TONE_RANGE_HZ, CitationReading, ColorSettings,
-    CommunityLexiconSettings, ComponentsSettings, CursorPlacement, CwSettings,
+    CommunityLexiconSettings, ComponentsSettings, CursorPlacement, CwKeyer, CwSettings,
     DEFAULT_HEADER_BUTTONS, DEFAULT_TOOLBAR_BUTTONS, DISPLAY_CELLS_RANGE, DectalkSettings,
     DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
     EspeakHelper, EspeakSettings, ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings,

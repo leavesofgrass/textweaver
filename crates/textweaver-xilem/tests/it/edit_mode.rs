@@ -97,6 +97,10 @@ fn apply(app: &mut App, action: DocAction) {
             let _ = app.paste_contents(contents, false);
             return;
         }
+        DocAction::CwKey { key, down } => {
+            app.cw_adapter_key(key, down);
+            return;
+        }
         DocAction::WindowFocused | DocAction::ContextMenu { .. } => return,
     };
     let _ = app.dispatch(cmd);

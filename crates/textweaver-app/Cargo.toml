@@ -29,6 +29,11 @@ opus = ["audio-export", "textweaver-export/opus"]
 # Dictation in edit mode (Agent W6d, ADR-0042): Whisper in-process on
 # RTen with the microphone. Off, the Dictate command stays hidden.
 dictation = ["dep:textweaver-dictation"]
+# CW keying from MIDI key adapters (the TinyMIDI, the CTR2 MIDI) through
+# midir, and `tw cw monitor`'s MIDI; on Windows through its WinRT
+# backend, which also sees Bluetooth LE MIDI devices. On in releases
+# (through textweaver-cli's `cw-midi`).
+cw-midi = ["dep:midir"]
 # Markdown lint in edit mode (Agent W4g, ADR-0032): textweaver's own
 # rules on the parser the app already uses; no dependencies.
 lint = []
@@ -131,8 +136,12 @@ ropey.workspace = true
 regex.workspace = true
 thiserror.workspace = true
 log.workspace = true
+midir = { workspace = true, optional = true }
 
 [target.'cfg(windows)'.dependencies]
+# WinRT MIDI: the only Windows MIDI interface that lists Bluetooth LE
+# MIDI devices (the TinyMIDI).
+midir = { workspace = true, optional = true, features = ["winrt"] }
 # GetLocalTime, for the local date in new documents from templates;
 # GetLogicalDrives and GetDriveTypeW, for the file browser's drives (W6f);
 # ShellExecuteW, to open links and files without a shell (W8a).

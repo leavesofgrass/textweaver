@@ -24,16 +24,34 @@
 //!   a Braille display through the screen reader).
 //! - [`training`]: practice, with the Koch method's lessons, random
 //!   character and word drills from a seed, and checking what was copied.
+//!
+//! Keying, Morse code typed with a key or paddle:
+//!
+//! - [`input`]: MIDI messages and keyboard keys from key adapters (the
+//!   N6ARA TinyMIDI, the CTR2 MIDI, VBand and Vail) as key contacts.
+//! - [`keyer`]: an iambic keyer (modes A and B, dot and dash memory) and
+//!   straight keying, on a virtual clock.
+//! - [`decode`]: tone timing to characters and word spaces, adapting to
+//!   the operator's speed.
+//! - [`mod@sidetone`]: the tone heard while keying, made sample by sample.
 
+pub mod decode;
+pub mod input;
+pub mod keyer;
 pub mod render;
 pub mod schedule;
 pub mod sending;
+pub mod sidetone;
 pub mod table;
 pub mod timing;
 pub mod training;
 
+pub use decode::{Decoded, Decoder, Keyed, decode};
+pub use input::{AdapterKey, MidiMap};
+pub use keyer::{Input, Keyer, KeyerMode, KeyerOptions, ToneEdge};
 pub use render::{RenderOptions, render, to_samples};
 pub use schedule::{Options, Schedule, SentChar, SentWord, Tone, schedule};
 pub use sending::{Sending, SendingSnapshot, sending};
+pub use sidetone::Sidetone;
 pub use table::{PROSIGNS, Symbol, code, prosign};
 pub use timing::{DEFAULT_CHAR_WPM, DEFAULT_EFFECTIVE_WPM, MAX_WPM, MIN_WPM, Timing};

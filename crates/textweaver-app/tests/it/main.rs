@@ -23,6 +23,7 @@ mod clipboard;
 mod command_list;
 mod components_registry;
 mod cw;
+mod cw_keying;
 mod cw_practice;
 mod details;
 mod edit;

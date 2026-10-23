@@ -240,7 +240,15 @@ CW (Morse code). See [CW: reading in Morse code](cw.md).
 - `practice_groups`, default `10`: the groups in a practice round, 1 to 50.
 - `practice_delay_ms`, default `1000`: the quiet before each practice group is sent, 0 to 5000 milliseconds, after the time textweaver's spoken message is expected to take. See [Practice and training](cw.md#practice-and-training).
 
-A change to `[speech.cw]` applies from the next sentence; a reading in progress goes on from the last word with it.
+Keying Morse code with a key or paddle ([CW keying](cw.md#key-morse-code-into-a-document)):
+
+- `keyer`, default `"iambic_b"`: how a paddle's contacts become dits and dahs. `"iambic_b"` is iambic mode B, `"iambic_a"` iambic mode A, both with dot and dash memory; `"straight"` keys the tone from either contact, as a straight key. The keyer runs at the character speed `wpm`.
+- `swap_paddles`, default `false`: swap dit and dah, from MIDI and from keyboard adapters, for a paddle used with the other hand.
+- `sidetone`, default `true`: play the CW tone, at `tone_hz` and `volume`, while the key is down.
+- `dit_note`, default `20`; `dah_note`, default `21`; `straight_note`, default `30`: the MIDI notes of the dit and dah contacts and of a straight key, 0 to 127. The defaults are the N6ARA TinyMIDI's and the CTR2 MIDI's.
+- `midi_channel`, default `0`: the MIDI channel keying listens to, 1 to 16, or 0 for any.
+
+A change to `[speech.cw]` applies from the next sentence; a reading in progress goes on from the last word with it. While keying, a new speed, keyer, note, channel, or paddle swap applies at once; a new tone or level applies to the sidetone the next time keying is turned on. The note numbers and the channel belong to the adapter on each computer, so they are not synced; the other keying settings are.
 
 ### [speech.voice_params]
 

@@ -332,6 +332,7 @@ impl MenuId {
                 Sep,
                 Do(A::Dictate),
                 Do(A::PauseDictation),
+                Do(A::CwKeying),
             ],
             MenuId::Find => &[
                 Do(A::Find),

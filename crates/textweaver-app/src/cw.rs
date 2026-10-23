@@ -99,6 +99,7 @@ impl App {
     /// utterance, and a reading in progress restarts from the last word.
     pub(crate) fn apply_cw_settings(&mut self) {
         set_options(CwOptions::from_settings(&self.settings));
+        self.cw_keying_settings_changed();
         if self.cw_engine() {
             self.speech.respeak();
         }

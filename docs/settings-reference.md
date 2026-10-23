@@ -47,6 +47,13 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.cw.practice_group`: default 5 characters. CW practice group size. How many characters each practice group has. From 2 to 10 characters, in steps of 1. Syncs between computers.
 - `speech.cw.practice_groups`: default 10 groups. CW practice round length. How many groups a practice round has. After the last, the round's score is said and kept. From 1 to 50 groups, in steps of 1. Syncs between computers.
 - `speech.cw.practice_delay_ms`: default 1000 milliseconds. CW practice start delay. The quiet before each group is sent. It comes after the time textweaver's own spoken messages are expected to take. From 0 to 5000 milliseconds, in steps of 250. Syncs between computers.
+- `speech.cw.keyer`: default iambic B (`"iambic_b"`). CW keyer. How a paddle's contacts become dits and dahs when keying Morse code. Iambic B adds the opposite element when a squeeze is released during an element; iambic A does not; both remember a contact pressed during an element. Straight keys the tone from either contact. Choices: `"iambic_b"` (iambic B), `"iambic_a"` (iambic A), `"straight"` (straight key). Syncs between computers.
+- `speech.cw.swap_paddles`: default off (`false`). Swap CW paddles. Swap dit and dah, for a paddle used with the other hand. MIDI and keyboard adapters both follow it. On or off: `true` or `false`. Syncs between computers.
+- `speech.cw.sidetone`: default on (`true`). CW sidetone. Play the CW tone while the key is down when keying Morse code. On or off: `true` or `false`. Syncs between computers.
+- `speech.cw.dit_note`: default 20. CW dit MIDI note. The MIDI note of the dit contact. 20 for the N6ARA TinyMIDI and the CTR2 MIDI. From 0 to 127, in steps of 1. Stays on this computer.
+- `speech.cw.dah_note`: default 21. CW dah MIDI note. The MIDI note of the dah contact. 21 for the N6ARA TinyMIDI and the CTR2 MIDI. From 0 to 127, in steps of 1. Stays on this computer.
+- `speech.cw.straight_note`: default 30. CW straight key MIDI note. The MIDI note of a straight key. 30 for the CTR2 MIDI in extended paddle mode. From 0 to 127, in steps of 1. Stays on this computer.
+- `speech.cw.midi_channel`: default 0. CW MIDI channel. The MIDI channel keying listens to, 1 to 16, or 0 for any. The CTR2 MIDI always uses channel 1. From 0 to 16, in steps of 1. Stays on this computer.
 - `speech.voice_params`: default none. Rate and pitch per voice. The rate and pitch each voice was last used at. Choosing a voice again brings them back. A table of names and values, edited in the file. Stays on this computer.
 
 ## Highlight: the `[highlight]` section

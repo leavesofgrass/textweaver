@@ -73,7 +73,10 @@ impl RsvpState {
 impl App {
     /// RSVP, while it is showing.
     pub fn rsvp(&self) -> Option<&Rsvp> {
-        self.rsvp.as_ref().map(|s| &s.rsvp)
+        self.rsvp
+            .as_ref()
+            .map(|s| &s.rsvp)
+            .or_else(|| self.cw_keying_rsvp())
     }
 
     /// How long until the RSVP word changes, while it plays on its timer:
@@ -123,6 +126,10 @@ impl App {
         if self.rsvp.take().is_some() {
             let msg = self.msg("aids-rsvp-off");
             self.tell(&msg);
+            return;
+        }
+        // While CW keying, RSVP shows the words keyed (crate::cw_keying).
+        if self.mode == Mode::Edit && self.cw_keying_rsvp_toggle() {
             return;
         }
         if self.mode == Mode::Edit {
@@ -217,7 +224,10 @@ impl App {
 
     /// Puts the cursor on the RSVP word, quietly.
     fn sync_cursor_to_rsvp(&mut self) {
-        let Some(pos) = self.rsvp().and_then(Rsvp::frame).map(|f| f.word.start) else {
+        // The reader's RSVP only: keying's shows text that is not in the
+        // document.
+        let shown = self.rsvp.as_ref().map(|s| &s.rsvp);
+        let Some(pos) = shown.and_then(Rsvp::frame).map(|f| f.word.start) else {
             return;
         };
         if let Some(s) = self.session.as_mut() {

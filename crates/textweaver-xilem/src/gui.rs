@@ -243,6 +243,8 @@ struct Shown {
     font: Option<DocFont>,
     /// Edit mode, as the view shows it.
     editing: bool,
+    /// CW keying, as the view knows it.
+    cw_keying: bool,
     /// Edit mode, as the Edit button says it.
     edit_button: bool,
     /// Dictation, as the Dictate and Pause dictation buttons say it.
@@ -1835,6 +1837,11 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     if editing != shown.editing {
         host.edit(DOC, |mut d| DocumentView::set_editing(&mut d, editing));
         shown.editing = editing;
+    }
+    let keying = app.cw_keying_active();
+    if keying != shown.cw_keying {
+        host.edit(DOC, |mut d| DocumentView::set_cw_keying(&mut d, keying));
+        shown.cw_keying = keying;
     }
     // The reader's marks and the search matches in the window.
     let (marks, names) = shown
@@ -4883,6 +4890,8 @@ impl AppDriver for Gui {
             }
         } else if let Some(DocAction::Paste(text)) = action.downcast_ref::<DocAction>() {
             self.paste_key(ctx, text.clone());
+        } else if let Some(DocAction::CwKey { key, down }) = action.downcast_ref::<DocAction>() {
+            self.app.cw_adapter_key(*key, *down);
         } else if let Some(DocAction::TableCell { forward }) = action.downcast_ref::<DocAction>() {
             let a = if *forward {
                 ActionId::NextTableCell
@@ -4902,6 +4911,7 @@ impl AppDriver for Gui {
                 | DocAction::TableCell { .. }
                 | DocAction::WindowFocused
                 | DocAction::ContextMenu { .. }
+                | DocAction::CwKey { .. }
                 | DocAction::Paste(_) => return,
             };
             if self.log {

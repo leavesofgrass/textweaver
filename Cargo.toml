@@ -188,8 +188,8 @@ log = "0.4"
 # frontends
 clap = { version = "4.6", features = ["derive"] }
 ratatui = "0.30"
-# Beta 4: `tw cw monitor` reads MIDI key adapters (MIT). Its `winrt`
-# feature is turned on for Windows by textweaver-cli.
+# Beta 4: CW keying and `tw cw monitor` read MIDI key adapters (MIT). Its
+# `winrt` feature is turned on for Windows by textweaver-app (`cw-midi`).
 midir = "0.11"
 
 # Audio playback and export. speech-dispatcher (SSIP over its socket) and
