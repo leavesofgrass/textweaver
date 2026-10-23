@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-cw"
-description = "CW (Morse code) for textweaver: ITU Morse tables and prosigns, PARIS and Farnsworth timing, a schedule of elements with exact word boundaries, and a click-free tone renderer"
+description = "CW (Morse code) for textweaver: ITU Morse tables and prosigns, PARIS and Farnsworth timing, a schedule of elements with exact word boundaries, a click-free tone renderer, and keying: key adapters, an iambic keyer, an adaptive decoder and a sidetone"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
