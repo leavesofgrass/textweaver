@@ -475,6 +475,28 @@ pub enum DocAction {
     /// which reads the clipboard's HTML and RTF too and pastes formatted
     /// text as Markdown (B1-cm).
     Paste(String),
+    /// CW keying: a keyboard key adapter's key went down or up. The
+    /// driver hands it to `App::cw_adapter_key`.
+    CwKey {
+        /// The key.
+        key: textweaver_app::CwAdapterKey,
+        /// Down, not up.
+        down: bool,
+    },
+}
+
+/// The key adapter key `code` is, if it is one (by its place on the
+/// keyboard, so any layout works).
+fn cw_adapter_key(code: masonry::core::keyboard::Code) -> Option<textweaver_app::CwAdapterKey> {
+    use masonry::core::keyboard::Code;
+    use textweaver_app::CwAdapterKey as K;
+    Some(match code {
+        Code::ControlLeft => K::LeftControl,
+        Code::ControlRight => K::RightControl,
+        Code::BracketLeft => K::LeftBracket,
+        Code::BracketRight => K::RightBracket,
+        _ => return None,
+    })
 }
 
 /// What a caret key moved onto, for textweaver's own voice in the
@@ -566,6 +588,9 @@ pub struct DocumentView {
     edit_role: bool,
     /// Edit mode (ADR-0033): a multi-line edit that takes typing.
     editing: bool,
+    /// CW keying is on: the keyboard key adapters' keys key Morse code
+    /// ([`cw_adapter_key`]).
+    cw_keying: bool,
     /// Whose caret keys and command modifier the view follows
     /// ([`keys::caret_keys`]).
     platform: Platform,
@@ -695,6 +720,7 @@ impl DocumentView {
             select_spoken: false,
             edit_role: false,
             editing: false,
+            cw_keying: false,
             platform: Platform::current(),
             yielded: Vec::new(),
             focused: false,
@@ -1157,6 +1183,13 @@ impl DocumentView {
             this.ctx.request_layout();
         }
         this.ctx.request_render();
+    }
+
+    /// CW keying on or off: while on, the keys of keyboard key adapters
+    /// (Left and Right Control, `[` and `]`) key Morse code, pressed and
+    /// released, and do nothing else.
+    pub fn set_cw_keying(this: &mut WidgetMut<'_, Self>, on: bool) {
+        this.widget.cw_keying = on;
     }
 
     /// Edit mode on or off: the view becomes a multi-line edit that takes
@@ -2613,6 +2646,17 @@ impl Widget for DocumentView {
         let TextEvent::Keyboard(k) = event else {
             return;
         };
+        // CW keying: an adapter's presses and releases both key.
+        if self.cw_keying
+            && let Some(key) = cw_adapter_key(k.code)
+        {
+            ctx.submit_action::<DocAction>(DocAction::CwKey {
+                key,
+                down: k.state == KeyState::Down,
+            });
+            ctx.set_handled();
+            return;
+        }
         if k.state != KeyState::Down {
             return;
         }
