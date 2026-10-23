@@ -304,10 +304,19 @@ pub enum RenderError {
     Template(String),
 }
 
-/// Finds the Markdown of a note named in `![[Note]]` (for inline embeds).
+/// Finds the Markdown of a note named in `![[Note]]` (for inline embeds),
+/// and where a `[[Note]]` link points.
 pub trait Resolver: Send + Sync {
     /// The note's Markdown, or `None` when there is no such note.
     fn resolve(&self, name: &str) -> Option<String>;
+
+    /// The page a wikilink to `page` points to, relative to the page
+    /// being written and without an extension (`../Projects/Plan`), when
+    /// the link resolves to a note; `None` keeps `page` as written.
+    fn link(&self, page: &str) -> Option<String> {
+        let _ = page;
+        None
+    }
 }
 
 /// Resolves notes as Obsidian does: by name anywhere under a vault folder

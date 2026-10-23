@@ -64,6 +64,7 @@ use textweaver_render::{
 use textweaver_text::Document;
 
 pub mod citations;
+mod links;
 mod plan;
 pub mod report;
 pub mod watch;
@@ -614,6 +615,9 @@ pub struct Converter {
     citations: citations::Citations,
     /// Embed resolvers, one per input root (built on first use).
     resolvers: std::sync::Mutex<HashMap<PathBuf, std::sync::Arc<FsResolver>>>,
+    /// The files of each link scope (a vault, or a folder without one),
+    /// walked once, for wikilinks in the Obsidian flavor.
+    scopes: std::sync::Mutex<HashMap<PathBuf, std::sync::Arc<links::Scope>>>,
 }
 
 impl std::fmt::Debug for Converter {
@@ -676,6 +680,7 @@ impl Converter {
             writers,
             citations,
             resolvers: std::sync::Mutex::new(HashMap::new()),
+            scopes: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -968,11 +973,12 @@ impl Converter {
             }),
             OutputFormat::Html => {
                 let resolver = self.resolver_for(job);
-                let rendered = textweaver_render::render_with(
-                    text,
-                    &self.options.render,
-                    resolver.as_deref().map(|r| r as &dyn Resolver),
-                );
+                let note_links = self.note_links(job, resolver.as_deref());
+                let resolver = match &note_links {
+                    Some(l) => Some(l as &dyn Resolver),
+                    None => resolver.as_deref().map(|r| r as &dyn Resolver),
+                };
+                let rendered = textweaver_render::render_with(text, &self.options.render, resolver);
                 Ok(Output {
                     issues: self.markdown_issues(text),
                     ..self.page(job, &rendered).map(Output::new)?
@@ -1119,6 +1125,26 @@ impl Converter {
             .render(&self.template, rendered, &page)
             .map(String::into_bytes)
             .map_err(|e| e.to_string())
+    }
+
+    /// With the Obsidian flavor, wikilinks point to the page of the note
+    /// they resolve to anywhere in the vault ([`links::NoteLinks`]).
+    fn note_links<'a>(
+        &self,
+        job: &Job,
+        embeds: Option<&'a FsResolver>,
+    ) -> Option<links::NoteLinks<'a>> {
+        if self.options.render.flavor != textweaver_render::Flavor::Obsidian {
+            return None;
+        }
+        let found = textweaver_vault::LinkScope::for_note(&job.source);
+        let scope = {
+            let mut map = self.scopes.lock().ok()?;
+            map.entry(found.root().to_owned())
+                .or_insert_with(|| std::sync::Arc::new(links::Scope::new(found)))
+                .clone()
+        };
+        Some(links::NoteLinks::new(scope, &job.source, embeds))
     }
 
     /// The embed resolver for a job's input root, when embeds are inlined.
