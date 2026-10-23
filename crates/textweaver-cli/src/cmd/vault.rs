@@ -1,5 +1,11 @@
 //! `tw vault`: export documents' notes and highlights to an Obsidian vault,
 //! or import a vault's notes. Owner: Agent J (wave 2).
+//!
+//! Beta 4 adds the vault index's questions, which only read: `backlinks`
+//! (the notes that link to a note), `unresolved` (links to notes that
+//! don't exist, of a note or a whole vault), `tags` (every tag with its
+//! count, or with `--tag` the notes carrying one), and `properties` (a
+//! note's front matter and its Dataview `key::` fields).
 
 use std::path::{Path, PathBuf};
 
@@ -8,17 +14,23 @@ use serde::Serialize;
 use textweaver_app::store::{Paths, StateStore};
 use textweaver_vault::{
     AnnotationStore, ExportDocument, ExportOptions, ImportMode, ImportOptions, LibraryEntry,
-    RelationType, StateStoreAnnotations, apply, export_documents, read_vault, save_library,
+    LinkScope, RelationType, StateStoreAnnotations, VaultIndex, apply, export_documents,
+    inline_fields, read_vault, save_library, split_front_matter,
 };
 
 /// Arguments for `tw vault`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
-    /// `import` or `export`.
-    #[arg(value_parser = ["import", "export"])]
+    /// `import` or `export`; or, reading only, `backlinks`, `unresolved`,
+    /// `tags`, or `properties`.
+    #[arg(value_parser = ["import", "export", "backlinks", "unresolved", "tags", "properties"])]
     pub action: String,
-    /// The Obsidian vault folder.
+    /// The Obsidian vault folder; for `backlinks` and `properties`, a note
+    /// in it; for `unresolved` and `tags`, a note or a folder.
     pub vault: PathBuf,
+    /// The tag whose notes to list (tags only), with or without `#`.
+    #[arg(long)]
+    pub tag: Option<String>,
     /// Document whose notes and highlights to export (export only; repeat
     /// for several documents).
     #[arg(long)]
@@ -226,8 +238,224 @@ fn import(args: &Args, paths: &Paths) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// The index of the vault holding `path` (a note or a folder), or of
+/// the folder itself when no `.obsidian` is above it.
+fn index_for(path: &Path) -> anyhow::Result<VaultIndex> {
+    if !path.exists() {
+        anyhow::bail!("{} was not found", path.display());
+    }
+    let scope = if path.is_dir() {
+        LinkScope::for_folder(path)
+    } else {
+        LinkScope::for_note(path)
+    };
+    Ok(VaultIndex::build(scope))
+}
+
+/// Said after a list when the index hit a size limit.
+const PARTIAL: &str = "Only part of the vault was searched; it is very large.";
+
+/// A note for text output: its title, then its folder in the vault.
+fn note_line(index: &VaultIndex, path: &Path) -> String {
+    let rel = index.scope().relative(path);
+    let folder = rel.rsplit_once('/').map_or("top folder", |(f, _)| f);
+    format!("{}, in {folder}", index.title_of(path))
+}
+
+/// Checks the path names a note, for the commands about one note.
+fn note_arg(args: &Args) -> anyhow::Result<()> {
+    if !args.vault.is_file() {
+        anyhow::bail!("Name a note file, not a folder: {}", args.vault.display());
+    }
+    Ok(())
+}
+
+/// "1 note" or "2 notes".
+fn count(n: usize, one: &str, many: &str) -> String {
+    format!("{n} {}", if n == 1 { one } else { many })
+}
+
+/// `tw vault backlinks NOTE`.
+fn backlinks(args: &Args) -> anyhow::Result<()> {
+    note_arg(args)?;
+    let index = index_for(&args.vault)?;
+    let back = index.backlinks(&args.vault);
+    if args.json {
+        #[derive(Serialize)]
+        struct Row {
+            path: PathBuf,
+            title: String,
+            links: usize,
+        }
+        #[derive(Serialize)]
+        struct Out<'a> {
+            note: &'a Path,
+            vault: &'a Path,
+            partial: bool,
+            backlinks: Vec<Row>,
+        }
+        let rows = back
+            .iter()
+            .map(|b| Row {
+                path: b.from.clone(),
+                title: index.title_of(&b.from),
+                links: b.links,
+            })
+            .collect();
+        crate::cmd::outln!(
+            "{}",
+            serde_json::to_string_pretty(&Out {
+                note: &args.vault,
+                vault: index.scope().root(),
+                partial: index.is_partial(),
+                backlinks: rows,
+            })?
+        );
+        return Ok(());
+    }
+    let name = index.title_of(&args.vault);
+    if back.is_empty() {
+        crate::cmd::outln!("No notes link to {name}.");
+    } else {
+        let n = count(back.len(), "note links", "notes link");
+        crate::cmd::outln!("{n} to {name}:");
+        for b in &back {
+            let links = count(b.links, "link", "links");
+            crate::cmd::outln!("{}, {links}", note_line(&index, &b.from));
+        }
+    }
+    if index.is_partial() {
+        crate::cmd::outln!("{PARTIAL}");
+    }
+    Ok(())
+}
+
+/// `tw vault unresolved PATH`: a note's links, or a whole vault's.
+fn unresolved(args: &Args) -> anyhow::Result<()> {
+    let index = index_for(&args.vault)?;
+    let note = args.vault.is_file().then_some(args.vault.as_path());
+    let missing = index.unresolved(note);
+    if args.json {
+        #[derive(Serialize)]
+        struct Out<'a> {
+            vault: &'a Path,
+            partial: bool,
+            unresolved: &'a [textweaver_vault::Unresolved],
+        }
+        crate::cmd::outln!(
+            "{}",
+            serde_json::to_string_pretty(&Out {
+                vault: index.scope().root(),
+                partial: index.is_partial(),
+                unresolved: &missing,
+            })?
+        );
+        return Ok(());
+    }
+    if missing.is_empty() {
+        crate::cmd::outln!("Every link leads to a note.");
+    } else {
+        let n = count(missing.len(), "link", "links");
+        crate::cmd::outln!("{n} to notes that don't exist:");
+        for u in &missing {
+            crate::cmd::outln!("{}, from {}", u.target, note_line(&index, &u.from));
+        }
+    }
+    if index.is_partial() {
+        crate::cmd::outln!("{PARTIAL}");
+    }
+    Ok(())
+}
+
+/// `tw vault tags PATH [--tag NAME]`.
+fn tags(args: &Args) -> anyhow::Result<()> {
+    let index = index_for(&args.vault)?;
+    if let Some(tag) = &args.tag {
+        let notes = index.notes_with_tag(tag);
+        if args.json {
+            crate::cmd::outln!("{}", serde_json::to_string_pretty(&notes)?);
+            return Ok(());
+        }
+        let tag = tag.trim().trim_start_matches('#');
+        if notes.is_empty() {
+            crate::cmd::outln!("No notes carry the tag {tag}.");
+        } else {
+            crate::cmd::outln!("Tag {tag}, {}:", count(notes.len(), "note", "notes"));
+            for p in &notes {
+                crate::cmd::outln!("{}", note_line(&index, p));
+            }
+        }
+    } else {
+        let tags = index.tags();
+        if args.json {
+            crate::cmd::outln!("{}", serde_json::to_string_pretty(&tags)?);
+            return Ok(());
+        }
+        if tags.is_empty() {
+            crate::cmd::outln!("No tags in this vault.");
+        }
+        for t in &tags {
+            crate::cmd::outln!("{}, {}", t.tag, count(t.notes, "note", "notes"));
+        }
+    }
+    if index.is_partial() {
+        crate::cmd::outln!("{PARTIAL}");
+    }
+    Ok(())
+}
+
+/// `tw vault properties NOTE`: front matter, then Dataview fields.
+fn properties(args: &Args) -> anyhow::Result<()> {
+    note_arg(args)?;
+    let bytes = std::fs::read(&args.vault)
+        .with_context(|| format!("Could not read {}", args.vault.display()))?;
+    let text = String::from_utf8_lossy(&bytes);
+    let (fm, body) = split_front_matter(&text);
+    let props = fm.properties();
+    let fields = inline_fields(body);
+    if args.json {
+        #[derive(Serialize)]
+        struct Out<'a> {
+            properties: &'a [(String, String)],
+            fields: &'a [(String, String)],
+        }
+        crate::cmd::outln!(
+            "{}",
+            serde_json::to_string_pretty(&Out {
+                properties: &props,
+                fields: &fields,
+            })?
+        );
+        return Ok(());
+    }
+    if props.is_empty() && fields.is_empty() {
+        crate::cmd::outln!("This note has no properties.");
+        return Ok(());
+    }
+    if !props.is_empty() {
+        crate::cmd::outln!("Properties: {}", props.len());
+        for (k, v) in &props {
+            crate::cmd::outln!("{k}: {v}");
+        }
+    }
+    if !fields.is_empty() {
+        crate::cmd::outln!("Dataview fields: {}", fields.len());
+        for (k, v) in &fields {
+            crate::cmd::outln!("{k}: {v}");
+        }
+    }
+    Ok(())
+}
+
 /// Runs `tw vault`.
 pub fn run(args: Args) -> anyhow::Result<()> {
+    match args.action.as_str() {
+        "backlinks" => return backlinks(&args),
+        "unresolved" => return unresolved(&args),
+        "tags" => return tags(&args),
+        "properties" => return properties(&args),
+        _ => {}
+    }
     let paths = super::paths(args.home.as_deref())?;
     match args.action.as_str() {
         "export" => export(&args, &paths),
