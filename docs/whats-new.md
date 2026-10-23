@@ -2,6 +2,13 @@
 
 This page summarizes what each release brought, for readers who want the changes without the full record. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-beta.4
+
+Not yet released.
+
+- **The Braille view.** The textweaver app can draw the line you are reading as braille dots in a bar at the bottom of the screen, for learning and teaching braille and for checking spacing (Alt+Shift+F2, or Braille view under Reading aids in the View menu). It follows the cursor and the spoken sentence, as many cells at a time as your Braille display has (40 by default), in uncontracted or contracted braille (Alt+Shift+F3 switches). Optional teaching aids put the print under each cell and outline the cells, so blank cells show. It is visual only: screen readers find it as a picture named "Braille view" and are never sent its braille. In the terminal reader the same key shows a row of Unicode braille in self-voicing mode. See [The Braille view](reading-aids.md#the-braille-view).
+- **Contracted braille in BRF files from the reader.** The new braille grade setting (`[braille] grade`) also decides whether a BRF file exported from the reader is uncontracted or contracted; contracted braille needs liblouis.
+
 ## 0.1.0-beta.3
 
 Released on Saturday, October 17, 2026.

@@ -367,7 +367,13 @@ Audio export. See [Audio export](audio-export.md).
 
 ### [braille]
 
-Braille output and input: BRF files written and read, and math braille on the display. See [Math in braille files](math.md#math-in-braille-files) and [Converting documents](converting.md).
+Braille output and input: BRF files written and read, math braille on the display, and the textweaver app's Braille view. See [Math in braille files](math.md#math-in-braille-files), [Converting documents](converting.md), and [The Braille view](reading-aids.md#the-braille-view).
+
+- `grade`, default `"uncontracted"`: uncontracted (grade 1) or contracted (grade 2, `"contracted"`) Unified English Braille, for BRF files exported from the reader and for the Braille view. Contracted braille goes through liblouis with the BRF writer's table, `en-ueb-g2.ctb`; without liblouis, uncontracted braille is used and textweaver says so. Alt+Shift+F3 switches it.
+- `display_cells`, default `40`: how many cells your Braille display has, from 8 to 120. The Braille view shows this many cells at a time. Stays on this computer, since each computer may have its own display.
+- `viewer`, default `false`: the Braille view, the current line or spoken sentence drawn as braille dots at the bottom of the textweaver app (in the terminal reader, a row of Unicode braille in self-voicing mode). Visual only. Alt+Shift+F2 turns it on and off.
+- `viewer_print_line`, default `false`: under each braille cell in the Braille view, the print letter or contraction it stands for.
+- `viewer_cell_outlines`, default `false`: an outline around each cell in the Braille view, so blank cells and spacing show.
 
 - `math_code`, default `"nemeth"`: the braille code math is written in, in BRF files and while exploring a formula. `"nemeth"` is the Nemeth Code inside UEB text, with the Nemeth switch indicators; `"ueb"` is Unified English Braille's own mathematics. Needs a build with MathCAT; without it, math is written as its spoken words in uncontracted braille.
 - `brf_code`, default `"ueb"`: the braille code BRF files are read in when you open one and textweaver translates it back to print through liblouis. `"ueb"` is Unified English Braille, the code of books produced since 2016; `"ebae"` is English Braille American Edition, for older American books. Open the file again after a change. See [Braille files](reading.md#braille-files-brf).

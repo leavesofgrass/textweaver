@@ -8,6 +8,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - "Paused." is said at every interface announcement level, minimal and off included, so pausing is always confirmed with a screen reader running.
 
+### Braille
+
+- **New: the Braille view.** The textweaver app draws the current line, or the sentence being spoken, as braille dots in a bar at the bottom of the app, under RSVP when both are on, as a learning and teaching tool and for checking spacing. Show or hide it with Alt+Shift+F2 or Braille view under Reading aids in the View menu (`[braille] viewer`, off by default). It shows `[braille] display_cells` cells at a time (40 by default) and pans to the part with the spoken word or the cursor, breaking between words where it can; every space is a cell. The dots are drawn at the standard cell proportions and scale with the document text size: a raised dot is a filled disc, an empty position a thin ring, so the two differ by shape, never by color alone; eight-dot cells get a fourth row. Teaching options, off by default: a print line under each cell or run of cells (`viewer_print_line`), exact in uncontracted braille and paired word by word through each word's contracted beginnings in contracted braille, and cell outlines (`viewer_cell_outlines`). It fades with the bars in focus mode. To screen readers it is one image named "Braille view" with a description saying it is visual only; its braille is never in the accessibility tree and never announced. In the terminal reader the same key shows the line in Unicode braille on a row above the status line, in self-voicing mode only, so a screen reader never reads it out ([The Braille view](docs/reading-aids.md#the-braille-view)).
+- **New: the braille grade setting.** `[braille] grade` chooses uncontracted (grade 1, the default) or contracted (grade 2) Unified English Braille for the Braille view and for BRF files exported from the reader; Alt+Shift+F3 switches it and says which. Contracted braille goes through liblouis with the BRF writer's table, and falls back to uncontracted, saying so, when liblouis is missing. Reader builds now include the BRF writer's liblouis support.
+- The native UEB translator can say which print character each braille cell stands for (`ueb::translate_mapped`), and the BRF writer's liblouis bridge can return Unicode braille with dots 7 and 8 (`louis_unicode`).
+
 ## [0.1.0-beta.3] - 2026-10-17
 
 ### Changed
