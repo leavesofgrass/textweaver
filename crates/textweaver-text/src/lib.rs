@@ -21,7 +21,7 @@ pub mod units;
 
 pub use document::{DisplayIndex, Document, DocumentData, DocumentMeta};
 pub use history::History;
-pub use marker::{HEADER_ROW_LABEL, Marker, MarkerIndex, MarkerTables};
+pub use marker::{HEADER_ROW_LABEL, HIGHLIGHT_LABEL, Marker, MarkerIndex, MarkerTables};
 pub use narrate::{
     BlockEnd, InlineSpeech, NarrationPolicy, ReadingPass, TableNarration, block_ends, plan,
     plan_with,

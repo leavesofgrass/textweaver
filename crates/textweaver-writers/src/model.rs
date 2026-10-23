@@ -158,6 +158,9 @@ pub enum Style {
     Italic,
     /// Underlined.
     Underline,
+    /// Highlighted (Markdown's `==text==`): shown as a highlight, never
+    /// as an underline.
+    Highlight,
     /// Inline code.
     Code,
     /// A link to a target.
@@ -1006,6 +1009,7 @@ fn style_of(m: &Marker) -> Style {
     match m.kind {
         MarkerKind::Bold => Style::Bold,
         MarkerKind::Italic => Style::Italic,
+        MarkerKind::Underline if m.is_highlight() => Style::Highlight,
         MarkerKind::Underline => Style::Underline,
         MarkerKind::Strikethrough => Style::Strikethrough,
         MarkerKind::Math => Style::Math {

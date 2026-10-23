@@ -132,3 +132,23 @@ fn pdf_typesets_math_in_a_formula_tag() {
     assert!(!text.contains('$'), "{text}");
     assert!(!text.contains("\\pi"), "{text}");
 }
+
+/// A Markdown highlight (`==text==`) is a highlight in Word and EPUB, and a
+/// transcriber-defined typeform in braille: never an underline.
+#[test]
+fn highlights_are_highlights_in_word_epub_and_braille() {
+    let doc = md("Some ==bright== words.\n");
+    let (bytes, _) = write_to_vec(&doc, Format::Docx, &options()).unwrap();
+    let xml = String::from_utf8(entries(&bytes)["word/document.xml"].clone()).unwrap();
+    roxmltree::Document::parse(&xml).expect("well-formed document.xml");
+    assert!(xml.contains("<w:highlight w:val=\"yellow\"/>"), "{xml}");
+    assert!(!xml.contains("<w:u "), "{xml}");
+    let (bytes, _) = write_to_vec(&doc, Format::Epub, &options()).unwrap();
+    let marked = entries(&bytes)
+        .values()
+        .any(|d| String::from_utf8_lossy(d).contains("<mark>bright</mark>"));
+    assert!(marked, "no <mark> in the EPUB");
+    let (bytes, _) = write_to_vec(&doc, Format::Brf, &options()).unwrap();
+    let brf = String::from_utf8_lossy(&bytes);
+    assert!(brf.contains("@#"), "transcriber-defined typeform: {brf}");
+}

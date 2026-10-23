@@ -2,7 +2,7 @@
 
 Our class read *To Kill a Mockingbird* this term.
 
-The **key** point is that *every* word counts, and ==underlined words== are for review.
+The **key** point is that *every* word counts, and ==highlighted words== are for review.
 
 Did you finish *Hamlet*?
 

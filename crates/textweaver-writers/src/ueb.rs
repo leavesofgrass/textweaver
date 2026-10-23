@@ -212,7 +212,7 @@ impl Typeform {
             Typeform::Italic => ".",
             Typeform::Bold => "^",
             Typeform::Underline => "_",
-            Typeform::Transcriber1 => "`#",
+            Typeform::Transcriber1 => "@#",
             Typeform::Transcriber2 => "^#",
             Typeform::Transcriber3 => "_#",
             Typeform::Transcriber4 => "\"#",
