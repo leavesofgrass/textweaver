@@ -120,17 +120,43 @@ impl App {
         let last = text_util::line_count(&s.doc).saturating_sub(1);
         let top = self.view.top_line.saturating_add_signed(delta).min(last);
         if top == self.view.top_line {
-            let msg = self.msg(if delta < 0 {
-                "nav-top-of-document-stop"
-            } else {
-                "view-bottom-of-document"
-            });
-            self.say_at(&msg, Verbosity::Normal, Priority::Polite);
+            self.say_scroll_stop(delta > 0);
             return;
         }
         self.view.top_line = top;
         let msg = self.msg_args("view-line-at-top", &args!["line" => top + 1]);
         self.say_at(&msg, Verbosity::High, Priority::Polite);
+    }
+
+    /// A frontend that scrolls its own view (the graphical version, which
+    /// lays out lines of its own width) reports where Scroll Down
+    /// (`down`) or Scroll Up left it: `top` is the first char now at the
+    /// top of the view, or `None` when the view could not move. The
+    /// cursor stays where it is; the viewport's top line follows, and the
+    /// same words are said as for the terminal reader's scrolling: the
+    /// line at the top at high verbosity, the stop at the top or bottom
+    /// of the document at normal verbosity.
+    pub fn scrolled_to(&mut self, top: Option<CharPos>, down: bool) {
+        let Some(s) = self.session.as_ref() else {
+            return;
+        };
+        let Some(top) = top else {
+            self.say_scroll_stop(down);
+            return;
+        };
+        let line = text_util::line_of(&s.doc, top);
+        self.view.top_line = line;
+        let msg = self.msg_args("view-line-at-top", &args!["line" => line + 1]);
+        self.say_at(&msg, Verbosity::High, Priority::Polite);
+    }
+
+    fn say_scroll_stop(&mut self, down: bool) {
+        let msg = self.msg(if down {
+            "view-bottom-of-document"
+        } else {
+            "nav-top-of-document-stop"
+        });
+        self.say_at(&msg, Verbosity::Normal, Priority::Polite);
     }
 
     /// Words the highlight is drawn ahead of (positive) or behind (negative)

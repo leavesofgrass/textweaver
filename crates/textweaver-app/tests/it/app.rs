@@ -463,6 +463,45 @@ fn verbosity_shapes_messages() {
     assert!(said.any("Paused."));
 }
 
+/// Scroll Down and Scroll Up from a frontend that scrolls its own view
+/// (the graphical version): the app keeps the cursor, follows the top
+/// line, and says what the terminal reader's scrolling says (beta 4).
+#[test]
+fn a_view_scrolled_by_its_frontend_says_what_the_terminal_says() {
+    let text = "Line one\nLine two\nLine three\nLast line";
+    let said = Said::default();
+    let (mut config, _log) = make_config(&said);
+    config.settings.speech.verbosity = Verbosity::High;
+    let mut app = App::new(config);
+    app.open_document(
+        Document::from_plain_text(text),
+        DocKey::untitled(3),
+        "Scroll".into(),
+    );
+    let cursor = app.session().unwrap().cursor;
+    // The view moved: its top is now on line three.
+    let top = CharPos(text.find("Line three").unwrap());
+    app.scrolled_to(Some(top), true);
+    assert_eq!(said.last(), "Line 3 at top.");
+    assert_eq!(app.viewport().top_line, 2);
+    assert_eq!(app.session().unwrap().cursor, cursor, "the cursor stays");
+    // It could not move: the same stops the terminal says.
+    app.scrolled_to(None, true);
+    assert_eq!(said.last(), "Bottom of document.");
+    app.scrolled_to(None, false);
+    assert_eq!(said.last(), "Top of document.");
+    // The terminal's own scrolling says the same words.
+    app.dispatch(Command::Action(ActionId::ScrollUp));
+    assert_eq!(said.last(), "Line 2 at top.");
+    // At normal verbosity the line at the top is not said; the stops are.
+    let mut r = rig(text);
+    let before = r.said.all().len();
+    r.app.scrolled_to(Some(top), true);
+    assert_eq!(r.said.all().len(), before);
+    r.app.scrolled_to(None, false);
+    assert_eq!(r.said.last(), "Top of document.");
+}
+
 #[test]
 fn speech_cursor_reads_lines_and_says_blank() {
     let text = "Line one\n\nLine three\nLast line";
