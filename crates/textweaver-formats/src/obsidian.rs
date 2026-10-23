@@ -2,9 +2,12 @@
 //! needs beyond CommonMark to read a note from a vault.
 //!
 //! - **Embeds** (`![[note]]`, `![[note#Heading]]`, `![[note#^id]]`): the
-//!   other note is read in place, found inside the embedding note's own
-//!   folder or below it, never outside; two levels deep at most, a cycle
-//!   refused, and each note and the total bounded in size.
+//!   other note is read in place, found anywhere in the note's vault (the
+//!   folder holding `.obsidian`) and never outside it, or, outside a
+//!   vault, in the note's own folder or below it; by the vault crate's
+//!   shared resolver (`textweaver_vault::resolve`), by name or path first
+//!   and then by title or alias. Two levels deep at most, a cycle refused,
+//!   and each note and the total bounded in size.
 //! - **Inline marks**: tags (`#physics/waves`, read "tag physics slash
 //!   waves"), highlights (`==text==`), and comments (`%%hidden%%`, not
 //!   read).
@@ -13,7 +16,9 @@
 //!   properties so a link to `note#^id` can find the block
 //!   ([`block_position`]).
 
-use std::path::{Component, Path, PathBuf};
+use std::cell::OnceCell;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use textweaver_core::CharPos;
 use textweaver_text::DocumentMeta;
@@ -31,11 +36,6 @@ pub const MAX_EMBED_TOTAL: usize = 16 << 20;
 
 /// Most embeds read in one document; later ones are links.
 pub const MAX_EMBEDS: usize = 64;
-
-/// How deep below the note's folder the search for an embedded note by its
-/// name goes, and how many folder entries it looks at in all.
-const SEARCH_DEPTH: usize = 8;
-const SEARCH_ENTRIES: usize = 20_000;
 
 /// The `DocumentMeta::properties` key holding the block ids a note
 /// defines: one `id offset` pair per line, the offset in characters.
@@ -180,9 +180,15 @@ pub(crate) fn image_alias(alias: &str) -> (Option<String>, Option<String>) {
 /// The embeds read so far in one document, and where they may come from.
 #[derive(Clone, Debug)]
 pub(crate) struct Embeds {
-    /// The embedding document's folder, resolved: embeds come from here or
-    /// below.
+    /// The embedding document's folder, resolved.
     root: PathBuf,
+    /// Where embeds may come from: the vault, or the folder and below.
+    scope: Rc<textweaver_vault::LinkScope>,
+    /// The scope's files, walked when the first embed is looked for.
+    files: Rc<OnceCell<textweaver_vault::ScopeFiles>>,
+    /// The scope's index, built only when a name is not found, to find
+    /// the note by its title or an alias.
+    index: Rc<OnceCell<textweaver_vault::VaultIndex>>,
     /// The notes being read, outermost first (the document itself too), to
     /// refuse a cycle.
     chain: Vec<PathBuf>,
@@ -218,12 +224,16 @@ impl Refused {
 impl Embeds {
     /// Embeds for a document in `folder`, itself at `path` when known.
     pub(crate) fn new(folder: &Path, path: Option<&Path>) -> Option<Self> {
-        let root = folder.canonicalize().ok()?;
+        let root = folder.canonicalize().ok().map(|_| resolve_path(folder))?;
         let chain = path
-            .and_then(|p| p.canonicalize().ok())
+            .filter(|p| p.exists())
+            .map(resolve_path)
             .into_iter()
             .collect();
         Some(Embeds {
+            scope: Rc::new(textweaver_vault::LinkScope::for_folder(&root)),
+            files: Rc::default(),
+            index: Rc::default(),
             root,
             chain,
             used: std::rc::Rc::default(),
@@ -240,6 +250,9 @@ impl Embeds {
         chain.push(note);
         Embeds {
             root: self.root.clone(),
+            scope: self.scope.clone(),
+            files: self.files.clone(),
+            index: self.index.clone(),
             chain,
             used: self.used.clone(),
         }
@@ -274,60 +287,33 @@ impl Embeds {
         Ok((path, crate::decode_bytes(&bytes, None).text))
     }
 
-    /// The note `name` names, inside the root folder: the path as written
-    /// (with `.md` added), relative to the root, else a note of that file
-    /// name anywhere below the root, as Obsidian finds notes by name.
+    /// The note `name` names, for the note being read (the last in the
+    /// chain): by path or name in the scope, nearest first, then by a
+    /// note's title or alias. Only a file inside the scope.
     fn resolve(&self, name: &str) -> Option<PathBuf> {
-        let rel = PathBuf::from(name.replace('\\', "/"));
-        if !rel.components().all(|c| matches!(c, Component::Normal(_))) {
-            return None;
-        }
-        let file_name = rel.file_name()?.to_string_lossy().to_lowercase();
-        let with_md = if file_name.ends_with(".md") {
-            file_name.clone()
-        } else {
-            format!("{file_name}.md")
-        };
-        let inside = |p: PathBuf| -> Option<PathBuf> {
-            let real = p.canonicalize().ok()?;
-            (real.starts_with(&self.root) && real.is_file()).then_some(real)
-        };
-        let mut direct = self.root.join(&rel);
-        if !direct.to_string_lossy().to_lowercase().ends_with(".md") {
-            direct.as_mut_os_string().push(".md");
-        }
-        if let Some(found) = inside(direct) {
-            return Some(found);
-        }
-        let mut seen = 0usize;
-        find_by_name(&self.root, &with_md, SEARCH_DEPTH, &mut seen).and_then(inside)
+        let from = self
+            .chain
+            .last()
+            .and_then(|p| p.parent())
+            .unwrap_or(&self.root)
+            .to_owned();
+        let files = self.files.get_or_init(|| self.scope.files());
+        let found = textweaver_vault::resolve(&self.scope, files, &from, name)
+            .or_else(|| {
+                let index = self
+                    .index
+                    .get_or_init(|| textweaver_vault::VaultIndex::build((*self.scope).clone()));
+                index.resolve_in(&from, name)
+            })?
+            .path;
+        (self.scope.contains(&found) && found.is_file()).then_some(found)
     }
 }
 
-/// A file named `wanted` (lowercase) under `dir`, nearest first, skipping
-/// hidden folders (`.obsidian`, `.git`).
-fn find_by_name(dir: &Path, wanted: &str, depth: usize, seen: &mut usize) -> Option<PathBuf> {
-    let mut dirs = Vec::new();
-    for e in std::fs::read_dir(dir).ok()?.flatten() {
-        *seen += 1;
-        if *seen > SEARCH_ENTRIES {
-            return None;
-        }
-        let name = e.file_name().to_string_lossy().to_lowercase();
-        let Ok(kind) = e.file_type() else { continue };
-        if kind.is_file() && name == wanted {
-            return Some(e.path());
-        }
-        if kind.is_dir() && !name.starts_with('.') {
-            dirs.push(e.path());
-        }
-    }
-    if depth == 0 {
-        return None;
-    }
-    dirs.sort();
-    dirs.iter()
-        .find_map(|d| find_by_name(d, wanted, depth - 1, seen))
+/// `path` absolute, links followed, without Windows' `\\?\` prefix: the
+/// form the vault resolver gives, so a cycle is seen whatever the spelling.
+fn resolve_path(path: &Path) -> PathBuf {
+    textweaver_store::library::resolve_path(path)
 }
 
 /// The lines of `text` outside fenced code blocks, with their byte offsets.

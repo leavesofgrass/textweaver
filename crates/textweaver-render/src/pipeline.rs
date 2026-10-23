@@ -329,6 +329,7 @@ impl<'a> Pass<'_, 'a> {
                     let mut ctx = Ctx {
                         link_ext: &self.opts.wikilink_extension,
                         tags: &mut self.facts.tags,
+                        links: self.resolver,
                     };
                     match inline::transform(&text, self.inline, &mut ctx) {
                         None => self.emit(Event::Text(text)),

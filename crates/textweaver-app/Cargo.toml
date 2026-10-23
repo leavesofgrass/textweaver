@@ -79,6 +79,8 @@ textweaver-text.workspace = true
 textweaver-formats.workspace = true
 textweaver-speech.workspace = true
 textweaver-store.workspace = true
+# Obsidian vaults: the link resolver and the index (crate::vault).
+textweaver-vault.workspace = true
 # Document identity for sync (ADR-0049): sync ids found on the writer.
 textweaver-sync.workspace = true
 textweaver-keymap.workspace = true

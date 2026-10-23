@@ -764,6 +764,11 @@ action-previous-separator = Ir al separador anterior (línea horizontal)
 action-next-graphic = Ir al gráfico siguiente (imagen)
 action-previous-graphic = Ir al gráfico anterior (imagen)
 action-follow-link = Seguir el enlace en el cursor, o ir entre una nota al pie y su nota
+action-note-properties = Listar las propiedades de la nota abierta (sus metadatos iniciales), cada nombre con su valor
+action-backlinks = Listar las notas del vault que enlazan a esta nota; Intro abre una
+action-unresolved-links = Listar los enlaces de esta nota a notas que no existen
+action-note-tags = Listar las etiquetas de esta nota; Intro lista las notas del vault con esa etiqueta
+action-vault-tags = Listar todas las etiquetas del vault con cuántas notas las llevan; Intro lista esas notas
 action-table-next-row = En una tabla, bajar una fila en la misma columna
 action-table-previous-row = En una tabla, subir una fila en la misma columna
 action-table-next-column = En una tabla, ir a la celda siguiente de la fila
@@ -1753,12 +1758,72 @@ links-heading-label = Encabezado
 links-no-heading = No hay ningún encabezado llamado { $anchor } en este documento.
 # $file is the file the link names.
 links-file-not-found = El enlace va a { $file }, que no se encontró.
+links-block-label = Bloque
+links-no-block = No hay ningún bloque { $id } en este documento.
+links-note-not-found = Enlace a una nota que no existe: { $name }.
+vault-same-name = { $count } notas se llaman { $name }; se abrió la más cercana.
+vault-properties-count = Propiedades: { $n }.
+vault-properties-title = Propiedades
+vault-no-properties = Este documento no tiene propiedades.
+vault-property-row = { $name }: { $value }
+vault-property-checked = marcada
+vault-property-not-checked = sin marcar
+vault-no-file = Este documento no está guardado en una carpeta, así que no tiene vault.
+vault-partial = Solo se buscó en parte del vault; es muy grande.
+vault-top-folder = carpeta principal
+vault-backlink-row =
+    { $links ->
+        [one] { $title }, 1 enlace, en { $folder }
+       *[other] { $title }, { $links } enlaces, en { $folder }
+    }
+vault-note-row = { $title }, en { $folder }
+vault-backlinks-title = Notas que enlazan aquí
+vault-backlinks-intro =
+    { $n ->
+        [one] Notas que enlazan aquí, 1 nota. Intro la abre.
+       *[other] Notas que enlazan aquí, { $n } notas. Intro abre una.
+    }
+vault-no-backlinks = Ninguna nota enlaza aquí.
+vault-unresolved-title = Enlaces a notas que no existen
+vault-unresolved-intro =
+    { $n ->
+        [one] Enlaces a notas que no existen, 1 enlace.
+       *[other] Enlaces a notas que no existen, { $n } enlaces.
+    }
+vault-no-unresolved = Todos los enlaces de esta nota llevan a una nota.
+vault-note-tags-title = Etiquetas de esta nota
+vault-note-tags-intro =
+    { $n ->
+        [one] Etiquetas de esta nota, 1 etiqueta. Intro lista las notas que la llevan.
+       *[other] Etiquetas de esta nota, { $n } etiquetas. Intro lista las notas con una.
+    }
+vault-no-note-tags = Esta nota no tiene etiquetas.
+vault-tags-title = Etiquetas del vault
+vault-tags-intro =
+    { $n ->
+        [one] Etiquetas del vault, 1 etiqueta. Intro lista sus notas.
+       *[other] Etiquetas del vault, { $n } etiquetas. Intro lista las notas de una etiqueta.
+    }
+vault-no-tags = No hay etiquetas en este vault.
+vault-tag-row =
+    { $n ->
+        [one] { $tag }, 1 nota
+       *[other] { $tag }, { $n } notas
+    }
+vault-tag-notes-title = Notas con una etiqueta
+vault-tag-notes-intro =
+    { $n ->
+        [one] Etiqueta { $tag }, 1 nota. Intro la abre.
+       *[other] Etiqueta { $tag }, { $n } notas. Intro abre una.
+    }
+vault-tag-no-notes = Ninguna nota lleva la etiqueta { $tag }.
 # $title is the document's title; $heading is the heading arrived at, $anchor
 # the heading a link names; $key names the History Back command's keys;
 # $text is the first words at the position arrived at.
 links-opened = Se abrió { $title }. Atrás: { $key }.
 links-opened-at = Se abrió { $title }, en { $heading }. Atrás: { $key }.
 links-opened-no-heading = Se abrió { $title }, al principio: no hay ningún encabezado llamado { $anchor }. Atrás: { $key }.
+links-opened-no-block = Se abrió { $title }, al principio: no hay ningún bloque { $id }. Atrás: { $key }.
 links-back-in = Atrás en { $title }: { $text }
 links-forward-in = Adelante en { $title }: { $text }
 # $label is the footnote's label, such as 1.
@@ -3766,6 +3831,11 @@ name-previous-separator = Separador anterior
 name-next-graphic = Gráfico siguiente
 name-previous-graphic = Gráfico anterior
 name-follow-link = Seguir enlace
+name-note-properties = Propiedades de la nota
+name-backlinks = Notas que enlazan aquí
+name-unresolved-links = Enlaces a notas que no existen
+name-note-tags = Etiquetas de esta nota
+name-vault-tags = Etiquetas del vault
 name-table-next-row = Fila siguiente de la tabla
 name-table-previous-row = Fila anterior de la tabla
 name-table-next-column = Columna siguiente de la tabla

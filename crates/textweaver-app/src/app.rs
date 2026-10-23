@@ -339,6 +339,9 @@ pub(crate) enum ListKind {
     /// Customize buttons: the bars' buttons, one button's moves, or the
     /// commands to add (crate::buttons, B1-cb).
     Buttons(crate::buttons::ButtonsList),
+    /// A note's properties, the notes that link to it, its unresolved
+    /// links, or tags and the notes carrying one (crate::vault).
+    Vault(crate::vault::VaultList),
 }
 
 /// The application: the only owner of mutable state.
@@ -584,6 +587,8 @@ pub struct App {
     /// Relations between notes: the filter and the library's notes
     /// (crate::relations, B1-g1).
     pub(crate) relations: crate::relations::RelationsState,
+    /// The Obsidian vault index and what was said about it (crate::vault).
+    pub(crate) vault: crate::vault::VaultState,
 }
 
 impl App {
@@ -724,6 +729,7 @@ impl App {
             components: crate::components::ComponentsState::default(),
             updates: crate::updates::UpdatesState::default(),
             relations: crate::relations::RelationsState::default(),
+            vault: crate::vault::VaultState::default(),
         };
         if app.paths.is_some() {
             // The writers find a downloaded Lexend by name.
@@ -1378,6 +1384,12 @@ impl App {
             Some(moved) => format!("{msg} {moved}"),
             None => msg,
         };
+        // An Obsidian note's front matter: "Properties: 3." (the key `f`
+        // lists them; crate::vault).
+        let msg = match self.properties_count_message() {
+            Some(props) => format!("{msg} {props}"),
+            None => msg,
+        };
         self.tell(&msg);
         // "Ask" asks about the library folder's other place (ADR-0049,
         // problem 1: it used to keep this computer's without asking).
@@ -1979,6 +1991,7 @@ impl App {
             Some(ListKind::GraphFormats) => return self.choose_graph_format(n),
             Some(ListKind::HelpSearch(topics)) => return self.choose_help_topic(&topics, n),
             Some(ListKind::Buttons(l)) => return self.choose_buttons(l, n),
+            Some(ListKind::Vault(l)) => return self.choose_vault(l, n),
             Some(ListKind::Info) | Some(ListKind::Help) | None => {}
         }
         vec![Effect::Redraw]
@@ -2383,6 +2396,11 @@ impl App {
             A::OpenLibrary => return self.open_library(),
             A::ContinueReading => return self.open_continue_reading(),
             A::ReviewList => return self.open_review_list(),
+            A::NoteProperties => return self.list_note_properties(),
+            A::Backlinks => return self.list_backlinks(),
+            A::UnresolvedLinks => return self.list_unresolved_links(),
+            A::NoteTags => return self.list_note_tags(),
+            A::VaultTags => return self.list_vault_tags(),
             A::ReadingQueue => return self.open_reading_queue(),
             A::QueueDocument => return self.queue_document(),
             A::AddLibraryFolder => return self.add_library_folder(),

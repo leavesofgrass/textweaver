@@ -5,7 +5,7 @@
 ## Before you start
 
 - A vault is a folder of Markdown files; Obsidian keeps its own settings in a `.obsidian` folder inside it. `tw vault` operates on the folder, so Obsidian need not be running or even installed.
-- The vault commands belong to `tw`, the command-line tool. Neither the terminal reader nor the app has a vault menu yet.
+- Export and import belong to `tw`, the command-line tool. The reader, in the terminal and in the textweaver app, follows a vault's links and lists its properties, backlinks, unresolved links, and tags; see [Read vault notes in textweaver](#read-vault-notes-in-textweaver).
 - Notes and highlights are created while reading; [the notes guide](notes.md) describes how. `tw marks`, given a document's file name, lists the notes and highlights that document holds.
 - textweaver stores each document's notes and highlights in its own data folder, never inside the document. On Windows that is `%APPDATA%\leavesofgrass\textweaver\data\state`. On macOS it is `~/Library/Application Support/org.leavesofgrass.textweaver/state`, and on Linux `~/.local/share/textweaver/state`. If the `TEXTWEAVER_HOME` environment variable is set, it is `data\state` inside that folder.
 - Import only reads the vault; it never changes, moves, or deletes a file in it.
@@ -19,7 +19,7 @@
 tw vault --help
 ```
 
-The command takes the form `tw vault`, then `import` or `export`, then the vault folder, then any options. Some options belong to one action only, and an option given to the other action is ignored without a warning.
+The command takes the form `tw vault`, then an action, then the vault folder (or a note in it), then any options. The actions are `import` and `export`, which exchange notes with textweaver, and four that only read the vault: `backlinks`, `unresolved`, `tags`, and `properties` (see [Ask the vault](#ask-the-vault)). Some options belong to one action only, and an option given to another action is ignored without a warning.
 
 - `--document FILE` (export only): a document whose notes and highlights to export. Export needs at least one. Repeat the option for several documents.
 - `--folder FOLDER` (export only): a folder inside the vault for new notes, such as `textweaver`. Without it, new notes go in the vault's top folder.
@@ -27,7 +27,8 @@ The command takes the form `tw vault`, then `import` or `export`, then the vault
 - `--mode graph` or `--mode library` (import only): what to import. `graph`, the default, imports notes and their links. `library` adds the vault's notes to the library as documents and does nothing else; see [Library mode](#library-mode).
 - `--link-relation NAME` (import only): the kind of link a plain `[[link]]` becomes, such as `SUPPORTS`. Without it, plain links become `SEE_ALSO`.
 - `--dry-run` (import only): read the vault and report what an import would do, storing nothing.
-- `--json` (both): print the full result as JSON, for scripts.
+- `--tag NAME` (tags only): list the notes that carry the tag `NAME`, written with or without `#`, instead of every tag.
+- `--json` (every action): print the full result as JSON, for scripts.
 
 ## Export notes and highlights to a vault
 
@@ -221,7 +222,7 @@ Importing the same vault again refreshes these notes and never adds a second one
 
 ### How links are read
 
-- `[[Note]]` links to the note whose file name, front matter `title`, or one of whose `aliases` is "Note". Case is ignored. If two notes share a name, the first one found, in path order, is used.
+- `[[Note]]` links to the note whose file name, front matter `title`, or one of whose `aliases` is "Note". Case is ignored. If two notes share a name, the first one found, in path order, is used. Aliases may be a list (`aliases: [Cell biology, Cytology]`, or one alias per line under `aliases:`) or text with commas between them; an alias may contain spaces.
 - `[[Note#Heading]]` and `[[Note#^block]]` link to the whole note; the heading or block part is not kept.
 - `[[Note|shown text]]` links to "Note".
 - A Dataview field such as `supports:: [[Note]]` gives a link of that kind. The field name may be written in any case, with spaces or hyphens, such as `is example of::` or `See-Also::`. If the field begins its line, the rest of the line after the link becomes a comment on the link.
@@ -322,11 +323,81 @@ Nothing is lost if the steps are taken in this order:
 tw open "D:\Notes\Biology\Cell.md"
 ```
 
-A vault note is a Markdown file, so textweaver opens and reads it like any other. The front matter is not read aloud as text, and its `title` becomes the document's title.
+A vault note is a Markdown file, so textweaver opens and reads it like any other. The front matter, which Obsidian calls the note's properties, is not read aloud as text, and its `title` becomes the document's title.
 
-A wikilink is a link in the reader, as in Obsidian. `[[Mitochondria]]` is read as "Mitochondria" and `[[Other|the cell]]` as "the cell", without the brackets, and the next link and previous link commands stop on wikilinks as on ordinary Markdown links. **Alt+Shift+F** follows the link at the cursor: textweaver opens the note it names, looking for `Mitochondria.md` beside the current note and then for a file of that name in the folders below it. `[[Note#Heading]]` opens the note at that heading, and **Alt+Left** returns.
+### The vault a note belongs to
+
+textweaver treats as the vault the nearest folder at or above the note that holds a `.obsidian` folder, the folder in which Obsidian keeps its settings. Links and embeds are resolved anywhere inside that folder and never outside it. A note with no `.obsidian` folder above it is treated as before: links and embeds reach its own folder and the folders below it. Folders whose names begin with a dot, such as `.obsidian`, `.trash`, and `.git`, are never searched.
+
+### Follow a link: Alt+Shift+F
+
+A wikilink is a link in the reader, as in Obsidian. `[[Mitochondria]]` is read as "Mitochondria" and `[[Other|the cell]]` as "the cell", without the brackets, and the next link and previous link commands stop on wikilinks as on ordinary Markdown links. **Alt+Shift+F** follows the link at the cursor, and **Alt+Left** returns. textweaver finds the note in this order:
+
+1. A path written in the link, from the current note's folder (`[[../Projects/Plan]]`) and then from the top of the vault (`[[Projects/Plan]]`). A path that would lead outside the vault is not followed.
+2. A note of that name anywhere in the vault, with or without `.md`; `[[Projects/Plan]]` also matches any note whose path ends that way.
+3. A note whose front matter `title` is the name, then one with the name among its `aliases`.
+
+Case is ignored throughout. When several notes share a name, the nearest one opens, the one with the fewest folders between it and the current note, and textweaver says once, for example, "2 notes named Dup; the nearest opened." To reach a different one, write its folder in the link.
+
+A link can also name part of a note:
+
+- `[[Note#Heading]]` opens the note at that heading, matched by its text or its slug. `[[Note#Part#Detail]]`, a heading inside a heading, opens at "Detail".
+- `[[Note#^key-point]]` opens the note at the block with that id. `[[#^key-point]]` goes to the block in the current note. A missing block is reported as "No block key-point in this document."
+
+A link to a note that does not exist says "Link to a note that doesn't exist:" and its name.
+
+### Properties: f
+
+When a note with front matter opens, the opening message ends with the number of properties, as in "Opened The Cell. Properties: 4." Press **f** to list them, one row per property, name first: "tags: biology, exam". A list property is read as its items separated by commas, and a checkbox property as "checked" or "not checked". Properties nested inside another property are not listed. Lists may be written either way Obsidian writes them, in brackets (`tags: [biology, exam]`) or one item per line under the name; `tag`, `alias`, and `cssclass`, Obsidian's older names, are read as `tags`, `aliases`, and `cssclasses`. Dataview fields written in the text (`status:: draft`) are not properties here; `tw vault properties` lists them (see [Ask the vault](#ask-the-vault)).
+
+### Notes that link here, links to notes that don't exist, and tags
+
+These commands are in the command palette and in the Reading menu under Go to. They read the whole vault the first time one is used, and again only the notes that have changed since, so a note added or edited in Obsidian is included the next time. Each shows a list, which works like every other list in textweaver: the arrow keys move, Enter acts on the row, and Escape closes the list.
+
+- **Notes that link here** lists every note that links to or embeds the open note, each row naming the note first, then how many links, then its folder: "Mitochondria, 1 link, in Projects". Links written as Markdown links (`[the cell](../Notes/Cell.md)`) count as well. Enter opens the note.
+- **Links to notes that don't exist** lists this note's links that lead nowhere, each name once.
+- **Tags in this note** lists the tags from the front matter and from the text, without `#`. Enter on a tag lists the notes in the vault that carry it.
+- **Tags in the vault** lists every tag with the number of notes carrying it: "exam, 2 notes". Tags that differ only in case count as one tag. Enter on a tag lists its notes; a tag such as `biology` also lists the notes tagged `biology/organelles`. Enter on a note opens it.
+
+Links inside code and inside `%% comments %%` are not counted, as in Obsidian. For a very large vault textweaver reads at most 20,000 notes, and a note larger than 4 megabytes only by its name; when a limit is reached, the list says "Only part of the vault was searched; it is very large."
 
 The links that an import stores with textweaver notes are a separate matter. An export writes them out again, but textweaver does not yet display them: the notes list and `tw marks` show each note's text and tags, not its links. To see which links an import finds, use a dry run with `--json`.
+
+## Ask the vault
+
+Four actions of `tw vault` answer questions about a vault without storing or changing anything. Each accepts `--json`.
+
+```powershell
+tw vault backlinks "D:\Notes\Biology\Cell.md"
+```
+
+This lists the notes that link to `Cell.md`, as the reader's Notes that link here does, for example:
+
+```text
+1 note links to The Cell:
+Mitochondria, in Projects, 2 links
+```
+
+```powershell
+tw vault unresolved "D:\Notes\Biology"
+```
+
+This lists the links that lead to notes that don't exist, with the note each appears in, for the whole vault, or for one note when a note is given: "Ghost, from The Cell, in Notes".
+
+```powershell
+tw vault tags "D:\Notes\Biology"
+tw vault tags "D:\Notes\Biology" --tag biology
+```
+
+The first lists every tag in the vault with the number of notes carrying it, one per line ("biology, 1 note"); the second lists the notes carrying `biology` or a tag nested under it.
+
+```powershell
+tw vault properties "D:\Notes\Biology\Cell.md"
+```
+
+This prints the note's properties, after the line "Properties: 3", and then any Dataview fields written in its text (`status:: draft`, or `- supports:: [[Mitochondria]]` in a list), after the line "Dataview fields: 2". Only the vault commands read Dataview fields; the reader does not.
+
+A note's vault is found as in the reader: the nearest folder above it holding `.obsidian`, or the folder given.
 
 ## Turn vault notes into web pages
 
@@ -334,7 +405,7 @@ The links that an import stores with textweaver notes are a separate matter. An 
 tw convert "D:\Notes\Biology" --to html --flavor obsidian --out "D:\Notes\Biology-web"
 ```
 
-This converts every note in the vault to an HTML page in `Biology-web`, preserving the vault's folder structure and skipping the `.obsidian` folder. With `--flavor obsidian`, `[[Note]]` becomes a link to `Note.html`, `[[Note#Heading]]` a link to that heading, and `[[Note|text]]` shows the given link text. Callouts, `#tags`, `==highlights==`, inline footnotes, and block ids are supported as well. Comments (`%%...%%`) are private notes and are left out of the pages, including those that span several paragraphs; `--keep-comments` keeps them.
+This converts every note in the vault to an HTML page in `Biology-web`, preserving the vault's folder structure and skipping the `.obsidian` folder. With `--flavor obsidian`, `[[Note]]` becomes a link to the page of the note it names, found as the reader finds it: `[[Plan]]` in `Notes\Main.md` links to `../Projects/Plan.html` when the note is `Projects\Plan.md`. `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows the given link text. Callouts, `#tags`, `==highlights==`, inline footnotes, and block ids are supported as well. Comments (`%%...%%`) are private notes and are left out of the pages, including those that span several paragraphs; `--keep-comments` keeps them.
 
 An embedded note, `![[Note]]`, becomes a link by default; `--embeds inline` places the note's text there instead:
 
@@ -342,7 +413,7 @@ An embedded note, `![[Note]]`, becomes a link by default; `--embeds inline` plac
 tw convert "D:\Notes\Biology" --to html --flavor obsidian --embeds inline --out "D:\Notes\Biology-web"
 ```
 
-Two limits apply. A link points to a page of the same name in the same folder, so a link to a note in another folder, or a link by title or alias, leads to a page that does not exist. And the web pages are generated from the vault's files only; textweaver notes and highlights are not part of them.
+Three limits apply. A link by title or alias, or to a note that does not exist, points to a page of that name in the same folder, which does not exist. A link to a note outside the converted folder points to where its page would be, so convert the whole vault for every link to work. And the web pages are generated from the vault's files only; textweaver notes and highlights are not part of them.
 
 [The converting guide](converting.md#markdown-flavors) lists every option.
 

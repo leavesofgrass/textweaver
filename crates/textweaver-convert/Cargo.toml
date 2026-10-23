@@ -25,6 +25,9 @@ textweaver-render.workspace = true
 textweaver-writers.workspace = true
 textweaver-cite.workspace = true
 textweaver-math.workspace = true
+# Wikilinks in web pages resolve across the vault (crate::links).
+textweaver-vault.workspace = true
+textweaver-store.workspace = true
 pulldown-cmark.workspace = true
 thiserror.workspace = true
 serde.workspace = true

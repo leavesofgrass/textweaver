@@ -10,6 +10,11 @@
 //!   vault's notes as documents with their links, and bring textweaver's
 //!   own exported notes and highlights back onto their documents, so a
 //!   vault round-trips.
+//! - [`find_vault_root`], [`LinkScope`] and [`resolve`] find the file a
+//!   link names, anywhere in the note's vault and never outside it; the
+//!   reader, its embeds, the converter, and the vault commands share them.
+//! - [`VaultIndex`] knows every note's name, title, aliases, tags, and
+//!   links: backlinks, unresolved links, tags, and links by alias.
 //!
 //! The crate reads and writes notes only through [`AnnotationStore`];
 //! [`MemoryStore`] serves tests and dry runs, and
@@ -22,26 +27,41 @@
 mod export;
 mod frontmatter;
 mod import;
+mod index;
 mod links;
 mod model;
 mod names;
+mod scope;
 mod state;
 mod walk;
 
 pub use export::{
     ExportDocument, ExportOptions, ExportReport, document_id, export_documents, highlight_id,
 };
-pub use frontmatter::{FmValue, FrontMatter, split as split_front_matter};
+pub use frontmatter::{
+    FmValue, FrontMatter, parse as parse_front_matter, split as split_front_matter,
+};
 pub use import::{
     ImportMode, ImportOptions, ImportReport, NoteKind, VaultNote, VaultRead, apply, import_vault,
     parse_note, read_vault,
 };
-pub use links::{Link, extract_links, first_line, inline_tags, strip_link_syntax};
+pub use index::{
+    Backlink, IndexLink, IndexedNote, MAX_INDEX_BYTES, MAX_INDEX_NOTE_BYTES, MAX_INDEX_NOTES,
+    TagCount, Unresolved, VaultIndex,
+};
+pub use links::{
+    Link, NoteLink, extract_links, first_line, inline_fields, inline_tags, note_links,
+    strip_link_syntax,
+};
 pub use model::{
     AnnotationStore, DEFAULT_HIGHLIGHT_COLOR, DocAnnotations, Highlight, LibraryEntry, MemoryStore,
     Note, Relation, RelationType, color_name, derive_id,
 };
 pub use names::{MAX_NAME_CHARS, NameAllocator, sanitize as sanitize_name};
+pub use scope::{
+    Anchor, LinkScope, MAX_SCOPE_ENTRIES, Resolved, ScopeFiles, find_vault_root, resolve,
+    split_target, walk as walk_scope,
+};
 pub use state::{StateStoreAnnotations, save_library};
 pub use walk::note_files;
 

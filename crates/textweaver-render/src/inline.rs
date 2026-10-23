@@ -63,6 +63,9 @@ pub struct Ctx<'a> {
     pub link_ext: &'a str,
     /// Tags found, in order of first appearance.
     pub tags: &'a mut Vec<String>,
+    /// Where wikilinks point: the page of the note a link resolves to
+    /// ([`crate::Resolver::link`]); without it, a page of the link's name.
+    pub links: Option<&'a dyn crate::Resolver>,
 }
 
 /// Image extensions that `![[embeds]]` show as images.
@@ -83,11 +86,9 @@ pub fn transform(text: &str, on: Inline, ctx: &mut Ctx<'_>) -> Option<Vec<Seg>> 
     while i < bytes.len() {
         let found: Option<(usize, String)> = match bytes[i] {
             b'!' if on.wikilinks && text[i..].starts_with("![[") => {
-                wikilink(&text[i + 1..], ctx.link_ext, true).map(|(n, h)| (n + 1, h))
+                wikilink(&text[i + 1..], ctx, true).map(|(n, h)| (n + 1, h))
             }
-            b'[' if on.wikilinks && text[i..].starts_with("[[") => {
-                wikilink(&text[i..], ctx.link_ext, false)
-            }
+            b'[' if on.wikilinks && text[i..].starts_with("[[") => wikilink(&text[i..], ctx, false),
             b'[' if on.citations || on.spans => bracket(&text[i..], on),
             b'#' if on.tags && boundary_before(text, i) => tag(&text[i..], ctx),
             b'=' if on.highlights && text[i..].starts_with("==") => highlight(&text[i..]),
@@ -150,7 +151,7 @@ fn autolink_boundary(text: &str, i: usize) -> bool {
 }
 
 /// Parses `[[target|alias]]` (with `embed`, the text after `!`).
-fn wikilink(s: &str, ext: &str, embed: bool) -> Option<(usize, String)> {
+fn wikilink(s: &str, ctx: &Ctx<'_>, embed: bool) -> Option<(usize, String)> {
     let inner_end = s[2..].find("]]")? + 2;
     let inner = &s[2..inner_end];
     if inner.is_empty() || inner.contains('\n') || inner.contains('[') {
@@ -164,7 +165,8 @@ fn wikilink(s: &str, ext: &str, embed: bool) -> Option<(usize, String)> {
         Some((p, f)) => (p.trim(), Some(f.trim())),
         None => (target, None),
     };
-    let href = wiki_href(page, fragment, ext);
+    let resolved = ctx.links.and_then(|r| r.link(page));
+    let href = wiki_href(resolved.as_deref().unwrap_or(page), fragment, ctx.link_ext);
     let len = inner_end + 2;
     if embed {
         let lower = page.to_lowercase();
@@ -526,6 +528,7 @@ mod tests {
         let mut ctx = Ctx {
             link_ext: ".html",
             tags: &mut tags,
+            links: None,
         };
         match transform(text, on, &mut ctx) {
             None => format!("UNCHANGED:{text}"),

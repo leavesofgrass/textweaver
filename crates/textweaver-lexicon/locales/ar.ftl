@@ -875,6 +875,11 @@ action-previous-separator = الانتقال إلى الفاصل السابق (�
 action-next-graphic = الانتقال إلى الصورة التالية
 action-previous-graphic = الانتقال إلى الصورة السابقة
 action-follow-link = اتباع الرابط عند المؤشر، أو الانتقال بين حاشية وملاحظتها
+action-note-properties = عرض خصائص الملاحظة المفتوحة (بياناتها الأولية)، كل اسم مع قيمته
+action-backlinks = عرض ملاحظات المخزن التي ترتبط بهذه الملاحظة؛ Enter يفتح إحداها
+action-unresolved-links = عرض روابط هذه الملاحظة إلى ملاحظات غير موجودة
+action-note-tags = عرض وسوم هذه الملاحظة؛ Enter يعرض ملاحظات المخزن التي تحمل الوسم
+action-vault-tags = عرض كل وسوم المخزن مع عدد الملاحظات التي تحملها؛ Enter يعرض تلك الملاحظات
 action-table-next-row = في جدول، النزول صفًا في العمود نفسه
 action-table-previous-row = في جدول، الصعود صفًا في العمود نفسه
 action-table-next-column = في جدول، الانتقال إلى الخلية التالية في الصف
@@ -1949,12 +1954,72 @@ links-heading-label = عنوان
 links-no-heading = لا عنوان باسم { $anchor } في هذا المستند.
 # $file is the file the link names.
 links-file-not-found = الرابط يذهب إلى { $file }، الذي لم يُعثر عليه.
+links-block-label = كتلة
+links-no-block = لا توجد كتلة { $id } في هذا المستند.
+links-note-not-found = رابط إلى ملاحظة غير موجودة: { $name }.
+vault-same-name = { $count } ملاحظات باسم { $name }؛ فُتحت الأقرب.
+vault-properties-count = الخصائص: { $n }.
+vault-properties-title = الخصائص
+vault-no-properties = لا خصائص لهذا المستند.
+vault-property-row = { $name }: { $value }
+vault-property-checked = محدد
+vault-property-not-checked = غير محدد
+vault-no-file = هذا المستند غير محفوظ في مجلد، لذا لا مخزن له.
+vault-partial = بُحث في جزء من المخزن فقط؛ فهو كبير جدًا.
+vault-top-folder = المجلد الأعلى
+vault-backlink-row =
+    { $links ->
+        [one] { $title }، رابط واحد، في { $folder }
+       *[other] { $title }، { $links } روابط، في { $folder }
+    }
+vault-note-row = { $title }، في { $folder }
+vault-backlinks-title = الملاحظات التي ترتبط هنا
+vault-backlinks-intro =
+    { $n ->
+        [one] الملاحظات التي ترتبط هنا، ملاحظة واحدة. Enter لفتحها.
+       *[other] الملاحظات التي ترتبط هنا، { $n } ملاحظات. Enter لفتح واحدة.
+    }
+vault-no-backlinks = لا توجد ملاحظات ترتبط هنا.
+vault-unresolved-title = روابط إلى ملاحظات غير موجودة
+vault-unresolved-intro =
+    { $n ->
+        [one] روابط إلى ملاحظات غير موجودة، رابط واحد.
+       *[other] روابط إلى ملاحظات غير موجودة، { $n } روابط.
+    }
+vault-no-unresolved = كل رابط في هذه الملاحظة يقود إلى ملاحظة.
+vault-note-tags-title = الوسوم في هذه الملاحظة
+vault-note-tags-intro =
+    { $n ->
+        [one] الوسوم في هذه الملاحظة، وسم واحد. Enter يعرض الملاحظات التي تحمله.
+       *[other] الوسوم في هذه الملاحظة، { $n } وسوم. Enter يعرض ملاحظات وسم.
+    }
+vault-no-note-tags = لا وسوم لهذه الملاحظة.
+vault-tags-title = الوسوم في المخزن
+vault-tags-intro =
+    { $n ->
+        [one] الوسوم في المخزن، وسم واحد. Enter يعرض ملاحظاته.
+       *[other] الوسوم في المخزن، { $n } وسوم. Enter يعرض ملاحظات وسم.
+    }
+vault-no-tags = لا وسوم في هذا المخزن.
+vault-tag-row =
+    { $n ->
+        [one] { $tag }، ملاحظة واحدة
+       *[other] { $tag }، { $n } ملاحظات
+    }
+vault-tag-notes-title = ملاحظات تحمل وسمًا
+vault-tag-notes-intro =
+    { $n ->
+        [one] الوسم { $tag }، ملاحظة واحدة. Enter لفتحها.
+       *[other] الوسم { $tag }، { $n } ملاحظات. Enter لفتح واحدة.
+    }
+vault-tag-no-notes = لا ملاحظة تحمل الوسم { $tag }.
 # $title is the document's title; $heading is the heading arrived at, $anchor
 # the heading a link names; $key names the History Back command's keys;
 # $text is the first words at the position arrived at.
 links-opened = فُتح { $title }. الرجوع: { $key }.
 links-opened-at = فُتح { $title }، عند { $heading }. الرجوع: { $key }.
 links-opened-no-heading = فُتح { $title }، في البداية: لا عنوان باسم { $anchor }. الرجوع: { $key }.
+links-opened-no-block = فُتح { $title }، في البداية: لا توجد كتلة { $id }. الرجوع: { $key }.
 links-back-in = الرجوع في { $title }: { $text }
 links-forward-in = التقدّم في { $title }: { $text }
 # $label is the footnote's label, such as 1.
@@ -4143,6 +4208,11 @@ name-previous-separator = الفاصل السابق
 name-next-graphic = الصورة التالية
 name-previous-graphic = الصورة السابقة
 name-follow-link = اتباع الرابط
+name-note-properties = خصائص الملاحظة
+name-backlinks = الملاحظات التي ترتبط هنا
+name-unresolved-links = روابط إلى ملاحظات غير موجودة
+name-note-tags = الوسوم في هذه الملاحظة
+name-vault-tags = الوسوم في المخزن
 name-table-next-row = صف الجدول التالي
 name-table-previous-row = صف الجدول السابق
 name-table-next-column = عمود الجدول التالي

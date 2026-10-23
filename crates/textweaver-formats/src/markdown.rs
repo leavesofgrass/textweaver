@@ -1268,23 +1268,12 @@ impl<'a> Converter<'a> {
     }
 }
 
-/// Fills `meta` from YAML-style (`key: value` lines) or TOML front matter.
+/// Fills `meta` from YAML front matter (the vault crate's parser, through
+/// [`crate::properties`]) or TOML front matter.
 fn apply_front_matter(kind: MetadataBlockKind, text: &str, meta: &mut DocumentMeta) {
     let mut fields: BTreeMap<String, String> = BTreeMap::new();
     match kind {
-        MetadataBlockKind::YamlStyle => {
-            for line in text.lines() {
-                if line.starts_with([' ', '\t', '-', '#']) {
-                    continue;
-                }
-                if let Some((k, v)) = line.split_once(':') {
-                    let v = v.trim().trim_matches(|c| c == '"' || c == '\'').trim();
-                    if !k.trim().is_empty() && !v.is_empty() {
-                        fields.insert(k.trim().to_lowercase(), v.to_owned());
-                    }
-                }
-            }
-        }
+        MetadataBlockKind::YamlStyle => crate::properties::apply_yaml(text, meta),
         MetadataBlockKind::PlusesStyle => {
             if let Ok(table) = text.parse::<toml::Table>() {
                 for (k, v) in table {

@@ -185,6 +185,11 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move to the next graphic (image) | `g` (browse) | `g` (browse) | `g` (browse) | `next_graphic` |
 | Move to the previous graphic (image) | `Shift+G` (browse) | `Shift+G` (browse) | `Shift+G` (browse) | `previous_graphic` |
 | Follow the link at the cursor, or go between a footnote and its note | `Alt+Shift+F` | `Alt+Shift+F` | `Cmd+Option+Shift+F` | `follow_link` |
+| List the open note's properties (its front matter), each name with its value | `f` (browse) | `f` (browse) | `f` (browse) | `note_properties` |
+| List the notes in the vault that link to this note; Enter opens one | palette | palette | palette | `backlinks` |
+| List this note's links to notes that don't exist | palette | palette | palette | `unresolved_links` |
+| List the tags in this note; Enter lists the notes in the vault with that tag | palette | palette | palette | `note_tags` |
+| List every tag in the vault with how many notes carry it; Enter lists those notes | palette | palette | palette | `vault_tags` |
 | In a table, move down a row in the same column | `Ctrl+Alt+Down` | `Ctrl+Alt+Down` | `Cmd+Option+Down` | `table_next_row` |
 | In a table, move up a row in the same column | `Ctrl+Alt+Up` | `Ctrl+Alt+Up` | `Cmd+Option+Up` | `table_previous_row` |
 | In a table, move to the next cell in the row | `Ctrl+Alt+Right` | `Ctrl+Alt+Right` | `Cmd+Option+Right` | `table_next_column` |
@@ -541,6 +546,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Move to the previous separator (horizontal rule) | palette | palette | `previous_separator` |
 | Move to the next graphic (image) | palette | palette | `next_graphic` |
 | Move to the previous graphic (image) | palette | palette | `previous_graphic` |
+| List the open note's properties (its front matter), each name with its value | palette | palette | `note_properties` |
 | Scroll down one line without moving the cursor | palette | palette | `scroll_down` |
 | Scroll up one line without moving the cursor | palette | palette | `scroll_up` |
 | Speech Cursor: read the current line again | palette | palette | `speech_cursor_reread_line` |
@@ -577,6 +583,10 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Switch a talking book between its recorded narration and speech | `toggle_book_audio` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
+| List the notes in the vault that link to this note; Enter opens one | `backlinks` |
+| List this note's links to notes that don't exist | `unresolved_links` |
+| List the tags in this note; Enter lists the notes in the vault with that tag | `note_tags` |
+| List every tag in the vault with how many notes carry it; Enter lists those notes | `vault_tags` |
 | Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
 | Highlight the selection or the sentence with a name chosen from the highlight palette | `highlight_as` |
 | Write the highlights of one name as a Markdown list | `collect_highlights` |

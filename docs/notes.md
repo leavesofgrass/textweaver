@@ -150,6 +150,8 @@ You hear "Linked:" with the type and the note, and the links list returns. Addin
 
 Links are saved with the note, so they sync to your other computers with it, and `tw vault export` writes them as Dataview fields. "What links here" considers this document and every library document that has notes; textweaver reads those documents the first time you open a links list after opening a document.
 
+These links belong to textweaver's notes. The `[[wikilinks]]` written in an Obsidian note are the note's own text, and have their own commands: Notes that link here, Links to notes that don't exist, Tags in this note, and Tags in the vault, in the command palette and in the Reading menu under Go to, and **f** for a note's properties. [Obsidian vaults](vault.md#notes-that-link-here-links-to-notes-that-dont-exist-and-tags) describes them.
+
 ### List links from the command line: tw notes links
 
 ```bash

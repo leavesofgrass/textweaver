@@ -353,6 +353,9 @@ expression: view(&doc)
     "format": "markdown",
     "language": null,
     "path": null,
+    "properties": {
+      "textweaver.front_matter": "title\tSample Markdown Document\nauthor\tTest Author"
+    },
     "title": "Sample Markdown Document"
   },
   "text": "Sample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote. (footnote: The footnote text lives here.) It ends with a question?"

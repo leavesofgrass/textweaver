@@ -781,6 +781,11 @@ action-previous-separator = Move to the previous separator (horizontal rule)
 action-next-graphic = Move to the next graphic (image)
 action-previous-graphic = Move to the previous graphic (image)
 action-follow-link = Follow the link at the cursor, or go between a footnote and its note
+action-note-properties = List the open note's properties (its front matter), each name with its value
+action-backlinks = List the notes in the vault that link to this note; Enter opens one
+action-unresolved-links = List this note's links to notes that don't exist
+action-note-tags = List the tags in this note; Enter lists the notes in the vault with that tag
+action-vault-tags = List every tag in the vault with how many notes carry it; Enter lists those notes
 action-table-next-row = In a table, move down a row in the same column
 action-table-previous-row = In a table, move up a row in the same column
 action-table-next-column = In a table, move to the next cell in the row
@@ -1790,12 +1795,72 @@ links-heading-label = Heading
 links-no-heading = No heading called { $anchor } in this document.
 # $file is the file the link names.
 links-file-not-found = The link goes to { $file }, which was not found.
+links-block-label = Block
+links-no-block = No block { $id } in this document.
+links-note-not-found = Link to a note that doesn't exist: { $name }.
+vault-same-name = { $count } notes named { $name }; the nearest opened.
+vault-properties-count = Properties: { $n }.
+vault-properties-title = Properties
+vault-no-properties = This document has no properties.
+vault-property-row = { $name }: { $value }
+vault-property-checked = checked
+vault-property-not-checked = not checked
+vault-no-file = This document is not saved in a folder, so it has no vault.
+vault-partial = Only part of the vault was searched; it is very large.
+vault-top-folder = top folder
+vault-backlink-row =
+    { $links ->
+        [one] { $title }, 1 link, in { $folder }
+       *[other] { $title }, { $links } links, in { $folder }
+    }
+vault-note-row = { $title }, in { $folder }
+vault-backlinks-title = Notes that link here
+vault-backlinks-intro =
+    { $n ->
+        [one] Notes that link here, 1 note. Enter opens it.
+       *[other] Notes that link here, { $n } notes. Enter opens one.
+    }
+vault-no-backlinks = No notes link here.
+vault-unresolved-title = Links to notes that don't exist
+vault-unresolved-intro =
+    { $n ->
+        [one] Links to notes that don't exist, 1 link.
+       *[other] Links to notes that don't exist, { $n } links.
+    }
+vault-no-unresolved = Every link in this note leads to a note.
+vault-note-tags-title = Tags in this note
+vault-note-tags-intro =
+    { $n ->
+        [one] Tags in this note, 1 tag. Enter lists the notes with it.
+       *[other] Tags in this note, { $n } tags. Enter lists the notes with one.
+    }
+vault-no-note-tags = This note has no tags.
+vault-tags-title = Tags in the vault
+vault-tags-intro =
+    { $n ->
+        [one] Tags in the vault, 1 tag. Enter lists its notes.
+       *[other] Tags in the vault, { $n } tags. Enter lists a tag's notes.
+    }
+vault-no-tags = No tags in this vault.
+vault-tag-row =
+    { $n ->
+        [one] { $tag }, 1 note
+       *[other] { $tag }, { $n } notes
+    }
+vault-tag-notes-title = Notes with a tag
+vault-tag-notes-intro =
+    { $n ->
+        [one] Tag { $tag }, 1 note. Enter opens it.
+       *[other] Tag { $tag }, { $n } notes. Enter opens one.
+    }
+vault-tag-no-notes = No notes carry the tag { $tag }.
 # $title is the document's title; $heading is the heading arrived at, $anchor
 # the heading a link names; $key names the History Back command's keys;
 # $text is the first words at the position arrived at.
 links-opened = Opened { $title }. Back: { $key }.
 links-opened-at = Opened { $title }, at { $heading }. Back: { $key }.
 links-opened-no-heading = Opened { $title }, at the start: no heading called { $anchor }. Back: { $key }.
+links-opened-no-block = Opened { $title }, at the start: no block { $id }. Back: { $key }.
 links-back-in = Back in { $title }: { $text }
 links-forward-in = Forward in { $title }: { $text }
 # $label is the footnote's label, such as 1.
@@ -3827,6 +3892,11 @@ name-previous-separator = Previous separator
 name-next-graphic = Next graphic
 name-previous-graphic = Previous graphic
 name-follow-link = Follow link
+name-note-properties = Note properties
+name-backlinks = Notes that link here
+name-unresolved-links = Links to notes that don't exist
+name-note-tags = Tags in this note
+name-vault-tags = Tags in the vault
 name-table-next-row = Next table row
 name-table-previous-row = Previous table row
 name-table-next-column = Next table column
