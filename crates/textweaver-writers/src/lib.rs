@@ -43,6 +43,19 @@ pub mod ueb;
 mod xml;
 
 pub use brf::BrfWriter;
+
+/// Contracts each text through liblouis's `lou_translate` with `table`
+/// (a grade 2 table such as `en-ueb-g2.ctb`, the BRF writer's default),
+/// one line of Unicode braille patterns per text, dots 7 and 8 kept. A
+/// braille viewer's way to the same contractions the BRF writer writes.
+///
+/// # Errors
+///
+/// When `lou_translate` cannot run or fails, in words.
+#[cfg(feature = "liblouis")]
+pub fn louis_unicode(texts: &[&str], table: &str) -> Result<Vec<String>, String> {
+    brf::louis_unicode(texts, table)
+}
 pub use docx::DocxWriter;
 pub use epub::EpubWriter;
 pub use pdf::PdfWriter;

@@ -230,3 +230,73 @@ fn terminal_spacing_comes_from_the_settings() {
     let t = app.terminal_spacing();
     assert_eq!((t.rows_between_lines, t.extra_word_spaces), (1, 2));
 }
+
+/// The Braille view (beta 4): off by default; its command shows it and
+/// says so once; it follows the cursor's line, every space a cell; moving
+/// the cursor while it shows announces nothing.
+#[test]
+fn braille_view_follows_the_cursor_and_is_never_announced() {
+    let (mut app, said) = rig("Alpha  beta.\nGamma delta.");
+    assert!(app.braille_view().is_none(), "off by default");
+    act(&mut app, ActionId::BrailleViewToggle);
+    assert_eq!(said.last(), "Braille view shown.");
+    assert!(app.settings().braille.viewer);
+    let v = app.braille_view().expect("the view");
+    assert_eq!(v.width, 40);
+    assert!(!v.contracted && !v.fell_back);
+    // ,alpha, two blank cells, beta and the period.
+    assert_eq!(v.cells.len(), 1 + 5 + 2 + 4 + 1);
+    assert_eq!(&v.cells[6..8], &[0, 0]);
+    assert!(v.unicode().starts_with('\u{2820}'), "{}", v.unicode());
+    assert_eq!(v.print[0].print, "A");
+    assert_eq!(v.print[0].cells, 0..2);
+    let before = said.all().len();
+    app.dispatch(Command::GoTo(GoTo::Char(CharPos(14))));
+    let v = app.braille_view().expect("the view");
+    assert_eq!(v.print[0].print, "G", "the second line");
+    let after: Vec<String> = said.all()[before..].to_vec();
+    assert!(
+        after
+            .iter()
+            .all(|s| !s.contains('\u{2820}') && !s.contains("Braille")),
+        "{after:?}"
+    );
+    act(&mut app, ActionId::BrailleViewToggle);
+    assert_eq!(said.last(), "Braille view hidden.");
+    assert!(app.braille_view().is_none());
+}
+
+/// The grade key switches `[braille] grade` both ways and says which.
+#[test]
+fn braille_grade_key_switches_and_says_the_grade() {
+    use textweaver_app::store::BrailleGrade;
+    let (mut app, said) = rig(PROSE);
+    act(&mut app, ActionId::BrailleGradeToggle);
+    assert_eq!(app.settings().braille.grade, BrailleGrade::Contracted);
+    assert!(
+        said.last().starts_with("Contracted braille, grade 2."),
+        "{}",
+        said.last()
+    );
+    act(&mut app, ActionId::BrailleGradeToggle);
+    assert_eq!(app.settings().braille.grade, BrailleGrade::Uncontracted);
+    assert_eq!(said.last(), "Uncontracted braille, grade 1.");
+}
+
+/// A narrow display pans: the view shows the part with the cursor.
+#[test]
+fn braille_view_pans_to_the_cursor() {
+    let text = "one two three four five six seven";
+    let mut s = Settings::default();
+    s.braille.viewer = true;
+    s.braille.display_cells = 10;
+    let (mut app, _) = rig_with(text, s);
+    let v = app.braille_view().unwrap();
+    assert_eq!(v.part, 0);
+    assert!(v.parts > 1);
+    assert!(v.cells.len() <= 10);
+    app.dispatch(Command::GoTo(GoTo::Char(at(text, "seven"))));
+    let v = app.braille_view().unwrap();
+    assert_eq!(v.part + 1, v.parts);
+    assert_eq!(v.print[0].print, "s");
+}

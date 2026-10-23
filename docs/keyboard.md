@@ -380,6 +380,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Switch to the next color theme | `F5` | `F5` | `F5` | `next_theme` |
 | Show or hide line numbers | `F6` | none | none | `toggle_line_numbers` |
 | Show the original braille of the page at the cursor, in a BRF file read as print | palette | palette | palette | `show_original_braille` |
+| Show or hide the Braille view: the current line as braille dots at the bottom of the screen, for learning and teaching braille | `Alt+Shift+F2` | `Alt+Shift+F2` | `Option+Shift+F2` | `braille_view_toggle` |
+| Switch braille between uncontracted and contracted, grade 1 and grade 2, in the Braille view and BRF files | `Alt+Shift+F3` | `Alt+Shift+F3` | `Option+Shift+F3` | `braille_grade_toggle` |
 | Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `F9` | `toggle_character_keys` |
 | Cycle the accessibility mode: self-voicing, hybrid, or screen reader | `Alt+Shift+A` | `Alt+Shift+A` | `Cmd+Option+Shift+A` | `cycle_access_mode` |
 | List settings profiles: switch to one, save the current settings as one, rename, delete, import, or export | `Alt+U` | `Ctrl+Shift+U` | `Cmd+Shift+U` | `settings_profiles` |

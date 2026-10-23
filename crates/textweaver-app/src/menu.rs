@@ -408,6 +408,8 @@ impl MenuId {
                 Do(A::RulerCycle),
                 Do(A::SyllablesToggle),
                 Do(A::DifficultWordsToggle),
+                Do(A::BrailleViewToggle),
+                Do(A::BrailleGradeToggle),
                 Sub(MenuId::Rsvp),
             ],
             MenuId::Rsvp => &[
@@ -651,6 +653,8 @@ pub fn bound_setting(a: ActionId) -> Option<&'static str> {
         A::BionicToggle => "reading_aids.bionic",
         A::SyllablesToggle => "reading_aids.syllables",
         A::DifficultWordsToggle => "reading_aids.difficult_words",
+        A::BrailleViewToggle => "braille.viewer",
+        A::BrailleGradeToggle => "braille.grade",
         A::RulerCycle => "reading_aids.ruler.mode",
         A::ToggleLineNumbers => "display.show_line_numbers",
         A::ToggleCharacterKeys => "keyboard.character_keys",

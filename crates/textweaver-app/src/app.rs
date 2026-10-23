@@ -2398,6 +2398,8 @@ impl App {
             A::RulerCycle => self.ruler_cycle(),
             A::SyllablesToggle => self.syllables_toggle(),
             A::DifficultWordsToggle => self.difficult_words_toggle(),
+            A::BrailleViewToggle => self.braille_view_toggle(),
+            A::BrailleGradeToggle => self.braille_grade_toggle(),
             // The window's text size and font (the GUI handles them first).
             A::TextLarger
             | A::TextSmaller

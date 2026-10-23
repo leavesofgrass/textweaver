@@ -13,6 +13,8 @@ Every aid can be switched on and off, and textweaver announces each change. The 
 - **Alt+Shift+G**: say the reading level of the document, or of the selection.
 - **Alt+Shift+Z**: syllables shown or hidden.
 - **Alt+Shift+J**: difficult words marked or not.
+- **Alt+Shift+F2**: show or hide the Braille view.
+- **Alt+Shift+F3**: switch braille between uncontracted and contracted.
 
 In the app (`textweaver`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver app](gui.md#reading-aids).
 
@@ -191,6 +193,20 @@ textweaver can display long words divided into syllables, for example `read·a·
 The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. Both the terminal reader and the app draw the split; only the letters shown change, so your screen reader and Braille display still read the word whole. See also [The textweaver app](gui.md#reading-aids).
 
 The split is worked out from English spelling rules, not a dictionary, so a few words split in odd places.
+
+## The Braille view
+
+The Braille view draws the line you are reading as braille dots, in a bar at the bottom of the textweaver app. It is a learning and teaching tool: a sighted student, teacher, parent, or transcriber can watch the braille that a line becomes, cell by cell, and it shows spacing exactly, so a doubled space or a missing one is visible at a glance. Alt+Shift+F2 shows and hides it, as does **Braille view** under Reading aids in the View menu, beside Braille grade; the setting is `[braille] viewer`, off by default.
+
+- **What it shows.** While textweaver reads aloud, the sentence being spoken; otherwise the line the cursor is on. It shows as many cells as your Braille display has (`[braille] display_cells`, 40 by default) and pans to the part with the spoken word or the cursor, breaking between words where it can, as a display does. A caption names the grade and the part: "Contracted braille, 2 of 3".
+- **Every space is a cell.** Two spaces in print are two blank cells, and a tab is one.
+- **The grade** is the same setting as BRF files (`[braille] grade`): uncontracted (grade 1) Unified English Braille, translated by textweaver itself, or contracted (grade 2) through liblouis with the same table the BRF writer uses. Alt+Shift+F3 switches between them, so a learner can compare a line in both. Without liblouis, the view shows uncontracted braille and its caption says that contracted braille needs liblouis.
+- **The dots** are drawn, not set in a braille font, at the standard proportions of a braille cell, and they grow and shrink with the document text size (Ctrl+= and Ctrl+-). A raised dot is a filled disc and an empty position a thin ring, so the two differ by shape as well as shade. Eight-dot cells get a fourth row when the braille uses dots 7 or 8.
+- **The print line** (`[braille] viewer_print_line`, off by default) puts under each cell, or run of cells, the print letter or contraction it stands for. In uncontracted braille the pairing is exact, indicators included: the capital sign stands with the capital it marks. In contracted braille liblouis does not say which print each cell came from, so textweaver contracts each word's beginnings as well and pairs the print with the cells once they agree; a contraction that only takes shape at the end of a word ("ar" in "bar") is shown over the whole word.
+- **Cell outlines** (`[braille] viewer_cell_outlines`, off by default) draw each cell's box, so blank cells and the space between words are visible.
+- **With RSVP on,** both bars show, RSVP above the Braille view. In focus mode the Braille view fades with the other bars and comes back with them when the mouse moves, never on a key.
+- **For screen readers it is a picture.** The bar is one image named "Braille view", with a description saying that it is visual only; its braille is never in the accessibility tree and is never announced, because your screen reader already sends braille to your display. Only showing, hiding, and switching the grade are said.
+- **In the terminal reader,** the same key shows the line as Unicode braille characters on a row above the status line, in self-voicing mode only. With a screen reader running (hybrid and screen-reader modes) there is no row, since the screen reader would read each change aloud and the display already shows braille; the setting is kept for the app.
 
 ## See also
 

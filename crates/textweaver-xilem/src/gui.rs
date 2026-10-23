@@ -48,6 +48,7 @@ use textweaver_app::{
 };
 
 use crate::bars::{FRAME, Flow, Frame, StatusRow};
+use crate::braille::{BrailleBar, BrailleShown};
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
 use crate::document::{
     CaretEcho, DocAction, DocAids, DocFont, DocModel, DocState, DocumentView, HighlightShown,
@@ -113,6 +114,8 @@ pub const FORM: WidgetTag<SettingsGrid> = WidgetTag::named("tw-settings-form");
 pub const DIALOG_CLOSE: WidgetTag<ActionButton> = WidgetTag::named("tw-dialog-close");
 /// The RSVP panel, under the document.
 pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
+/// The Braille view, under RSVP.
+pub const BRAILLE: WidgetTag<BrailleBar> = WidgetTag::named("tw-braille");
 
 /// The longest an idle tick goes without refreshing the window, though
 /// its [`tick_signature`] is unchanged: a safety net for anything shown
@@ -235,6 +238,7 @@ struct Shown {
     /// What the reading highlight draws ([`highlight_shown`]).
     highlight: Option<HighlightShown>,
     rsvp: Option<RsvpShown>,
+    braille: Option<BrailleShown>,
     /// The document font, from `[reading_aids.font]`.
     font: Option<DocFont>,
     /// Edit mode, as the view shows it.
@@ -914,6 +918,8 @@ pub fn build_tree(
     // RSVP, hidden until it is turned on: its own strip under the document,
     // so the word never covers the text or the caret.
     let rsvp = NewWidget::new(RsvpView::new(p.clone())).with_tag(RSVP);
+    // The Braille view, hidden until it is turned on: a bar under RSVP.
+    let braille = NewWidget::new(BrailleBar::new(p.clone())).with_tag(BRAILLE);
 
     // Toolbar: Play/Pause is the primary action; Slower and Faster sit at
     // the right end.
@@ -953,8 +959,10 @@ pub fn build_tree(
     let announcer =
         NewWidget::new(Announcer::new(Rc::clone(&full_passes)).with_mode(mode)).with_tag(ANNOUNCER);
 
-    let column = NewWidget::new(Frame::new(header, doc, rsvp, toolbar, status, announcer, p))
-        .with_tag(FRAME);
+    let column = NewWidget::new(Frame::new(
+        header, doc, rsvp, braille, toolbar, status, announcer, p,
+    ))
+    .with_tag(FRAME);
     let main = NewWidget::new(Region::new(
         column.with_props(Padding::all(Length::px(theme::PAD))),
         Role::GenericContainer,
@@ -1418,6 +1426,7 @@ pub fn apply_palette(host: &mut impl Host, p: &Palette) {
     // properties (`widgets::ACCENT_TEXT_CLASS`).
     host.edit(DOC, |mut d| DocumentView::set_palette(&mut d, p.clone()));
     host.edit(RSVP, |mut r| RsvpView::set_palette(&mut r, p.clone()));
+    host.edit(BRAILLE, |mut b| BrailleBar::set_palette(&mut b, p.clone()));
 }
 
 /// Where the driver edits widgets: the live window or the test harness.
@@ -1870,6 +1879,14 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     if rsvp != shown.rsvp {
         host.edit(RSVP, |mut r| RsvpView::set_shown(&mut r, rsvp.clone()));
         shown.rsvp = rsvp;
+    }
+    // The Braille view: the bar under RSVP.
+    let braille = BrailleShown::from_app(app);
+    if braille != shown.braille {
+        host.edit(BRAILLE, |mut b| {
+            BrailleBar::set_shown(&mut b, braille.clone())
+        });
+        shown.braille = braille;
     }
     // `[highlight] enabled`, `granularity`, and `lead_words`: what the
     // reading highlight draws.

@@ -4936,6 +4936,40 @@ choice-braille-brf-code-ueb = UEB
 choice-braille-brf-code-ebae = EBAE
 name-show-original-braille = Mostrar o braille original
 action-show-original-braille = Mostrar o braille original da página no cursor, num arquivo BRF lido como texto impresso
+## Beta 4: the Braille view (braille dots at the bottom of the app)
+## and the braille grade. $n is the part shown, $total how many.
+name-braille-view-toggle = Visualização braille
+action-braille-view-toggle = Mostrar ou ocultar a visualização braille: a linha atual em pontos braille na parte de baixo da tela, para aprender e ensinar braille
+name-braille-grade-toggle = Grau do braille
+action-braille-grade-toggle = Alternar o braille entre integral e abreviado, grau 1 e grau 2, na visualização braille e nos arquivos BRF
+braille-view-shown = Visualização braille exibida.
+braille-view-hidden = Visualização braille oculta.
+braille-view-not-in-build = A visualização braille não está nesta versão do { -brand }.
+braille-grade-uncontracted = Braille integral, grau 1.
+braille-grade-contracted = Braille abreviado, grau 2.
+braille-grade-contracted-no-liblouis = Braille abreviado, grau 2. O liblouis está faltando, então o braille integral é mostrado até que seja instalado.
+setting-braille-grade = Grau do braille
+setting-braille-grade-help = Braille integral (grau 1) ou abreviado (grau 2), nos arquivos BRF e na visualização braille. O braille abreviado precisa do liblouis; sem ele, usa-se o braille integral.
+choice-braille-grade-uncontracted = integral (grau 1)
+choice-braille-grade-contracted = abreviado (grau 2)
+setting-braille-display-cells = Celas da linha braille
+setting-braille-display-cells-help = Quantas celas tem a sua linha braille. A visualização braille mostra essa quantidade de celas de cada vez.
+setting-braille-viewer = Visualização braille
+setting-braille-viewer-help = Mostrar a linha ou a frase atual em pontos braille na parte de baixo do aplicativo. Apenas visual: os leitores de tela não recebem o seu conteúdo.
+setting-braille-viewer-print-line = Linha em tinta da visualização braille
+setting-braille-viewer-print-line-help = Sob cada cela braille, a letra ou abreviatura em tinta que ela representa.
+setting-braille-viewer-cell-outlines = Contornos das celas da visualização braille
+setting-braille-viewer-cell-outlines-help = Desenhar um contorno em volta de cada cela braille, para que as celas vazias e o espaçamento fiquem visíveis.
+settings-unit-cells =
+    { $n ->
+        [one] cela
+       *[other] celas
+    }
+gui-braille-view = Visualização braille
+gui-braille-view-description = Apenas visual: a linha atual em pontos braille, para pessoas que enxergam e aprendem ou ensinam braille. O seu leitor de tela mostra o braille na sua linha braille.
+gui-braille-caption-uncontracted = Braille integral, { $n } de { $total }
+gui-braille-caption-contracted = Braille abreviado, { $n } de { $total }
+gui-braille-caption-fell-back = Braille integral (o abreviado precisa do liblouis), { $n } de { $total }
 brf-original-title = Braille original, página { $page }
 brf-original-intro =
     { $n ->

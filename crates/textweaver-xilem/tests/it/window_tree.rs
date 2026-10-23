@@ -533,6 +533,105 @@ fn rsvp_is_quiet_for_screen_readers_and_never_covers_the_caret() {
     assert_eq!(panel_node.children().count(), 0);
 }
 
+/// The Braille view: hidden and roomless until shown; then a bar under
+/// RSVP (both may show) whose node is one image, named and described,
+/// with no children and nothing live, so its braille never reaches a
+/// screen reader; the document keeps the focus; focus mode's veil fades
+/// it with the bars.
+#[test]
+fn braille_view_is_a_named_image_under_rsvp_and_never_announced() {
+    use masonry::accesskit::Live;
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::bars::{FRAME, Frame};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
+    let mut refresher = gui::Refresher::default();
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let bar = h.get_widget(gui::BRAILLE);
+    assert!(bar.inner().shown().is_none());
+    assert_eq!(bar.ctx().bounding_box().height(), 0.0);
+    let _ = app.dispatch(Command::Action(ActionId::RsvpToggle));
+    let _ = app.dispatch(Command::Action(ActionId::BrailleViewToggle));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let shown = h
+        .get_widget(gui::BRAILLE)
+        .inner()
+        .shown()
+        .cloned()
+        .expect("the Braille view shows");
+    assert!(!shown.cells.is_empty());
+    assert_eq!(shown.width, 40);
+    assert!(
+        shown.caption.starts_with("Uncontracted braille, 1 of "),
+        "{}",
+        shown.caption
+    );
+    assert!(shown.print.is_empty(), "the print line is off by default");
+    let id = h.get_widget(gui::BRAILLE).id();
+    let node = h.access_node(id).unwrap();
+    assert_eq!(node.role(), Role::Image);
+    assert_eq!(node.label().as_deref(), Some("Braille view"));
+    assert!(
+        node.description()
+            .is_some_and(|d| d.starts_with("Visual only"))
+    );
+    assert_eq!(node.children().count(), 0, "no braille in the tree");
+    assert_eq!(node.live(), Live::Off);
+    assert!(!node.is_hidden());
+    let braille_text = textweaver_app::braille_view::unicode(&shown.cells);
+    for n in all_nodes(&h) {
+        for t in [n.label.as_deref(), n.value.as_deref()]
+            .into_iter()
+            .flatten()
+        {
+            assert!(
+                !t.contains(braille_text.as_str()),
+                "braille in a node: {t:?}"
+            );
+        }
+    }
+    assert_eq!(h.focused_widget_id(), Some(doc));
+    // Under the document and under RSVP.
+    let doc_rect = h.get_widget(DOC).ctx().bounding_box();
+    let rsvp_rect = h.get_widget(gui::RSVP).ctx().bounding_box();
+    let bar_rect = h.get_widget(gui::BRAILLE).ctx().bounding_box();
+    assert!(bar_rect.height() > 30.0, "{bar_rect:?}");
+    assert!(rsvp_rect.height() > 0.0);
+    assert!(
+        bar_rect.y0 >= rsvp_rect.y1 - 0.5,
+        "{bar_rect:?} under {rsvp_rect:?}"
+    );
+    assert!(rsvp_rect.y0 >= doc_rect.y1 - 6.0);
+    // The print line and outlines, from the settings.
+    app.set_setting("braille.viewer_print_line", serde_json::Value::Bool(true))
+        .unwrap();
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let shown = h.get_widget(gui::BRAILLE).inner().shown().cloned().unwrap();
+    assert!(!shown.print.is_empty());
+    // Focus mode's veil fades it with the bars.
+    h.edit_widget(FRAME, |mut f| Frame::set_veiled(&mut f, true));
+    assert!(h.get_widget(gui::BRAILLE).inner().is_veiled());
+    h.edit_widget(FRAME, |mut f| Frame::set_veiled(&mut f, false));
+    assert!(!h.get_widget(gui::BRAILLE).inner().is_veiled());
+    // Off again: hidden, no room.
+    let _ = app.dispatch(Command::Action(ActionId::BrailleViewToggle));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let id = h.get_widget(gui::BRAILLE).id();
+    assert!(h.access_node(id).unwrap().is_hidden());
+    assert_eq!(
+        h.get_widget(gui::BRAILLE).ctx().bounding_box().height(),
+        0.0
+    );
+}
+
 /// The reading aids the view draws: bionic reading and difficult words as
 /// spans (the text runs a screen reader gets do not change), text spacing
 /// through the layout, and the ruler's marks, which follow the caret and a

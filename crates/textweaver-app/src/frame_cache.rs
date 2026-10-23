@@ -1,6 +1,6 @@
 //! Caches for what a frontend asks for on every frame (W6u): the Unicode
-//! math shown, bionic reading's bold starts, the difficult words, and the
-//! syllable breaks of each line. Each is kept for the document revision,
+//! math shown, bionic reading's bold starts, the difficult words, the
+//! syllable breaks of each line, and the Braille view's line. Each is kept for the document revision,
 //! the range, and the settings it was made with, and made again only when
 //! one of them changes; a frame of the terminal reader with the reading
 //! aids on took 2 ms, most of it redoing this work.
@@ -29,6 +29,9 @@ pub(crate) struct FrameCaches {
         Vec<CharRange>,
     >,
     pub(crate) difficult: Slot<(u64, CharRange), Vec<CharRange>>,
+    /// The Braille view's line, by its text and grade (contracted or
+    /// not): liblouis runs once per line, not once per frame.
+    pub(crate) braille: Slot<(String, bool), crate::braille_view::BrailleLine>,
     /// Syllable breaks by line range, for one revision and one set of
     /// options; cleared when either changes.
     pub(crate) syllables: Mutex<SyllableCache>,

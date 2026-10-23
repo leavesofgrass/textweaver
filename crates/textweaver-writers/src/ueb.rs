@@ -274,6 +274,57 @@ pub fn translate(text: &str) -> Translation {
         .unwrap_or_default()
 }
 
+/// Translates print text like [`translate`], and says which print char
+/// each braille cell stands for: for each char of the braille, the index
+/// (in `text.chars()`) of the print char it was written for. An indicator
+/// (capital, numeric, grade 1, typeform) goes with the char it is written
+/// before, and a closing indicator at the end with the last char. The
+/// cells of one print char are a contiguous run, in print order: a braille
+/// viewer's print line.
+pub fn translate_mapped(text: &str) -> (Translation, Vec<usize>) {
+    let texts = [(text, Join::Fresh)];
+    let marked = Marked::parse(&texts, &[0]);
+    // Where each char the translator sees came from in `text`.
+    let kept: Vec<usize> = text
+        .chars()
+        .enumerate()
+        .filter(|&(_, c)| !ignored(c) && Typeform::of_mark(c).is_none())
+        .map(|(i, _)| i)
+        .collect();
+    let mut plan = Plan::new(&marked.chars, marked.runs.clone(), true);
+    plan.reopen(&marked.chars);
+    plan.sort();
+    let mut t = Translator {
+        chars: &marked.chars,
+        out: String::with_capacity(marked.chars.len() + marked.chars.len() / 4),
+        unsupported: Vec::new(),
+        numeric: false,
+        single_open: false,
+        plan,
+        splits: Vec::new(),
+        marks: Vec::new(),
+    };
+    t.run();
+    let mut origins = Vec::with_capacity(t.out.len());
+    let mut marks = t.marks.iter().peekable();
+    let mut current = 0;
+    for (at, _) in t.out.char_indices() {
+        while let Some(&&(from, index)) = marks.peek() {
+            if from > at {
+                break;
+            }
+            current = index;
+            marks.next();
+        }
+        origins.push(kept.get(current).copied().unwrap_or(current));
+    }
+    let tr = Translation {
+        braille: t.out,
+        unsupported: t.unsupported,
+    };
+    (tr, origins)
+}
+
 /// Translates texts that may go on from one another, one translation per
 /// text, in order.
 ///
@@ -300,6 +351,7 @@ pub fn translate_series(texts: &[(&str, Join)]) -> Vec<Translation> {
             single_open: false,
             plan,
             splits: Vec::new(),
+            marks: Vec::new(),
         };
         t.run();
         let mut from = 0;
@@ -401,6 +453,16 @@ fn series(texts: &[(&str, Join)]) -> Vec<Vec<usize>> {
     all
 }
 
+/// Chars the translator leaves out: carriage returns, soft hyphens,
+/// zero-width spaces and joiners, the byte order mark, and the joints.
+fn ignored(c: char) -> bool {
+    matches!(
+        c,
+        '\r' | '\u{AD}' | '\u{200B}'
+            ..='\u{200D}' | '\u{2060}' | '\u{FEFF}' | LINE_JOINT | ELEMENT_JOINT
+    )
+}
+
 /// A series of texts as one stretch of print: its chars with joints
 /// between the texts, and its typeform runs.
 struct Marked {
@@ -423,11 +485,7 @@ impl Marked {
                 });
             }
             for c in text.chars() {
-                if matches!(
-                    c,
-                    '\r' | '\u{AD}' | '\u{200B}'
-                        ..='\u{200D}' | '\u{2060}' | '\u{FEFF}' | LINE_JOINT | ELEMENT_JOINT
-                ) {
+                if ignored(c) {
                     continue;
                 }
                 let Some((form, opens)) = Typeform::of_mark(c) else {
@@ -813,6 +871,9 @@ struct Translator<'a> {
     plan: Plan,
     /// Where each text after the first starts in `out` (byte offsets).
     splits: Vec<usize>,
+    /// From which byte of `out` on the braille stands for which char:
+    /// (byte offset, char index), in order ([`translate_mapped`]).
+    marks: Vec<(usize, usize)>,
 }
 
 /// A letter's UEB form: optional prefix (modifier or Greek indicator) and the
@@ -976,6 +1037,11 @@ impl Translator<'_> {
         }
     }
 
+    /// The braille written from here on stands for char `i`.
+    fn mark(&mut self, i: usize) {
+        self.marks.push((self.out.len(), i));
+    }
+
     fn unsupported(&mut self, c: char) {
         if !self.unsupported.contains(&c) {
             self.unsupported.push(c);
@@ -1002,6 +1068,7 @@ impl Translator<'_> {
         let mut i = 0;
         while i < self.chars.len() {
             let c = self.chars[i];
+            self.mark(i);
             self.indicators(i);
             if c == LINE_JOINT || c == ELEMENT_JOINT {
                 // The next text of the series starts here.
@@ -1049,6 +1116,8 @@ impl Translator<'_> {
                 i += 1;
             }
         }
+        // A closing indicator at the end goes with the last char.
+        self.mark(self.chars.len().saturating_sub(1));
         self.indicators(self.chars.len());
     }
 
@@ -1080,6 +1149,7 @@ impl Translator<'_> {
         let mut i = start;
         let mut caps_word_open = false;
         while i < end {
+            self.mark(i);
             let upper = self.chars[i].is_uppercase();
             let mut j = i;
             while j < end && self.chars[j].is_uppercase() == upper {
@@ -1088,6 +1158,7 @@ impl Translator<'_> {
             if upper && self.plan.in_caps_passage[i] {
                 // The passage indicator is already written (Rule 8.5).
                 for k in i..j {
+                    self.mark(k);
                     self.letter_cells(self.chars[k], false);
                 }
             } else if upper {
@@ -1095,6 +1166,7 @@ impl Translator<'_> {
                     self.out.push_str(",,");
                     caps_word_open = true;
                     for k in i..j {
+                        self.mark(k);
                         self.letter_cells(self.chars[k], false);
                     }
                 } else {
@@ -1106,6 +1178,7 @@ impl Translator<'_> {
                     caps_word_open = false;
                 }
                 for k in i..j {
+                    self.mark(k);
                     self.letter_cells(self.chars[k], false);
                 }
             }
@@ -1192,6 +1265,52 @@ mod tests {
             "translating {print:?}"
         );
         assert!(t.unsupported.is_empty(), "{print:?}: {:?}", t.unsupported);
+    }
+
+    /// The print char each cell of `print`'s braille stands for, as
+    /// (cells, print) pairs of runs.
+    fn runs(print: &str) -> Vec<(String, String)> {
+        let (tr, origins) = translate_mapped(print);
+        let chars: Vec<char> = print.chars().collect();
+        assert_eq!(tr.braille.chars().count(), origins.len(), "{print:?}");
+        let mut out: Vec<(String, String, usize)> = Vec::new();
+        for (cell, &o) in tr.braille.chars().zip(&origins) {
+            match out.last_mut() {
+                Some((cells, _, at)) if *at == o => cells.push(cell),
+                _ => out.push((cell.to_string(), chars[o].to_string(), o)),
+            }
+        }
+        out.into_iter().map(|(c, p, _)| (c, p)).collect()
+    }
+
+    fn pairs(list: &[(&str, &str)]) -> Vec<(String, String)> {
+        list.iter()
+            .map(|(c, p)| ((*c).to_owned(), (*p).to_owned()))
+            .collect()
+    }
+
+    /// Each cell names the print char it stands for: indicators go with
+    /// the char after them, spaces stay one cell each.
+    #[test]
+    fn mapped_cells_name_their_print() {
+        assert_eq!(
+            runs("Hi  5"),
+            pairs(&[(",H", "H"), ("I", "i"), (" ", " "), (" ", " "), ("#E", "5")])
+        );
+        assert_eq!(
+            runs("CDs"),
+            pairs(&[(",,C", "C"), ("D", "D"), (",'S", "s")])
+        );
+        assert_eq!(runs("3a"), pairs(&[("#C", "3"), (";A", "a")]));
+        assert_eq!(runs("é"), pairs(&[("^/E", "é")]));
+        // Chars the translator drops keep the indices of the text given.
+        let (tr, origins) = translate_mapped("a\u{AD}b");
+        assert_eq!(tr.braille, "AB");
+        assert_eq!(origins, vec![0, 2]);
+        // The same braille as translate.
+        for t in ["CAUTION: WET PAINT!", "\"Hi,\" she said.", "1,000 x@y.org"] {
+            assert_eq!(translate_mapped(t).0, translate(t), "{t:?}");
+        }
     }
 
     #[test]

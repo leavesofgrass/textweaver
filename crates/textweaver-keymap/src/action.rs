@@ -722,6 +722,15 @@ actions! {
     ShowOriginalBraille = "show_original_braille", View,
         "Show the original braille of the page at the cursor, in a BRF file read as print",
         gui [], term [], shared [];
+    // The Braille view (beta 4). Alt+Shift with F2 and F3 is free in NVDA,
+    // JAWS, Windows, Windows Terminal, GNOME, KDE and macOS (Alt+F2 alone
+    // is GNOME's and KDE's run dialog; Shift keeps it apart).
+    BrailleViewToggle = "braille_view_toggle", View,
+        "Show or hide the Braille view: the current line as braille dots at the bottom of the screen, for learning and teaching braille",
+        gui ["g:Alt+Shift+F2"], term ["g:Alt+Shift+F2"], shared [];
+    BrailleGradeToggle = "braille_grade_toggle", View,
+        "Switch braille between uncontracted and contracted, grade 1 and grade 2, in the Braille view and BRF files",
+        gui ["g:Alt+Shift+F3"], term ["g:Alt+Shift+F3"], shared [];
     ToggleCharacterKeys = "toggle_character_keys", View,
         "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",
         gui ["g:F9"], term ["g:F9"], shared [];
