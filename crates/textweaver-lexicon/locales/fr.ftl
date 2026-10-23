@@ -834,6 +834,10 @@ action-volume-down = Moins fort
 action-cycle-speed-preset = Faire défiler les préréglages de vitesse (survol, normal, étude, lent)
 action-choose-voice = Choisir une voix
 action-restart-speech = Redémarrer la synthèse vocale avec les paramètres actuels (après l'arrêt du moteur vocal)
+action-cw-practice-koch = S’entraîner au morse, méthode Koch : copier des groupes des caractères appris jusqu’ici
+action-cw-practice-characters = S’entraîner au morse : copier des groupes de caractères au hasard
+action-cw-practice-words = S’entraîner au morse : copier des mots au hasard
+action-cw-practice-progress = Annoncer la progression de l’entraînement au morse : la leçon Koch et les derniers scores
 action-cycle-verbosity = Faire défiler la verbosité de textweaver : faible, normale, élevée
 action-cycle-punctuation = Faire défiler la ponctuation dite : aucune, quelques signes, tous
 action-find = Rechercher du texte dans le document
@@ -2658,6 +2662,11 @@ settings-unit-columns =
         [one] colonne
        *[other] colonnes
     }
+settings-unit-groups =
+    { $n ->
+        [one] groupe
+       *[other] groupes
+    }
 settings-unit-characters =
     { $n ->
         [one] caractère
@@ -3588,6 +3597,14 @@ setting-speech-cw-prosigns = Procédures CW
 setting-speech-cw-prosigns-help = Envoyer la structure en signes de procédure : BT après les titres et les paragraphes, AR à la fin du document. Les signes écrits entre chevrons, comme <BT>, sont aussi envoyés.
 setting-speech-cw-status-line = Caractères CW dans la ligne d'état
 setting-speech-cw-status-line-help = Afficher chaque caractère dans la ligne d'état au moment de l'envoi, pour qu'un lecteur d'écran l'affiche sur une plage braille. Rien de plus n'est dit.
+setting-speech-cw-practice-threshold = Entraînement CW : seuil de réussite
+setting-speech-cw-practice-threshold-help = Le score d’une série Koch, en pour cent, qui ajoute le caractère suivant. La méthode Koch utilise 90.
+setting-speech-cw-practice-group = Entraînement CW : taille des groupes
+setting-speech-cw-practice-group-help = Le nombre de caractères de chaque groupe.
+setting-speech-cw-practice-groups = Entraînement CW : longueur d’une série
+setting-speech-cw-practice-groups-help = Le nombre de groupes d’une série. Après le dernier, le score de la série est annoncé et conservé.
+setting-speech-cw-practice-delay-ms = Entraînement CW : délai avant l’envoi
+setting-speech-cw-practice-delay-ms-help = Le silence avant l’envoi de chaque groupe. Il suit le temps que les messages parlés de { -brand } devraient prendre.
 setting-speech-voice-params = Débit et hauteur par voix
 setting-speech-voice-params-help = Le débit et la hauteur de la dernière utilisation de chaque voix. Choisir à nouveau une voix les rétablit.
 setting-authoring-author = Auteur
@@ -3958,6 +3975,10 @@ name-volume-down = Moins fort
 name-cycle-speed-preset = Vitesse prédéfinie
 name-choose-voice = Voix
 name-restart-speech = Redémarrer la parole
+name-cw-practice-koch = Entraînement Koch
+name-cw-practice-characters = Entraînement aux caractères au hasard
+name-cw-practice-words = Entraînement aux mots au hasard
+name-cw-practice-progress = Progression de l’entraînement
 name-cycle-verbosity = Niveau de détail
 name-cycle-punctuation = Ponctuation
 name-find = Rechercher
@@ -4626,6 +4647,7 @@ sync-stopped = Synchro désactivée ici. Le dossier reste tel quel.
 prompt-sync-computer-name = Nom de cet ordinateur, Entrée le garde
 menu-sync = Synchro
 menu-cards = Cartes d’étude
+menu-cw-practice = Entraînement au morse
 name-sync-setup = Configurer la synchro
 name-sync-status = État de la synchro
 name-sync-now = Synchroniser maintenant
@@ -4985,6 +5007,7 @@ prompt-comment-reply = Réponse
 prompt-comment-text = Commentaire
 prompt-github-token = Jeton GitHub de la source de composants, Entrée pour passer
 prompt-import-cards = Importer des cartes d’étude d’un paquet Anki
+prompt-cw-copy = Tapez ce que vous avez entendu
 changes-title = Modifications et commentaires
 changes-intro =
     { $n ->
@@ -5181,3 +5204,28 @@ cw-skipped =
         [one] 1 caractère non envoyé en morse.
        *[other] { $count } caractères non envoyés en morse.
     }
+## Beta 4: CW practice (Koch method, random drills, copy checking).
+cw-practice-koch-start = Leçon Koch { $lesson } sur 40, { $count } caractères, nouveau : { $new }.
+cw-practice-characters-start = Caractères au hasard, { $groups } groupes.
+cw-practice-words-start = Mots au hasard, { $groups } groupes.
+cw-practice-group = Groupe { $n } sur { $groups }.
+cw-practice-again = Encore, groupe { $n } sur { $groups }.
+cw-practice-perfect = { $correct } sur { $total }, tout juste.
+cw-practice-score = { $correct } sur { $total }. Erreurs : { $missed }. Envoyé : { $sent }.
+cw-practice-wrong = { $sent } pris pour { $typed }
+cw-practice-missing = { $sent } non copié
+cw-practice-extra = { $typed } en trop
+cw-practice-round = Série : { $correct } sur { $total }, { $percent } pour cent.
+cw-practice-added = Leçon { $lesson } : { $new } ajouté.
+cw-practice-not-yet = { $threshold } pour cent ajoute le caractère suivant.
+cw-practice-all-learned = Tous les caractères sont appris.
+cw-practice-stopped = Entraînement arrêté.
+cw-practice-progress = Leçon Koch { $lesson } sur 40, nouveau : { $new }. { $recent }
+cw-practice-recent = Dernières séries : { $scores } pour cent.
+cw-practice-no-rounds = Aucune série pour l’instant.
+cw-practice-unavailable = Le moteur CW n’a pas démarré, l’entraînement ne peut donc pas envoyer.
+cw-char-period = point
+cw-char-comma = virgule
+cw-char-equals = égal
+cw-char-slash = barre oblique
+cw-char-question = point d’interrogation

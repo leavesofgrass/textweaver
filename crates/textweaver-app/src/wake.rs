@@ -112,6 +112,7 @@ impl App {
             || self.screen_say_all.is_some()
             || self.opening()
             || self.cw_status_active()
+            || self.cw_practice_pending()
         {
             BUSY_TICK
         } else {

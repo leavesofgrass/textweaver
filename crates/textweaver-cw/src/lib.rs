@@ -22,12 +22,15 @@
 //!   platform.
 //! - [`mod@sending`]: what is being sent now, for the status line (and so for
 //!   a Braille display through the screen reader).
+//! - [`training`]: practice, with the Koch method's lessons, random
+//!   character and word drills from a seed, and checking what was copied.
 
 pub mod render;
 pub mod schedule;
 pub mod sending;
 pub mod table;
 pub mod timing;
+pub mod training;
 
 pub use render::{RenderOptions, render, to_samples};
 pub use schedule::{Options, Schedule, SentChar, SentWord, Tone, schedule};

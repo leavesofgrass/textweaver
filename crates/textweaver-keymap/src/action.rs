@@ -417,6 +417,17 @@ actions! {
     RestartSpeech = "restart_speech", Voice,
         "Restart speech with the current settings (after the speech engine stopped working)",
         gui ["g:Shift+F8"], term ["g:Shift+F8"], shared [];
+    CwPracticeKoch = "cw_practice_koch", Voice,
+        "Morse code practice, Koch method: copy groups of the characters learned so far",
+        gui [], term [], shared [];
+    CwPracticeCharacters = "cw_practice_characters", Voice,
+        "Morse code practice: copy groups of random characters",
+        gui [], term [], shared [];
+    CwPracticeWords = "cw_practice_words", Voice, "Morse code practice: copy random words",
+        gui [], term [], shared [];
+    CwPracticeProgress = "cw_practice_progress", Voice,
+        "Say the Morse code practice progress: the Koch lesson and the latest scores",
+        gui [], term [], shared [];
     CycleVerbosity = "cycle_verbosity", Voice, "Cycle how much textweaver says: low, normal, high",
         gui ["g:Alt+Shift+V"], term ["g:Alt+Shift+V"], shared [];
     CyclePunctuation = "cycle_punctuation", Voice, "Cycle how much punctuation is spoken: none, some, all",

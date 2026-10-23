@@ -150,6 +150,8 @@ pub enum MenuId {
     Sync,
     /// Reading, Bookmarks and notes, Study cards.
     Cards,
+    /// Tools, Morse code practice.
+    CwPractice,
 }
 
 /// One entry of a menu's definition.
@@ -177,7 +179,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 30] = [
+    pub const ALL: [MenuId; 31] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
@@ -208,6 +210,7 @@ impl MenuId {
         MenuId::SpeechCursor,
         MenuId::Sync,
         MenuId::Cards,
+        MenuId::CwPractice,
     ];
 
     /// The stable id, used in catalog ids (`menu-export-as`) and JSON-RPC.
@@ -243,6 +246,7 @@ impl MenuId {
             MenuId::SpeechCursor => "speech-cursor",
             MenuId::Sync => "sync",
             MenuId::Cards => "cards",
+            MenuId::CwPractice => "cw-practice",
         }
     }
 
@@ -607,6 +611,7 @@ impl MenuId {
                 Do(A::Summarize),
                 Do(A::ReadingLevel),
                 Do(A::ReadingStatistics),
+                Sub(MenuId::CwPractice),
                 Sep,
                 Sub(MenuId::Sync),
                 Sep,
@@ -627,6 +632,13 @@ impl MenuId {
                 Sep,
                 Do(A::ExportCardsAnki),
                 Do(A::ImportCardsAnki),
+            ],
+            MenuId::CwPractice => &[
+                Do(A::CwPracticeKoch),
+                Do(A::CwPracticeCharacters),
+                Do(A::CwPracticeWords),
+                Sep,
+                Do(A::CwPracticeProgress),
             ],
             MenuId::Sync => &[
                 Do(A::SyncSetup),

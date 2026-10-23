@@ -146,6 +146,11 @@ pub(crate) enum Job {
         key: DocKey,
         deck: Box<textweaver_store::CardDeck>,
     },
+    /// Save `cw-practice.json` (crate::cw_practice).
+    CwPractice {
+        paths: Paths,
+        progress: Box<textweaver_store::CwPractice>,
+    },
     /// Save `profiles.toml`.
     Profiles {
         paths: Paths,
@@ -621,6 +626,12 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             .save(&key, &deck)
             .err()
             .map(|e| Report::CardsFailed(e.to_string())),
+        Job::CwPractice { paths, progress } => {
+            if let Err(e) = progress.save(&paths) {
+                log::warn!("cannot save CW practice progress: {e}");
+            }
+            None
+        }
         Job::Profiles { paths, profiles } => profiles
             .save(&paths)
             .err()

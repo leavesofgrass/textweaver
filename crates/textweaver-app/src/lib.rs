@@ -178,6 +178,7 @@ mod command;
 mod command_list;
 pub mod components;
 mod cw;
+mod cw_practice;
 mod details_form;
 mod dictation;
 pub mod disk;

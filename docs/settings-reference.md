@@ -43,6 +43,10 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.cw.volume`: default 50 percent. CW tone level. How loud the Morse tone is, before the speech volume. From 0 to 100 percent, in steps of 5. Syncs between computers.
 - `speech.cw.prosigns`: default on (`true`). CW prosigns. Send structure as prosigns: BT after headings and paragraphs, AR at the end. Prosigns written in angle brackets, such as <BT>, are sent too. On or off: `true` or `false`. Syncs between computers.
 - `speech.cw.status_line`: default on (`true`). CW characters on the status line. Show each character on the status line as it is sent, for a Braille display. Nothing extra is said. On or off: `true` or `false`. Syncs between computers.
+- `speech.cw.practice_threshold`: default 90 percent. CW practice pass mark. The score in a Koch practice round, in percent, that adds the next character. The Koch method uses 90. From 50 to 100 percent, in steps of 5. Syncs between computers.
+- `speech.cw.practice_group`: default 5 characters. CW practice group size. How many characters each practice group has. From 2 to 10 characters, in steps of 1. Syncs between computers.
+- `speech.cw.practice_groups`: default 10 groups. CW practice round length. How many groups a practice round has. After the last, the round's score is said and kept. From 1 to 50 groups, in steps of 1. Syncs between computers.
+- `speech.cw.practice_delay_ms`: default 1000 milliseconds. CW practice start delay. The quiet before each group is sent. It comes after the time textweaver's own spoken messages are expected to take. From 0 to 5000 milliseconds, in steps of 250. Syncs between computers.
 - `speech.voice_params`: default none. Rate and pitch per voice. The rate and pitch each voice was last used at. Choosing a voice again brings them back. A table of names and values, edited in the file. Stays on this computer.
 
 ## Highlight: the `[highlight]` section

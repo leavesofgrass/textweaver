@@ -823,6 +823,10 @@ action-volume-down = Quieter
 action-cycle-speed-preset = Cycle the speed presets (skim, normal, study, slow)
 action-choose-voice = Choose a voice
 action-restart-speech = Restart speech with the current settings (after the speech engine stopped working)
+action-cw-practice-koch = Morse code practice, Koch method: copy groups of the characters learned so far
+action-cw-practice-characters = Morse code practice: copy groups of random characters
+action-cw-practice-words = Morse code practice: copy random words
+action-cw-practice-progress = Say the Morse code practice progress: the Koch lesson and the latest scores
 action-cycle-verbosity = Cycle how much textweaver says: low, normal, high
 action-cycle-punctuation = Cycle how much punctuation is spoken: none, some, all
 action-find = Find text in the document
@@ -2669,6 +2673,11 @@ settings-unit-columns =
         [one] column
        *[other] columns
     }
+settings-unit-groups =
+    { $n ->
+        [one] group
+       *[other] groups
+    }
 settings-unit-characters =
     { $n ->
         [one] character
@@ -3622,6 +3631,14 @@ setting-speech-cw-prosigns = CW prosigns
 setting-speech-cw-prosigns-help = Send structure as prosigns: BT after headings and paragraphs, AR at the end. Prosigns written in angle brackets, such as <BT>, are sent too.
 setting-speech-cw-status-line = CW characters on the status line
 setting-speech-cw-status-line-help = Show each character on the status line as it is sent, for a Braille display. Nothing extra is said.
+setting-speech-cw-practice-threshold = CW practice pass mark
+setting-speech-cw-practice-threshold-help = The score in a Koch practice round, in percent, that adds the next character. The Koch method uses 90.
+setting-speech-cw-practice-group = CW practice group size
+setting-speech-cw-practice-group-help = How many characters each practice group has.
+setting-speech-cw-practice-groups = CW practice round length
+setting-speech-cw-practice-groups-help = How many groups a practice round has. After the last, the round's score is said and kept.
+setting-speech-cw-practice-delay-ms = CW practice start delay
+setting-speech-cw-practice-delay-ms-help = The quiet before each group is sent. It comes after the time { -brand }'s own spoken messages are expected to take.
 setting-speech-voice-params = Rate and pitch per voice
 setting-speech-voice-params-help = The rate and pitch each voice was last used at. Choosing a voice again brings them back.
 setting-authoring-author = Author
@@ -3996,6 +4013,10 @@ name-volume-down = Quieter
 name-cycle-speed-preset = Speed preset
 name-choose-voice = Voices
 name-restart-speech = Restart speech
+name-cw-practice-koch = Koch practice
+name-cw-practice-characters = Random character practice
+name-cw-practice-words = Random word practice
+name-cw-practice-progress = Practice progress
 name-cycle-verbosity = Verbosity
 name-cycle-punctuation = Punctuation
 name-find = Find
@@ -4676,6 +4697,7 @@ sync-stopped = Sync off here. The folder is left as it is.
 prompt-sync-computer-name = Name this computer, Enter keeps it
 menu-sync = Sync
 menu-cards = Study cards
+menu-cw-practice = Morse code practice
 name-sync-setup = Set up sync
 name-sync-status = Sync status
 name-sync-now = Sync now
@@ -5053,6 +5075,7 @@ prompt-comment-reply = Reply
 prompt-comment-text = Comment
 prompt-github-token = GitHub token for your components source, Enter skips
 prompt-import-cards = Import study cards from Anki package
+prompt-cw-copy = Type what you heard
 changes-title = Changes and comments
 # Said when the list opens; $title is changes-title, $n how many rows.
 changes-intro =
@@ -5258,3 +5281,28 @@ cw-skipped =
         [one] 1 character not sent in Morse code.
        *[other] { $count } characters not sent in Morse code.
     }
+## Beta 4: CW practice (Koch method, random drills, copy checking).
+cw-practice-koch-start = Koch lesson { $lesson } of 40, { $count } characters, newest { $new }.
+cw-practice-characters-start = Random characters, { $groups } groups.
+cw-practice-words-start = Random words, { $groups } groups.
+cw-practice-group = Group { $n } of { $groups }.
+cw-practice-again = Again, group { $n } of { $groups }.
+cw-practice-perfect = { $correct } of { $total }, all correct.
+cw-practice-score = { $correct } of { $total }. Missed: { $missed }. Sent: { $sent }.
+cw-practice-wrong = { $sent } as { $typed }
+cw-practice-missing = { $sent } not copied
+cw-practice-extra = { $typed } extra
+cw-practice-round = Round: { $correct } of { $total }, { $percent } percent.
+cw-practice-added = Lesson { $lesson }: added { $new }.
+cw-practice-not-yet = { $threshold } percent adds the next character.
+cw-practice-all-learned = Every character learned.
+cw-practice-stopped = Practice stopped.
+cw-practice-progress = Koch lesson { $lesson } of 40, newest { $new }. { $recent }
+cw-practice-recent = Latest rounds: { $scores } percent.
+cw-practice-no-rounds = No rounds yet.
+cw-practice-unavailable = The CW engine did not start, so practice cannot send.
+cw-char-period = period
+cw-char-comma = comma
+cw-char-equals = equals
+cw-char-slash = slash
+cw-char-question = question mark
