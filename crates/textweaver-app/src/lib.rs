@@ -209,6 +209,7 @@ mod mdline;
 pub mod menu;
 mod nav;
 mod notes;
+mod obsidian_edit;
 pub mod opener;
 pub mod opening;
 mod pages;

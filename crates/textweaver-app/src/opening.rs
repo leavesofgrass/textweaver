@@ -158,6 +158,10 @@ pub fn open_failure_reason_in(c: &Catalog, path: &Path, err: &LoadError) -> Stri
                 log::warn!("{name}: {detail}");
                 c.tr("opening-damaged-notebook")
             }
+            "canvas" => {
+                log::warn!("{name}: {detail}");
+                c.tr("opening-damaged-canvas")
+            }
             "svg" => {
                 log::warn!("{name}: {detail}");
                 c.tr("opening-damaged-svg")
@@ -561,6 +565,10 @@ mod tests {
             (
                 "growth.ipynb",
                 "a readable Jupyter notebook; it may be damaged or too large.",
+            ),
+            (
+                "board.canvas",
+                "a readable canvas; it may be damaged or too large.",
             ),
             (
                 "chart.SVG",

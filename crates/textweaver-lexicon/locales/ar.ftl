@@ -997,6 +997,10 @@ action-horizontal-rule = إدراج خط أفقي
 action-insert-table = إدراج جدول
 action-add-table-row = إضافة صف إلى الجدول عند المؤشر
 action-insert-image = إدراج صورة
+action-insert-wiki-link = إدراج رابط ويكي إلى ملاحظة في المخزن، أو إلى عنوان أو كتلة فيها
+action-toggle-task = تحديد المهمة في السطر الحالي أو إلغاء تحديدها، أو جعل السطر مهمة
+action-cycle-task-status = نقل المهمة في السطر الحالي إلى حالتها التالية: قيد التنفيذ، منجزة، ملغاة، محوّلة، مهمة، سؤال
+action-insert-callout = إدراج تنبيه (callout) من نوع تختاره؛ تصبح الأسطر المحددة نصه
 action-replace = بحث واستبدال
 action-copy = نسخ التحديد، أو الجملة عند المؤشر، إلى الحافظة
 action-cut = قص التحديد إلى الحافظة
@@ -3108,6 +3112,40 @@ edit-not-a-table-size = ليس حجم جدول: { $text }. اكتب أعمدة �
 # $name is the image's file name.
 edit-image-inserted = أُدرجت الصورة { $name }. وصفها محدَّد؛ اكتب لاستبداله.
 edit-image-failed = تعذّر إدراج الصورة: { $error } لم يتغيّر النص.
+# Edit mode's Obsidian aids: a wiki link, tasks, callouts.
+edit-wikilink-title = رابط إلى ملاحظة
+edit-wikilink-intro =
+    { $n ->
+        [one] رابط إلى ملاحظة، ملاحظة واحدة. يختارها مفتاح الإدخال.
+       *[other] رابط إلى ملاحظة، { $n } ملاحظات. يختار مفتاح الإدخال واحدة.
+    }
+edit-wikilink-no-notes = لا توجد ملاحظات في هذا المخزن يمكن الربط إليها.
+edit-wikilink-anchor-title = رابط إلى جزء من { $note }
+edit-wikilink-anchor-intro = رابط إلى الملاحظة { $note } كلها، أو إلى عنوان أو كتلة فيها. يختار مفتاح الإدخال.
+edit-wikilink-whole = الملاحظة كلها
+edit-wikilink-heading = عنوان { $level }: { $text }
+edit-wikilink-block = كتلة { $id }: { $text }
+edit-wikilink-inserted = أُدرج رابط إلى { $target }.
+edit-callout-title = نوع التنبيه
+edit-callout-intro = أنواع التنبيه، { $n }. يدرج مفتاح الإدخال واحدًا.
+edit-callout-inserted = أُدرج تنبيه من نوع { $type }. اكتب نصه.
+edit-task-status =
+    { $status ->
+        [done] محددة.
+        [open] غير محددة.
+        [in-progress] قيد التنفيذ.
+        [cancelled] ملغاة.
+        [forwarded] محوّلة.
+        [important] مهمة.
+        [question] سؤال.
+       *[other] معلّمة بـ { $mark }.
+    }
+edit-task-new = مهمة جديدة، غير محددة.
+edit-tasks-changed =
+    { $n ->
+        [one] تغيّرت مهمة في سطر واحد.
+       *[other] تغيّرت المهام في { $n } أسطر.
+    }
 # $query is the text to find.
 common-no-matches = لا تطابقات لـ{ $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -4120,6 +4158,7 @@ gui-updated-to = تم التحديث إلى { $version }. مساعدة، الت�
 ## each starts in lower case.
 opening-damaged-json = ليس ملف JSON قابلًا للقراءة؛ قد يكون كبيرًا جدًا.
 opening-damaged-notebook = ليس دفتر Jupyter قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
+opening-damaged-canvas = ليس ملف لوحة (canvas) قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-svg = ليس رسمًا بصيغة SVG قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-mathml = ليست صيغة MathML قابلة للقراءة؛ قد تكون تالفة أو كبيرة جدًا.
 
@@ -4352,6 +4391,10 @@ name-horizontal-rule = خط أفقي
 name-insert-table = إدراج جدول
 name-add-table-row = إضافة صف إلى الجدول
 name-insert-image = إدراج صورة
+name-insert-wiki-link = إدراج رابط ويكي
+name-toggle-task = تحديد المهمة
+name-cycle-task-status = تغيير حالة المهمة
+name-insert-callout = إدراج تنبيه
 name-replace = استبدال
 name-copy = نسخ
 name-cut = قص

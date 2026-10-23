@@ -1629,7 +1629,12 @@ impl App {
                 A::Undo => "undo",
                 A::Redo => "redo",
                 A::Replace => "replace-text",
-                A::InsertTable | A::InsertImage | A::HorizontalRule | A::AddTableRow => "insert",
+                A::InsertTable
+                | A::InsertImage
+                | A::HorizontalRule
+                | A::AddTableRow
+                | A::InsertWikiLink
+                | A::InsertCallout => "insert",
                 _ => "format",
             };
             return self.not_editing(what);
@@ -1641,6 +1646,10 @@ impl App {
             A::InsertTable => return self.prompt(PromptPurpose::TableSize),
             A::InsertImage => return self.prompt(PromptPurpose::ImagePath),
             A::Replace => return self.prompt(PromptPurpose::ReplaceFind),
+            A::InsertWikiLink => return self.insert_wiki_link_start(),
+            A::InsertCallout => return self.insert_callout_start(),
+            A::ToggleTask => return self.task_command(MarkdownOp::ToggleTask),
+            A::CycleTaskStatus => return self.task_command(MarkdownOp::CycleTaskStatus),
             _ => {}
         }
         // Keys of the edit-format-* messages.

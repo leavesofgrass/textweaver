@@ -903,6 +903,10 @@ action-horizontal-rule = Insert a horizontal rule
 action-insert-table = Insert a table
 action-add-table-row = Add a row to the table at the cursor
 action-insert-image = Insert an image
+action-insert-wiki-link = Insert a wiki link to a note in the vault, or to a heading or block in it
+action-toggle-task = Check or uncheck the task on the current line, or make the line a task
+action-cycle-task-status = Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question
+action-insert-callout = Insert a callout of a type you choose; selected lines become its text
 action-replace = Find and replace
 action-copy = Copy the selection, or the sentence at the cursor, to the clipboard
 action-cut = Cut the selection to the clipboard
@@ -2892,6 +2896,45 @@ edit-not-a-table-size = Not a table size: { $text }. Type columns and rows, for 
 # $name is the image's file name.
 edit-image-inserted = Inserted image { $name }. Its description is selected; type to replace it.
 edit-image-failed = Could not insert the image: { $error } The text is unchanged.
+# Edit mode's Obsidian aids: a wiki link, tasks, callouts.
+edit-wikilink-title = Link to a note
+edit-wikilink-intro =
+    { $n ->
+        [one] Link to a note, 1 note. Enter chooses it.
+       *[other] Link to a note, { $n } notes. Enter chooses one.
+    }
+edit-wikilink-no-notes = There are no notes in this vault to link to.
+# $note is the chosen note's title.
+edit-wikilink-anchor-title = Link to part of { $note }
+edit-wikilink-anchor-intro = Link to all of { $note }, or to a heading or block in it. Enter chooses.
+edit-wikilink-whole = The whole note
+edit-wikilink-heading = Heading { $level }: { $text }
+edit-wikilink-block = Block { $id }: { $text }
+# $target is the link as written, such as Cell#Parts.
+edit-wikilink-inserted = Inserted a link to { $target }.
+edit-callout-title = Callout type
+edit-callout-intro = Callout types, { $n }. Enter inserts one.
+# $type is the callout type as written, such as tip.
+edit-callout-inserted = Inserted a { $type } callout. Type its text.
+# The task's status on the current line after Toggle task or Cycle task
+# status; $mark is the status character when it has no name.
+edit-task-status =
+    { $status ->
+        [done] Checked.
+        [open] Not checked.
+        [in-progress] In progress.
+        [cancelled] Cancelled.
+        [forwarded] Forwarded.
+        [important] Important.
+        [question] Question.
+       *[other] Marked { $mark }.
+    }
+edit-task-new = New task, not checked.
+edit-tasks-changed =
+    { $n ->
+        [one] Task changed on 1 line.
+       *[other] Tasks changed on { $n } lines.
+    }
 # $query is the text to find.
 common-no-matches = No matches for { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -3804,6 +3847,7 @@ gui-updated-to = Updated to { $version }. Help, Documentation describes what is 
 ## each starts in lower case.
 opening-damaged-json = it is not a readable JSON file; it may be too large.
 opening-damaged-notebook = it is not a readable Jupyter notebook; it may be damaged or too large.
+opening-damaged-canvas = it is not a readable canvas; it may be damaged or too large.
 opening-damaged-svg = it is not a readable SVG drawing; it may be damaged or too large.
 opening-damaged-mathml = it is not a readable MathML formula; it may be damaged or too large.
 
@@ -4036,6 +4080,10 @@ name-horizontal-rule = Horizontal rule
 name-insert-table = Insert table
 name-add-table-row = Add table row
 name-insert-image = Insert image
+name-insert-wiki-link = Insert wiki link
+name-toggle-task = Toggle task
+name-cycle-task-status = Cycle task status
+name-insert-callout = Insert callout
 name-replace = Replace
 name-copy = Copy
 name-cut = Cut
