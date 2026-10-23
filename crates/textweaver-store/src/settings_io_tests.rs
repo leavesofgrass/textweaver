@@ -71,6 +71,10 @@ fn everything_changed() -> Settings {
         volume: 30,
         prosigns: false,
         status_line: false,
+        practice_threshold: 80,
+        practice_group: 4,
+        practice_groups: 5,
+        practice_delay_ms: 2000,
         ..crate::CwSettings::default()
     };
     sp.voice_params = BTreeMap::from([(

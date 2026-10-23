@@ -109,6 +109,12 @@ impl Paths {
         self.data_dir.join("stats.json")
     }
 
+    /// `cw-practice.json`: CW practice progress (the Koch lesson and the
+    /// latest scores).
+    pub fn cw_practice_file(&self) -> PathBuf {
+        self.data_dir.join("cw-practice.json")
+    }
+
     /// The interface translations folder, `locales/` in the configuration
     /// directory (`<language>.ftl` files).
     pub fn locales_dir(&self) -> PathBuf {

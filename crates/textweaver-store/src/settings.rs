@@ -311,6 +311,19 @@ pub const CW_MAX_WPM: u16 = 50;
 /// The lowest and highest CW tone, in hertz.
 pub const CW_TONE_RANGE_HZ: (u16, u16) = (200, 1500);
 
+/// The lowest and highest score, in percent, that adds the next Koch
+/// character (`[speech.cw] practice_threshold`).
+pub const CW_PRACTICE_THRESHOLD: (u8, u8) = (50, 100);
+
+/// The fewest and most characters in a practice group.
+pub const CW_PRACTICE_GROUP: (u8, u8) = (2, 10);
+
+/// The fewest and most groups in a practice round.
+pub const CW_PRACTICE_GROUPS: (u8, u8) = (1, 50);
+
+/// The longest wait before a practice group is sent, in milliseconds.
+pub const CW_PRACTICE_DELAY_MS: u16 = 5000;
+
 /// `[speech.cw]`: CW (Morse code). The speeds and the tone apply to the
 /// next sentence sent; the rate keys change the character speed while CW
 /// is the engine, and the effective speed with it in proportion.
@@ -335,6 +348,17 @@ pub struct CwSettings {
     /// Show the characters being sent on the status line, so a screen
     /// reader shows them on a Braille display.
     pub status_line: bool,
+    /// Practice: the score, in percent of a round, that adds the next
+    /// Koch character (50 to 100; 90 is the Koch method's usual mark).
+    pub practice_threshold: u8,
+    /// Practice: the characters in each group (2 to 10).
+    pub practice_group: u8,
+    /// Practice: the groups in a round, after which the score is said and
+    /// kept (1 to 50).
+    pub practice_groups: u8,
+    /// Practice: the quiet before a group is sent, in milliseconds (0 to
+    /// 5000), after the time spoken messages are expected to take.
+    pub practice_delay_ms: u16,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -349,6 +373,10 @@ impl Default for CwSettings {
             volume: 50,
             prosigns: true,
             status_line: true,
+            practice_threshold: 90,
+            practice_group: 5,
+            practice_groups: 10,
+            practice_delay_ms: 1000,
             extra: toml::Table::new(),
         }
     }
@@ -2573,6 +2601,47 @@ impl Settings {
                 "100".into(),
             );
             cw.volume = 100;
+        }
+        for (key, value, (lo, hi), unit) in [
+            (
+                "practice_threshold",
+                &mut cw.practice_threshold,
+                CW_PRACTICE_THRESHOLD,
+                "percent",
+            ),
+            (
+                "practice_group",
+                &mut cw.practice_group,
+                CW_PRACTICE_GROUP,
+                "characters",
+            ),
+            (
+                "practice_groups",
+                &mut cw.practice_groups,
+                CW_PRACTICE_GROUPS,
+                "groups",
+            ),
+        ] {
+            if !(lo..=hi).contains(value) {
+                let c = (*value).clamp(lo, hi);
+                fix(
+                    format!("speech.cw.{key}"),
+                    format!("{value} is outside {lo} to {hi} {unit}"),
+                    c.to_string(),
+                );
+                *value = c;
+            }
+        }
+        if cw.practice_delay_ms > CW_PRACTICE_DELAY_MS {
+            fix(
+                "speech.cw.practice_delay_ms".into(),
+                format!(
+                    "{} is outside 0 to {CW_PRACTICE_DELAY_MS} milliseconds",
+                    cw.practice_delay_ms
+                ),
+                CW_PRACTICE_DELAY_MS.to_string(),
+            );
+            cw.practice_delay_ms = CW_PRACTICE_DELAY_MS;
         }
         let (lo, hi) = PREVIEW_DELAY_RANGE_MS;
         let delay = self.preview.pane_delay_ms;

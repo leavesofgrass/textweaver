@@ -101,6 +101,10 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("speech.cw.volume", Portable),
     ("speech.cw.prosigns", Portable),
     ("speech.cw.status_line", Portable),
+    ("speech.cw.practice_threshold", Portable),
+    ("speech.cw.practice_group", Portable),
+    ("speech.cw.practice_groups", Portable),
+    ("speech.cw.practice_delay_ms", Portable),
     ("speech.voice_params", Machine),
     // [highlight]
     ("highlight.enabled", Portable),
