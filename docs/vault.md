@@ -361,6 +361,30 @@ These commands are in the command palette and in the Reading menu under Go to. T
 
 Links inside code and inside `%% comments %%` are not counted, as in Obsidian. For a very large vault textweaver reads at most 20,000 notes, and a note larger than 4 megabytes only by its name; when a limit is reached, the list says "Only part of the vault was searched; it is very large."
 
+### Canvases
+
+```powershell
+tw open "D:\Notes\Biology\Week 1.canvas"
+```
+
+A canvas, Obsidian's board of cards, is a `.canvas` file in the open JSON Canvas format (version 1.0). textweaver opens it as a document. It begins with a summary, such as "Canvas: 4 cards, 1 group, 3 connections.", and every card and group is a heading, so the heading keys move from card to card:
+
+- A text card's heading is its first line, in plain words, and the rest of its text follows, read as Markdown, with lists, links, and math; headings written inside the card come one level below the card's own. A first line longer than 80 characters is shortened in the heading and read in full below it. A card with no text is "Empty card".
+- A file card is a link to its file, named by the note's name and what the file is: "Mitochondria, note", "Mitochondria, Energy, note" for a card showing that heading, "cell diagram.png, picture", or "syllabus.pdf, PDF". **Alt+Shift+F** opens the file, found the way a wiki link finds a note: by path from the canvas's folder, then from the top of the vault, then by name.
+- A web page card is a link to the page, named by its address without `https://`: "example.com/cells, web page".
+- A group is a heading with its label, "Week 1, group", or "Unnamed group", and the cards inside it follow one heading level lower, as a section.
+- A card or group colored with one of Obsidian's six preset colors says the color after its name, "Study plan, green", since a color may carry meaning on the board; custom colors are not named.
+
+The reading order follows the board. A card belongs to the smallest group whose rectangle holds the card's center. Cards are read top to bottom in rows, and left to right within a row: a card joins the row of the card before it when its top edge is above the middle of that card. Groups inside groups are read the same way, to heading level 6.
+
+The connections come last, under the heading "Connections", one line each, in the reading order of the card they start from: "From Study plan to Mitochondria: start here" for an arrow, "Both ways between A and B" for arrows at both ends, and "Between A and B" for a line without arrows. A connection's label follows a colon; its color is not read.
+
+A canvas converts like any other document, `tw convert "Week 1.canvas" --to docx` for example, with the same headings and connections. A canvas of more than 5,000 cards or 20,000 connections is read up to those limits, and says so; the file size and nesting limits are those of JSON files.
+
+### Write in vault notes
+
+Edit mode has four commands for Obsidian's own syntax: Insert wiki link, which lists the vault's notes and then a note's headings and blocks; Toggle task (**Ctrl+L**, or **Ctrl+Enter** in the textweaver app), Cycle task status, and Insert callout. [Writing and editing](editing.md#obsidian-notes-wiki-links-tasks-and-callouts) describes them.
+
 The links that an import stores with textweaver notes are a separate matter. An export writes them out again, but textweaver does not yet display them: the notes list and `tw marks` show each note's text and tags, not its links. To see which links an import finds, use a dry run with `--json`.
 
 ## Ask the vault
