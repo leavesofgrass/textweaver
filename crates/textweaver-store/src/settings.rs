@@ -98,6 +98,9 @@ pub struct SpeechSettings {
     pub espeak: EspeakSettings,
     /// `[speech.piper]`: Piper neural voices (ADR-0023).
     pub piper: PiperSettings,
+    /// `[speech.cw]`: CW (Morse code), the engine that sends the text as
+    /// a tone.
+    pub cw: CwSettings,
     /// `[speech.voice_params]`: the rate and pitch each voice was last used
     /// at, keyed `"engine:voice"` (`"sapi:David"`); choosing the voice again
     /// brings them back. Written by the voice list, not by hand.
@@ -299,6 +302,58 @@ pub struct PiperSettings {
     pub extra: toml::Table,
 }
 
+/// The slowest CW speed, in words per minute.
+pub const CW_MIN_WPM: u16 = 5;
+
+/// The fastest CW speed, in words per minute.
+pub const CW_MAX_WPM: u16 = 50;
+
+/// The lowest and highest CW tone, in hertz.
+pub const CW_TONE_RANGE_HZ: (u16, u16) = (200, 1500);
+
+/// `[speech.cw]`: CW (Morse code). The speeds and the tone apply to the
+/// next sentence sent; the rate keys change the character speed while CW
+/// is the engine, and the effective speed with it in proportion.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CwSettings {
+    /// Character speed in words per minute (PARIS), 5 to 50.
+    pub wpm: u16,
+    /// Effective (Farnsworth) speed in words per minute: the gaps between
+    /// characters and words stretch so the text goes at this speed. At or
+    /// above `wpm`, plain spacing.
+    pub effective_wpm: u16,
+    /// The tone's pitch in hertz, 200 to 1500.
+    pub tone_hz: u16,
+    /// The tone's level, 0 to 100 percent of full scale (the speech
+    /// volume applies on top).
+    pub volume: u8,
+    /// Send document structure as prosigns (BT around headings and between
+    /// paragraphs, AR at the end), and read prosigns written in angle
+    /// brackets (`<BT>`).
+    pub prosigns: bool,
+    /// Show the characters being sent on the status line, so a screen
+    /// reader shows them on a Braille display.
+    pub status_line: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for CwSettings {
+    fn default() -> Self {
+        CwSettings {
+            wpm: 20,
+            effective_wpm: 10,
+            tone_hz: 600,
+            volume: 50,
+            prosigns: true,
+            status_line: true,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
 /// The rate and pitch a voice was last used at (`[speech.voice_params]`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RememberedVoice {
@@ -347,6 +402,7 @@ impl Default for SpeechSettings {
             dectalk: DectalkSettings::default(),
             espeak: EspeakSettings::default(),
             piper: PiperSettings::default(),
+            cw: CwSettings::default(),
             voice_params: BTreeMap::new(),
             extra: toml::Table::new(),
         }
@@ -2304,7 +2360,7 @@ impl Settings {
         };
         let (eci, sapi, apple) = (sub("eci"), sub("sapi"), sub("apple"));
         let (dectalk, piper, voice_params) = (sub("dectalk"), sub("piper"), sub("voice_params"));
-        let espeak = sub("espeak");
+        let (espeak, cw) = (sub("espeak"), sub("cw"));
         let mut speech: SpeechSettings = lenient_section("speech", speech_table, &mut w);
         speech.eci = lenient_section("speech.eci", eci, &mut w);
         speech.sapi = lenient_section("speech.sapi", sapi, &mut w);
@@ -2312,6 +2368,7 @@ impl Settings {
         speech.dectalk = lenient_section("speech.dectalk", dectalk, &mut w);
         speech.espeak = lenient_section("speech.espeak", espeak, &mut w);
         speech.piper = lenient_section("speech.piper", piper, &mut w);
+        speech.cw = lenient_section("speech.cw", cw, &mut w);
         speech.voice_params = voice_params_leniently(voice_params, &mut w);
         let mut normalization_table = table.remove("normalization");
         let (lexicon, medical) = match &mut normalization_table {
@@ -2429,6 +2486,39 @@ impl Settings {
                 );
                 *ms = MAX_PAUSE_MS;
             }
+        }
+        let cw = &mut self.speech.cw;
+        for (key, wpm) in [
+            ("wpm", &mut cw.wpm),
+            ("effective_wpm", &mut cw.effective_wpm),
+        ] {
+            if !(CW_MIN_WPM..=CW_MAX_WPM).contains(wpm) {
+                let c = (*wpm).clamp(CW_MIN_WPM, CW_MAX_WPM);
+                fix(
+                    format!("speech.cw.{key}"),
+                    format!("{wpm} is outside {CW_MIN_WPM} to {CW_MAX_WPM} words per minute"),
+                    c.to_string(),
+                );
+                *wpm = c;
+            }
+        }
+        let (lo, hi) = CW_TONE_RANGE_HZ;
+        if !(lo..=hi).contains(&cw.tone_hz) {
+            let c = cw.tone_hz.clamp(lo, hi);
+            fix(
+                "speech.cw.tone_hz".into(),
+                format!("{} is outside {lo} to {hi} hertz", cw.tone_hz),
+                c.to_string(),
+            );
+            cw.tone_hz = c;
+        }
+        if cw.volume > 100 {
+            fix(
+                "speech.cw.volume".into(),
+                format!("{} is outside 0 to 100 percent", cw.volume),
+                "100".into(),
+            );
+            cw.volume = 100;
         }
         let (lo, hi) = PREVIEW_DELAY_RANGE_MS;
         let delay = self.preview.pane_delay_ms;
@@ -2628,7 +2718,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 38] = [
+pub(crate) const STRUCT_TABLES: [&str; 39] = [
     "keyboard",
     "colors",
     "sync",
@@ -2660,6 +2750,7 @@ pub(crate) const STRUCT_TABLES: [&str; 38] = [
     "speech.dectalk",
     "speech.espeak",
     "speech.piper",
+    "speech.cw",
     "highlight",
     "normalization",
     "reading",

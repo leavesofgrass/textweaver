@@ -94,6 +94,13 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("speech.piper.voices", Machine),
     ("speech.piper.voice", Machine),
     ("speech.piper.phonemizer", Machine),
+    // How CW sounds and how fast: the reader's own, on every computer.
+    ("speech.cw.wpm", Portable),
+    ("speech.cw.effective_wpm", Portable),
+    ("speech.cw.tone_hz", Portable),
+    ("speech.cw.volume", Portable),
+    ("speech.cw.prosigns", Portable),
+    ("speech.cw.status_line", Portable),
     ("speech.voice_params", Machine),
     // [highlight]
     ("highlight.enabled", Portable),
