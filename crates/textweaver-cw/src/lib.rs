@@ -31,7 +31,7 @@
 //!   N6ARA TinyMIDI, the CTR2 MIDI, VBand and Vail) as key contacts.
 //! - [`keyer`]: an iambic keyer (modes A and B, dot and dash memory) and
 //!   straight keying, on a virtual clock.
-//! - [`decode`]: tone timing to characters and word spaces, adapting to
+//! - [`mod@decode`]: tone timing to characters and word spaces, adapting to
 //!   the operator's speed.
 //! - [`mod@sidetone`]: the tone heard while keying, made sample by sample.
 

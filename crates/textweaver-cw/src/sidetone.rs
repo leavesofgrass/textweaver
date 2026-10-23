@@ -1,7 +1,7 @@
 //! The sidetone: the tone heard while keying, following the key.
 //!
 //! The same tone as the CW engine's, a sine shaped by the same
-//! raised-cosine rise and fall ([`crate::render`]), but made one sample
+//! raised-cosine rise and fall ([`mod@crate::render`]), but made one sample
 //! at a time as the key goes down and up, since a key's timing is not
 //! known in advance. The edge always runs its whole length, so even a
 //! very short contact does not click.
