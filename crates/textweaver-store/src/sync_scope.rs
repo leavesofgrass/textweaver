@@ -190,6 +190,12 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("braille.math_code", Portable),
     ("braille.table_format", Portable),
     ("braille.brf_code", Portable),
+    ("braille.grade", Portable),
+    // The cells of the display attached to this computer.
+    ("braille.display_cells", Machine),
+    ("braille.viewer", Portable),
+    ("braille.viewer_print_line", Portable),
+    ("braille.viewer_cell_outlines", Portable),
     // [reading_aids]
     ("reading_aids.rsvp.wpm", Portable),
     ("reading_aids.rsvp.pacing", Portable),

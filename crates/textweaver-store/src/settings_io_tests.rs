@@ -175,6 +175,11 @@ fn everything_changed() -> Settings {
     s.braille.math_code = crate::MathBrailleCode::Ueb;
     s.braille.table_format = crate::BrailleTableFormat::Listed;
     s.braille.brf_code = crate::BrfCode::Ebae;
+    s.braille.grade = crate::BrailleGrade::Contracted;
+    s.braille.display_cells = 20;
+    s.braille.viewer = true;
+    s.braille.viewer_print_line = true;
+    s.braille.viewer_cell_outlines = true;
     let a = &mut s.reading_aids;
     a.rsvp = crate::reading_aids::RsvpSettings {
         wpm: 450,

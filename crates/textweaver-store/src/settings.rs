@@ -2105,9 +2105,26 @@ pub enum BrfCode {
     Ebae,
 }
 
+/// `[braille] grade`: uncontracted or contracted braille, for BRF files
+/// and the app's Braille view.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BrailleGrade {
+    /// Uncontracted Unified English Braille (grade 1), translated by
+    /// textweaver itself. The default.
+    #[default]
+    Uncontracted,
+    /// Contracted Unified English Braille (grade 2), through liblouis;
+    /// uncontracted when liblouis is missing.
+    Contracted,
+}
+
+/// The fewest and most cells `[braille] display_cells` takes.
+pub const DISPLAY_CELLS_RANGE: (u16, u16) = (8, 120);
+
 /// `[braille]`: braille output: BRF files and math braille on the
-/// display.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+/// display, and the app's Braille view.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BrailleSettings {
     /// The code math is written in, in BRF files and while exploring a
@@ -2118,9 +2135,40 @@ pub struct BrailleSettings {
     pub table_format: BrailleTableFormat,
     /// The code BRF files are read in when opened.
     pub brf_code: BrfCode,
+    /// Uncontracted or contracted braille, for BRF files and the Braille
+    /// view.
+    pub grade: BrailleGrade,
+    /// Cells on the Braille display (40 by default): how many cells the
+    /// Braille view shows at a time.
+    pub display_cells: u16,
+    /// The Braille view: the current line or sentence drawn as braille
+    /// dots at the bottom of the app (off by default). Visual only.
+    pub viewer: bool,
+    /// The Braille view's print line: under each cell, the print letter or
+    /// contraction it stands for (off by default).
+    pub viewer_print_line: bool,
+    /// The Braille view's cell outlines, so blank cells and spacing show
+    /// (off by default).
+    pub viewer_cell_outlines: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+impl Default for BrailleSettings {
+    fn default() -> Self {
+        BrailleSettings {
+            math_code: MathBrailleCode::default(),
+            table_format: BrailleTableFormat::default(),
+            brf_code: BrfCode::default(),
+            grade: BrailleGrade::default(),
+            display_cells: 40,
+            viewer: false,
+            viewer_print_line: false,
+            viewer_cell_outlines: false,
+            extra: toml::Table::new(),
+        }
+    }
 }
 
 /// All settings, one TOML table per group.
@@ -2558,6 +2606,17 @@ impl Settings {
                 "5".into(),
             );
             self.editing.autosave_interval_secs = 5;
+        }
+        let cells = self.braille.display_cells;
+        let (low, high) = DISPLAY_CELLS_RANGE;
+        if !(low..=high).contains(&cells) {
+            let fixed = cells.clamp(low, high);
+            fix(
+                "braille.display_cells".into(),
+                format!("{cells} is outside {low} to {high}"),
+                fixed.to_string(),
+            );
+            self.braille.display_cells = fixed;
         }
         let sentences = self.summary.sentences;
         let max = SummarySettings::MAX_SENTENCES;
@@ -3099,6 +3158,32 @@ wrap_navigation = true
         assert_eq!(s.reading.math_display, MathDisplay::Source);
         assert!(s.reading.wrap_navigation);
         assert!(err.unwrap_or_default().contains("reading.math_display"));
+    }
+
+    /// The Braille view's settings (beta 4): off, uncontracted, 40 cells by
+    /// default, stored only when changed, and the cells kept in range.
+    #[test]
+    fn braille_view_settings_default_round_trip_and_range() {
+        let s = Settings::default();
+        assert_eq!(s.braille.grade, BrailleGrade::Uncontracted);
+        assert_eq!(s.braille.display_cells, 40);
+        assert!(!s.braille.viewer && !s.braille.viewer_print_line);
+        assert!(!s.braille.viewer_cell_outlines);
+        assert!(!s.to_minimal_toml().unwrap().contains("[braille]"));
+        let (_d, store) = store();
+        write(
+            &store,
+            "[braille]\ngrade = \"contracted\"\ndisplay_cells = 20\nviewer = true\n",
+        );
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.braille.grade, BrailleGrade::Contracted);
+        assert_eq!(s.braille.display_cells, 20);
+        assert!(s.braille.viewer);
+        write(&store, "[braille]\ndisplay_cells = 400\n");
+        let (s, err) = store.load();
+        assert_eq!(s.braille.display_cells, 120);
+        assert!(err.unwrap_or_default().contains("braille.display_cells"));
     }
 
     /// The math braille code (W5c4): Nemeth by default, stored only when
