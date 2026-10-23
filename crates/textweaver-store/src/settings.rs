@@ -335,6 +335,20 @@ pub struct CwSettings {
     /// Show the characters being sent on the status line, so a screen
     /// reader shows them on a Braille display.
     pub status_line: bool,
+    /// Keying: how a paddle's contacts become dits and dahs.
+    pub keyer: CwKeyer,
+    /// Keying: dit and dah swapped, for every key adapter.
+    pub swap_paddles: bool,
+    /// Keying: the tone sounds while the key is down.
+    pub sidetone: bool,
+    /// Keying: the MIDI note of the dit contact, 0 to 127.
+    pub dit_note: u8,
+    /// Keying: the MIDI note of the dah contact, 0 to 127.
+    pub dah_note: u8,
+    /// Keying: the MIDI note of a straight key, 0 to 127.
+    pub straight_note: u8,
+    /// Keying: the MIDI channel listened to, 1 to 16, or 0 for any.
+    pub midi_channel: u8,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -349,9 +363,33 @@ impl Default for CwSettings {
             volume: 50,
             prosigns: true,
             status_line: true,
+            keyer: CwKeyer::default(),
+            swap_paddles: false,
+            sidetone: true,
+            // The N6ARA TinyMIDI's and the CTR2 MIDI's documented notes.
+            dit_note: 20,
+            dah_note: 21,
+            straight_note: 30,
+            midi_channel: 0,
             extra: toml::Table::new(),
         }
     }
+}
+
+/// `[speech.cw] keyer`: how a paddle's contacts become dits and dahs when
+/// keying Morse code.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CwKeyer {
+    /// Iambic mode B, with dot and dash memory: a squeeze released during
+    /// an element adds the opposite element. The default.
+    #[default]
+    IambicB,
+    /// Iambic mode A, with dot and dash memory: a squeeze released during
+    /// an element ends after it.
+    IambicA,
+    /// No keyer: either contact keys the tone, as a straight key.
+    Straight,
 }
 
 /// The rate and pitch a voice was last used at (`[speech.voice_params]`).
@@ -2573,6 +2611,31 @@ impl Settings {
                 "100".into(),
             );
             cw.volume = 100;
+        }
+        for (key, note) in [
+            ("dit_note", &mut cw.dit_note),
+            ("dah_note", &mut cw.dah_note),
+            ("straight_note", &mut cw.straight_note),
+        ] {
+            if *note > 127 {
+                fix(
+                    format!("speech.cw.{key}"),
+                    format!("{note} is outside the MIDI notes 0 to 127"),
+                    "127".into(),
+                );
+                *note = 127;
+            }
+        }
+        if cw.midi_channel > 16 {
+            fix(
+                "speech.cw.midi_channel".into(),
+                format!(
+                    "{} is outside the MIDI channels 1 to 16 (0 is any)",
+                    cw.midi_channel
+                ),
+                "0".into(),
+            );
+            cw.midi_channel = 0;
         }
         let (lo, hi) = PREVIEW_DELAY_RANGE_MS;
         let delay = self.preview.pane_delay_ms;
