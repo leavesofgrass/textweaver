@@ -230,7 +230,9 @@ fn choosing_a_guide_section_opens_the_guide_at_its_heading() {
 #[test]
 fn documentation_warns_of_a_missing_guide_and_follows_links_and_back() {
     let tmp = tempfile::tempdir().unwrap();
-    let docs = fake_docs(tmp.path());
+    // Links resolve to the canonical path (the long name on Windows,
+    // /private/var on macOS), so the expected paths are resolved too.
+    let docs = textweaver_store::library::resolve_path(&fake_docs(tmp.path()));
     let (mut app, said) = app_on(&docs, &tmp.path().join("home"));
     app.dispatch(Command::Action(ActionId::Documentation));
     assert_eq!(open_path(&app), Some(docs.join("README.md")));
