@@ -19,4 +19,5 @@ mod ocr_missing;
 mod page_numbers;
 mod pdf;
 mod positions;
+mod vault_links;
 mod w6o;

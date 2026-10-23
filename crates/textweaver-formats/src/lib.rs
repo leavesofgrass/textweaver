@@ -109,6 +109,7 @@ pub mod pause_markup;
 pub mod pdf;
 pub mod pptx;
 pub mod progress;
+pub mod properties;
 mod revision;
 pub mod rtf;
 pub mod sheet;
@@ -209,7 +210,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 9;
+pub const CANONICAL_VERSION: u32 = 10;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]

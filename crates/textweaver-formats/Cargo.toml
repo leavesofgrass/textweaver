@@ -58,6 +58,9 @@ textweaver-text.workspace = true
 # Helper programs (pandoc, liblouis) are looked for in the components
 # folder first (`textweaver_store::find_helper`).
 textweaver-store.workspace = true
+# One link resolver and front matter parser for the reader and the vault
+# commands (the vault root, aliases, properties).
+textweaver-vault.workspace = true
 thiserror.workspace = true
 log.workspace = true
 serde.workspace = true
