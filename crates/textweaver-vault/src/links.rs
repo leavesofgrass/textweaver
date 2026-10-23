@@ -248,6 +248,116 @@ pub fn extract_links(body: &str) -> Vec<Link> {
     links
 }
 
+/// Any wikilink or embed with its whole target: group 1 is `!` for an
+/// embed, group 2 the target with its heading or block part.
+static ANY_TARGET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(!?)\[\[([^\]\|\n]+)(?:\|[^\]\n]*)?\]\]").expect("valid regex"));
+
+/// A Markdown link `[text](target)`; group 1 is `!` for an image, group 2
+/// the target.
+static MD_LINK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(!?)\[[^\]\n]*\]\(<?([^)>\s]+)>?(?:\s+[^)]*)?\)").expect("valid regex")
+});
+
+/// A Dataview inline field on a line of its own: `key:: value`, after an
+/// optional list marker.
+static INLINE_FIELD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)^[ \t]*(?:[-*+][ \t]+)?([A-Za-z][\w -]*?)[ \t]*::[ \t]*(.*?)[ \t]*$")
+        .expect("valid regex")
+});
+
+/// A link to another note, as the vault index keeps it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NoteLink {
+    /// The target as written, with its heading or block part and without
+    /// its shown text: `Note#Heading`, `folder/Note.md`.
+    pub target: String,
+    /// True for an embed (`![[Note]]`).
+    pub embed: bool,
+}
+
+/// Every link to another file in `body`, in order: wikilinks and embeds
+/// (`[[Note]]`, `![[Note#^id]]`), and Markdown links to local Markdown
+/// files (`[text](other.md)`, percent-decoded). Links in code and comments
+/// are ignored, as are web addresses and links to a heading of the same
+/// note.
+pub fn note_links(body: &str) -> Vec<NoteLink> {
+    let text = mask_code(body);
+    let mut found: Vec<(usize, NoteLink)> = Vec::new();
+    for m in ANY_TARGET.captures_iter(&text) {
+        let (Some(whole), Some(target)) = (m.get(0), m.get(2)) else {
+            continue;
+        };
+        let target = target.as_str().trim();
+        if target.is_empty() || target.starts_with('#') {
+            continue;
+        }
+        found.push((
+            whole.start(),
+            NoteLink {
+                target: target.to_owned(),
+                embed: m.get(1).is_some_and(|b| !b.as_str().is_empty()),
+            },
+        ));
+    }
+    for m in MD_LINK.captures_iter(&text) {
+        let (Some(whole), Some(target)) = (m.get(0), m.get(2)) else {
+            continue;
+        };
+        let target = percent_decode(target.as_str());
+        let file = target.split('#').next().unwrap_or("");
+        let scheme = file
+            .split_once(':')
+            .is_some_and(|(s, _)| s.len() > 1 && s.chars().all(|c| c.is_ascii_alphanumeric()));
+        if file.is_empty() || scheme || !file.to_lowercase().ends_with(".md") {
+            continue;
+        }
+        found.push((
+            whole.start(),
+            NoteLink {
+                target,
+                embed: m.get(1).is_some_and(|b| !b.as_str().is_empty()),
+            },
+        ));
+    }
+    found.sort_by_key(|(at, _)| *at);
+    found.into_iter().map(|(_, l)| l).collect()
+}
+
+/// Dataview inline fields in `body` (`key:: value` lines, outside code and
+/// comments), in order, as `(key, value)`.
+pub fn inline_fields(body: &str) -> Vec<(String, String)> {
+    let text = mask_code(body);
+    INLINE_FIELD
+        .captures_iter(&text)
+        .filter_map(|c| {
+            let key = c.get(1)?.as_str().trim();
+            let value = c.get(2)?.as_str().trim();
+            (!key.is_empty()).then(|| (key.to_owned(), value.to_owned()))
+        })
+        .collect()
+}
+
+/// Decodes `%20` and the like.
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let Ok(b) = u8::from_str_radix(&s[i + 1..i + 3], 16)
+        {
+            out.push(b);
+            i += 3;
+            continue;
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 /// True when only a list marker and spaces precede byte `at` on its line.
 fn starts_line(text: &str, at: usize) -> bool {
     let line_start = text[..at].rfind('\n').map_or(0, |i| i + 1);

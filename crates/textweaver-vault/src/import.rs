@@ -187,8 +187,8 @@ pub fn read_vault(vault: &Path, options: &ImportOptions) -> Result<VaultRead, Va
 pub fn parse_note(path: &Path, text: &str) -> VaultNote {
     let (fm, body) = frontmatter::split(text);
     let title = fm.text("title").unwrap_or_else(|| stem(path));
-    let mut aliases = fm.list("aliases");
-    aliases.extend(fm.list("alias"));
+    let mut aliases = fm.items("aliases");
+    aliases.extend(fm.items("alias"));
     let tags = collect_tags(&fm, body);
     let source = fm.text("source").map(PathBuf::from);
     let kind = match (fm.text("textweaver_doc"), fm.text("textweaver_id"), source) {
@@ -232,7 +232,7 @@ pub fn parse_note(path: &Path, text: &str) -> VaultNote {
 
 /// Front matter `tags` (or `tag`) then inline tags, `#` stripped, without
 /// duplicates (star's `_collect_tags`).
-fn collect_tags(fm: &FrontMatter, body: &str) -> Vec<String> {
+pub(crate) fn collect_tags(fm: &FrontMatter, body: &str) -> Vec<String> {
     let mut tags: Vec<String> = Vec::new();
     let mut raw = fm.list("tags");
     raw.extend(fm.list("tag"));

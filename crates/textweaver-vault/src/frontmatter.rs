@@ -88,6 +88,47 @@ impl FrontMatter {
         }
     }
 
+    /// The value of `key` as a list of names: a list as is, a scalar as
+    /// its comma-separated parts. Unlike [`list`](Self::list), spaces do
+    /// not separate, so `aliases: Cell biology` is one alias.
+    pub fn items(&self, key: &str) -> Vec<String> {
+        match self.get(key) {
+            Some(FmValue::Text(s)) => s
+                .split(',')
+                .map(str::trim)
+                .filter(|p| !p.is_empty())
+                .map(str::to_owned)
+                .collect(),
+            _ => self.list(key),
+        }
+    }
+
+    /// The entries as `(key, value)` text for reading aloud, in file
+    /// order: a scalar as written, a list as its items joined by ", ", a
+    /// block scalar with its lines joined by spaces. Empty values (and
+    /// nested maps, which are skipped) are left out; a key that repeats
+    /// keeps its last value, in its first place.
+    pub fn properties(&self) -> Vec<(String, String)> {
+        let mut out: Vec<(String, String)> = Vec::new();
+        for (key, value) in &self.entries {
+            let text = match value {
+                FmValue::Text(s) => s.split_whitespace().collect::<Vec<_>>().join(" "),
+                FmValue::Int(n) => n.to_string(),
+                FmValue::List(items) => items.join(", "),
+            };
+            let at = out.iter().position(|(k, _)| k == key);
+            match (at, text.is_empty()) {
+                (Some(i), true) => {
+                    out.remove(i);
+                }
+                (Some(i), false) => out[i].1 = text,
+                (None, false) => out.push((key.clone(), text)),
+                (None, true) => {}
+            }
+        }
+        out
+    }
+
     /// Sets `key`, replacing an existing entry in place or appending.
     pub fn set(&mut self, key: &str, value: FmValue) {
         match self.entries.iter_mut().find(|(k, _)| k == key) {
@@ -548,6 +589,27 @@ mod tests {
         assert_eq!(back.text("empty"), None);
         assert_eq!(back.list("tags"), vec!["a", "b, c", "[x]"]);
         assert_eq!(back.int("position"), Some(42));
+    }
+
+    #[test]
+    fn items_keep_spaces_and_properties_read_aloud() {
+        let fm = parse(
+            "title: \"Cells: an intro\"\naliases: Cell biology, Cells\ntags:\n  - exam\n  - review\n\
+             meta:\n  a: 1\nrating: 4\nempty:\nsummary: >\n  one\n  two\n",
+        );
+        assert_eq!(fm.items("aliases"), vec!["Cell biology", "Cells"]);
+        assert_eq!(fm.list("aliases"), vec!["Cell", "biology", "Cells"]);
+        assert_eq!(fm.items("tags"), vec!["exam", "review"]);
+        assert_eq!(
+            fm.properties(),
+            vec![
+                ("title".to_owned(), "Cells: an intro".to_owned()),
+                ("aliases".to_owned(), "Cell biology, Cells".to_owned()),
+                ("tags".to_owned(), "exam, review".to_owned()),
+                ("rating".to_owned(), "4".to_owned()),
+                ("summary".to_owned(), "one two".to_owned()),
+            ]
+        );
     }
 
     #[test]
