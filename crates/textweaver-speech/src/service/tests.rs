@@ -864,6 +864,23 @@ fn native_normalization_engines_get_raw_numbers() {
 }
 
 #[test]
+fn raw_text_engines_get_the_text_exactly() {
+    let mut rig = Rig::new(
+        RecordingMode::Instant,
+        RecordingBackend::DEFAULT_CAPS | Caps::RAW_TEXT,
+        ServiceConfig::default(),
+    );
+    rig.core.set_split_caps(true);
+    rig.core.set_punctuation(PunctuationLevel::All);
+    rig.core.read(vec![Utterance::literal(
+        "Dr. camelCase paid $5, ok",
+        CharPos(0),
+    )]);
+    rig.step();
+    assert_eq!(rig.rec.spoken_texts(), ["Dr. camelCase paid $5, ok"]);
+}
+
+#[test]
 fn inserted_speech_reports_no_range() {
     let mut rig = Rig::instant();
     let mut b = SpokenBuilder::new();

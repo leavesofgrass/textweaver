@@ -1124,12 +1124,16 @@ impl ServiceCore {
         let voices = backend
             .voice_cache()
             .unwrap_or_else(|| VoiceCache::ready(backend.voices()));
-        let pipeline = Pipeline::for_settings(
-            &config.normalize,
-            config.punctuation,
-            config.split_caps,
-            caps.contains(Caps::NATIVE_NORMALIZATION),
-        );
+        let pipeline = if caps.contains(Caps::RAW_TEXT) {
+            Pipeline::new()
+        } else {
+            Pipeline::for_settings(
+                &config.normalize,
+                config.punctuation,
+                config.split_caps,
+                caps.contains(Caps::NATIVE_NORMALIZATION),
+            )
+        };
         let mut core = ServiceCore {
             backend: Mixed::new(backend),
             caps,
@@ -1835,6 +1839,10 @@ impl ServiceCore {
     }
 
     fn rebuild_pipeline(&mut self) {
+        if self.caps.contains(Caps::RAW_TEXT) {
+            self.pipeline = Pipeline::new();
+            return;
+        }
         self.pipeline = Pipeline::for_settings(
             &self.config.normalize,
             self.config.punctuation,
@@ -1863,7 +1871,8 @@ impl ServiceCore {
         if caps == self.caps {
             return;
         }
-        let native_changed = (caps ^ self.caps).contains(Caps::NATIVE_NORMALIZATION);
+        let native_changed =
+            (caps ^ self.caps).intersects(Caps::NATIVE_NORMALIZATION | Caps::RAW_TEXT);
         self.caps = caps;
         if native_changed {
             self.rebuild_pipeline();
