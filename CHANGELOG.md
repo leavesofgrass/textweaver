@@ -4,6 +4,17 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Obsidian notes
+
+- **Highlights are read and written as highlights.** `==highlighted text==` was announced nowhere and exported as underlined text (`<u>` in Markdown, an underline in Word and EPUB, the underline typeform in BRF). At high verbosity, continuous reading now says "highlighted" before it, as it says "strikethrough" before struck-out text. Markdown export writes `==text==`, HTML export and EPUB `<mark>`, Word a highlight (`w:highlight`), and BRF the first transcriber-defined typeform no highlight name uses in the document, named "highlighted text" in the transcriber's note (with all five in use it is left unmarked and the report says so). Markdown export also escapes doubled `=` and `%` in plain text, so they do not turn into a highlight or a comment when read back ([Obsidian notes](docs/converting.md#obsidian-notes)).
+- **Comments are left out of converted files.** With `--flavor obsidian`, `tw convert` published `%%comments%%` in HTML and Markdown output. They are now left out of every output, inline or spanning several blocks, outside code; a `%%` that is never closed hides the rest of the note, as in Obsidian. `--keep-comments` keeps them (`RenderOptions::keep_comments`, `LoadOptions::keep_comments`). Reading already left them out, but read a code block inside a comment; one rule, shared by the reader and the renderer (`textweaver_formats::obsidian_source`), now hides everything inside. The new setting **Read Obsidian comments** (`[reading] read_comments`, off by default) reads them, without their `%%` marks.
+- **New: inline footnotes.** `^[a note written in place]` was read as typed. It is now a footnote like any other, numbered after the note's own, in every footnote mode, and an endnote in HTML with the `obsidian` and `pandoc` flavors.
+- **New: custom task statuses in words.** `- [/] Draft` was read "left bracket slash right bracket Draft". The item's label now says the status, as `[ ]` and `[x]` say "not checked" and "checked": "in progress", "cancelled", "forwarded", "scheduled", "important", "question", "starred", "quote", and the letters themes use; any other character is "marked" and the character.
+- **Embedded files say what they are.** `![[slides.pdf#page=3]]` reads "Embedded PDF, slides, page 3" instead of the raw target; sounds, videos, and other files read "Embedded audio, talk", "Embedded video, demo", "Embedded file, data.xlsx", each a link to the file. A picture's size is read ("diagram.png, 300 pixels wide", "640 by 480 pixels"), and text after `|` that is not a size is its description.
+- **Mermaid diagrams are named.** A code block fenced `mermaid` is read after "Mermaid diagram source" (skipped: "Mermaid diagram skipped"), and its first line says "code, Mermaid diagram".
+- The canonical text version is now 10, so cached Markdown documents are read again.
+- BRF: the first transcriber-defined typeform was written with a backtick, a character outside braille ASCII that embossers and Braille displays may not show; its indicator is now `@#` (dots 4, 3-4-5-6), as UEB writes it.
+
 ### Reading and speech
 
 - "Paused." is said at every interface announcement level, minimal and off included, so pausing is always confirmed with a screen reader running.

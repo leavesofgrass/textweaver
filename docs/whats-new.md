@@ -2,6 +2,14 @@
 
 This page summarizes what each release brought, for readers who want the changes without the full record. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-beta.4
+
+Not yet released.
+
+- **Obsidian highlights are highlights.** `==highlighted text==` is said "highlighted" at high verbosity, where struck-out text is said "strikethrough", and never "underline". Exported, it stays a highlight: `==` in Markdown, `<mark>` in HTML and EPUB, a highlight in Word, and a transcriber-defined typeform in BRF, named in the transcriber's note. See [Obsidian notes](converting.md#obsidian-notes).
+- **Obsidian comments stay private.** `%%comments%%`, inline or across paragraphs, are left out of converted files in the `obsidian` flavor, Markdown and HTML included, as they already were from reading; a `%%` never closed hides the rest of the note, as in Obsidian. `tw convert --keep-comments` keeps them, and the setting **Read Obsidian comments** reads them aloud. Comments that held a code block are no longer read.
+- **More of Obsidian's syntax read in words.** Custom task statuses (`- [/]` "in progress", `- [-]` "cancelled", `- [>]` "forwarded", and others), inline footnotes (`^[a note]`) in every footnote mode, embedded PDFs, sounds and videos ("Embedded PDF, slides, page 3"), a picture's size or description, and Mermaid diagrams ("Mermaid diagram source").
+
 ## 0.1.0-beta.3
 
 Released on Saturday, October 17, 2026.
