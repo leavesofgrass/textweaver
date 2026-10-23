@@ -216,7 +216,7 @@ It holds:
 - The note's title: the `title` in its front matter, or else the file name without `.md`.
 - As its text, the note's first line of content with heading marks and link brackets removed, up to 200 characters; an empty note uses its title instead.
 - Its tags: the front matter `tags` (or `tag`), then every `#tag` in the text, without the `#`, plus the tag `obsidian-note`, which marks the note as coming from a vault.
-- Its links to other notes in the vault, each with its kind, as described below. The notes list and `tw marks` do not show links yet.
+- Its links to other notes in the vault, each with its kind, as described below. The notes list shows each note's link count, and the note's links open with Space ([Links between notes](notes.md#links-between-notes)).
 
 Importing the same vault again refreshes these notes and never adds a second one. Links are rebuilt from the files each time, so a link removed in Obsidian disappears from textweaver on the next import.
 
@@ -331,7 +331,7 @@ textweaver treats as the vault the nearest folder at or above the note that hold
 
 ### Follow a link: Alt+Shift+F
 
-A wikilink is a link in the reader, as in Obsidian. `[[Mitochondria]]` is read as "Mitochondria" and `[[Other|the cell]]` as "the cell", without the brackets, and the next link and previous link commands stop on wikilinks as on ordinary Markdown links. **Alt+Shift+F** follows the link at the cursor, and **Alt+Left** returns. textweaver finds the note in this order:
+A wikilink is a link in the reader, as in Obsidian. `[[Mitochondria]]` is read as "Mitochondria" and `[[Other|the cell]]` as "the cell", without the brackets, and the next link and previous link commands stop on wikilinks as on ordinary Markdown links. **Enter** in reading mode, or **Alt+Shift+F** in any mode, follows the link at the cursor, and **Alt+Left** returns. textweaver finds the note in this order:
 
 1. A path written in the link, from the current note's folder (`[[../Projects/Plan]]`) and then from the top of the vault (`[[Projects/Plan]]`). A path that would lead outside the vault is not followed.
 2. A note of that name anywhere in the vault, with or without `.md`; `[[Projects/Plan]]` also matches any note whose path ends that way.
@@ -385,7 +385,7 @@ A canvas converts like any other document, `tw convert "Week 1.canvas" --to docx
 
 Edit mode has four commands for Obsidian's own syntax: Insert wiki link, which lists the vault's notes and then a note's headings and blocks; Toggle task (**Ctrl+L**, or **Ctrl+Enter** in the textweaver app), Cycle task status, and Insert callout. [Writing and editing](editing.md#obsidian-notes-wiki-links-tasks-and-callouts) describes them.
 
-The links that an import stores with textweaver notes are a separate matter. An export writes them out again, but textweaver does not yet display them: the notes list and `tw marks` show each note's text and tags, not its links. To see which links an import finds, use a dry run with `--json`.
+The links that an import stores with textweaver notes are a separate matter. An export writes them out again, and textweaver shows them as lists: the notes list ends a note with its link count, Space opens the note's links, and `tw notes links` prints them ([Links between notes](notes.md#links-between-notes)). To see which links an import finds before storing them, use a dry run with `--json`.
 
 ## Ask the vault
 

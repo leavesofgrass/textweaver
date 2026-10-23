@@ -112,7 +112,8 @@ textweaver's default keys are the quick navigation keys of NVDA's and JAWS's bro
 - **s** and **Shift+S**: separator (a horizontal rule).
 - **g** and **Shift+G**: graphic (an image).
 - **d** and **Shift+D**: section or chapter, the nearest thing to a landmark.
-- **Backspace**: go back after a jump.
+- **Enter**: follow the link or footnote at the cursor; anywhere else it reads on from the cursor, as **Ctrl+Space** always does. A link to another document opens it in textweaver.
+- **Backspace** or **Alt+Left**: go back after a jump, including across the documents that links opened. **\** or **Alt+Right**: go forward again.
 - **Alt+Down** and **Alt+Up**: next and previous sentence, as in JAWS. **Ctrl+Down** and **Ctrl+Up**: next and previous paragraph.
 
 These follow NVDA's letters; where JAWS differs (its `q`, `d`, `r`, and link keys), the [keyboard reference](keyboard.md#quick-navigation-as-in-nvda-and-jaws) says how. Quitting is **Ctrl+Q**, and it still asks first.
@@ -222,7 +223,7 @@ textweaver's own words (messages, lists, help, and settings) are in English, Spa
 
 ## Braille displays
 
-textweaver draws no braille of its own, in the terminal or in the app. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. This section is written for a 40-cell display, the HumanWare Mantis Q40, with NVDA or JAWS on Windows.
+A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. textweaver never sends braille to the display itself. The Braille view in the textweaver app (below) draws braille dots on the screen for learning and teaching, and is not meant for the display. This section is written for a 40-cell display, the HumanWare Mantis Q40, with NVDA or JAWS on Windows.
 
 ### Set up textweaver for the display
 
@@ -274,6 +275,11 @@ In Settings Center (**Insert+6**), Braille group. **Every item here is not yet v
 3. Open Find (**Ctrl+F**). Does the display show the label, then what you type?
 4. Press **Shift+W**, then go to page 12 of a PDF (**Ctrl+G**, `12`, Enter). Do the position and the page come first?
 5. Try the NVDA and JAWS settings above. Which ones work, and which do you keep?
+
+### The Braille view and CW
+
+- **The Braille view is visual only.** Alt+Shift+F2 shows a bar of braille dots at the bottom of the textweaver app. A screen reader finds one image named "Braille view" whose description says it is visual only; the braille in it is never in the accessibility tree and is never sent to your display, so nothing is read twice. Only showing, hiding, and switching the grade (Alt+Shift+F3) are announced. In the terminal reader the same key shows Unicode braille on a row above the status line in self-voicing mode only, never with a screen reader running. See [The Braille view](reading-aids.md#the-braille-view).
+- **CW on a display.** With CW as the speech engine, the status line shows the characters being sent, newest last, in 40 cells, so your screen reader shows them on the display without speaking each one. The same line shows the characters you key in edit mode (Alt+Shift+F11). See [CW](cw.md#following-along-highlight-rsvp-and-the-status-line).
 
 ### What has been tried
 
