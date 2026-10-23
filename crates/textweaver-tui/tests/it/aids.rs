@@ -201,3 +201,29 @@ fn text_spacing_adds_rows_and_word_space() {
     let p = h.term.backend().cursor_position();
     assert_eq!((p.x, p.y), (0, 1));
 }
+
+/// The Braille view (beta 4) in the terminal: a row of Unicode braille
+/// above the status line in self-voicing mode; with a screen reader, no
+/// row, so nothing changes on screen for it to read out.
+#[test]
+fn braille_view_row_in_self_voicing_mode_only() {
+    let mut h = launch(Settings::default());
+    assert!(!h.screen().contains('\u{2820}'));
+    h.press(h.tui.key_for(ActionId::BrailleViewToggle));
+    assert!(h.status().starts_with("Braille view shown."));
+    let row = h.tui.braille_row().expect("the row");
+    // ",one two three4": the capital sign first.
+    assert!(row.starts_with('\u{2820}'), "{row}");
+    let at = h.tui.areas(h.term.backend().buffer().area).braille;
+    assert_eq!(at.height, 1);
+    assert!(h.row(at.y).starts_with(&row), "{:?}", h.row(at.y));
+    h.press(h.tui.key_for(ActionId::BrailleViewToggle));
+    assert!(h.tui.braille_row().is_none());
+
+    let mut s = Settings::default();
+    s.braille.viewer = true;
+    s.accessibility.mode = textweaver_app::store::AccessMode::Hybrid;
+    let h = launch(s);
+    assert!(h.tui.braille_row().is_none());
+    assert!(!h.screen().contains('\u{2820}'));
+}

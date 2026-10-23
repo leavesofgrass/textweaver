@@ -242,6 +242,9 @@ pub struct Areas {
     pub title: Rect,
     /// Document text.
     pub body: Rect,
+    /// The Braille view's row: the current line in Unicode braille, in
+    /// self-voicing mode while the view is on; no rows otherwise.
+    pub braille: Rect,
     /// Status line (one to three rows).
     pub status: Rect,
     /// Key hints or the minibuffer.
@@ -840,9 +843,11 @@ impl Tui {
     pub fn areas(&self, area: Rect) -> Areas {
         let needed = self.status_rows(&self.status_line(), area.width).len();
         let status_rows = status_height(needed, area.width, area.height, self.braille_first());
-        let [title, body, status, bottom] = Layout::vertical([
+        let braille_rows = u16::from(self.braille_row().is_some() && area.height > 6);
+        let [title, body, braille, status, bottom] = Layout::vertical([
             Constraint::Length(1),
             Constraint::Min(1),
+            Constraint::Length(braille_rows),
             Constraint::Length(status_rows),
             Constraint::Length(1),
         ])
@@ -850,9 +855,23 @@ impl Tui {
         Areas {
             title,
             body,
+            braille,
             status,
             bottom,
         }
+    }
+
+    /// The Braille view's row (`[braille] viewer`, Alt+Shift+F2): the
+    /// current line or sentence in Unicode braille, the part with the
+    /// cursor. Only in self-voicing mode: with a screen reader the row
+    /// would be read out on every change, over the reading, and the
+    /// screen reader already puts braille on the display; there the view
+    /// is the app's alone.
+    pub fn braille_row(&self) -> Option<String> {
+        if self.braille_first() {
+            return None;
+        }
+        self.app.braille_view().map(|v| v.unicode())
     }
 
     /// Columns for line numbers, if shown.
@@ -1027,6 +1046,11 @@ impl Tui {
             theme.status
         };
         f.render_widget(Paragraph::new(rows).style(status_style), areas.status);
+        if areas.braille.height > 0
+            && let Some(row) = self.braille_row()
+        {
+            f.render_widget(Paragraph::new(row).style(theme.hints), areas.braille);
+        }
         let prompt = self.draw_bottom(f, areas.bottom, &theme);
         let cursor = prompt.or(cursor);
         let cursor = self.draw_list(f, areas.body, &theme).or(cursor);
