@@ -271,7 +271,7 @@ textweaver's messages ("Paused.", "Reading at 300 words per minute.") reach your
 - **A live region** (the default). NVDA and JAWS both speak it.
 - **UI Automation notifications** (Windows only). Choose it in Settings, under "Window", or with `--announce uia` for one run.
 
-The setting is `announce` in the `[gui]` section of `settings.toml`; see [Settings](settings.md#gui).
+The setting is `announce` in the `[gui]` section of `settings.toml`; see [Settings](settings.md#accessibility-and-announcements).
 
 Messages spoken while the app starts ("Opened", the title, "Reading at") wait until your screen reader has asked for the window's contents and are then spoken once; previously they could be lost when the app was quicker than the screen reader.
 

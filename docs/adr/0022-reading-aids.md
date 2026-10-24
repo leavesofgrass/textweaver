@@ -49,6 +49,6 @@ star's audits (the wiki's "star WCAG perceivable operable audit", "star TUI pale
 
 - [Reading aids](../reading-aids.md): the user guide.
 - [Reading aids demo](../site/reading-aids.html): try RSVP, bionic reading, and the ruler in a browser.
-- [Settings](../settings.md#reading_aids): the `[reading_aids]` settings.
+- [Settings](../settings.md#spacing-font-and-ruler): the `[reading_aids]` settings.
 - [ADR-0020: Themes](0020-themes.md): the colors the aids use.
 - [Documentation index](../README.md)
