@@ -496,6 +496,12 @@ status-hybrid = hybrid
 status-screen-reader = screen reader mode
 status-rate-spoken = { $wpm } words per minute
 status-rate = { $wpm } wpm
+# With CW as the engine: the CW speeds, the effective (Farnsworth) speed
+# when it is below the character speed.
+status-cw-rate = CW { $wpm } wpm
+status-cw-rate-spoken = CW at { $wpm } words per minute
+status-cw-rate-farnsworth = CW { $wpm } wpm, effective { $effective }
+status-cw-rate-farnsworth-spoken = CW at { $wpm } words per minute, effective { $effective }
 # The window's status bar, last: reading time left at the current rate.
 status-time-left =
     { $minutes ->

@@ -479,6 +479,10 @@ status-hybrid = híbrido
 status-screen-reader = modo lector de pantalla
 status-rate-spoken = { $wpm } palabras por minuto
 status-rate = { $wpm } ppm
+status-cw-rate = CW { $wpm } ppm
+status-cw-rate-spoken = CW a { $wpm } palabras por minuto
+status-cw-rate-farnsworth = CW { $wpm } ppm, efectiva { $effective }
+status-cw-rate-farnsworth-spoken = CW a { $wpm } palabras por minuto, efectiva { $effective }
 # The window's status bar, last: reading time left at the current rate.
 status-time-left =
     { $minutes ->

@@ -588,6 +588,10 @@ status-hybrid = مختلط
 status-screen-reader = وضع قارئ الشاشة
 status-rate-spoken = { $wpm } كلمة في الدقيقة
 status-rate = { $wpm } ك/د
+status-cw-rate = CW { $wpm } ك/د
+status-cw-rate-spoken = CW بسرعة { $wpm } كلمة في الدقيقة
+status-cw-rate-farnsworth = CW { $wpm } ك/د، الفعلية { $effective }
+status-cw-rate-farnsworth-spoken = CW بسرعة { $wpm } كلمة في الدقيقة، والسرعة الفعلية { $effective }
 # The window's status bar, last: reading time left at the current rate.
 status-time-left =
     { $minutes ->
