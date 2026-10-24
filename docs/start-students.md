@@ -24,6 +24,7 @@ Plain text, Markdown, HTML, PDF, EPUB, Word, PowerPoint, spreadsheets, and a num
 ## Move around
 
 - **h** moves to the next heading.
+- **Enter** on a link follows it. A link to another document, such as a reading list's link to a chapter, opens it in textweaver, and **Alt+Left** returns to where you were ([Follow a link or a footnote](reading.md#follow-a-link-or-a-footnote-enter-or-altshiftf)).
 - [Reading and moving around](reading.md) lists the keys for moving by word, sentence, and paragraph.
 - **F10** opens the menus. **F2** opens the command palette, where you type the name of a command.
 
@@ -31,7 +32,7 @@ Plain text, Markdown, HTML, PDF, EPUB, Word, PowerPoint, spreadsheets, and a num
 
 - Voice and speaking rate: [Speech engines and voices](speech.md).
 - Theme, font, and spacing: [Themes](themes.md) and [Reading aids](reading-aids.md).
-- Marking your place and recording your own thoughts: [Bookmarks, notes, and highlights](notes.md).
+- Marking your place and recording your own thoughts: [Bookmarks, notes, and highlights](notes.md). If you keep notes in Obsidian, [Obsidian vaults](vault.md) explains how textweaver reads them.
 
 The reading aids are options, and the research on several of them is mixed. Evaluate each against your own reading and keep only those that help.
 

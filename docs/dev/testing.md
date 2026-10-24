@@ -101,6 +101,8 @@ The features: Linux CI uses `--all-features`, which includes `espeak`, `speechd`
 - Speech is tested with the `recording` backend and a fake clock, so timing tests never depend on the machine's speed. Engine hosts are tested against fake hosts that speak the real protocol.
 - Tests never play audio aloud. Write audio to a temporary file, or use a silent output. A test that chooses a backend uses `BackendRegistry::test_doubles()` (only `null` and `recording`), never `with_builtins()` or `speech_registry()`: automatic selection from those reaches a real engine, which speaks. A test that only checks what a registry holds reads `descriptions()`, which probes and starts nothing. The speech crate's `no_test_outside_the_registry_reaches_a_real_engine` test fails when test code calls `BackendRegistry::with_builtins()`, `speech_registry()` or `speech_registry_for(`. `scripts/dev-check` runs the tests with `TEXTWEAVER_ESPEAK_OUTPUT=virtual`, as CI does, so eSpeak NG is never heard.
 - Tests against real engines are ignored unless you ask for them with an environment variable: `TEXTWEAVER_ECI=1` (Eloquence, with licensed Voxin in the container), `TEXTWEAVER_SAPI=1` (Microsoft voices and eSpeak only), `TEXTWEAVER_APPLE=1` (macOS voices), `TEXTWEAVER_DECTALK=1` (a licensed DECtalk), `TEXTWEAVER_SPEECHD=1` (speech-dispatcher), `TEXTWEAVER_WHISPER_REAL=1` (an installed Whisper), and `TEXTWEAVER_WORD=1` (Microsoft Word opens a DOCX). Run them with `-- --ignored`.
+- CW (Morse code) needs no device to test. `textweaver-cw` is pure: its tables, PARIS and Farnsworth timing, schedule, and tone renderer are checked directly, and a golden hash of a rendered clip fails if a sample changes on any platform. The keyer, decoder, adapter mapping, and sidetone take their time as an argument, so tests move a virtual clock (squeeze and memory in modes A and B, straight-key decoding at several speeds with jitter) and never wait. The CW engine plays through the silent output in tests, so a reading is complete in a fraction of a second and its word times come from the schedule. MIDI inputs and keyboard adapters are not opened by tests; the app's keying takes contacts through `App::cw_adapter_key_at` with a given time.
+- Vault features are tested against vaults built in a temporary folder with a `.obsidian` folder (the resolver, the index, and the vault commands), and against the fixtures in `fixtures/o/vault` and `fixtures/b4` (a canvas, `board.canvas`). A note outside any vault keeps its own folder, so a test of the old behavior needs no `.obsidian` at all.
 - Never load Code Factory's Eloquence or OpenEVV in tests, and never commit audio made by an engine. Local samples go in the git-ignored `target-local/`.
 
 ### Tests that need a tool
@@ -491,7 +493,7 @@ The GUI's real test is a human listening session with NVDA, JAWS, and a Braille 
 
 ### The accessibility tree, on every GUI change
 
-The GUI workflow (`gui-xilem.yml`) dumps the window's accessibility tree on Windows, macOS, and Linux with accessibility-cli, built from a pinned commit. It opens `fixtures/t/reading.md` in the background with the silent `paced` backend. The run summary compares the tree with main's last successful run:
+The GUI workflow (`gui-xilem.yml`) dumps the app's accessibility tree on Windows, macOS, and Linux with accessibility-cli, built from a pinned commit. It opens `fixtures/t/reading.md` in the background with the silent `paced` backend. The run summary compares the tree with main's last successful run:
 
 - **Pass:** the same elements as main.
 - **Changed:** each added and removed line, in words. Check that every change was meant, such as a new button or a renamed setting.
@@ -504,13 +506,15 @@ The artifacts are `a11y-tree-windows`, `a11y-tree-macos`, and `a11y-tree-linux`.
 python3 tools/a11y/tree_report.py compare --system Linux --current new/tree.txt --baseline old/tree.txt
 ```
 
+On Windows, `tree-dump.ps1` asks accessibility-cli for the tree every two seconds for up to 40 seconds (`-WaitSeconds`), because the app may not have shown its window yet; accessibility-cli's "Could not find window for PID n (found m top-level windows)" means that, and m counts every top-level window on the desktop. The script checks the tool's exit code, keeps trying, always stops the app, and on failure prints the end of the app's log.
+
 Running `tree-dump.sh` or `tree-dump.ps1` on your own machine is safe: it opens the GUI in the background, reads nothing aloud, and drives no screen reader. It needs accessibility-cli on the `PATH`, or its path in `A11Y_CLI` (`-Cli` in PowerShell).
 
 ### The screen-reader sessions, by hand
 
 Run "Screen-reader checks" (`a11y-tests.yml`) from the Actions tab, and choose a session: `nvda`, `orca`, `voiceover`, or `all`. It also runs when its own files change. Each session opens `fixtures/t/reading.md`, reads about three sentences, pauses, moves to the next heading, opens a dialog, and closes it. What was said is checked against `fixtures/t/expected-phrases.json`.
 
-- **nvda** (Windows): Guidepup starts NVDA and records its spoken phrases. The summary's first line answers "can Guidepup drive NVDA against the textweaver window?" with "Answer: yes" or "Answer: no".
+- **nvda** (Windows): Guidepup starts NVDA and records its spoken phrases. The summary's first line answers "can Guidepup drive NVDA against the textweaver app?" with "Answer: yes" or "Answer: no".
 - **orca** (Ubuntu, under Xvfb): the session is checked through AT-SPI events: the caret, the announcements, the focus. Orca runs beside it, and the report lists what it said at each step.
 - **voiceover** (macOS 14 and 15): the same with VoiceOver, if Guidepup can start it on the runner. If not, the setup log says why: the system version, System Integrity Protection, and whether AppleScript may drive VoiceOver.
 

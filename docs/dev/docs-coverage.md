@@ -1,6 +1,6 @@
 # Documentation coverage
 
-This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, and extended on Saturday, October 10, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
+This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, and again for beta 4 on Friday, October 23, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
 
 The generated pages (`keyboard.md` and `settings-reference.md`) list every key and setting, so this page tracks the guides that explain them.
 
@@ -92,6 +92,22 @@ Every guide was read again for beta 1, one by one, against the code and the chan
 - Customizable buttons, offline help, Search help, the menu bar hidden by default on Windows: gui.md, reading.md. Pass.
 - The developer profile and `[export] audio_format`, code blocks read by default, Export asks where to save: settings.md, speech.md, audio-export.md. Pass, after fix.
 - Version wording (beta), the app named "the app", Windows ARM64 not planned, Anki and the reading queue in beta 3: every guide, known-limits.md, roadmap.md, whats-new.md. Pass, after fix.
+
+## Beta 4, audited on Friday, October 23, 2026
+
+Every guide was read again against the beta 4 entries of the changelog. The features new since beta 3:
+
+- Links to other documents, with Back and Forward; "Paused." at every announcement level: reading.md, gui.md, quickstart.md, keyboard.md, start-students.md. Pass, after fix.
+- Scrolling and line numbers in the app: gui.md, reading.md, settings.md. Pass.
+- The Braille view and the braille grade setting: reading-aids.md, screen-readers.md, settings.md, converting.md, troubleshooting.md, known-limits.md, site/reading-aids.html. Pass, after fix.
+- Obsidian highlights, comments, task statuses, inline footnotes, embeds, and Mermaid diagrams: converting.md, notes.md, settings.md. Pass.
+- Obsidian vaults: links and embeds across the vault, block links, properties, backlinks, unresolved links, tags, `tw vault` questions, and converted pages: vault.md, reading.md, command-line.md. Pass, after fix.
+- Obsidian canvases: vault.md, converting.md, reading.md. Pass.
+- Insert wiki link, toggle and cycle task, insert callout: editing.md, gui.md. Pass.
+- CW as a speech engine, its settings, and audio export in Morse code: cw.md, speech.md, audio-export.md, settings.md. Pass, after fix.
+- CW keying, key adapters, and `tw cw monitor` and `tw cw ports`: cw.md, editing.md, gui.md, command-line.md, troubleshooting.md. Pass, after fix.
+- Morse code practice (Koch lessons and drills), `cw_copy` in JSON-RPC: cw.md, json-rpc.md. Pass.
+- The `textweaver-cw` crate, the vault resolver and index, canvases in formats, and the tree dump retries: dev/architecture.md, dev/testing.md, site/architecture.html. Pass, after fix.
 
 ## Still open
 

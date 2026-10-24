@@ -47,9 +47,22 @@ These keys are the same in the app on every platform.
 4. Plus and Minus change the speaking rate.
 5. Ctrl+E switches between reading and writing. Ctrl+S saves.
 6. F1 opens help. F2 opens the command palette, a list of every command: type part of a name and press Enter.
-7. Ctrl+Q quits.
+7. Enter on a link opens a linked document in textweaver, at the heading the link names. Alt+Left goes back to where you were, and Alt+Right goes forward again.
+8. Ctrl+Q quits.
 
 textweaver records your position in each file and resumes there the next time you open it.
+
+## What it does
+
+- **Reads aloud with an exact highlight.** The highlight follows each spoken word, with the engines you choose: ETI-Eloquence, Windows and Apple voices, eSpeak NG, Piper neural voices, DECtalk, and more ([Speech engines and voices](docs/speech.md)).
+- **Reads and writes your documents.** Word, PDF, EPUB, Markdown, HTML, and many other formats open directly, and edit mode adds typing echo, spell check, citations, and dictation ([Reading](docs/reading.md), [Writing and editing](docs/editing.md), [Converting documents](docs/converting.md)).
+- **Follows links between documents.** In beta 4, Enter on a link to another local document opens it in textweaver, with Back and Forward as in a web browser ([Follow a link or a footnote](docs/reading.md#follow-a-link-or-a-footnote-enter-or-altshiftf)).
+- **Shows braille.** The Braille view in the app draws the line you are reading as braille dots, in uncontracted or contracted braille, for learning and teaching braille and for checking spacing. It is visual only: your screen reader and Braille display are not sent it ([The Braille view](docs/reading-aids.md#the-braille-view)).
+- **Works with Obsidian.** Notes read with their highlights, comments, task statuses, footnotes, and embeds; links resolve across the whole vault; properties, backlinks, unresolved links, tags, and canvases are lists you can open; and edit mode can insert wiki links, toggle tasks, and insert callouts ([Obsidian vaults](docs/vault.md), [Writing and editing](docs/editing.md#obsidian-notes-wiki-links-tasks-and-callouts)).
+- **Speaks, keys, and teaches Morse code.** CW is a speech engine that sends a document in Morse code with the highlight following each word; Morse code from a key or paddle can be typed into a document; and Morse code practice teaches it with the Koch method ([CW: reading in Morse code](docs/cw.md)).
+- **Helps you study and listen.** Reading aids (RSVP, bionic reading, a reading ruler, spacing, fonts), study cards that go to Anki and back, a reading queue and library, audio export to audiobooks with chapters, and sync through a folder you choose ([Reading aids](docs/reading-aids.md), [Notes](docs/notes.md), [The library](docs/library.md), [Audio export](docs/audio-export.md)).
+
+The Braille view, link following, and the Obsidian and CW features above are new in the unreleased beta 4; [What is new](docs/whats-new.md) lists them.
 
 ## The terminal reader
 

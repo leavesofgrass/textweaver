@@ -323,6 +323,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
         The steps run in this order: math first, then Markdown residue, then abbreviations, then numbers, then punctuation.
         Math goes first so that a formula such as <code>$2x$</code> is not read as money.
         Every step returns a new offset map, and the maps are chained, so the final map still points into the document.</p>
+        <p>One engine skips these steps.
+        CW, which sends the text in Morse code, takes the text exactly as written, so nothing is expanded or removed before it is sent.</p>
         <p>Decided in <a href="../adr/0003-speech-threading-and-event-timing.md">ADR-0003: Speech threading and event timing</a>.</p>
       </section>
 
@@ -333,6 +335,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
         Others run in a host process: ETI-Eloquence, SAPI5 voices, and DECtalk.
         A host loads the engine's library, speaks into memory, and sends the audio and word positions back over a framed pipe protocol.
         textweaver plays the audio itself.
+        CW (Morse code) also runs inside textweaver: it makes the tones for a whole sentence at once and plays them through the same playback client.
         If an engine crashes, only its host stops, and textweaver restarts it.</p>
         <p>Decided in <a href="../adr/0012-engine-host.md">ADR-0012: One engine-host protocol and playback client</a>.</p>
       </section>
@@ -343,7 +346,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
         <p>For engines that report audio positions, the event is scheduled on the playback clock.
         So the highlight moves when you hear the word, not when the engine made it.
         Some engines send no word events, such as Omnivox.
-        For them a timer pacer estimates when each word is heard.</p>
+        For them a timer pacer estimates when each word is heard.
+        CW is exact in a different way: it plans every tone before playing, so each word's time comes from its own schedule, and the highlight follows the word being sent.</p>
       </section>
 
       <section class="step" id="step-9" aria-labelledby="step-9-h" data-title="Generation check">

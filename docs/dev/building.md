@@ -123,7 +123,7 @@ cargo build -p textweaver-tui --no-default-features
 
 `cargo xtask deps --check` makes sure that build links none of the conversion and citation stack, not grammar checking (harper-core), and not audio export (`textweaver-export`, with LAME and libopus, which need a C compiler and cmake).
 
-Grammar checking (the `grammar` feature) is on by default since Wave 7, in the reader, the window app, `tw`, and the packages. It costs about 11 MB and, on a clean build, 67 more crates (harper-core and the burn framework under it). To leave only grammar out, turn off the default features and name the others: `--no-default-features --features publish,lint,clipboard,highlight,dictation,audio-export,opus` for the reader. [ADR-0032](../adr/0032-grammar-lint-highlighting-clipboard.md) has the measurements.
+Grammar checking (the `grammar` feature) is on by default since Wave 7, in the terminal reader, the textweaver app, `tw`, and the packages. It costs about 11 MB and, on a clean build, 67 more crates (harper-core and the burn framework under it). To leave only grammar out, turn off the default features and name the others: `--no-default-features --features publish,lint,clipboard,highlight,dictation,audio-export,opus` for the reader. [ADR-0032](../adr/0032-grammar-lint-highlighting-clipboard.md) has the measurements.
 
 ## Scripts
 

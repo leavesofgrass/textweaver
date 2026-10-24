@@ -496,5 +496,6 @@ To write text by dictation, switch to edit mode first; see [the editing guide](e
 
 - [ADR-0013: Dictation through a Whisper program](adr/0013-dictation.md): the design decision behind this feature.
 - [Editing guide](editing.md): edit mode, for writing and changing text with speech feedback.
+- [CW: key Morse code into a document](cw.md#key-morse-code-into-a-document): the other way to type without the keyboard, from a key or paddle.
 - [Keyboard reference](keyboard.md): every shortcut, including F9 and single-key shortcuts.
 - [Documentation index](README.md)

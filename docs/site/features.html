@@ -257,7 +257,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 60,
+  "done": 68,
   "not yet": 0,
   "partial": 3
  },
@@ -322,7 +322,27 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       "title": "Reading and navigating guide"
      },
      "name": "Tables, links, and footnotes",
-     "note": "Ctrl+Alt+arrows in tables; Alt+Shift+F follows a link, wiki links included.",
+     "note": "Ctrl+Alt+arrows in tables; Enter or Alt+Shift+F follows a link, wiki links included.",
+     "status": "done"
+    },
+    {
+     "description": "A link to a local file opens it in textweaver at the heading the link names, and Back and Forward move through the documents you followed, as in a web browser.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Links to other documents, with Back and Forward",
+     "note": "Enter on a link; Alt+Left or Backspace goes back, Alt+Right goes forward.",
+     "status": "done"
+    },
+    {
+     "description": "Scroll down and Scroll up move the document one line without moving the cursor, and line numbers are drawn in the left margin.",
+     "guide": {
+      "href": "../gui.md",
+      "title": "The textweaver app (GUI)"
+     },
+     "name": "Scrolling and line numbers in the app",
+     "note": "j and Shift+J; View, Line numbers. Screen readers get the text without the numbers.",
      "status": "done"
     },
     {
@@ -526,6 +546,26 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
+     "description": "Insert a wiki link from a list of the vault's notes, headings, and blocks; check and cycle tasks; and insert a callout.",
+     "guide": {
+      "href": "../editing.md",
+      "title": "Editing guide"
+     },
+     "name": "Writing Obsidian notes",
+     "note": "In edit mode; Ctrl+L toggles a task in the terminal and Ctrl+Enter in the app.",
+     "status": "done"
+    },
+    {
+     "description": "Morse code from a key or paddle is typed at the cursor, with a sidetone and the characters on the status line.",
+     "guide": {
+      "href": "../cw.md",
+      "title": "CW (Morse code) guide"
+     },
+     "name": "Key Morse code into a document",
+     "note": "Alt+Shift+F11 in edit mode; MIDI and keyboard key adapters.",
+     "status": "done"
+    },
+    {
      "description": "Copy to the system clipboard, and cut and paste while writing.",
      "guide": {
       "href": "../editing.md",
@@ -621,6 +661,26 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
+     "description": "Play sends the document as a tone in Morse code, exactly as written, with the highlight following each word as it is sent.",
+     "guide": {
+      "href": "../cw.md",
+      "title": "CW (Morse code) guide"
+     },
+     "name": "CW (Morse code) as a speech engine",
+     "note": "Opt-in, never a fallback; Farnsworth speeds, prosigns, and audio export.",
+     "status": "done"
+    },
+    {
+     "description": "Koch-method lessons and random character and word drills; you type what you heard and the score is said in words.",
+     "guide": {
+      "href": "../cw.md",
+      "title": "CW (Morse code) guide"
+     },
+     "name": "Morse code practice",
+     "note": "Tools, Morse code practice.",
+     "status": "done"
+    },
+    {
      "description": "Download and use Piper voices, and manage every engine's voices in one list.",
      "guide": {
       "href": "../speech.md",
@@ -697,7 +757,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       "title": "Converting documents guide"
      },
      "name": "Grade 2 braille",
-     "note": "Needs the liblouis build feature and liblouis installed.",
+     "note": "From the reader's export, with liblouis installed; tw convert writes grade 1.",
      "status": "partial"
     },
     {
@@ -716,7 +776,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
   {
    "features": [
     {
-     "description": "23 color themes with contrast checks, and your own themes.",
+     "description": "24 color themes with contrast checks, and your own themes.",
      "guide": {
       "href": "../themes.md",
       "title": "Themes guide"
@@ -743,6 +803,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      },
      "name": "Difficult words and syllables",
      "note": "Alt+Shift+J and Alt+Shift+Z, in the terminal and the GUI.",
+     "status": "done"
+    },
+    {
+     "description": "The line you are reading, drawn as braille dots in a bar at the bottom of the app, for learning and teaching braille and for checking spacing.",
+     "guide": {
+      "href": "../reading-aids.md",
+      "title": "Reading aids guide"
+     },
+     "name": "Braille view",
+     "note": "Alt+Shift+F2 shows it and Alt+Shift+F3 switches grades; visual only, never read by a screen reader.",
      "status": "done"
     },
     {
@@ -798,6 +868,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      },
      "name": "Obsidian vault export and import",
      "note": "Through tw vault.",
+     "status": "done"
+    },
+    {
+     "description": "Links and embeds resolve across the whole vault, and properties, backlinks, unresolved links, tags, highlights, comments, task statuses, and canvases are read in words.",
+     "guide": {
+      "href": "../vault.md",
+      "title": "Obsidian vault guide"
+     },
+     "name": "Obsidian notes, vaults, and canvases",
+     "note": "Lists in the reader and the app, and tw vault backlinks, unresolved, tags, and properties.",
      "status": "done"
     },
     {
@@ -926,7 +1006,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "A native window for people who prefer a GUI, in the all-Rust Xilem toolkit with AccessKit.",
+     "description": "The textweaver app for people who prefer a graphical program, in the all-Rust Xilem toolkit with AccessKit.",
      "guide": {
       "href": "../gui.md",
       "title": "The textweaver app (GUI)"
@@ -965,7 +1045,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 63
+ "total": 71
 }
 </script>
 <!-- END generated: site-data -->

@@ -231,7 +231,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     <h1>Reading aids</h1>
     <p>Reading aids change how text looks.
     They never change what it says, so speech and highlighting stay exactly the same.
-    This page lets you try three of them on a short sample text.
+    This page lets you try three of them on a short sample text, and describes a fourth, the Braille view, which needs the textweaver app.
     Nothing here plays sound.</p>
     <p>The <a href="../reading-aids.md">reading aids guide</a> explains every aid and setting, and
     <a href="../adr/0022-reading-aids.md">ADR-0022: Reading aids</a> records how they were designed.</p>
@@ -342,6 +342,27 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     When it has focus, the Up and Down arrow keys move the current line, and Home and End go to the first and last line.
     Tab leaves it as usual.</p>
     <div class="ruler-region mode-ruler" id="ruler" role="region" tabindex="0" aria-label="Sample text for the reading ruler" aria-describedby="ruler-help"></div>
+
+    <h2>The Braille view</h2>
+    <p>The Braille view draws the line you are reading as braille dots, in a bar at the bottom of the textweaver app.
+    It is a tool for learning and teaching braille, and for checking spacing: a sighted student, teacher, or transcriber can watch the braille that a line becomes, cell by cell.
+    It cannot be tried on this page, because it needs the app.</p>
+    <p>It shows the sentence being spoken while textweaver reads aloud, and otherwise the line the cursor is on.
+    It shows as many cells as your Braille display has, 40 by default, and pans to the part with the spoken word or the cursor.
+    Every space is a cell, so a doubled space is two blank cells.
+    The braille is uncontracted (grade 1) by default, or contracted (grade 2) when liblouis is installed.</p>
+    <p>The dots are drawn at the standard proportions of a braille cell.
+    A raised dot is a filled disc and an empty position is a thin ring, so the two differ by shape, not by color alone.
+    Two optional teaching aids, both off by default, put the print letters under the cells and draw an outline around each cell.</p>
+    <p>To a screen reader the view is one picture named "Braille view", described as visual only.
+    Its braille is never read aloud, because your screen reader already sends braille to your own display.
+    In the terminal reader, the same key shows a row of Unicode braille above the status line, in self-voicing mode only.</p>
+    <h3>The Braille view in textweaver</h3>
+    <ul class="keys">
+      <li><kbd>Alt+Shift+F2</kbd> shows or hides the Braille view.</li>
+      <li><kbd>Alt+Shift+F3</kbd> switches between uncontracted and contracted braille, and says which.</li>
+    </ul>
+    <p>The <a href="../reading-aids.md#the-braille-view">reading aids guide</a> has the settings.</p>
   </div>
 </main>
 <footer class="site-footer">
@@ -351,6 +372,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       <li><a href="../reading-aids.md">Reading aids guide</a>: every aid, its settings, and its keys.</li>
       <li><a href="../adr/0022-reading-aids.md">ADR-0022: Reading aids</a></li>
       <li><a href="../themes.md">Themes guide</a>: colors and contrast.</li>
+      <li><a href="../screen-readers.md">Screen reader guide</a>: the Braille view, and braille on your own display.</li>
       <li><a href="../keyboard.md">Keyboard reference</a></li>
       <li><a href="README.md">About these pages</a></li>
       <li><a href="../README.md">Documentation index</a></li>
