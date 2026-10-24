@@ -47,7 +47,7 @@ fn harness_sized(app: &App, size: (u32, u32)) -> (TestHarness<Root>, SettingsFor
     params.window_size = size.into();
     let mut h = TestHarness::create_with(theme::default_properties(&p), tree.root, params);
     gui::refresh_for_tests(app, &mut h);
-    let form = SettingsForm::new(app.settings_schema());
+    let form = SettingsForm::for_window(app);
     let d = gui::settings_dialog(&p, &form, app, 0, 0);
     h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
     h.focus_on(Some(d.form));
@@ -70,14 +70,16 @@ fn every_visible_setting_is_in_one_section() {
     let dir = tempfile::tempdir().unwrap();
     let app = app(dir.path());
     let schema = app.settings_schema();
+    // Every engine's settings apply when no engine is known.
     let form = SettingsForm::new(schema.clone());
     assert!(form.sections.len() > 3, "{:?}", form.sections);
-    let shown: usize = (0..form.sections.len())
-        .map(|i| form.settings_in(i).len())
-        .sum();
-    // Every setting that does something in the window; none of the
-    // terminal's own.
+    let all = form.sections.len() - 1;
+    assert!(form.special_section(all), "All settings comes last");
+    let shown: usize = (0..all).map(|i| form.settings_in(i).len()).sum();
+    // Every setting that does something in the window, in one section,
+    // and in All settings; none of the terminal's own.
     assert_eq!(shown, schema.in_window().count());
+    assert_eq!(form.settings_in(all).len(), shown);
     assert_eq!(
         schema.visible().count() - shown,
         textweaver_app::TERMINAL_ONLY.len()
@@ -98,7 +100,15 @@ fn settings_and_sections_below_the_fold_stay_in_the_tree() {
     use accesskit_consumer::common_filter;
     let dir = tempfile::tempdir().unwrap();
     let app = app(dir.path());
-    let (h, _form) = harness_with_dialog(&app);
+    let (mut h, form) = harness_with_dialog(&app);
+    // All settings is the long list now; the sections are short.
+    let all = form.sections.len() - 1;
+    let rows = form.rows(all, &app);
+    let label = form.form_label(all, &app.catalog());
+    h.edit_widget(FORM, |mut g| {
+        SettingsGrid::set_section(&mut g, label, rows, 0)
+    });
+    let _ = h.redraw();
     for (name, id) in [
         ("form", h.get_widget(FORM).id()),
         ("sections", h.get_widget(SECTIONS).id()),
@@ -146,15 +156,20 @@ fn every_setting_of_every_section_is_named_and_reached_with_down() {
     let app = app(dir.path());
     let c = app.catalog();
     let (mut h, form) = harness_sized(&app, (1920, 1009));
-    let speech = form
-        .find("speech.cw.midi_channel")
-        .expect("CW in the form")
-        .0;
+    // Short sections now (beta 4), and All settings, the longest list.
+    let all = form.sections.len() - 1;
     assert!(
-        form.settings_in(speech).len() > 40,
-        "Speech is a long section: {}",
-        form.settings_in(speech).len()
+        form.settings_in(all).len() > 200,
+        "All settings is long: {}",
+        form.settings_in(all).len()
     );
+    for i in 0..all {
+        assert!(
+            form.settings_in(i).len() <= 15,
+            "{} is short",
+            form.sections[i]
+        );
+    }
     for i in 0..form.sections.len() {
         let settings = form.settings_in(i);
         let rows = form.rows(i, &app);
@@ -273,7 +288,7 @@ fn the_dialog_names_its_sections_and_settings_with_their_roles() {
     let group = tree.node_by_id(group.expect("the form")).unwrap();
     assert_eq!(
         group.label().as_deref(),
-        Some(format!("{} settings", form.sections[0]).as_str())
+        Some(format!("{} settings", form.section_title(0, &app.catalog())).as_str())
     );
     // One node per setting, each with the role its kind needs, a name, and
     // (for numbers) the range.
@@ -370,17 +385,19 @@ fn a_switch_toggles_and_enter_types_a_number() {
     let dir = tempfile::tempdir().unwrap();
     let mut app = app(dir.path());
     let (mut h, form) = harness_with_dialog(&app);
-    let rows = form.rows(0, &app);
+    // Pauses and verbosity has a switch and a number.
+    let sec = form.find("speech.split_caps").unwrap().0;
+    let rows = form.rows(sec, &app);
     let toggle = rows
         .iter()
         .position(|r| matches!(r.kind, RowKind::Toggle(_)))
-        .expect("a switch in the first section");
+        .expect("a switch in the section");
     let number = rows
         .iter()
         .position(|r| matches!(r.kind, RowKind::Number { .. }))
-        .expect("a number in the first section");
+        .expect("a number in the section");
     h.edit_widget(FORM, |mut g| {
-        SettingsGrid::set_section(&mut g, form.sections[0], rows.clone(), toggle);
+        SettingsGrid::set_section(&mut g, form.sections[sec], rows.clone(), toggle);
     });
     h.process_text_event(TextEvent::key_down(Key::Character(" ".into())));
     let (action, _) = h.pop_action::<FormAction>().expect("Space toggles");
@@ -391,14 +408,14 @@ fn a_switch_toggles_and_enter_types_a_number() {
             change: FormChange::Step(true)
         }
     );
-    let setting = form.setting(0, toggle).unwrap().clone();
+    let setting = form.setting(sec, toggle).unwrap().clone();
     let was = app.setting_value(&setting.path).unwrap().as_bool().unwrap();
     settings_dialog::apply(&mut app, &setting, FormChange::Step(true)).unwrap();
     assert_eq!(
         app.setting_value(&setting.path).unwrap().as_bool(),
         Some(!was)
     );
-    let rows = form.rows(0, &app);
+    let rows = form.rows(sec, &app);
     h.edit_widget(FORM, |mut g| {
         SettingsGrid::update_rows(&mut g, rows.clone())
     });
@@ -407,7 +424,7 @@ fn a_switch_toggles_and_enter_types_a_number() {
     assert_eq!(focused_setting(&h).1, Some(want));
     // Enter on a number asks for it, starting with the current value.
     h.edit_widget(FORM, |mut g| {
-        SettingsGrid::set_section(&mut g, form.sections[0], rows.clone(), number);
+        SettingsGrid::set_section(&mut g, form.sections[sec], rows.clone(), number);
     });
     h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::Enter)));
     let (action, _) = h.pop_action::<FormAction>().expect("Enter edits");
@@ -489,7 +506,11 @@ fn section_counts_are_spoken_not_drawn() {
     let list = h.get_widget(SECTIONS);
     assert_eq!(list.inner().items(), titles.as_slice(), "drawn text");
     for (title, name) in titles.iter().zip(&names) {
-        assert!(!title.contains("setting"), "{title}");
+        // Only All settings, the last, says "settings" in its title.
+        assert!(
+            !title.contains("setting") || *title == c.tr("settings-all"),
+            "{title}"
+        );
         assert!(name.starts_with(&format!("{title}, ")), "{name}");
         assert!(
             name.ends_with(" settings") || name.ends_with(" setting"),
@@ -534,9 +555,11 @@ fn the_window_and_the_settings_dialog_speak_spanish() {
     assert!(toolbars.iter().any(|t| t == "Lectura"), "{toolbars:?}");
     let c = app.catalog();
     let items = form.section_items(&c);
-    assert!(items[0].starts_with("Voz, "), "{items:?}");
-    assert!(items[0].ends_with(" ajustes"), "{items:?}");
-    assert_eq!(form.form_label(0, &c), "Configuración: Voz");
+    // The language just changed, so it is the recent block's one setting.
+    assert!(items[0].starts_with("Cambiados hace poco, "), "{items:?}");
+    assert!(items[1].starts_with("Voz y habla, "), "{items:?}");
+    assert!(items[1].ends_with(" ajustes"), "{items:?}");
+    assert_eq!(form.form_label(1, &c), "Configuración: Voz y habla");
     let (section, row) = form.find("speech.rate").unwrap();
     let rows = form.rows(section, &app);
     assert_eq!(rows[row].label, "Velocidad");
@@ -691,4 +714,41 @@ fn the_dialog_opens_on_the_last_changed_setting() {
         form.setting(0, 0).map(|s| s.path.as_str()),
         Some("speech.rate")
     );
+}
+
+/// The dialog follows the speech engine (beta 4): with CW, Voice and
+/// speech lists CW's sound instead of the voice, and All settings still
+/// has the rate, whose description says first why it does not apply now.
+#[test]
+fn the_sections_follow_the_speech_engine() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app(dir.path());
+    let mut form = SettingsForm::for_window(&app);
+    let (voice, _) = form.find("speech.backend").unwrap();
+    let paths = |form: &SettingsForm, i| {
+        form.settings_in(i)
+            .iter()
+            .map(|s| s.path.clone())
+            .collect::<Vec<_>>()
+    };
+    assert!(paths(&form, voice).contains(&"speech.rate".to_owned()));
+    let backend = form.setting(voice, 0).unwrap().clone();
+    settings_dialog::apply(&mut app, &backend, FormChange::Text("cw".into())).unwrap();
+    let (changed, at) = form.follow(&app, voice);
+    assert!(changed);
+    let now = paths(&form, at);
+    assert_eq!(now[0], "speech.backend");
+    assert_eq!(now[1], "speech.cw.wpm");
+    assert!(!now.contains(&"speech.rate".to_owned()), "{now:?}");
+    let all = form.sections.len() - 1;
+    let rows = form.rows(all, &app);
+    let rate = rows.iter().find(|r| r.path == "speech.rate").unwrap();
+    assert!(
+        rate.help
+            .starts_with("Applies when CW (Morse code) is not the speech engine."),
+        "{}",
+        rate.help
+    );
+    // Nothing changed: nothing to show again.
+    assert_eq!(form.follow(&app, at), (false, at));
 }

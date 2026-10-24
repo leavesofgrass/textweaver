@@ -3808,6 +3808,37 @@ impl Gui {
                         self.reopen_settings(ctx, form, section, row);
                     }
                 }
+                // A new speech engine changes what applies: the sections
+                // and the form are shown again, on the same row.
+                if let Some(OpenDialog::Settings(open)) = &mut self.dialog {
+                    let (changed, at) = open.form.follow(&self.app, open.section);
+                    if changed {
+                        open.section = at;
+                        let c = self.app.catalog();
+                        let items = open.form.section_titles(&c);
+                        let names = open.form.section_items(&c);
+                        let title = open.form.form_label(at, &c);
+                        let rows = open.form.rows(at, &self.app);
+                        let n = rows.len();
+                        let focus = row.min(n.saturating_sub(1));
+                        let root = ctx.render_root(self.window_id);
+                        root.edit_widget_with_tag(SECTIONS, |mut l| {
+                            ChoiceList::set_named_items(&mut l, items, names);
+                            ChoiceList::select(&mut l, at);
+                        });
+                        root.edit_widget_with_tag(FORM, |mut g| {
+                            SettingsGrid::set_section(&mut g, title, rows, focus);
+                        });
+                        let said = c.fmt(
+                            "settings-section-now",
+                            &args!["section" => open.form.section_title(at, &c), "n" => n],
+                        );
+                        self.app
+                            .announce_as(&said, Priority::Polite, Importance::Result);
+                        self.refresh(ctx);
+                        return;
+                    }
+                }
                 let Some(OpenDialog::Settings(open)) = &self.dialog else {
                     return;
                 };
