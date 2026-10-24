@@ -47,9 +47,8 @@ These keys are the same in the app on every platform.
 4. Plus and Minus change the speaking rate.
 5. Ctrl+E switches between reading and writing. Ctrl+S saves.
 6. F1 opens help. F2 opens the command palette, a list of every command: type part of a name and press Enter.
-7. Ctrl+Q quits.
-
 7. Enter on a link opens a linked document in textweaver, at the heading the link names. Alt+Left goes back to where you were, and Alt+Right goes forward again.
+8. Ctrl+Q quits.
 
 textweaver records your position in each file and resumes there the next time you open it.
 
