@@ -1724,6 +1724,12 @@ impl App {
                     self.leave_prompt();
                     return self.cw_practice_stop();
                 }
+                // Escape in a section of the settings: back to the sections.
+                if !self.mode.is_prompt()
+                    && let Some(effects) = self.settings_back()
+                {
+                    return effects;
+                }
                 if self.mode.is_prompt() || self.list.is_some() {
                     let list = self.list.take();
                     self.leave_prompt();

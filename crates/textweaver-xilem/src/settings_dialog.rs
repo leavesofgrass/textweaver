@@ -39,7 +39,7 @@ use masonry::parley::style::{FontFamily, FontWeight, LineHeight};
 use serde_json::Value;
 use textweaver_app::lexicon::args;
 use textweaver_app::lexicon::i18n::Catalog;
-use textweaver_app::{App, Setting, SettingKind, SettingsSchema};
+use textweaver_app::{App, Frontend, Setting, SettingKind, SettingsContext, SettingsSchema};
 
 use crate::theme::{self, Palette};
 
@@ -221,6 +221,10 @@ const RECENT: &str = "\u{1}recent";
 /// The first section while a filter is typed: every setting it matches.
 const MATCHING: &str = "\u{1}matching";
 
+/// The last section of the settings dialog: every setting the window
+/// shows, those that do not apply now too, each saying why.
+const ALL: &str = "\u{1}all";
+
 /// The highlight palette's table, whose entries end the Colors dialog.
 const PALETTE: &str = "highlight.palette";
 
@@ -239,10 +243,14 @@ enum FormKind {
 #[derive(Clone, Debug)]
 pub struct SettingsForm {
     schema: SettingsSchema,
-    /// Section titles ("Speech", "Display"). The settings dialog's first
-    /// section can be its recent block or the settings a filter matches
-    /// ([`Self::special_section`]).
+    /// Section ids (`voice`, `display`; the Colors and Reading dialogs'
+    /// titles). The settings dialog's first section can be its recent
+    /// block or the settings a filter matches, and its last is All
+    /// settings ([`Self::special_section`]).
     pub sections: Vec<&'static str>,
+    /// The speech engine and system the sections follow
+    /// (`App::settings_context`).
+    cx: SettingsContext,
     kind: FormKind,
     /// The settings changed last (`interface.recent_settings`).
     recent: Vec<String>,
@@ -263,6 +271,7 @@ impl SettingsForm {
             recent: Vec::new(),
             filter: String::new(),
             matching: Vec::new(),
+            cx: SettingsContext::any(),
         };
         form.fill_sections();
         form
@@ -274,8 +283,38 @@ impl SettingsForm {
     pub fn for_window(app: &App) -> Self {
         let mut form = Self::new(app.settings_schema());
         form.recent = app.settings().interface.recent_settings.clone();
+        form.cx = app.settings_context();
         form.fill_sections();
         form
+    }
+
+    /// Follows `app` after a change: its speech engine and system, which
+    /// decide what applies now. Returns true when the sections, or what
+    /// section `section` lists, changed, so the dialog shows them again,
+    /// and where that section now is in the list.
+    pub fn follow(&mut self, app: &App, section: usize) -> (bool, usize) {
+        let cx = app.settings_context();
+        if cx == self.cx || self.kind != FormKind::Settings {
+            return (false, section);
+        }
+        let id = self.sections.get(section).copied();
+        let before: Vec<String> = self
+            .settings_in(section)
+            .iter()
+            .map(|s| s.path.clone())
+            .collect();
+        let sections = self.sections.clone();
+        self.cx = cx;
+        self.fill_sections();
+        let at = id
+            .and_then(|id| self.sections.iter().position(|s| *s == id))
+            .unwrap_or(0);
+        let after: Vec<String> = self
+            .settings_in(at)
+            .iter()
+            .map(|s| s.path.clone())
+            .collect();
+        (sections != self.sections || before != after, at)
     }
 
     /// The Colors dialog's form (W6a6): every color setting in one
@@ -289,6 +328,7 @@ impl SettingsForm {
             recent: Vec::new(),
             filter: String::new(),
             matching: Vec::new(),
+            cx: SettingsContext::any(),
         }
     }
 
@@ -307,6 +347,7 @@ impl SettingsForm {
             recent: Vec::new(),
             filter: String::new(),
             matching: Vec::new(),
+            cx: SettingsContext::any(),
         }
     }
 
@@ -345,7 +386,7 @@ impl SettingsForm {
     /// True when section `i` is the recent block or the filter's matches,
     /// not a section of the schema.
     pub fn special_section(&self, i: usize) -> bool {
-        matches!(self.sections.get(i), Some(&RECENT | &MATCHING))
+        matches!(self.sections.get(i), Some(&RECENT | &MATCHING | &ALL))
     }
 
     fn fill_sections(&mut self) {
@@ -362,11 +403,13 @@ impl SettingsForm {
         {
             sections.push(RECENT);
         }
-        for s in self.schema.in_window() {
-            if !sections.contains(&s.section) {
-                sections.push(s.section);
-            }
-        }
+        sections.extend(
+            self.schema
+                .sections_now(&self.cx, Frontend::Window)
+                .into_iter()
+                .map(|s| s.id),
+        );
+        sections.push(ALL);
         self.sections = sections;
     }
 
@@ -396,11 +439,8 @@ impl SettingsForm {
                 v
             }
             MATCHING => self.by_paths(&self.matching),
-            _ => self
-                .schema
-                .in_window()
-                .filter(|s| s.section == *title)
-                .collect(),
+            ALL => self.schema.in_window().collect(),
+            id => self.schema.in_section(id, &self.cx, Frontend::Window),
         }
     }
 
@@ -431,11 +471,19 @@ impl SettingsForm {
             .into_iter()
             .map(|s| {
                 let value = app.setting_value(&s.path).unwrap_or(Value::Null);
-                if textweaver_app::is_color_setting(&s.path) {
+                let mut row = if textweaver_app::is_color_setting(&s.path) {
                     FormRow::for_color(s, &value, app, &c)
                 } else {
                     FormRow::new(s, &value, &c)
+                };
+                // Found by a search or in All settings: why it does
+                // nothing now comes first in its description and help.
+                if let Err(why) = textweaver_app::applies(&s.path, &self.cx) {
+                    let why = why.message_in(&c);
+                    row.help = format!("{why} {}", row.help).trim_end().to_owned();
+                    row.full_help = format!("{why} {}", row.full_help).trim_end().to_owned();
                 }
+                row
             })
             .collect();
         if self.is_colors()
@@ -465,12 +513,18 @@ impl SettingsForm {
                     &args!["filter" => self.filter.as_str()],
                 );
             }
+            Some(&ALL) => return c.tr("settings-all"),
             _ => {}
         }
-        self.settings_in(i).first().map_or_else(
-            || self.sections.get(i).copied().unwrap_or_default().to_owned(),
-            |s| s.section_in(c),
-        )
+        let id = self.sections.get(i).copied().unwrap_or_default();
+        let msg = format!("section-{id}");
+        if c.has(&msg) {
+            c.tr(&msg)
+        } else {
+            textweaver_app::settings_sections::section(id)
+                .map_or(id, |s| s.title)
+                .to_owned()
+        }
     }
 
     /// The form's name for section `i`: "Speech settings".
@@ -514,10 +568,13 @@ impl SettingsForm {
             .unwrap_or(0)
     }
 
-    /// Where the setting at `path` is: its section and row.
+    /// Where the setting at `path` is: its section and row, or its row
+    /// in All settings when it does not apply now.
     pub fn find(&self, path: &str) -> Option<(usize, usize)> {
+        let all = self.sections.iter().position(|s| *s == ALL);
         (0..self.sections.len())
             .filter(|&i| !self.special_section(i))
+            .chain(all)
             .find_map(|sec| {
                 self.settings_in(sec)
                     .iter()

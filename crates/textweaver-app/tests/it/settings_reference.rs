@@ -10,13 +10,15 @@
 //!
 //! The file is meant to be read with a screen reader and a Braille
 //! display: one list item per setting, the key first, then the default,
-//! the label, and the help, in words, with no tables.
+//! the label, and the help, in words, with no tables. Settings are grouped
+//! in the sections the settings screens list (beta 4), and a list at the
+//! top says which sections hold each `settings.toml` table's keys.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use serde_json::Value;
-use textweaver_app::{Setting, SettingKind, SettingsSchema};
+use textweaver_app::{SECTIONS, Setting, SettingKind, SettingsSchema};
 
 /// `docs/settings-reference.md` in the repository.
 fn target() -> PathBuf {
@@ -153,6 +155,11 @@ fn item(out: &mut String, s: &Setting) {
         line.push(' ');
         line.push_str(&values);
     }
+    let en = textweaver_app::lexicon::i18n::Catalog::english();
+    for c in textweaver_app::settings_sections::conditions(&s.path) {
+        line.push(' ');
+        line.push_str(&c.message_in(&en));
+    }
     line.push(' ');
     line.push_str(sync_text(&s.path));
     let _ = writeln!(out, "{line}");
@@ -175,40 +182,81 @@ fn sync_text(path: &str) -> &'static str {
 fn render(schema: &SettingsSchema) -> String {
     let mut out = String::new();
     out.push_str(
-        "# Settings reference\n\n\
-         Every setting in `settings.toml`, section by section, in the order the settings screen lists them. \
-         Each item gives the key, its default, its label on the settings screen, what it does, \
-         and the values it takes, then whether it syncs between computers \
-         ([Syncing between computers](sync.md)). [Settings](settings.md) explains where the file lives, \
-         and how to export, import, and reset it.\n\n\
-         This page is generated from the settings schema by `cargo xtask settings-doc`. \
-         Do not edit it by hand; CI checks that it is current.\n",
+        "# Settings reference
+
+         Every setting in `settings.toml`, in the sections and the order the settings screens list them.          Each item gives the key, its default, its label on the settings screen, what it does,          and the values it takes, then when it applies, if not always, and whether it syncs between computers          ([Syncing between computers](sync.md)). [Settings](settings.md) explains where the file lives,          and how to export, import, and reset it.
+
+         A key names its table in the file and its name in that table: `speech.rate` is `rate` under `[speech]`,          and `speech.cw.wpm` is `wpm` under `[speech.cw]`. The sections are for finding a setting;          the file keeps its own tables.
+
+         This page is generated from the settings schema by `cargo xtask settings-doc`.          Do not edit it by hand; CI checks that it is current.
+",
     );
-    let mut section: Option<&str> = None;
+    // Which sections hold each table's keys, for a reader with a key.
+    out.push_str(
+        "
+## Where each table's keys are
+
+",
+    );
+    let mut tables: Vec<(&str, Vec<&str>)> = Vec::new();
     for s in schema.settings.iter().filter(|s| !s.internal) {
         let top = s.path.split('.').next().unwrap_or_default();
-        if section != Some(top) {
-            section = Some(top);
-            let _ = write!(out, "\n## {}: the `[{top}]` section\n\n", s.section);
+        match tables.iter_mut().find(|(t, _)| *t == top) {
+            Some((_, secs)) if !secs.contains(&s.section) => secs.push(s.section),
+            Some(_) => {}
+            None => tables.push((top, vec![s.section])),
         }
-        item(&mut out, s);
+    }
+    tables.sort_by_key(|(t, _)| *t);
+    for (table, secs) in tables {
+        let _ = writeln!(out, "- `[{table}]`: {}.", secs.join(", "));
+    }
+    for section in SECTIONS {
+        let _ = write!(
+            out,
+            "
+## {}
+
+",
+            section.title
+        );
+        if section.id == "voice" {
+            out.push_str(
+                "Only the speech engine's own settings are listed here: the voice, rate and pitch for a speaking voice,                  the options of the engine in use, and, while CW is the speech engine,                  the sound of Morse code (`speech.cw.wpm`, `speech.cw.effective_wpm`, `speech.cw.tone_hz` and `speech.cw.volume`),                  moved here from Morse code.
+
+",
+            );
+        }
+        for s in schema
+            .settings
+            .iter()
+            .filter(|s| !s.internal && s.section_id == section.id)
+        {
+            item(&mut out, s);
+        }
     }
     let internal: Vec<&Setting> = schema.settings.iter().filter(|s| s.internal).collect();
     if !internal.is_empty() {
         out.push_str(
-            "\n## Kept by textweaver\n\n\
-             textweaver writes these itself, such as a question already asked. \
-             They are in the file, but not on the settings screen.\n\n",
+            "
+## Kept by textweaver
+
+             textweaver writes these itself, such as a question already asked.              They are in the file, but not on the settings screen.
+
+",
         );
         for s in internal {
             item(&mut out, s);
         }
     }
     out.push_str(
-        "\n## See also\n\n\
-         - [Settings](settings.md): where settings live, and export, import, and reset.\n\
-         - [JSON-RPC](json-rpc.md): `settings_schema`, `get_setting`, and `set_setting`.\n\
-         - [Documentation index](README.md)\n",
+        "
+## See also
+
+         - [Settings](settings.md): where settings live, and export, import, and reset.
+         - [JSON-RPC](json-rpc.md): `settings_schema`, `get_setting`, and `set_setting`.
+         - [Documentation index](README.md)
+",
     );
     out
 }

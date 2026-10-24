@@ -2158,6 +2158,7 @@ choice-speech-backend-nsspeech = Apple NSSpeech
 choice-speech-backend-avspeech = Apple AVSpeech
 choice-speech-backend-dectalk = DECtalk
 choice-speech-backend-omnivox = Omnivox
+choice-speech-backend-piper = Piper
 choice-speech-backend-cw = CW (código Morse)
 choice-speech-backend-null = silencioso
 setting-speech-rate = Velocidade
@@ -2712,24 +2713,15 @@ settings-unit-minutes =
 
 ## Settings sections.
 
-section-speech = Fala
 section-highlight = Realce
-section-normalization = Como o texto é falado
 section-reading = Leitura
 section-display = Exibição
 section-editing = Edição
-section-authoring = Autoria
-section-library = Biblioteca
-section-keyboard = Teclado
-section-accessibility = Acessibilidade
+section-library = Biblioteca e ferramentas de estudo
+section-keyboard = Teclado e idioma
+section-accessibility = Acessibilidade e anúncios
 section-export = Exportar
 section-braille = Braille
-section-reading-aids = Recursos de leitura
-section-preview = Pré-visualização
-section-lexicon = Definir palavra
-section-stats = Estatísticas de leitura
-section-interface = Interface
-section-gui = Janela
 
 ## Edit mode: entering, leaving, saving, and typing.
 
@@ -3821,7 +3813,6 @@ setting-summary-sentences = Frases do resumo
 setting-summary-sentences-help = Quantas frases Resumir e tw summarize dão, de 1 a 50.
 setting-reading-aids-difficult-definitions = Definições de palavras difíceis
 setting-reading-aids-difficult-definitions-help = Com as palavras difíceis marcadas, com verbosidade alta dizer também a primeira definição do dicionário de uma palavra difícil.
-section-summary = Resumos
 settings-unit-sentences =
     { $n ->
         [one] frase
@@ -4883,7 +4874,6 @@ dictation-model-damaged = Modelo de ditado danificado: { $file }.
 dictation-model-no-folder = Pasta não existe: { $dir }.
 
 ## Configurações dos componentes opcionais.
-section-components = Componentes opcionais
 setting-dictation-model = Modelo de ditado
 setting-dictation-model-help = O modelo Whisper que o ditado usa quando nenhuma pasta é definida. Baixar o modelo de ditado, no menu Ferramentas, o obtém.
 choice-dictation-model-whisper-base-en = base.en, o padrão
@@ -4919,7 +4909,7 @@ update-error-cancelled = Download parado; continua da próxima vez.
 update-error-download = Atualização não baixada: { $reason }
 update-error-install = Atualização não instalada: { $reason }. Nada mudou.
 update-error-not-package = Não atualizado: esta cópia não vem de um pacote publicado.
-section-updates = Atualizações
+section-updates = Atualizações e componentes
 setting-updates-check = Procurar atualizações
 setting-updates-check-help = Procurar um textweaver mais novo uma vez por dia ao iniciar. Ele lê a lista pública de versões no GitHub e pergunta antes de baixar. Nada sobre você é enviado. Ajuda, Procurar atualizações procura a qualquer hora.
 
@@ -5257,3 +5247,65 @@ cw-keying-unknown = Não é um caractere Morse.
 cw-keying-erased = Sinal de erro: { $text } apagado.
 cw-keying-nothing-erased = Sinal de erro: nada manipulado para apagar.
 cw-keying-rsvp-on = O RSVP mostra as palavras que manipula.
+
+## Settings by task (beta 4): sections, and when a setting applies.
+
+section-voice = Voz e fala
+section-pauses = Pausas e detalhamento
+section-speaking-text = Leitura do texto
+section-documents = Documentos
+section-math = Matemática
+section-morse = Código Morse
+section-morse-practice = Prática de Morse
+section-spacing = Espaçamento, fonte e régua
+section-word-aids = Recursos para palavras
+section-rsvp = Palavra por palavra (RSVP)
+section-window = Barras e painéis
+# $n is the number of sections.
+settings-intro-sections =
+    { $n ->
+        [one] Configurações, 1 seção. Enter abre uma seção. Digite para buscar em todas as configurações. Escape fecha.
+       *[other] Configurações, { $n } seções. Enter abre uma seção. Digite para buscar em todas as configurações. Escape fecha.
+    }
+# $section is a section-* title, $n its number of settings.
+settings-section-row =
+    { $n ->
+        [one] { $section }, 1 configuração
+       *[other] { $section }, { $n } configurações
+    }
+settings-all = Todas as configurações
+settings-all-row =
+    { $n ->
+        [one] Todas as configurações, 1 configuração
+       *[other] Todas as configurações, { $n } configurações
+    }
+settings-title-section = Configurações: { $section }
+settings-section-opened =
+    { $n ->
+        [one] { $section }, 1 configuração. Esquerda e Direita mudam um valor, Enter muda ou digita um, Delete restaura o padrão, Escape volta às seções.
+       *[other] { $section }, { $n } configurações. Esquerda e Direita mudam um valor, Enter muda ou digita um, Delete restaura o padrão, Escape volta às seções.
+    }
+settings-all-opened =
+    { $n ->
+        [one] Todas as configurações, 1 configuração, inclusive as que não se aplicam agora. Escape volta às seções.
+       *[other] Todas as configurações, { $n } configurações, inclusive as que não se aplicam agora. Escape volta às seções.
+    }
+settings-back = Seções das configurações.
+settings-section-now =
+    { $n ->
+        [one] { $section } agora mostra 1 configuração.
+       *[other] { $section } agora mostra { $n } configurações.
+    }
+settings-section-help =
+    { $n ->
+        [one] { $section }, 1 configuração. Enter a abre.
+       *[other] { $section }, { $n } configurações. Enter a abre.
+    }
+# $item is a settings-item row, $why a settings-applies-* sentence.
+settings-item-not-now = { $item }. { $why }
+# $engine, $first and $second are speech engine names, such as Eloquence.
+settings-applies-engine = Aplica-se quando { $engine } é o motor de fala.
+settings-applies-engines = Aplica-se quando { $first } ou { $second } é o motor de fala.
+settings-applies-not-engine = Aplica-se quando { $engine } não é o motor de fala.
+# $os is Windows, macOS or Linux.
+settings-applies-os = Aplica-se só no { $os }.

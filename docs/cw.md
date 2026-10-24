@@ -149,7 +149,7 @@ These adapters are keyboards: dit is Left Control and dah Right Control. While k
 - **CW dit MIDI note** (`dit_note`, 20), **CW dah MIDI note** (`dah_note`, 21), and **CW straight key MIDI note** (`straight_note`, 30), each 0 to 127.
 - **CW MIDI channel** (`midi_channel`): 0 for any channel (the default), or 1 to 16.
 
-A new speed, keyer, note, channel, swap, or sidetone pitch applies at once while keying. The notes and the channel belong to the adapter on each computer, so they are not synced. See [Settings](settings.md#speechcw).
+A new speed, keyer, note, channel, swap, or sidetone pitch applies at once while keying. The notes and the channel belong to the adapter on each computer, so they are not synced. See [Settings](settings.md#morse-code).
 
 ## Practice and training
 

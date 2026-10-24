@@ -126,7 +126,7 @@ These environment variables control how textweaver finds and runs Eloquence:
 - `TEXTWEAVER_ECI_DICTIONARIES`: `off`, or a folder of dictionaries to use instead of the included ones.
 - `TEXTWEAVER_ECI_HOST`: run Eloquence in this host program instead of textweaver itself or `textweaver-host-x86.exe` (for example a separate `textweaver-eci-host.exe` from an earlier release).
 
-The same choices can be stored in the `[speech.eci]` section of `settings.toml`: `library`, `code_factory`, and `dictionaries`. An environment variable takes precedence over the setting for that run. [Settings](settings.md#speecheci) describes them.
+The same choices can be stored in the `[speech.eci]` section of `settings.toml`: `library`, `code_factory`, and `dictionaries`. An environment variable takes precedence over the setting for that run. [Settings](settings.md#voice-and-speech) describes them.
 
 ## Why textweaver does not include Eloquence
 

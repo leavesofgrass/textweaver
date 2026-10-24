@@ -63,4 +63,4 @@ Direction controls are used by the algorithm and not drawn. The prompt's typing 
 
 - [ADR-0025: Define word offline, and the interface's message catalog](0025-lexicon-and-message-catalog.md)
 - [Using textweaver with a screen reader: Language](../screen-readers.md#language)
-- [Settings: `[interface]`](../settings.md#interface)
+- [Settings: `[interface]`](../settings.md#keyboard-and-language)

@@ -41,6 +41,7 @@ use textweaver_store::settings_io::settings_to_json;
 use crate::app::{App, ListKind};
 use crate::command::{Effect, PromptPurpose};
 use crate::list_model::ListKey;
+use crate::settings_sections::{self as sections, Section, SettingsContext};
 
 /// How a setting is changed, for a dialog or the settings screen.
 #[derive(Clone, Debug, PartialEq)]
@@ -95,8 +96,12 @@ pub struct Choice {
 pub struct Setting {
     /// The key's path in `settings.toml`, such as `speech.rate`.
     pub path: String,
-    /// The section title, such as "Speech".
+    /// The section title in English, such as "Voice and speech": the
+    /// setting's home section ([`crate::settings_sections::SECTIONS`]).
     pub section: &'static str,
+    /// The home section's id, such as `voice`; `internal` for a setting
+    /// kept by textweaver itself.
+    pub section_id: &'static str,
     /// The label, shown and spoken, such as "Rate".
     pub label: &'static str,
     /// One or two sentences of help.
@@ -170,22 +175,11 @@ pub const WINDOW_ONLY: &[&str] = &[
     "gui.auto_hide_menu",
     "gui.focus_mode",
     "gui.speak_messages",
+    "gui.sidebar",
 ];
 
-/// Where the reading aids go on a settings screen, first to last: the
-/// spacing, the font and the ruler first, RSVP last (W9b-d).
-fn aids_rank(path: &str) -> u8 {
-    let rest = path.strip_prefix("reading_aids.").unwrap_or(path);
-    match rest.split('.').next().unwrap_or_default() {
-        "spacing" => 0,
-        "font" => 1,
-        "ruler" => 2,
-        "rsvp" => 9,
-        _ => 5,
-    }
-}
-
-/// Every setting, in the store's order.
+/// Every setting, section by section, in the order the settings screens
+/// list them ([`crate::settings_sections::SECTIONS`]).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SettingsSchema {
     /// The settings, section by section.
@@ -333,6 +327,7 @@ pub const INFO: &[Info] = &[
             ("avspeech", "Apple AVSpeech"),
             ("dectalk", "DECtalk"),
             ("omnivox", "Omnivox"),
+            ("piper", "Piper"),
             ("cw", "CW (Morse code)"),
             ("null", "silent"),
         ],
@@ -1495,13 +1490,6 @@ pub const INFO: &[Info] = &[
         "Preview pane",
         "In edit mode, show the document as it reads beside the editor. F6 moves to it; the cursor stays in the editor.",
     ),
-    number(
-        "preview.pane_delay_ms",
-        "Preview pause",
-        "How long typing must pause before a preview that follows your typing is rewritten.",
-        (100.0, 3000.0, 50.0),
-        "milliseconds",
-    ),
     // [lexicon] (Agent W3e)
     optional(
         "lexicon.glossary",
@@ -1825,37 +1813,6 @@ pub const INFO: &[Info] = &[
     ),
 ];
 
-/// The section title for a top-level key.
-fn section_title(key: &str) -> &'static str {
-    match key {
-        "speech" => "Speech",
-        "highlight" => "Highlight",
-        "normalization" => "Speaking text",
-        "reading" => "Reading",
-        "display" => "Display",
-        "editing" => "Editing",
-        "authoring" => "Authoring",
-        "library" => "Library",
-        "keyboard" => "Keyboard",
-        "accessibility" => "Accessibility",
-        "export" => "Export",
-        "braille" => "Braille",
-        "reading_aids" => "Reading aids",
-        "preview" => "Preview",
-        "lexicon" => "Define word",
-        "stats" => "Reading statistics",
-        "summary" => "Summaries",
-        "dictation" => "Dictation",
-        "interface" => "Interface",
-        "gui" => "Window",
-        "colors" => "Colors",
-        "sync" => "Sync",
-        "components" => "Optional components",
-        "updates" => "Updates",
-        _ => "Other",
-    }
-}
-
 /// The leaf paths of a settings JSON tree, with their values, in order.
 /// `tables` are paths whose objects are values (maps), not sections.
 fn leaves(prefix: &str, map: &Map<String, Value>, tables: &[&str], out: &mut Vec<(String, Value)>) {
@@ -1932,27 +1889,19 @@ impl SettingsSchema {
             .collect();
         let mut found = Vec::new();
         leaves("", &defaults, &tables, &mut found);
-        // The store's order (speech first), not the JSON's sorted keys.
+        // Section by section, then the ones kept by textweaver in the
+        // store's order, not the JSON's sorted keys.
         found.sort_by_key(|(path, _)| {
-            INFO.iter()
+            let info = INFO
+                .iter()
                 .position(|i| i.path == path)
-                .unwrap_or(usize::MAX)
+                .unwrap_or(usize::MAX);
+            sections::home_of(path).map_or((usize::MAX, info), |(i, row)| (i, row))
         });
-        // The reading aids: spacing, font and ruler first, RSVP last.
-        if let (Some(first), Some(last)) = (
-            found
-                .iter()
-                .position(|(p, _)| p.starts_with("reading_aids.")),
-            found
-                .iter()
-                .rposition(|(p, _)| p.starts_with("reading_aids.")),
-        ) {
-            found[first..=last].sort_by_key(|(p, _)| aids_rank(p));
-        }
         let settings = found
             .into_iter()
             .map(|(path, default)| {
-                let top = path.split('.').next().unwrap_or_default().to_owned();
+                let home = sections::home_of(&path).map(|(i, _)| &sections::SECTIONS[i]);
                 let info = INFO.iter().find(|i| i.path == path);
                 let (label, help, kind, internal) = match info {
                     Some(i) => (
@@ -1981,7 +1930,8 @@ impl SettingsSchema {
                         label
                     },
                     help,
-                    section: section_title(&top),
+                    section: home.map_or("Kept by textweaver", |h| h.title),
+                    section_id: home.map_or(sections::INTERNAL_SECTION, |h| h.id),
                     internal,
                     default,
                     path,
@@ -2006,6 +1956,34 @@ impl SettingsSchema {
     /// ones that do something in the window.
     pub fn in_window(&self) -> impl Iterator<Item = &Setting> {
         self.visible().filter(|s| s.frontend.in_window())
+    }
+
+    /// The sections `here`'s settings screen lists in `cx`: each section
+    /// with a setting that applies there now, in order.
+    pub fn sections_now(&self, cx: &SettingsContext, here: Frontend) -> Vec<&'static Section> {
+        sections::SECTIONS
+            .iter()
+            .filter(|s| !self.in_section(s.id, cx, here).is_empty())
+            .collect()
+    }
+
+    /// The settings section `id` lists on `here`'s screen in `cx`: the
+    /// ones that apply now, in order, with the sound of Morse code at the
+    /// top of Voice and speech while CW is the engine
+    /// ([`sections::paths_now`]).
+    pub fn in_section(&self, id: &str, cx: &SettingsContext, here: Frontend) -> Vec<&Setting> {
+        sections::paths_now(id, cx)
+            .into_iter()
+            .filter_map(|p| self.get(p))
+            .filter(|s| s.shown_on(here) && sections::applies(&s.path, cx).is_ok())
+            .collect()
+    }
+
+    /// Every setting on `here`'s settings screen, whether it applies now
+    /// or not, section by section: what All settings lists and a search
+    /// looks through.
+    pub fn all_on(&self, here: Frontend) -> impl Iterator<Item = &Setting> {
+        self.settings.iter().filter(move |s| s.shown_on(here))
     }
 
     /// The schema as JSON, for JSON-RPC's `settings_schema`: each setting
@@ -2231,10 +2209,21 @@ impl Setting {
         first_sentence(&self.help_in(c)).to_owned()
     }
 
-    /// The section title in the catalog's language (`section-*`).
+    /// The home section's title in the catalog's language (`section-*`).
     pub fn section_in(&self, c: &Catalog) -> String {
-        let top = self.path.split('.').next().unwrap_or_default();
-        lookup(c, &format!("section-{}", slug(top)), self.section)
+        lookup(c, &format!("section-{}", self.section_id), self.section)
+    }
+
+    /// True when the setting is on `here`'s settings screen: not kept by
+    /// textweaver, and doing something in that frontend
+    /// ([`Frontend::Both`] takes every frontend's).
+    pub fn shown_on(&self, here: Frontend) -> bool {
+        !self.internal
+            && match here {
+                Frontend::Both => true,
+                Frontend::Terminal => self.frontend.in_terminal(),
+                Frontend::Window => self.frontend.in_window(),
+            }
     }
 
     /// A choice's label in the catalog's language (`choice-*`; a color
@@ -2457,6 +2446,7 @@ impl Setting {
         let mut m = Map::new();
         m.insert("path".into(), Value::String(self.path.clone()));
         m.insert("section".into(), Value::String(self.section.into()));
+        m.insert("section_id".into(), Value::String(self.section_id.into()));
         m.insert("label".into(), Value::String(self.label.into()));
         m.insert("help".into(), Value::String(self.help.into()));
         m.insert("default".into(), self.default.clone());
@@ -2521,12 +2511,26 @@ fn plain(v: &Value) -> String {
     }
 }
 
+/// One row of the settings screen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Row {
+    /// A setting, by its index in the screen's schema.
+    Setting(usize),
+    /// A section, by id: Enter opens it.
+    Section(&'static str),
+    /// All settings, those that do not apply now too: Enter opens it.
+    All,
+}
+
+/// The id the screen keeps while All settings is open.
+const ALL: &str = "all";
+
 /// The settings screen's state while it is open.
 #[derive(Clone, Debug)]
 pub(crate) struct SettingsScreen {
     schema: SettingsSchema,
-    /// Indexes into `schema.settings` of the items shown, in order.
-    shown: Vec<usize>,
+    /// The rows shown, in order.
+    shown: Vec<Row>,
     /// The filter typed so far.
     pub(crate) filter: String,
     /// The setting whose new value the prompt is asking for, and the list
@@ -2537,6 +2541,17 @@ pub(crate) struct SettingsScreen {
     /// How many of the first items are the recently changed settings,
     /// listed again at the top (W6u).
     recent: usize,
+    /// The section open (a section's id, or [`ALL`]); `None` lists the
+    /// sections.
+    open: Option<&'static str>,
+}
+
+impl SettingsScreen {
+    /// True when the rows are settings with their reasons, not sections:
+    /// a view of some settings, a search, or All settings.
+    fn flat(&self) -> bool {
+        self.scope.is_some() || !self.filter.trim().is_empty() || self.open == Some(ALL)
+    }
 }
 
 /// Most recently changed settings listed at the top of the screen.
@@ -2676,6 +2691,11 @@ impl App {
             said.push(' ');
             said.push_str(&c.tr("spacing-letter-without-word"));
         }
+        // Changed from a search, a setting that does nothing now says so.
+        if let Err(why) = sections::applies(path, &self.settings_context()) {
+            said.push(' ');
+            said.push_str(&why.message_in(&c));
+        }
         if !setting.internal {
             self.remember_setting(path);
         }
@@ -2793,49 +2813,98 @@ impl App {
             editing: None,
             scope,
             recent: 0,
+            open: None,
         });
         self.fill_settings_rows();
-        let n = self
-            .settings_screen
-            .as_ref()
-            .map_or(0, |s| s.shown.len() - s.recent);
+        let n = self.settings_screen.as_ref().map_or(0, |s| {
+            s.shown
+                .iter()
+                .filter(|r| matches!(r, Row::Setting(_) | Row::Section(_)))
+                .count()
+                - s.recent
+        });
+        // The whole screen lists its sections; a view, its settings.
+        let intro = if scope.is_none() {
+            "settings-intro-sections"
+        } else {
+            intro
+        };
         let msg = self.msg_args(intro, &args!["n" => n]);
         self.say_result(&msg);
         self.show_settings_list()
     }
 
-    /// Works out the rows of the settings screen: the recently changed
-    /// settings first (without a filter, on the whole screen), then every
-    /// setting the view shows that matches the filter.
+    /// What decides which settings apply now ([`sections::applies`]): the
+    /// speech engine chosen, or, when the choice is automatic, the one
+    /// running, and this system.
+    pub fn settings_context(&self) -> SettingsContext {
+        let chosen = self.settings.speech.backend.trim();
+        if chosen.is_empty() || chosen.eq_ignore_ascii_case("auto") {
+            SettingsContext::with_engine(self.speech.backend_id())
+        } else {
+            SettingsContext::with_engine(&chosen.to_ascii_lowercase())
+        }
+    }
+
+    /// Works out the rows of the settings screen. The whole screen lists
+    /// the recently changed settings, then its sections, then All
+    /// settings; an open section lists its settings that apply now; a
+    /// search, a view of some settings (View, Colors) and All settings
+    /// list every setting they take, applying now or not.
     fn fill_settings_rows(&mut self) {
         let c = self.catalog();
+        let cx = self.settings_context();
         let recent_paths = self.settings.interface.recent_settings.clone();
         let Some(screen) = self.settings_screen.as_mut() else {
             return;
         };
+        let here = Frontend::Terminal;
         let query = screen.filter.clone();
         let scope = screen.scope;
-        let visible = |s: &Setting| {
-            !s.internal && s.frontend.in_terminal() && scope.is_none_or(|f| f(&s.path))
-        };
-        let mut shown: Vec<usize> = Vec::new();
-        if query.trim().is_empty() && scope.is_none() {
+        let flat = screen.flat();
+        let open = screen.open;
+        let schema = &screen.schema;
+        let index = |s: &Setting| schema.settings.iter().position(|x| x.path == s.path);
+        let visible = |s: &Setting| s.shown_on(here) && scope.is_none_or(|f| f(&s.path));
+        let mut shown: Vec<Row> = Vec::new();
+        let mut recent = 0;
+        if flat {
+            shown.extend(
+                (0..schema.settings.len())
+                    .filter(|&i| {
+                        let s = &schema.settings[i];
+                        visible(s) && s.matches(&c, &query)
+                    })
+                    .map(Row::Setting),
+            );
+        } else if let Some(id) = open {
+            shown.extend(
+                schema
+                    .in_section(id, &cx, here)
+                    .into_iter()
+                    .filter_map(index)
+                    .map(Row::Setting),
+            );
+        } else {
             for path in recent_paths.iter().take(RECENT_SETTINGS) {
-                if let Some(i) = screen
-                    .schema
+                if let Some(i) = schema
                     .settings
                     .iter()
                     .position(|s| &s.path == path && visible(s))
                 {
-                    shown.push(i);
+                    shown.push(Row::Setting(i));
                 }
             }
+            recent = shown.len();
+            shown.extend(
+                schema
+                    .sections_now(&cx, here)
+                    .into_iter()
+                    .map(|sec| Row::Section(sec.id)),
+            );
+            shown.push(Row::All);
         }
-        screen.recent = shown.len();
-        shown.extend((0..screen.schema.settings.len()).filter(|&i| {
-            let s = &screen.schema.settings[i];
-            visible(s) && s.matches(&c, &query)
-        }));
+        screen.recent = recent;
         screen.shown = shown;
     }
 
@@ -2849,48 +2918,154 @@ impl App {
         self.settings_dirty = true;
     }
 
+    /// A section's title in the catalog's language ("Voice and speech").
+    fn section_title_in(c: &Catalog, id: &str) -> String {
+        let english = sections::section(id).map_or(id, |s| s.title);
+        lookup(c, &format!("section-{id}"), english)
+    }
+
     /// The settings list's title and items, for the frontend.
     fn show_settings_list(&mut self) -> Vec<Effect> {
+        let cx = self.settings_context();
         let Some(screen) = self.settings_screen.as_ref() else {
             return vec![Effect::Redraw];
         };
         let tree = json(&self.settings);
         let c = self.cat();
+        let here = Frontend::Terminal;
+        let flat = screen.flat();
         let items: Vec<String> = screen
             .shown
             .iter()
             .enumerate()
-            .map(|(row, &i)| {
-                let s = &screen.schema.settings[i];
-                let v = get(&tree, &s.path).cloned().unwrap_or(Value::Null);
-                let (label, value) = (s.label_in(c), s.describe_in(c, &v));
-                let line = if crate::colors::is_color_setting(&s.path) {
-                    self.color_row(c, &label, &value, &s.path)
-                } else {
-                    c.fmt("settings-item", &args!["label" => label, "value" => value])
-                };
-                if row < screen.recent {
-                    c.fmt("settings-item-recent", &args!["item" => line])
-                } else {
-                    line
+            .map(|(row, r)| match *r {
+                Row::Setting(i) => {
+                    let s = &screen.schema.settings[i];
+                    let v = get(&tree, &s.path).cloned().unwrap_or(Value::Null);
+                    let (label, value) = (s.label_in(c), s.describe_in(c, &v));
+                    let mut line = if crate::colors::is_color_setting(&s.path) {
+                        self.color_row(c, &label, &value, &s.path)
+                    } else {
+                        c.fmt("settings-item", &args!["label" => label, "value" => value])
+                    };
+                    if flat && let Err(why) = sections::applies(&s.path, &cx) {
+                        line = c.fmt(
+                            "settings-item-not-now",
+                            &args!["item" => line, "why" => why.message_in(c)],
+                        );
+                    }
+                    if row < screen.recent {
+                        c.fmt("settings-item-recent", &args!["item" => line])
+                    } else {
+                        line
+                    }
                 }
+                Row::Section(id) => c.fmt(
+                    "settings-section-row",
+                    &args![
+                        "section" => Self::section_title_in(c, id),
+                        "n" => screen.schema.in_section(id, &cx, here).len()
+                    ],
+                ),
+                Row::All => c.fmt(
+                    "settings-all-row",
+                    &args!["n" => screen.schema.all_on(here).count()],
+                ),
             })
             .collect();
-        let title = if screen.filter.is_empty() {
-            c.tr("settings-title")
-        } else {
+        let title = if !screen.filter.is_empty() {
             c.fmt(
                 "settings-title-matching",
                 &args!["filter" => screen.filter.as_str()],
             )
+        } else if let Some(id) = screen.open {
+            let section = if id == ALL {
+                c.tr("settings-all")
+            } else {
+                Self::section_title_in(c, id)
+            };
+            c.fmt("settings-title-section", &args!["section" => section])
+        } else {
+            c.tr("settings-title")
         };
         self.list = Some(ListKind::Settings);
         vec![Effect::ShowList { title, items }]
     }
 
+    /// Enter or Right on a section's row (or All settings): opens it, on
+    /// its first setting, and says what it holds.
+    fn open_settings_section(&mut self, id: &'static str) -> Vec<Effect> {
+        let c = self.catalog();
+        let Some(screen) = self.settings_screen.as_mut() else {
+            return vec![Effect::Redraw];
+        };
+        screen.open = Some(id);
+        screen.filter.clear();
+        self.fill_settings_rows();
+        let n = self.settings_screen.as_ref().map_or(0, |s| s.shown.len());
+        let msg = if id == ALL {
+            c.fmt("settings-all-opened", &args!["n" => n])
+        } else {
+            c.fmt(
+                "settings-section-opened",
+                &args!["section" => Self::section_title_in(&c, id), "n" => n],
+            )
+        };
+        self.say_result(&msg);
+        self.pending_list_focus = Some(0);
+        self.show_settings_list()
+    }
+
+    /// Escape on the settings screen while a section (or All settings) is
+    /// open: back to the sections, on that section's row. `None` when the
+    /// sections are showing, or a view of some settings, and Escape
+    /// closes the screen.
+    pub(crate) fn settings_back(&mut self) -> Option<Vec<Effect>> {
+        if self.list != Some(ListKind::Settings) {
+            return None;
+        }
+        let screen = self.settings_screen.as_mut()?;
+        if screen.scope.is_some() {
+            return None;
+        }
+        let id = screen.open.take()?;
+        screen.filter.clear();
+        self.fill_settings_rows();
+        let at = self.settings_screen.as_ref().and_then(|s| {
+            s.shown.iter().position(|r| match r {
+                Row::All => id == ALL,
+                Row::Section(x) => *x == id,
+                Row::Setting(_) => false,
+            })
+        });
+        self.pending_list_focus = Some(at.unwrap_or(0));
+        let msg = self.msg("settings-back");
+        self.say_dialog(&msg);
+        Some(self.show_settings_list())
+    }
+
     /// The list again after a change, when the screen is open.
     fn refresh_settings_screen(&mut self) -> Vec<Effect> {
         if self.settings_screen.is_some() && self.list == Some(ListKind::Settings) {
+            // A change can change what applies (a new speech engine), so
+            // an open section is worked out again, and a new count said.
+            let before = self.settings_screen.as_ref().map_or(0, |s| s.shown.len());
+            self.fill_settings_rows();
+            let section = self
+                .settings_screen
+                .as_ref()
+                .filter(|s| !s.flat())
+                .and_then(|s| s.open.map(|id| (id, s.shown.len())));
+            if let Some((id, n)) = section
+                && n != before
+            {
+                let c = self.catalog();
+                let msg = c.fmt(
+                    "settings-section-now",
+                    &args!["section" => Self::section_title_in(&c, id), "n" => n],
+                );
+                self.tell(&msg);
+            }
             self.show_settings_list()
         } else {
             vec![Effect::Redraw]
@@ -2920,10 +3095,13 @@ impl App {
         };
         screen.filter = query.clone();
         self.fill_settings_rows();
-        let n = self
-            .settings_screen
-            .as_ref()
-            .map_or(0, |s| s.shown.len() - s.recent);
+        let n = self.settings_screen.as_ref().map_or(0, |s| {
+            s.shown
+                .iter()
+                .filter(|r| matches!(r, Row::Setting(_)))
+                .count()
+                - s.recent
+        });
         let msg = if query.trim().is_empty() {
             c.fmt("settings-filter-cleared", &args!["n" => n])
         } else if n == 0 {
@@ -2938,8 +3116,43 @@ impl App {
     /// The setting shown as item `n`.
     fn shown_setting(&self, n: usize) -> Option<(usize, Setting)> {
         let screen = self.settings_screen.as_ref()?;
-        let i = *screen.shown.get(n)?;
+        let Row::Setting(i) = *screen.shown.get(n)? else {
+            return None;
+        };
         Some((i, screen.schema.settings[i].clone()))
+    }
+
+    /// The section shown as item `n` (or [`ALL`]), when it is one.
+    fn shown_section(&self, n: usize) -> Option<&'static str> {
+        match self.settings_screen.as_ref()?.shown.get(n)? {
+            Row::Section(id) => Some(id),
+            Row::All => Some(ALL),
+            Row::Setting(_) => None,
+        }
+    }
+
+    /// F1 on a section's row: what it holds, and that Enter opens it.
+    fn say_section_help(&mut self, id: &'static str) -> Vec<Effect> {
+        let cx = self.settings_context();
+        let c = self.catalog();
+        let n = self.settings_screen.as_ref().map_or(0, |s| {
+            if id == ALL {
+                s.schema.all_on(Frontend::Terminal).count()
+            } else {
+                s.schema.in_section(id, &cx, Frontend::Terminal).len()
+            }
+        });
+        let section = if id == ALL {
+            c.tr("settings-all")
+        } else {
+            Self::section_title_in(&c, id)
+        };
+        let msg = c.fmt(
+            "settings-section-help",
+            &args!["section" => section, "n" => n],
+        );
+        self.tell(&msg);
+        vec![Effect::Redraw]
     }
 
     /// Keys the settings screen handles itself: Left, Right, Enter,
@@ -2949,6 +3162,14 @@ impl App {
             return None;
         }
         let n = self.list_model.as_ref().map_or(0, |l| l.selected);
+        if let Some(id) = self.shown_section(n) {
+            return match key {
+                ListKey::Right | ListKey::Enter => Some(self.open_settings_section(id)),
+                ListKey::Left | ListKey::Delete => Some(vec![Effect::Redraw]),
+                ListKey::Introduce => Some(self.say_section_help(id)),
+                _ => None,
+            };
+        }
         match key {
             ListKey::Left | ListKey::Right => Some(self.step_setting(n, key == ListKey::Right)),
             ListKey::Enter => Some(self.choose_setting(n)),
@@ -3036,6 +3257,9 @@ impl App {
     pub(crate) fn choose_setting(&mut self, n: usize) -> Vec<Effect> {
         // `choose` took the list kind; the screen stays.
         self.list = Some(ListKind::Settings);
+        if let Some(id) = self.shown_section(n) {
+            return self.open_settings_section(id);
+        }
         let Some((i, s)) = self.shown_setting(n) else {
             return vec![Effect::Redraw];
         };
@@ -3219,6 +3443,143 @@ mod tests {
         );
         assert_eq!(slug("reading_aids.rsvp.wpm"), "reading-aids-rsvp-wpm");
         assert_eq!(value_key(&Value::Bool(true)), "true");
+    }
+
+    /// Every setting a screen shows is in exactly one section, every
+    /// path a section names is a setting, and the ones textweaver keeps
+    /// for itself are in none.
+    #[test]
+    fn every_setting_is_in_exactly_one_section() {
+        let schema = SettingsSchema::generate();
+        for s in &schema.settings {
+            let homes = sections::SECTIONS
+                .iter()
+                .filter(|sec| sec.paths.contains(&s.path.as_str()))
+                .count();
+            if s.internal {
+                assert_eq!(homes, 0, "{} is kept by textweaver", s.path);
+                assert_eq!(s.section_id, sections::INTERNAL_SECTION);
+            } else {
+                assert_eq!(
+                    homes, 1,
+                    "{} must be in exactly one section of SECTIONS in crates/textweaver-app/src/settings_sections.rs",
+                    s.path
+                );
+            }
+        }
+        for sec in sections::SECTIONS {
+            for p in sec.paths {
+                let s = schema
+                    .get(p)
+                    .unwrap_or_else(|| panic!("{p} is not a setting"));
+                assert_eq!(s.section_id, sec.id, "{p}");
+                assert_eq!(s.section, sec.title, "{p}");
+            }
+        }
+        // The schema lists them section by section.
+        let order: Vec<usize> = schema
+            .visible()
+            .map(|s| sections::home_of(&s.path).unwrap().0)
+            .collect();
+        assert!(order.windows(2).all(|w| w[0] <= w[1]), "{order:?}");
+    }
+
+    /// The contexts the tests try: each engine on each system.
+    fn contexts() -> Vec<SettingsContext> {
+        let engines = [
+            "eci", "sapi", "espeak", "speechd", "nsspeech", "avspeech", "dectalk", "omnivox",
+            "piper", "cw", "null",
+        ];
+        let mut out = vec![SettingsContext::any()];
+        for os in [
+            sections::Os::Windows,
+            sections::Os::MacOs,
+            sections::Os::Other,
+        ] {
+            for e in engines {
+                out.push(SettingsContext::on(e, os));
+            }
+        }
+        out
+    }
+
+    /// Every section is short enough to scan, with any engine on any
+    /// system, in either frontend; none is empty in the reference.
+    #[test]
+    fn sections_are_short() {
+        let schema = SettingsSchema::generate();
+        for cx in contexts().iter().skip(1) {
+            for here in [Frontend::Terminal, Frontend::Window] {
+                for sec in sections::SECTIONS {
+                    let n = schema.in_section(sec.id, cx, here).len();
+                    assert!(
+                        n <= 15,
+                        "{} has {n} settings with {cx:?} in {here:?}",
+                        sec.title
+                    );
+                }
+            }
+        }
+        for sec in sections::SECTIONS {
+            assert!(!sec.paths.is_empty(), "{}", sec.title);
+        }
+    }
+
+    /// The terminal reader and the textweaver app list the same sections
+    /// in the same order, whatever the engine.
+    #[test]
+    fn both_frontends_list_the_same_sections() {
+        let schema = SettingsSchema::generate();
+        for cx in contexts() {
+            let ids = |here| {
+                schema
+                    .sections_now(&cx, here)
+                    .into_iter()
+                    .map(|s| s.id)
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(ids(Frontend::Terminal), ids(Frontend::Window), "{cx:?}");
+        }
+    }
+
+    /// Voice and speech holds the engine's own settings: no voice with
+    /// CW, CW's sound and prosigns with it, Eloquence's options only with
+    /// Eloquence.
+    #[test]
+    fn voice_and_speech_follows_the_engine() {
+        let schema = SettingsSchema::generate();
+        let paths = |cx: &SettingsContext, id: &str| {
+            schema
+                .in_section(id, cx, Frontend::Terminal)
+                .into_iter()
+                .map(|s| s.path.as_str())
+                .collect::<Vec<_>>()
+        };
+        let cw = SettingsContext::on("cw", sections::Os::Windows);
+        let voice = paths(&cw, "voice");
+        assert_eq!(
+            voice,
+            [
+                "speech.backend",
+                "speech.cw.wpm",
+                "speech.cw.effective_wpm",
+                "speech.cw.tone_hz",
+                "speech.cw.volume",
+                "speech.volume",
+                "speech.cw.prosigns",
+                "speech.cw.status_line",
+                "speech.output_device",
+            ]
+        );
+        assert!(!paths(&cw, "morse").contains(&"speech.cw.wpm"));
+        let eci = SettingsContext::on("eci", sections::Os::Windows);
+        let voice = paths(&eci, "voice");
+        assert!(voice.contains(&"speech.voice") && voice.contains(&"speech.eci.library"));
+        assert!(!voice.iter().any(|p| p.starts_with("speech.cw.")));
+        assert!(!voice.contains(&"speech.sapi.onecore"));
+        assert!(paths(&eci, "morse").contains(&"speech.cw.wpm"));
+        let sapi_linux = SettingsContext::on("sapi", sections::Os::Other);
+        assert!(!paths(&sapi_linux, "voice").contains(&"speech.sapi.onecore"));
     }
 
     #[test]

@@ -18,7 +18,7 @@ Every aid can be switched on and off, and textweaver announces each change. The 
 
 In the app (`textweaver`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver app](gui.md#reading-aids).
 
-The [keyboard reference](keyboard.md) lists every key. Each aid's settings are in the `[reading_aids]` sections of `settings.toml`; [Settings](settings.md#reading_aids) lists them.
+The [keyboard reference](keyboard.md) lists every key. Each aid's settings are in the `[reading_aids]` sections of `settings.toml`; [Settings](settings.md#spacing-font-and-ruler) lists them.
 
 To try RSVP, bionic reading, and the ruler in a web browser first, open the [reading aids demo page](site/reading-aids.html) in `docs/site/`.
 
@@ -212,7 +212,7 @@ The Braille view draws the line you are reading as braille dots, in a bar at the
 
 - [Reading aids demo](site/reading-aids.html): try RSVP, bionic reading, and the ruler in a browser.
 - [Themes](themes.md): the colors the aids use, all checked for contrast.
-- [Settings](settings.md#reading_aids): every `[reading_aids]` setting.
+- [Settings](settings.md#spacing-font-and-ruler): every `[reading_aids]` setting.
 - [Reading and moving around](reading.md): reading aloud and moving through a document.
 - [ADR-0022: Reading aids](adr/0022-reading-aids.md): the design, and the star faults each aid fixes.
 - [Documentation index](README.md)
