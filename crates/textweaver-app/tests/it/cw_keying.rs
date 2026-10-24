@@ -231,3 +231,39 @@ fn leaving_edit_mode_ends_keying() {
         assert!(!app.cw_keying_active());
     }
 }
+
+/// The sidetone's pitch is its own setting, beside the sidetone switch,
+/// and a change while keying is taken at once: keying goes on.
+#[test]
+fn the_sidetone_pitch_changes_while_keying() {
+    let mut app = editing(straight());
+    let schema = app.settings_schema();
+    let paths: Vec<&str> = schema.settings.iter().map(|s| s.path.as_str()).collect();
+    let at = paths
+        .iter()
+        .position(|p| *p == "speech.cw.sidetone")
+        .unwrap();
+    assert_eq!(paths[at + 1], "speech.cw.sidetone_hz");
+    let hz = schema.get("speech.cw.sidetone_hz").unwrap();
+    assert_eq!(hz.describe(&serde_json::json!(600)), "600 hertz");
+    assert!(hz.parse("150").is_err(), "below the CW tone's range");
+    act(&mut app, ActionId::CwKeying);
+    assert!(app.cw_keying_active());
+    app.set_setting("speech.cw.sidetone_hz", serde_json::json!(800))
+        .unwrap();
+    assert_eq!(app.settings().speech.cw.sidetone_hz, 800);
+    assert_eq!(
+        app.settings().speech.cw.tone_hz,
+        600,
+        "sending keeps its tone"
+    );
+    assert!(app.cw_keying_active());
+    let ms = Duration::from_millis;
+    hand_key(
+        &mut app,
+        CwAdapterKey::LeftControl,
+        "-.-",
+        Instant::now() + ms(LEAD),
+    );
+    wait_for(&mut app, "k");
+}

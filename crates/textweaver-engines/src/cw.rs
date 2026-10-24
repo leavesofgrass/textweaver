@@ -24,7 +24,7 @@
 use std::collections::VecDeque;
 use std::ops::Range;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
 use textweaver_core::{Utterance, UtteranceId};
@@ -408,14 +408,27 @@ impl SpeechBackend for CwBackend {
     }
 }
 
-/// The sidetone heard while keying Morse code: the CW tone at the
-/// `[speech.cw]` pitch and level, on the audio device, following the key
-/// ([`Sidetone::set`]). It plays apart from speech, with the output's
-/// small buffer as its only delay. Tests never start one: it has no
-/// silent output.
+/// The sidetone heard while keying Morse code: a tone at the
+/// `[speech.cw]` sidetone pitch and the CW level, on the audio device,
+/// following the key ([`Sidetone::set`]). It plays apart from speech, with
+/// the output's small buffer as its only delay. Tests never start one: it
+/// has no silent output.
 pub struct Sidetone {
     key: Arc<AtomicBool>,
+    /// The pitch in hertz and the level in percent, packed by [`pack`],
+    /// read by the generator at each sample.
+    tone: Arc<AtomicU32>,
     _player: textweaver_enginehost::Player,
+}
+
+/// `hz` and `volume` in one word, for the generator to read at once.
+fn pack(hz: u16, volume: u8) -> u32 {
+    (u32::from(hz) << 8) | u32::from(volume.min(100))
+}
+
+/// The pitch in hertz and the level from 0 to 1 that [`pack`] packed.
+fn unpack(tone: u32) -> (f64, f64) {
+    (f64::from(tone >> 8), f64::from(tone & 0xff) / 100.0)
 }
 
 impl std::fmt::Debug for Sidetone {
@@ -425,22 +438,34 @@ impl std::fmt::Debug for Sidetone {
 }
 
 impl Sidetone {
-    /// Opens the audio device for the sidetone of `options`.
-    pub fn start(options: &CwOptions) -> Result<Self, SpeechError> {
+    /// Opens the audio device for a sidetone of `hz` hertz at `volume`
+    /// percent of full scale.
+    pub fn start(hz: u16, volume: u8) -> Result<Self, SpeechError> {
         let key = Arc::new(AtomicBool::new(false));
-        let mut tone = textweaver_cw::Sidetone::new(
+        let packed = pack(hz, volume);
+        let tone = Arc::new(AtomicU32::new(packed));
+        let (pitch, level) = unpack(packed);
+        let mut osc = textweaver_cw::Sidetone::new(
             SAMPLE_RATE,
-            f64::from(options.tone_hz),
-            f64::from(options.volume.min(100)) / 100.0,
+            pitch,
+            level,
             RenderOptions::default().edge_ms,
         );
-        let down = Arc::clone(&key);
+        let (down, wanted) = (Arc::clone(&key), Arc::clone(&tone));
+        let mut current = packed;
         let player =
             textweaver_enginehost::Player::start_generator(BACKEND_ID, SAMPLE_RATE, move || {
-                tone.next(down.load(Ordering::Relaxed))
+                let now = wanted.load(Ordering::Relaxed);
+                if now != current {
+                    current = now;
+                    let (pitch, level) = unpack(now);
+                    osc.retune(SAMPLE_RATE, pitch, level);
+                }
+                osc.next(down.load(Ordering::Relaxed))
             })?;
         Ok(Sidetone {
             key,
+            tone,
             _player: player,
         })
     }
@@ -448,6 +473,12 @@ impl Sidetone {
     /// The key went down (true) or up: the tone rises or falls.
     pub fn set(&self, down: bool) {
         self.key.store(down, Ordering::Relaxed);
+    }
+
+    /// The pitch or level changed: heard from the next sample, without a
+    /// click, even with the key down.
+    pub fn set_tone(&self, hz: u16, volume: u8) {
+        self.tone.store(pack(hz, volume), Ordering::Relaxed);
     }
 }
 
@@ -486,6 +517,15 @@ mod tests {
             b.poll(rec);
             std::thread::sleep(Duration::from_millis(2));
         }
+    }
+
+    #[test]
+    fn the_sidetone_pitch_and_level_pack_into_one_word() {
+        assert_eq!(unpack(pack(600, 50)), (600.0, 0.5));
+        assert_eq!(unpack(pack(1500, 100)), (1500.0, 1.0));
+        assert_eq!(unpack(pack(200, 0)), (200.0, 0.0));
+        // A level above 100 percent is full scale.
+        assert_eq!(unpack(pack(800, 255)), (800.0, 1.0));
     }
 
     #[test]
