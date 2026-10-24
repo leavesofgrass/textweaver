@@ -74,6 +74,7 @@ fn everything_changed() -> Settings {
         keyer: crate::CwKeyer::IambicA,
         swap_paddles: true,
         sidetone: false,
+        sidetone_hz: 800,
         dit_note: 96,
         dah_note: 97,
         straight_note: 98,

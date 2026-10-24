@@ -336,7 +336,7 @@ pub struct CwSettings {
     /// characters and words stretch so the text goes at this speed. At or
     /// above `wpm`, plain spacing.
     pub effective_wpm: u16,
-    /// The tone's pitch in hertz, 200 to 1500.
+    /// The pitch of sent Morse in hertz, 200 to 1500.
     pub tone_hz: u16,
     /// The tone's level, 0 to 100 percent of full scale (the speech
     /// volume applies on top).
@@ -354,6 +354,9 @@ pub struct CwSettings {
     pub swap_paddles: bool,
     /// Keying: the tone sounds while the key is down.
     pub sidetone: bool,
+    /// Keying: the sidetone's pitch in hertz, 200 to 1500, apart from the
+    /// pitch of sent Morse (`tone_hz`); both are 600 by default.
+    pub sidetone_hz: u16,
     /// Keying: the MIDI note of the dit contact, 0 to 127.
     pub dit_note: u8,
     /// Keying: the MIDI note of the dah contact, 0 to 127.
@@ -390,6 +393,7 @@ impl Default for CwSettings {
             keyer: CwKeyer::default(),
             swap_paddles: false,
             sidetone: true,
+            sidetone_hz: 600,
             // The N6ARA TinyMIDI's and the CTR2 MIDI's documented notes.
             dit_note: 20,
             dah_note: 21,
@@ -2623,14 +2627,19 @@ impl Settings {
             }
         }
         let (lo, hi) = CW_TONE_RANGE_HZ;
-        if !(lo..=hi).contains(&cw.tone_hz) {
-            let c = cw.tone_hz.clamp(lo, hi);
-            fix(
-                "speech.cw.tone_hz".into(),
-                format!("{} is outside {lo} to {hi} hertz", cw.tone_hz),
-                c.to_string(),
-            );
-            cw.tone_hz = c;
+        for (key, hz) in [
+            ("tone_hz", &mut cw.tone_hz),
+            ("sidetone_hz", &mut cw.sidetone_hz),
+        ] {
+            if !(lo..=hi).contains(hz) {
+                let c = (*hz).clamp(lo, hi);
+                fix(
+                    format!("speech.cw.{key}"),
+                    format!("{hz} is outside {lo} to {hi} hertz"),
+                    c.to_string(),
+                );
+                *hz = c;
+            }
         }
         if cw.volume > 100 {
             fix(
@@ -4384,6 +4393,31 @@ shape = \"brackets\"
         assert_eq!(s.summary.sentences, 1);
         let (s, _) = Settings::from_table("[summary]\nsentences = 500\n".parse().unwrap());
         assert_eq!(s.summary.sentences, 50);
+    }
+
+    /// `[speech.cw] sidetone_hz`: 600 like the CW tone by default, kept
+    /// apart from it when set, and held to the tone's range.
+    #[test]
+    fn cw_sidetone_pitch_is_its_own_setting() {
+        let d = Settings::default();
+        assert_eq!((d.speech.cw.sidetone_hz, d.speech.cw.tone_hz), (600, 600));
+        let (s, w) = Settings::from_table(
+            "[speech.cw]\ntone_hz = 700\nsidetone_hz = 450\n"
+                .parse()
+                .unwrap(),
+        );
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!((s.speech.cw.tone_hz, s.speech.cw.sidetone_hz), (700, 450));
+        let text = s.to_minimal_toml().unwrap();
+        assert!(text.contains("sidetone_hz = 450"), "{text}");
+        let (s, w) = Settings::from_table("[speech.cw]\nsidetone_hz = 100\n".parse().unwrap());
+        assert_eq!(
+            w,
+            ["speech.cw.sidetone_hz 100 is outside 200 to 1500 hertz; using 200"]
+        );
+        assert_eq!(s.speech.cw.sidetone_hz, 200);
+        let (s, _) = Settings::from_table("[speech.cw]\nsidetone_hz = 4000\n".parse().unwrap());
+        assert_eq!(s.speech.cw.sidetone_hz, 1500);
     }
 
     /// `[interface] rtl` and `[speech] voices_by_language` (W4d): `auto`

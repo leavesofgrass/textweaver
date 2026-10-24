@@ -104,6 +104,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("speech.cw.keyer", Portable),
     ("speech.cw.swap_paddles", Portable),
     ("speech.cw.sidetone", Portable),
+    ("speech.cw.sidetone_hz", Portable),
     // The key adapter's notes: the adapter plugged into this computer.
     ("speech.cw.dit_note", Machine),
     ("speech.cw.dah_note", Machine),
