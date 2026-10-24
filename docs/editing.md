@@ -279,6 +279,8 @@ The copies are in the `recovery` folder of the data folder. The [library guide](
 
 **Ctrl+C** copies the selection. In reading mode with nothing selected, it copies the sentence at the cursor and you hear "Copied the sentence:" followed by its first words; with a selection you hear "Copied:" and the first words. **Ctrl+X** cuts the selection in edit mode as a single undo step. A long selection is summarized rather than read in full: you hear the number of characters copied together with the first and last few words.
 
+In the graphical version a selection made with the mouse works exactly as one made with Shift and the cursor keys: drag across the text, or Shift with a click, a double click for a word, or a triple click for a whole line of the source; then Ctrl+C, Ctrl+X, Ctrl+V, typing, or the context menu act on it. See [Selecting with the mouse](gui.md#selecting-with-the-mouse).
+
 In the terminal reader, textweaver sends copied text to the terminal, which places it on your computer's clipboard (the OSC 52 sequence, which also works over SSH). Windows Terminal, iTerm2, kitty, WezTerm, foot, Alacritty, and xterm accept it. The old Windows console window, macOS Terminal, and terminals built on VTE (GNOME Terminal, Tilix) do not, so there textweaver writes to the system clipboard itself; the first time, it says "Copied with the system clipboard, because this terminal cannot take copied text." Konsole receives both. Over SSH and inside tmux, textweaver always uses the terminal, because the system clipboard on that side belongs to the other computer.
 
 ### Paste: formatted text becomes Markdown
