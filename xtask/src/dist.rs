@@ -185,6 +185,33 @@ fn missing_guide(path: &str) -> String {
 ///
 /// A missing file never stops the build: it is left out and named in the
 /// returned warnings, one per file, for [`report_doc_warnings`].
+/// The Markdown links in a guide from `docs/`, rewritten for a copy at
+/// the package root: `gui.md` becomes `docs/gui.md`, `../CHANGELOG.md`
+/// becomes `CHANGELOG.md`. Web addresses, `mailto:` and `#anchor` links
+/// are left alone.
+fn rebase_doc_links(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + 64);
+    let mut rest = text;
+    while let Some(i) = rest.find("](") {
+        out.push_str(&rest[..i + 2]);
+        rest = &rest[i + 2..];
+        let target_end = rest.find([')', ' ']).unwrap_or(rest.len());
+        let target = &rest[..target_end];
+        let external = target.contains("://") || target.starts_with("mailto:");
+        if external || target.starts_with('#') || target.is_empty() {
+            out.push_str(target);
+        } else if let Some(up) = target.strip_prefix("../") {
+            out.push_str(up);
+        } else {
+            out.push_str("docs/");
+            out.push_str(target);
+        }
+        rest = &rest[target_end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 pub(crate) fn stage_user_docs(root: &Path, stage: &Path) -> anyhow::Result<Vec<String>> {
     let mut warnings = Vec::new();
     let guides = fs::read_to_string(root.join(DOCS_INDEX))
@@ -391,7 +418,17 @@ pub(crate) fn stage(
     }
 
     for (src, dest) in DOCS.iter().chain(DATA_FILES.iter()) {
-        eci::copy(&root.join(src), &stage.join(dest))?;
+        if src.starts_with("docs/") && !dest.contains('/') {
+            // A guide copied to the package root (QUICKSTART.md,
+            // INSTALL.md): its links still point beside it in docs/, so
+            // they are rebased to the root, or following them fails.
+            let text =
+                fs::read_to_string(root.join(src)).with_context(|| format!("reading {src}"))?;
+            fs::write(stage.join(dest), rebase_doc_links(&text))
+                .with_context(|| format!("writing {dest}"))?;
+        } else {
+            eci::copy(&root.join(src), &stage.join(dest))?;
+        }
     }
     stage_notices(&root, &stage)?;
     // The helper scripts for this platform (doctor, speech check, update).
@@ -741,6 +778,20 @@ fn collect(dir: &Path, out: &mut Vec<PathBuf>) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn root_copies_of_guides_link_into_docs() {
+        let text = "See [the app](gui.md#focus), [keys](keyboard.md), [changes](../CHANGELOG.md), [site](https://example.org/a.md), [top](#start) and [mail](mailto:x@example.org).";
+        assert_eq!(
+            rebase_doc_links(text),
+            "See [the app](docs/gui.md#focus), [keys](docs/keyboard.md), [changes](CHANGELOG.md), [site](https://example.org/a.md), [top](#start) and [mail](mailto:x@example.org)."
+        );
+        // A link with a title keeps it.
+        assert_eq!(
+            rebase_doc_links(r#"[x](a.md "A")"#),
+            r#"[x](docs/a.md "A")"#
+        );
+    }
 
     /// Packages keep full optimization whatever the everyday `release`
     /// profile becomes: `[profile.dist]` in the root `Cargo.toml` sets fat

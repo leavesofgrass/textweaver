@@ -61,6 +61,10 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **The Windows accessibility tree dump retries again.** `tools/a11y/tree-dump.ps1` asks accessibility-cli for the tree every two seconds for up to 40 seconds, but Windows PowerShell made the tool's first error fatal, so one try made before the textweaver app showed its window ended the script and left the app running. The script now checks the tool's exit code, keeps trying, always stops the app, and on failure prints the end of the app's log. accessibility-cli's "Could not find window for PID n (found m top-level windows)" means the app had no window yet; m counts every top-level window on the desktop.
 
+### Packages and the build
+
+- The links in the packaged QUICKSTART.md and INSTALL.md now reach the guides in the package's docs folder, so following them works in an installed copy.
+
 ## [0.1.0-beta.3] - 2026-10-17
 
 ### Changed
