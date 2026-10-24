@@ -601,3 +601,87 @@ fn an_edit_sends_only_the_edited_paragraph() {
         text_of(&app).trim_end_matches('\n')
     );
 }
+
+/// Where the document draws the caret for `pos`, in the window: a point
+/// just inside the char after it.
+fn point_of(
+    app: &mut App,
+    h: &mut TestHarness<Root>,
+    r: &mut gui::Refresher,
+    pos: CharPos,
+) -> masonry::kurbo::Point {
+    let _ = app.dispatch(Command::SetCursor(pos));
+    let _ = r.refresh(app, h);
+    let _ = h.redraw();
+    let foot = h.get_widget(DOC).inner().caret_point().expect("drawn");
+    masonry::kurbo::Point::new(foot.x + 2.0, foot.y - 6.0)
+}
+
+/// A drag with the primary button from `from` to `to`, and the one caret
+/// move it reports, given to the app as the window does.
+fn mouse_drag(
+    app: &mut App,
+    h: &mut TestHarness<Root>,
+    r: &mut gui::Refresher,
+    from: masonry::kurbo::Point,
+    to: masonry::kurbo::Point,
+) {
+    use masonry::core::PointerButton;
+    while h.pop_action_erased().is_some() {}
+    h.mouse_move(from);
+    h.mouse_button_press(Some(PointerButton::Primary));
+    h.mouse_move(to);
+    h.mouse_button_release(Some(PointerButton::Primary));
+    let mut seen = 0;
+    while let Some((a, _)) = h.pop_action::<DocAction>() {
+        if let DocAction::CaretMoved {
+            caret, selection, ..
+        } = a
+        {
+            seen += 1;
+            r.caret_moved(app, caret, selection);
+        }
+    }
+    assert_eq!(seen, 1, "one caret move for the drag");
+}
+
+/// A mouse selection is the app's selection, as a keyboard one is: Copy
+/// takes it in reading mode, and in edit mode Cut takes it out and the
+/// paste key replaces it.
+#[test]
+fn copy_cut_and_paste_work_on_a_mouse_selection() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut app, mut h, mut r, _doc) = setup(dir.path());
+    // Reading mode.
+    let text = text_of(&app);
+    let start = text.find("First").unwrap();
+    let from = point_of(&mut app, &mut h, &mut r, CharPos(start));
+    let to = point_of(&mut app, &mut h, &mut r, CharPos(start + 5));
+    let _ = app.dispatch(Command::SetCursor(CharPos::ZERO));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    mouse_drag(&mut app, &mut h, &mut r, from, to);
+    let _ = app.dispatch(Command::Action(ActionId::Copy));
+    assert_eq!(app.take_clipboard().as_deref(), Some("First"));
+    // Edit mode: Cut, then the paste key over a new selection.
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let start = NOTES.find("First").unwrap();
+    let from = point_of(&mut app, &mut h, &mut r, CharPos(start));
+    let to = point_of(&mut app, &mut h, &mut r, CharPos(start + 6));
+    mouse_drag(&mut app, &mut h, &mut r, from, to);
+    let _ = app.dispatch(Command::Action(ActionId::Cut));
+    assert_eq!(app.take_clipboard().as_deref(), Some("First "));
+    assert!(text_of(&app).contains("\nline."), "{:?}", text_of(&app));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let start = text_of(&app).find("line").unwrap();
+    let from = point_of(&mut app, &mut h, &mut r, CharPos(start));
+    let to = point_of(&mut app, &mut h, &mut r, CharPos(start + 4));
+    mouse_drag(&mut app, &mut h, &mut r, from, to);
+    h.process_text_event(TextEvent::ClipboardPaste("entry".into()));
+    let (action, _) = h.pop_action::<DocAction>().expect("pasted");
+    apply(&mut app, action);
+    assert!(text_of(&app).contains("\nentry."), "{:?}", text_of(&app));
+}

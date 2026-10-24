@@ -380,6 +380,8 @@ You hear the text that was added, then "selected", or the text that was removed,
 
 Press **v** to hear the selection. Notes and highlights use the selection too; see [Bookmarks, notes, and highlights](notes.md).
 
+In the textweaver app the mouse selects as well: drag across the text, Shift with a click to extend, a double click for a word, and a triple click for a paragraph. A mouse selection is the same selection, so **v**, notes, highlights, and Copy use it. See [Selecting with the mouse](gui.md#selecting-with-the-mouse).
+
 ## Speech Cursor mode: line by line
 
 Speech Cursor mode reads exactly one line at a time. Use it to check a list, a table, code, or a poem line by line.

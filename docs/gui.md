@@ -133,6 +133,21 @@ The document moves its cursor with your system's keys, and Shift with any of the
 
 In browse mode, Home and End go to the ends of the line, as in any document window; in the terminal they go to the ends of the document, a role that Ctrl+Home and Ctrl+End fill here. In Speech Cursor mode (Alt+Shift+S, or Reading, then Speech Cursor, in the menus; Tab moves the focus here, as in any window, and is the terminal's key), Up and Down read the next and previous line and Page Up and Page Down move by paragraph, as in the terminal.
 
+## Selecting with the mouse
+
+The mouse selects text in the document as it does in a word processor, in reading mode and in edit mode. The selection it makes is the same one that Shift and the cursor keys make, so Copy, Cut, Paste, the context menu, and every command that acts on a selection treat the two alike.
+
+- **A click** places the cursor where you click, with nothing selected. A click on a link places the cursor on the link and does not follow it; Enter follows it, as described under [Following links to other documents](#following-links-to-other-documents).
+- **Dragging** with the left button held selects from where the drag began to the pointer, in either direction. Dragging to the top or bottom edge of the document, or past it, scrolls the text a line at a time, faster the farther past the edge the pointer goes, and the selection grows with it. In a very long document the scrolling stops at the end of the text the app holds around the cursor, about 120,000 characters.
+- **Shift with a click** extends the selection from its fixed end to the click, or from the cursor when nothing is selected.
+- **A double click** selects the word under the pointer, without the space after it. **A triple click** selects the paragraph with its line break. In edit mode a paragraph of the view is a line of the Markdown source, so there a triple click selects the line, as in most code editors. Dragging after a double or a triple click extends the selection by whole words or whole paragraphs.
+- **A right-click** opens the context menu at the pointer. On the selection, the menu acts on it; elsewhere, the cursor moves to the click first.
+- **The mouse wheel** scrolls without moving the cursor, and moving the mouse brings back what focus mode hid, as before.
+
+The selection is drawn with the theme's selection style: in the built-in themes, reverse video (the text and page colors swapped), which marks it by lightness and shape and not by hue alone, with the contrast of the theme's own text.
+
+A drag is reported once, when the button comes up. Your screen reader then hears the new selection, as it does after selecting with the keyboard, rather than every position the pointer crossed, and the Braille view, RSVP, and the status bar move to it at the same moment. With **Speak textweaver's messages** on, textweaver says the selected text followed by "selected", as it does for Shift with a cursor key; a long selection is summarized with its number of characters and its first and last words. A plain click says nothing in textweaver's own voice, as before; a screen reader reads the new cursor position itself.
+
 ## Keys
 
 The app uses the same keymap as the terminal reader, plus a few chords the terminal cannot send. The [keyboard reference](keyboard.md) lists every key, with a column for the app. The keys used most often are:

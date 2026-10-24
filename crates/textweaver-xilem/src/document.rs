@@ -20,6 +20,11 @@
 //!   Option and Command on macOS for words, paragraphs, and the ends, and
 //!   Shift to select) move the caret here, and the screen reader reads what
 //!   the caret moved over. Every other key goes on to the keymap.
+//! - **Mouse.** A click places the caret, a drag selects (scrolling at
+//!   the top and bottom edges), Shift with a click extends, a double
+//!   click selects a word and a triple click a paragraph. The selection
+//!   is the keyboard's, drawn as it grows and reported once, when the
+//!   button comes up.
 //! - **Actions.** A user's caret move is reported as [`DocAction`]; the
 //!   driver passes it to the app as `Command::SetCursor`.
 
@@ -34,8 +39,9 @@ use masonry::accesskit::{
 use masonry::core::keyboard::{Key, KeyState, NamedKey};
 use masonry::core::{
     AccessCtx, AccessEvent, BrushIndex, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerButtonEvent, PointerEvent, PointerScrollEvent, PropertiesMut, PropertiesRef,
-    RegisterCtx, StyleProperty, TextEvent, Update, UpdateCtx, Widget, WidgetMut, render_text,
+    PointerButton, PointerButtonEvent, PointerEvent, PointerScrollEvent, PointerUpdate,
+    PropertiesMut, PropertiesRef, RegisterCtx, StyleProperty, TextEvent, Update, UpdateCtx, Widget,
+    WidgetMut, render_text,
 };
 use masonry::dpi::{LogicalPosition, PhysicalPosition};
 use masonry::imaging::Painter;
@@ -78,6 +84,14 @@ const PANGRAM: &str = "the quick brown fox jumps over the lazy dog";
 const CACHE_LIMIT: usize = 600;
 /// Scroll distance of one wheel line.
 const WHEEL_LINE: f64 = 48.0;
+/// How near the view's top or bottom edge a drag scrolls the text, in
+/// logical pixels; past the edge it scrolls faster.
+const DRAG_EDGE: f64 = 24.0;
+/// The time between lines a drag scrolls at the edge, in nanoseconds; it
+/// shortens the farther past the edge the pointer is, to [`DRAG_FASTEST`].
+const DRAG_SLOWEST: u64 = 120_000_000;
+/// The shortest time between lines a drag scrolls, in nanoseconds.
+const DRAG_FASTEST: u64 = 25_000_000;
 
 // Brush indices into the palette ([`DocumentView::brushes`]).
 const B_TEXT: usize = 0;
@@ -434,8 +448,10 @@ pub enum DocAction {
         selection: Option<CharRange>,
         /// What textweaver's own voice says for a caret key (the driver
         /// passes it to `App::echo`, which speaks only in the self-voicing
-        /// mode; a screen reader reads the caret itself). `None` for the
-        /// pointer and a screen reader's own moves.
+        /// mode; a screen reader reads the caret itself). `None` for a
+        /// click and a screen reader's own moves; the selected text when
+        /// a drag, Shift with a click, or a double or triple click
+        /// changed the selection.
         echo: Option<CaretEcho>,
     },
     /// Edit mode: Tab (`forward`) or Shift+Tab. The driver runs the app's
@@ -582,6 +598,38 @@ struct SepMarks {
     placed: Vec<(usize, Vec2)>,
 }
 
+/// What a press of the primary button selects as the pointer drags: chars
+/// (a single click), words (a double click), or paragraphs (a triple
+/// click; in edit mode a paragraph is a line of the source).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PressUnit {
+    Char,
+    Word,
+    Paragraph,
+}
+
+/// The primary button held down on the text: a click, or a drag that
+/// selects. The view draws the selection as it grows but reports nothing
+/// until the button comes up, so the driver, the self-voicing echo, and
+/// the screen reader hear of a drag once, at its end.
+#[derive(Clone, Copy, Debug)]
+struct Press {
+    /// The caret and anchor the screen reader was last given: the node
+    /// keeps them as its selection until the press ends.
+    told: (CharPos, Option<CharPos>),
+    /// The unit a drag selects by.
+    unit: PressUnit,
+    /// The unit the press began on, start and end: for chars, the
+    /// selection's fixed end twice (the click, or with Shift the old
+    /// anchor).
+    first: (CharPos, CharPos),
+    /// Where the pointer is, in the view's coordinates.
+    at: Point,
+    /// Time gathered towards the next line a drag at an edge scrolls, in
+    /// nanoseconds.
+    scroll_ns: u64,
+}
+
 /// The document view widget. See the module documentation.
 pub struct DocumentView {
     palette: Palette,
@@ -656,6 +704,8 @@ pub struct DocumentView {
     /// The caret's foot as last painted, in the window's logical pixels:
     /// where a context menu opened from the keyboard appears.
     caret_at: Option<Point>,
+    /// The primary button held down on the text ([`Press`]).
+    press: Option<Press>,
 
     // Accessibility.
     /// Each paragraph's runs, by visual line, built when first asked for.
@@ -759,6 +809,7 @@ impl DocumentView {
             follow: true,
             goal_x: None,
             caret_at: None,
+            press: None,
             para_runs: Vec::new(),
             para_ids: Vec::new(),
             dirty_paras: Vec::new(),
@@ -1183,8 +1234,14 @@ impl DocumentView {
     }
 
     /// Updates the caret and highlights.
-    pub fn set_state(this: &mut WidgetMut<'_, Self>, state: DocState) {
+    pub fn set_state(this: &mut WidgetMut<'_, Self>, mut state: DocState) {
         let w = &mut *this.widget;
+        if w.press.is_some() {
+            // A press in progress keeps its caret and selection until the
+            // button comes up (the spoken word still moves).
+            state.caret = w.state.caret;
+            state.anchor = w.state.anchor;
+        }
         if w.state == state {
             return;
         }
@@ -2507,22 +2564,177 @@ impl DocumentView {
 
     fn hit(&mut self, ctx: &mut EventCtx<'_>, pos: Point) -> Option<CharPos> {
         let (fcx, lcx) = ctx.text_contexts();
+        self.hit_in(pos, fcx, lcx)
+    }
+
+    /// The paragraph on screen at `pos` (in the view's coordinates), and
+    /// `pos` in its layout's coordinates: the last paragraph on screen when
+    /// `pos` is below them all, the first when it is above.
+    fn para_point(
+        &mut self,
+        pos: Point,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> Option<(usize, f32, f32)> {
         for k in 0..self.visible.len() {
             let (i, y) = self.visible[k];
             self.ensure_layout(i, fcx, lcx);
             let h = self.height_of(i);
             if pos.y < y + h || k + 1 == self.visible.len() {
                 let pl = &self.layouts[&i];
-                let p = &self.model.paragraphs[i];
-                let c = Cursor::from_point(
-                    &pl.layout,
+                return Some((
+                    i,
                     (pos.x - self.column_x - pl.indent) as f32,
                     (pos.y - y - pl.top_gap) as f32,
-                );
-                return Some(CharPos(p.start.0 + pl.bytes.char(&p.text, c.index())));
+                ));
             }
         }
         None
+    }
+
+    /// The caret position nearest `pos` (in the view's coordinates).
+    fn hit_in(
+        &mut self,
+        pos: Point,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> Option<CharPos> {
+        let (i, x, y) = self.para_point(pos, fcx, lcx)?;
+        let pl = &self.layouts[&i];
+        let p = &self.model.paragraphs[i];
+        let c = Cursor::from_point(&pl.layout, x, y);
+        Some(CharPos(p.start.0 + pl.bytes.char(&p.text, c.index())))
+    }
+
+    /// The word at `pos` (in the view's coordinates), start and end, as
+    /// Parley finds it for a double click; trailing white space is left
+    /// out, so a double click selects the word alone.
+    fn word_at(
+        &mut self,
+        pos: Point,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> Option<(CharPos, CharPos)> {
+        let (i, x, y) = self.para_point(pos, fcx, lcx)?;
+        let pl = &self.layouts[&i];
+        let p = &self.model.paragraphs[i];
+        let r = Selection::word_from_point(&pl.layout, x, y).text_range();
+        let (start, end) = (
+            pl.bytes.char(&p.text, r.start),
+            pl.bytes.char(&p.text, r.end),
+        );
+        let word: String = p.text.chars().skip(start).take(end - start).collect();
+        let kept = if word.trim().is_empty() {
+            word.chars().count()
+        } else {
+            word.trim_end().chars().count()
+        };
+        Some((
+            CharPos(p.start.0 + start),
+            CharPos(p.start.0 + start + kept),
+        ))
+    }
+
+    /// The paragraph holding `pos`, start and end, with its line break (a
+    /// triple click selects it as a whole line, as editors do).
+    fn paragraph_span(&self, pos: CharPos) -> (CharPos, CharPos) {
+        let paras = &self.model.paragraphs;
+        if paras.is_empty() {
+            return (pos, pos);
+        }
+        let p = &paras[caret::paragraph_at(paras, pos)];
+        (p.start, CharPos(p.start.0 + p.span_chars()))
+    }
+
+    /// The `unit` at caret position `pos`, under the pointer at `at`.
+    fn unit_at(
+        &mut self,
+        unit: PressUnit,
+        pos: CharPos,
+        at: Point,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> (CharPos, CharPos) {
+        match unit {
+            PressUnit::Char => (pos, pos),
+            PressUnit::Word => self.word_at(at, fcx, lcx).unwrap_or((pos, pos)),
+            PressUnit::Paragraph => self.paragraph_span(pos),
+        }
+    }
+
+    /// Puts the caret at `caret` with `anchor` (none when it is the caret)
+    /// during a press: drawn at once, reported when the press ends, and the
+    /// view does not jump to it.
+    fn place(&mut self, caret: CharPos, anchor: Option<CharPos>) {
+        self.state.caret = caret;
+        self.state.anchor = anchor.filter(|a| *a != caret);
+        self.goal_x = None;
+    }
+
+    /// A drag to `at`: the selection runs from where the press began to
+    /// the pointer, by the press's unit. Returns true when it changed.
+    fn drag_to(
+        &mut self,
+        at: Point,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> bool {
+        let Some(press) = self.press else {
+            return false;
+        };
+        let Some(pos) = self.hit_in(at, fcx, lcx) else {
+            return false;
+        };
+        let before = (self.state.caret, self.state.anchor);
+        let (lo, hi) = press.first;
+        let u = self.unit_at(press.unit, pos, at, fcx, lcx);
+        match press.unit {
+            PressUnit::Char => self.place(pos, Some(lo)),
+            _ if u.0.0 < lo.0 => self.place(u.0, Some(hi)),
+            _ => self.place(CharPos(u.1.0.max(hi.0)), Some(lo)),
+        }
+        (self.state.caret, self.state.anchor) != before
+    }
+
+    /// Which way a drag at `at` scrolls, and how long between lines: down
+    /// near or below the view's bottom, up near or above its top.
+    fn drag_scroll(&self, at: Point) -> Option<(bool, u64)> {
+        let (down, depth) = if at.y < DRAG_EDGE {
+            (false, DRAG_EDGE - at.y)
+        } else if at.y > self.size.height - DRAG_EDGE {
+            (true, at.y - (self.size.height - DRAG_EDGE))
+        } else {
+            return None;
+        };
+        let every = (DRAG_SLOWEST as f64 / (1.0 + depth / DRAG_EDGE)) as u64;
+        Some((down, every.max(DRAG_FASTEST)))
+    }
+
+    /// The press ends (the button came up): the caret and the selection go
+    /// to the driver once, with the selected text for the self-voicing
+    /// echo when the press changed the selection, and to the screen reader
+    /// as the node's selection.
+    fn end_press(&mut self, ctx: &mut EventCtx<'_>) {
+        let Some(press) = self.press.take() else {
+            return;
+        };
+        let (was, anchor) = press.told;
+        let told = anchor
+            .filter(|a| *a != was)
+            .map(|a| CharRange::new(a.0.min(was.0), a.0.max(was.0)));
+        let selection = self.selection();
+        let echo = selection
+            .filter(|r| Some(*r) != told)
+            .map(|r| CaretEcho::Selection {
+                text: caret::text_between(&self.model.paragraphs, r.start, r.end),
+                selected: true,
+            });
+        ctx.request_render();
+        ctx.submit_action::<DocAction>(DocAction::CaretMoved {
+            caret: self.state.caret,
+            selection,
+            echo,
+        });
     }
 
     // --- Accessibility.
@@ -2700,7 +2912,7 @@ impl Widget for DocumentView {
     ) {
         match event {
             PointerEvent::Down(PointerButtonEvent { state, button, .. })
-                if *button == Some(masonry::core::PointerButton::Secondary) =>
+                if *button == Some(PointerButton::Secondary) =>
             {
                 // A right-click: the caret goes where it was, unless that
                 // is on the selection, which the menu then acts on.
@@ -2721,13 +2933,71 @@ impl Widget for DocumentView {
                 ctx.set_handled();
             }
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
+                // A click places the caret (Shift extends the selection to
+                // it), a double click selects a word, a triple click a
+                // paragraph; a drag from any of them selects ([`Press`]).
+                // A link is followed with Enter, not by a click.
                 ctx.request_focus();
+                ctx.capture_pointer();
                 let local = ctx.local_position(state.position);
-                if let Some(pos) = self.hit(ctx, local) {
-                    let shift = state.modifiers.shift();
-                    self.move_caret(ctx, pos, shift);
+                let unit = match state.count {
+                    0 | 1 => PressUnit::Char,
+                    2 => PressUnit::Word,
+                    _ => PressUnit::Paragraph,
+                };
+                let told = self
+                    .press
+                    .map_or((self.state.caret, self.state.anchor), |p| p.told);
+                let (fcx, lcx) = ctx.text_contexts();
+                if let Some(pos) = self.hit_in(local, fcx, lcx) {
+                    let first = match unit {
+                        PressUnit::Char if state.modifiers.shift() => {
+                            let a = self.state.anchor.unwrap_or(self.state.caret);
+                            (a, a)
+                        }
+                        _ => self.unit_at(unit, pos, local, fcx, lcx),
+                    };
+                    match unit {
+                        PressUnit::Char => self.place(pos, Some(first.0)),
+                        _ => self.place(first.1, Some(first.0)),
+                    }
+                    self.press = Some(Press {
+                        told,
+                        unit,
+                        first,
+                        at: local,
+                        scroll_ns: 0,
+                    });
+                    ctx.request_render();
                 }
                 ctx.set_handled();
+            }
+            PointerEvent::Move(PointerUpdate { current, .. }) => {
+                let Some(mut press) = self.press else {
+                    return;
+                };
+                if !current.buttons.contains(PointerButton::Primary) {
+                    // The button came up where the view did not hear it.
+                    self.end_press(ctx);
+                    return;
+                }
+                press.at = ctx.local_position(current.position);
+                self.press = Some(press);
+                let (fcx, lcx) = ctx.text_contexts();
+                if self.drag_to(press.at, fcx, lcx) {
+                    ctx.request_render();
+                }
+                if self.drag_scroll(press.at).is_some() {
+                    ctx.request_anim_frame();
+                }
+                // Not handled: the move goes on to the frame, which shows
+                // focus mode's bars again on any move.
+            }
+            PointerEvent::Up(..) | PointerEvent::Cancel(..) => {
+                if self.press.is_some() {
+                    self.end_press(ctx);
+                    ctx.set_handled();
+                }
             }
             PointerEvent::Scroll(PointerScrollEvent { delta, .. }) => {
                 let scale = ctx.scale_factor();
@@ -2744,6 +3014,38 @@ impl Widget for DocumentView {
             }
             _ => {}
         }
+    }
+
+    fn on_anim_frame(&mut self, ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, ns: u64) {
+        // A drag held at the top or bottom edge scrolls a line at a time,
+        // faster the farther past the edge, and the selection follows.
+        let Some(mut press) = self.press else {
+            return;
+        };
+        let Some((down, every)) = self.drag_scroll(press.at) else {
+            press.scroll_ns = 0;
+            self.press = Some(press);
+            return;
+        };
+        press.scroll_ns += ns;
+        let (fcx, lcx) = ctx.text_contexts();
+        let mut moved = false;
+        while press.scroll_ns >= every {
+            press.scroll_ns -= every;
+            if self.step_line(down, fcx, lcx).is_none() {
+                press.scroll_ns = 0;
+                break;
+            }
+            moved = true;
+        }
+        self.press = Some(press);
+        if moved {
+            self.layout_view(fcx, lcx);
+            self.drag_to(press.at, fcx, lcx);
+            ctx.request_layout();
+            ctx.request_render();
+        }
+        ctx.request_anim_frame();
     }
 
     fn on_text_event(
@@ -3666,14 +3968,15 @@ impl Widget for DocumentView {
         self.last_nodes_sent = sent;
 
         // The caret (or, while reading, the caret on the spoken word) as
-        // the text selection.
+        // the text selection; during a press, the one before it, so a drag
+        // reaches the screen reader once, when it ends.
+        let (caret, anchor) = self
+            .press
+            .map_or((self.state.caret, self.state.anchor), |p| p.told);
         let (anchor, focus) = match (self.state.reading, self.state.spoken) {
             (true, Some(r)) if self.select_spoken => (r.start, r.end),
             (true, Some(r)) => (r.start, r.start),
-            _ => (
-                self.state.anchor.unwrap_or(self.state.caret),
-                self.state.caret,
-            ),
+            _ => (anchor.unwrap_or(caret), caret),
         };
         if let (Some(a), Some(f)) = (self.text_position(anchor), self.text_position(focus)) {
             node.set_text_selection(TextSelection {
