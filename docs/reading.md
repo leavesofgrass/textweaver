@@ -73,7 +73,8 @@ If the file cannot be opened, you hear "Could not open", the path, and the reaso
 The reader opens these formats itself:
 
 - Plain text: `.txt`, `.text`, `.log`.
-- Markdown: `.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`, `.mdwn`, `.mdtxt`, `.rmd`.
+- Markdown: `.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`, `.mdwn`, `.mdtxt`, `.rmd`. Obsidian notes are Markdown, and their highlights, comments, task statuses, embeds, and properties are read too ([Obsidian vaults](vault.md)).
+- Obsidian canvases: `.canvas`, a board of cards read as a document ([Canvases](vault.md#canvases)).
 - HTML: `.html`, `.htm`, `.xhtml`, `.xht`.
 - EPUB: `.epub`.
 - Word: `.docx`, `.docm`, with comments as notes.
@@ -331,7 +332,7 @@ Some desktops keep **Ctrl+Alt** with the arrows for switching workspaces; give t
 Move to a link (**k** finds the next one) and press **Enter**, as in a screen reader's browse mode. **Alt+Shift+F** does the same in every mode, edit mode included, where Enter starts a new line.
 
 - A link to a heading in the same document, such as `[see Methods](#methods)`, goes to that heading.
-- A link to another document opens it in textweaver, in place of the current one: `[keyboard reference](keyboard.md)`, `[part](notes/a.md#part-two)`, or an absolute path. A relative path is read from the folder of the document the link is in. Any format textweaver opens can be a link's target, not only Markdown, and so can a file inside a zip (`book.zip!volume1.brf`). An Obsidian wiki link such as `[[chapter 2]]` finds `chapter 2.md` in the folder or below it.
+- A link to another document opens it in textweaver, in place of the current one: `[keyboard reference](keyboard.md)`, `[part](notes/a.md#part-two)`, or an absolute path. A relative path is read from the folder of the document the link is in. Any format textweaver opens can be a link's target, not only Markdown, and so can a file inside a zip (`book.zip!volume1.brf`). An Obsidian wiki link such as `[[chapter 2]]` finds `chapter 2.md` anywhere in the note's vault (the nearest folder above it that holds `.obsidian`), never outside it, and opens a block link (`[[chapter 2#^id]]`) at the block; a note that belongs to no vault finds notes in its own folder and the folders below. See [Read vault notes in textweaver](vault.md#read-vault-notes-in-textweaver).
 - When the link names a heading (the part after `#`), the document opens at that heading; otherwise it opens at its start. A heading is named by its anchor, the GitHub rule the documentation site also uses: lowercase, spaces become hyphens, and punctuation is dropped, so `#edit-mode` names "Edit mode". The heading's own text works too. You hear where you arrived and the key that goes back: "Opened Keyboard reference, at Edit mode. Back: Alt+Left or Backspace." When no heading matches, you hear so, and the document opens at its start.
 - If the document you are editing has unsaved changes, you are asked first, exactly as when you open another file: save, discard, or cancel. After you answer, the link's document opens at its heading.
 - A link to a file that does not exist says so with the path as the link gives it ("The link goes to gone.md, which was not found."), and you stay where you were.
@@ -358,7 +359,8 @@ Chapters are the book's sections when the document has them (EPUB chapters, Word
 ### Pages and scrolling
 
 - **PageDown** and **PageUp**: move one screen, less four lines. You hear "Page, line", the line number, and a preview.
-- **j** and **Shift+J**: scroll the view down or up one line without moving the cursor.
+- **j** and **Shift+J**: scroll the view down or up one line without moving the cursor, in the terminal reader and in the textweaver app. At normal verbosity you hear "Top of document." or "Bottom of document." when you reach an end, and at high verbosity also "Line 12 at top." for the line now at the top.
+- **Line numbers** (View, Line numbers, or the command palette's "toggle line numbers") are drawn in the left margin in both; they are drawn only, so a screen reader reads the text without them. See [Scrolling and line numbers](gui.md#scrolling-and-line-numbers).
 
 ### The cursor keys
 
@@ -841,7 +843,9 @@ tw --help
 - [Keyboard reference](keyboard.md): every key in both frontends, and how to change keys.
 - [Bookmarks, notes, and highlights](notes.md): marking and annotating what you read.
 - [Using textweaver with a screen reader](screen-readers.md): JAWS, NVDA, VoiceOver, and Orca.
-- [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, and text spacing.
+- [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, and the Braille view.
+- [Obsidian vaults](vault.md): reading vault notes, properties, backlinks, tags, and canvases.
+- [CW: reading in Morse code](cw.md): a speech engine that sends the document in Morse code.
 - [Speech engines and voices](speech.md): engines, voices, rate, pitch, and volume.
 - [ADR-0002: Text model](adr/0002-text-model.md): why lines and positions work the way they do.
 - [ADR-0003: Speech threading and event timing](adr/0003-speech-threading-and-event-timing.md): how the highlight follows speech.

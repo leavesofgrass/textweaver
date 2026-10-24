@@ -348,6 +348,18 @@ Speech plays on the system's default sound device. When a headset or other devic
 
 If you hear "Speech stopped working", textweaver restarts speech once on its own. If it fails again, press **Shift+F8** (Restart speech), or restart textweaver.
 
+### Morse code keying or practice does not work
+
+1. Run `tw cw ports`: it lists the MIDI inputs textweaver can see. If your adapter is missing, pair or connect it first. A Bluetooth LE adapter such as the TinyMIDI needs to be paired again after you change its mode.
+2. Run `tw cw monitor` and key. It prints what the adapter sends, in words, so you can compare the note numbers with the CW dit, dah, and straight key MIDI note settings. See [Record what a key adapter sends](cw.md#record-what-a-key-adapter-sends-tw-cw-monitor).
+3. Turn keying on in edit mode with Alt+Shift+F11. Keying is off outside edit mode, and in reading mode the key only says so.
+4. Keyboard adapters (VBand, Vail, and the TinyMIDI in keyboard mode) key only in the textweaver app; the terminal reader keys from MIDI.
+5. If you hear no sidetone, the speech engine is one that plays no audio of its own, or a screen reader is speaking for textweaver. Use your adapter's own sidetone then, or turn off CW sidetone.
+
+### The Braille view is empty or uncontracted
+
+The Braille view is in the textweaver app, and in the terminal reader only in self-voicing mode; with a screen reader running in the terminal there is no row, by design. Contracted braille needs liblouis; without it the view shows uncontracted braille, and its caption says so. See [The Braille view](reading-aids.md#the-braille-view).
+
 ## Report a bug
 
 A good report allows someone else to reproduce the problem. Include:
@@ -372,5 +384,6 @@ Report bugs at the project's issue tracker: [github.com/leavesofgrass/textweaver
 - [Installing textweaver](install.md): packages, SmartScreen, and Gatekeeper.
 - [Updates](updates.md) and [Optional components](components.md): when an update or a download fails.
 - [Keyboard reference](keyboard.md): every key, and the terminal notes.
+- [CW: reading in Morse code](cw.md): keying, adapters, and practice.
 - [Scripts](../scripts/README.md): the doctor, the speech check, and the install scripts.
 - [Documentation index](README.md)
