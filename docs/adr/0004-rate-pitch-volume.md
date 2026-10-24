@@ -25,6 +25,6 @@ Every engine has its own scale: espeak-ng takes words per minute, SAPI and WinRT
 ## See also
 
 - [Speech engines and voices](../speech.md): changing rate, pitch, and volume.
-- [Settings](../settings.md#speech): the `[speech]` settings.
+- [Settings](../settings.md#voice-and-speech): the `[speech]` settings, under Voice and speech.
 - [Keyboard reference](../keyboard.md#voice): the voice keys.
 - [Documentation index](../README.md)
