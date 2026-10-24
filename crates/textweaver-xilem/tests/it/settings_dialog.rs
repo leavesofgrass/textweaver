@@ -30,6 +30,11 @@ fn app(home: &std::path::Path) -> App {
 
 /// The window with the settings dialog open on its first section.
 fn harness_with_dialog(app: &App) -> (TestHarness<Root>, SettingsForm) {
+    harness_sized(app, (1100, 780))
+}
+
+/// [`harness_with_dialog`] in a window of `size`.
+fn harness_sized(app: &App, size: (u32, u32)) -> (TestHarness<Root>, SettingsForm) {
     let p = Palette::galaxy();
     let tree = gui::build_tree(
         &p,
@@ -39,7 +44,7 @@ fn harness_with_dialog(app: &App) -> (TestHarness<Root>, SettingsForm) {
         Default::default(),
     );
     let mut params = TestHarnessParams::default();
-    params.window_size = (1100, 780).into();
+    params.window_size = size.into();
     let mut h = TestHarness::create_with(theme::default_properties(&p), tree.root, params);
     gui::refresh_for_tests(app, &mut h);
     let form = SettingsForm::new(app.settings_schema());
@@ -116,6 +121,103 @@ fn settings_and_sections_below_the_fold_stay_in_the_tree() {
             "the {name}"
         );
     }
+}
+
+/// The name a platform screen reader gets for `node`: AccessKit names a
+/// label by its value, everything else by its label.
+fn spoken_name(node: &accesskit_consumer::NodeRef<'_>) -> Option<String> {
+    if node.label_comes_from_value() {
+        node.value()
+    } else {
+        node.label()
+    }
+}
+
+/// Every setting of every section, the long ones above all (Speech has
+/// about fifty), is in the tree a screen reader gets, under its own name,
+/// and Down reaches the last one, scrolled into the form's view. The
+/// owner (B4) reached nothing in Speech after "Pause after paragraphs";
+/// the window is the size of a maximized one on a 1080p screen, where
+/// that is the last row inside the window before the form scrolls.
+#[test]
+fn every_setting_of_every_section_is_named_and_reached_with_down() {
+    use accesskit_consumer::common_filter;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let c = app.catalog();
+    let (mut h, form) = harness_sized(&app, (1920, 1009));
+    let speech = form
+        .find("speech.cw.midi_channel")
+        .expect("CW in the form")
+        .0;
+    assert!(
+        form.settings_in(speech).len() > 40,
+        "Speech is a long section: {}",
+        form.settings_in(speech).len()
+    );
+    for i in 0..form.sections.len() {
+        let settings = form.settings_in(i);
+        let rows = form.rows(i, &app);
+        assert_eq!(rows.len(), settings.len(), "{}", form.sections[i]);
+        h.edit_widget(FORM, |mut g| {
+            SettingsGrid::set_section(&mut g, form.form_label(i, &c), rows, 0);
+        });
+        let _ = h.redraw();
+        let grid = h.access_node(h.get_widget(FORM).id()).unwrap();
+        let names: Vec<_> = grid
+            .filtered_children(common_filter)
+            .map(|n| spoken_name(&n).unwrap_or_default())
+            .collect();
+        assert_eq!(names.len(), settings.len(), "{}", form.sections[i]);
+        for (name, s) in names.iter().zip(&settings) {
+            assert!(
+                name.starts_with(s.label),
+                "{}: {} is named {name:?}",
+                form.sections[i],
+                s.path
+            );
+        }
+        for _ in 1..settings.len() {
+            h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::ArrowDown)));
+            let _ = h.redraw();
+        }
+        let grid = h.access_node(h.get_widget(FORM).id()).unwrap();
+        let view = grid.bounding_box().expect("the form has bounds");
+        let last = grid.active_descendant().expect("an active descendant");
+        assert_eq!(
+            last.label().as_deref(),
+            settings.last().map(|s| s.label),
+            "Down reaches the last setting of {}",
+            form.sections[i]
+        );
+        let b = last.bounding_box().expect("the row has bounds");
+        assert!(
+            b.y0 >= view.y0 - 0.5 && b.y1 <= view.y1 + 0.5,
+            "the last setting of {} is in view: {b:?} in {view:?}",
+            form.sections[i]
+        );
+    }
+}
+
+/// A table's row says the setting's name, not only its size: AccessKit
+/// names a label by its value, so "4 entries" alone was all NVDA said for
+/// Speed presets.
+#[test]
+fn a_tables_row_is_named_by_its_setting() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let (h, form) = harness_with_dialog(&app);
+    let (section, row) = form.find("speech.speed_presets").unwrap();
+    assert_eq!(section, 0);
+    let grid = h.access_node(h.get_widget(FORM).id()).unwrap();
+    let node = grid.children().nth(row).unwrap();
+    assert_eq!(node.role(), Role::Label);
+    let name = spoken_name(&node).unwrap_or_default();
+    assert!(name.starts_with("Speed presets, "), "{name:?}");
+    assert_eq!(
+        settings_dialog::table_name("Speed presets", ""),
+        "Speed presets"
+    );
 }
 
 /// Settings scrolled into view are drawn with their text, not blank.

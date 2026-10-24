@@ -826,6 +826,17 @@ impl SettingsGrid {
     }
 }
 
+/// What a screen reader says for a table's row, which AccessKit names by
+/// its value: the setting's name, then the value ("Speed presets, 4
+/// entries").
+pub fn table_name(label: &str, value: &str) -> String {
+    if value.is_empty() {
+        label.to_owned()
+    } else {
+        format!("{label}, {value}")
+    }
+}
+
 /// A number as typed: no trailing zeros, whole for whole steps.
 fn number_text(value: f64, step: f64) -> String {
     if step.fract() == 0.0 && value.fract() == 0.0 {
@@ -1390,8 +1401,12 @@ impl Widget for SettingsGrid {
                     o
                 }
                 RowKind::Table => {
+                    // A label's name is its value on every platform
+                    // (AccessKit's `label_comes_from_value`), so the value
+                    // carries the setting's name first: "Speed presets, 4
+                    // entries", not "4 entries" alone.
                     let mut o = Node::new(Role::Label);
-                    o.set_value(r.value_text.as_str());
+                    o.set_value(table_name(&r.label, &r.value_text));
                     o.set_read_only();
                     o
                 }
