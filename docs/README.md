@@ -29,8 +29,8 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 - [Quick start](quickstart.md): installation, a first reading, and navigation on Windows, macOS, and Linux.
 - [Installing textweaver](install.md): the packages, the install scripts, and checking a download.
-- [Using textweaver with a screen reader](screen-readers.md): the three accessibility modes (self-voicing, hybrid, and screen reader), settings for NVDA and JAWS, and terminal keys that clash.
-- [Troubleshooting](troubleshooting.md): the log file, diagnosing speech, and common problems.
+- [Using textweaver with a screen reader](screen-readers.md): the three accessibility modes (self-voicing, hybrid, and screen reader), settings for NVDA and JAWS, terminal keys that clash, and braille displays, including the Braille view and CW on the status line.
+- [Troubleshooting](troubleshooting.md): the log file, diagnosing speech, and common problems, including Morse code adapters and the Braille view.
 
 ### Reading
 
@@ -45,9 +45,9 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ### Writing
 
-- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, Obsidian wiki links, tasks, and callouts, undo, saving, the outline, spell check, clipboard and Markdown paste, templates, find and replace with regular expressions, the preview pane, and tracked changes in Word files.
+- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, Obsidian wiki links, tasks, and callouts, Morse code keying, undo, saving, the outline, spell check, clipboard and Markdown paste, templates, find and replace with regular expressions, the preview pane, and tracked changes in Word files.
 - [Citations](citations.md): inserting citations while writing, `tw cite`, the reference library, DOI and ISBN lookup, and citation styles.
-- [Dictation](dictation.md): `tw dictate`, turning speech in an audio file into text.
+- [Dictation](dictation.md): voice typing in edit mode, and `tw dictate`, turning speech in an audio file into text.
 
 ### Speech
 
@@ -157,7 +157,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Speech pipeline](site/speech-pipeline.html): step from a key press to a highlighted word, with a worked offset map.
 - [Keyboard](site/keyboard.html): search and filter every key by category, layer, frontend, and platform.
 - [Features](site/features.html): everything textweaver does, with its status.
-- [Reading aids](site/reading-aids.html): try RSVP, bionic reading, and the reading ruler.
+- [Reading aids](site/reading-aids.html): try RSVP, bionic reading, and the reading ruler, and read about the Braille view.
 - [About the pages](site/README.md): how they are made and regenerated.
 
 ## See also

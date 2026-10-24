@@ -136,6 +136,10 @@ Four commands write the parts of Obsidian's syntax that are tedious to type by h
 
 Writing citations and math has its own guides: [citations](citations.md) and [math](math.md).
 
+## Morse code keying: Alt+Shift+F11
+
+With a Morse key or paddle and a key adapter, Morse code you key can be typed into the document at the cursor. Press Alt+Shift+F11 in edit mode (CW keying, also in the Edit menu and the command palette) to turn keying on, and again to turn it off; leaving edit mode turns it off too. textweaver times the dits and dahs itself, with an iambic keyer or a straight key, decodes the characters, and plays a sidetone. The status line shows the characters keyed, in 40 cells, for a Braille display, and Alt+Shift+R shows the word being keyed. MIDI adapters work in the terminal reader and the textweaver app; keyboard adapters work in the app only. The adapters, the keyer, and what each prosign types are in [Key Morse code into a document](cw.md#key-morse-code-into-a-document).
+
 ## Undo and redo
 
 - **Ctrl+Z**: undo.
