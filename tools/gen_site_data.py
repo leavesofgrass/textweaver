@@ -380,7 +380,7 @@ FEATURES = [
          "done", "Whole folders convert in parallel.", "converting.md"),
         ("Grade 2 braille",
          "Contracted braille output in BRF files.",
-         "partial", "Needs the liblouis build feature and liblouis installed.", "converting.md"),
+         "partial", "From the reader's export, with liblouis installed; tw convert writes grade 1.", "converting.md"),
         ("Audio export",
          "Read a document into WAV, FLAC, MP3, Opus, or M4B with chapters, plus SRT or WebVTT subtitles.",
          "done", "Only M4B needs ffmpeg.", "audio-export.md"),
