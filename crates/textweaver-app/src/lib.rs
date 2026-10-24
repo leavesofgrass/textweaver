@@ -243,6 +243,7 @@ pub mod rpc;
 mod search_options;
 pub mod settings_io;
 pub mod settings_schema;
+pub mod settings_sections;
 mod speech_cursor;
 pub mod speech_start;
 mod spell;
@@ -320,6 +321,7 @@ pub use search_options::SearchOptions;
 pub use settings_schema::{
     Frontend, Setting, SettingKind, SettingsSchema, TERMINAL_ONLY, WINDOW_ONLY,
 };
+pub use settings_sections::{Condition, Os, SECTIONS, Section, SettingsContext, applies};
 pub use speech_start::start_speech_service;
 pub use templates::local_date;
 pub use textweaver_engines::{

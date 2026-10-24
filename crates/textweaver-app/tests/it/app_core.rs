@@ -328,8 +328,11 @@ fn the_settings_screen_changes_values_with_the_arrows() {
     let (mut app, said) = app("Text.");
     app.dispatch(Command::Action(ActionId::Settings));
     assert!(said.any("Settings, "));
-    let n = app.list_model().expect("the settings list").items.len();
-    assert!(n > 80, "{n} settings");
+    // The sections, then All settings; typing searches every setting.
+    let items = app.list_model().expect("the settings list").items.clone();
+    assert!(items.len() < 30, "{items:?}");
+    assert!(items[0].starts_with("Voice and speech, "), "{items:?}");
+    assert!(items.last().unwrap().starts_with("All settings, "));
     // Filter to the rate.
     for c in "rate".chars() {
         list_key(&mut app, ListKey::Char(c));
@@ -390,6 +393,14 @@ fn the_settings_screen_changes_values_with_the_arrows() {
 fn choosing_a_setting_keeps_the_list_in_place() {
     let (mut app, _said) = app("Text.");
     app.dispatch(Command::Action(ActionId::Settings));
+    // Choosing a section opens it.
+    let sections = app.list_model().unwrap().items.clone();
+    let display = sections
+        .iter()
+        .position(|x| x.starts_with("Display, "))
+        .unwrap();
+    app.dispatch(Command::Choose(display));
+    assert_eq!(app.list_model().unwrap().title, "Settings: Display");
     let items = app.list_model().unwrap().items.clone();
     let i = items
         .iter()
@@ -400,13 +411,112 @@ fn choosing_a_setting_keeps_the_list_in_place() {
     let list = app.list_model().expect("shown again");
     assert_eq!(list.selected, i);
     assert_eq!(list.items[i], "Line numbers: on");
+    // Escape goes back to the sections, on Display.
+    app.dispatch(Command::Cancel);
+    let list = app.list_model().expect("the sections");
+    assert_eq!(list.title, "Settings");
+    // Line numbers is now listed first, as recently changed.
+    assert!(list.items[0].starts_with("Line numbers: on, recently changed"));
+    assert!(list.items[list.selected].starts_with("Display, "));
+    let sections = list.items.clone();
     // A table says where to edit it, and the list stays.
+    let speaking = sections
+        .iter()
+        .position(|x| x.starts_with("Speaking text, "))
+        .unwrap();
+    app.dispatch(Command::Choose(speaking));
+    let items = app.list_model().unwrap().items.clone();
     let t = items
         .iter()
         .position(|x| x.starts_with("Pronunciations: "))
         .unwrap();
     app.dispatch(Command::Choose(t));
     assert_eq!(app.list_model().unwrap().selected, t);
+}
+
+/// The sections follow the speech engine: CW's sound replaces the voice
+/// in Voice and speech, and a search still finds what is hidden, saying
+/// why it does not apply now.
+#[test]
+fn settings_sections_follow_the_engine_and_search_finds_the_rest() {
+    let (mut app, said) = app("Text.");
+    app.dispatch(Command::Action(ActionId::Settings));
+    let sections = app.list_model().unwrap().items.clone();
+    let voice = sections
+        .iter()
+        .position(|x| x.starts_with("Voice and speech, "))
+        .unwrap();
+    app.dispatch(Command::ListFocus(voice));
+    list_key(&mut app, ListKey::Enter);
+    assert!(
+        said.any("Voice and speech, "),
+        "the section says what it holds: {:?}",
+        said.all()
+    );
+    let items = app.list_model().unwrap().items.clone();
+    assert!(items[0].starts_with("Speech engine: "), "{items:?}");
+    assert!(items.iter().any(|x| x.starts_with("Rate: ")));
+    assert!(!items.iter().any(|x| x.starts_with("CW character speed: ")));
+    assert!(!items.iter().any(|x| x.starts_with("Eloquence library: ")));
+    // CW as the engine: the voice goes, CW's sound comes, and the new
+    // count is said.
+    app.dispatch(Command::SetSetting {
+        path: "speech.backend".into(),
+        value: serde_json::json!("cw"),
+    });
+    let items = app.list_model().unwrap().items.clone();
+    assert!(
+        items.iter().any(|x| x.starts_with("CW character speed: ")),
+        "{items:?}"
+    );
+    assert!(items.iter().any(|x| x.starts_with("CW prosigns: ")));
+    assert!(!items.iter().any(|x| x.starts_with("Rate: ")));
+    assert!(said.any("Voice and speech now lists "), "{:?}", said.all());
+    // A search finds the rate, and says why it does not apply now.
+    for c in "rate".chars() {
+        list_key(&mut app, ListKey::Char(c));
+    }
+    let items = app.list_model().unwrap().items.clone();
+    let rate = items
+        .iter()
+        .find(|x| x.starts_with("Rate: "))
+        .expect("found");
+    assert!(
+        rate.ends_with(". Applies when CW (Morse code) is not the speech engine."),
+        "{rate}"
+    );
+    // Escape goes back to the sections, then closes.
+    list_key(&mut app, ListKey::Escape);
+    assert_eq!(app.list_model().unwrap().title, "Settings");
+    assert!(said.any("Settings sections."));
+    list_key(&mut app, ListKey::Escape);
+    assert!(app.list_model().is_none());
+}
+
+/// All settings lists every setting the terminal shows, those that do not
+/// apply now too, each with its reason.
+#[test]
+fn all_settings_lists_every_setting() {
+    let (mut app, said) = app("Text.");
+    app.dispatch(Command::Action(ActionId::Settings));
+    let n = app.list_model().unwrap().items.len();
+    app.dispatch(Command::Choose(n - 1));
+    assert!(said.any("All settings, "), "{:?}", said.all());
+    let list = app.list_model().unwrap();
+    assert_eq!(list.title, "Settings: All settings");
+    let shown = app
+        .settings_schema()
+        .all_on(textweaver_app::Frontend::Terminal)
+        .count();
+    assert_eq!(list.items.len(), shown);
+    assert!(
+        list.items
+            .iter()
+            .any(|x| x.starts_with("Eloquence library: ")
+                && x.ends_with("Applies when Eloquence is the speech engine.")),
+        "{:?}",
+        list.items
+    );
 }
 
 // The waker.

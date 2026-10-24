@@ -2357,6 +2357,7 @@ choice-speech-backend-nsspeech = Apple NSSpeech
 choice-speech-backend-avspeech = Apple AVSpeech
 choice-speech-backend-dectalk = DECtalk
 choice-speech-backend-omnivox = Omnivox
+choice-speech-backend-piper = Piper
 choice-speech-backend-cw = CW (شفرة مورس)
 choice-speech-backend-null = صامت
 setting-speech-rate = السرعة
@@ -2941,24 +2942,15 @@ settings-unit-minutes =
 
 ## أقسام الإعدادات.
 
-section-speech = الكلام
 section-highlight = تمييز
-section-normalization = نطق النص
 section-reading = القراءة
 section-display = العرض
 section-editing = التحرير
-section-authoring = التأليف
-section-library = المكتبة
-section-keyboard = لوحة المفاتيح
-section-accessibility = إمكانية الوصول
+section-library = المكتبة وأدوات الدراسة
+section-keyboard = لوحة المفاتيح واللغة
+section-accessibility = إمكانية الوصول والإعلانات
 section-export = التصدير
 section-braille = برايل
-section-reading-aids = أدوات القراءة
-section-preview = معاينة
-section-lexicon = تعريف كلمة
-section-stats = إحصاءات القراءة
-section-interface = الواجهة
-section-gui = النافذة
 
 ## وضع التحرير: الدخول والمغادرة والحفظ والكتابة.
 
@@ -4176,7 +4168,6 @@ setting-summary-sentences = جمل الملخص
 setting-summary-sentences-help = عدد الجمل التي يعطيها التلخيص و tw summarize، من 1 إلى 50.
 setting-reading-aids-difficult-definitions = تعريفات الكلمات الصعبة
 setting-reading-aids-difficult-definitions-help = عند تمييز الكلمات الصعبة، نطق التعريف الأول للكلمة الصعبة من القاموس أيضًا في مستوى التفصيل المرتفع.
-section-summary = الملخصات
 settings-unit-sentences =
     { $n ->
         [one] جملة
@@ -5233,7 +5224,6 @@ dictation-model-damaged = نموذج الإملاء تالف: { $file }.
 dictation-model-no-folder = لا مجلد للنموذج: { $dir }.
 
 ## إعدادات المكونات الاختيارية.
-section-components = المكونات الاختيارية
 setting-dictation-model = نموذج الإملاء
 setting-dictation-model-help = نموذج Whisper الذي يستخدمه الإملاء حين لا يُحدَّد مجلد. «تنزيل نموذج الإملاء» في قائمة الأدوات يجلبه.
 choice-dictation-model-whisper-base-en = base.en، الافتراضي
@@ -5269,7 +5259,7 @@ update-error-cancelled = توقف تنزيل التحديث؛ يُستأنف ف�
 update-error-download = لم يُنزَّل التحديث: { $reason }
 update-error-install = لم يُثبَّت التحديث: { $reason }. لم يتغير شيء.
 update-error-not-package = لم يُحدَّث: هذه النسخة ليست من حزمة إصدار.
-section-updates = التحديثات
+section-updates = التحديثات والمكونات
 setting-updates-check = البحث عن تحديثات
 setting-updates-check-help = البحث عن إصدار أحدث من textweaver مرة يوميًا عند البدء. يقرأ القائمة العامة للإصدارات على GitHub ويسأل قبل التنزيل. لا يُرسل شيء عنك. المساعدة، البحث عن تحديثات يبحث في أي وقت.
 
@@ -5619,3 +5609,93 @@ cw-keying-unknown = ليس حرفًا من شفرة مورس.
 cw-keying-erased = إشارة الخطأ: مُحي { $text }.
 cw-keying-nothing-erased = إشارة الخطأ: لا شيء مُبرَق لمحوه.
 cw-keying-rsvp-on = العرض السريع يُظهر الكلمات التي تبرقها.
+
+## Settings by task (beta 4): sections, and when a setting applies.
+
+section-voice = الصوت والكلام
+section-pauses = الوقفات ومستوى التفصيل
+section-speaking-text = نطق النص
+section-documents = المستندات
+section-math = الرياضيات
+section-morse = شفرة مورس
+section-morse-practice = التدرب على مورس
+section-spacing = التباعد والخط والمسطرة
+section-word-aids = أدوات الكلمات
+section-rsvp = كلمة كلمة (RSVP)
+section-window = الأشرطة واللوحات
+# $n is the number of sections.
+settings-intro-sections =
+    { $n ->
+        [0] الإعدادات، لا أقسام. Enter يفتح قسمًا. اكتب للبحث في كل الإعدادات. Escape للإغلاق.
+        [one] الإعدادات، قسم واحد. Enter يفتح قسمًا. اكتب للبحث في كل الإعدادات. Escape للإغلاق.
+        [two] الإعدادات، قسمان. Enter يفتح قسمًا. اكتب للبحث في كل الإعدادات. Escape للإغلاق.
+        [few] الإعدادات، { $n } أقسام. Enter يفتح قسمًا. اكتب للبحث في كل الإعدادات. Escape للإغلاق.
+        [many] الإعدادات، { $n } قسمًا. Enter يفتح قسمًا. اكتب للبحث في كل الإعدادات. Escape للإغلاق.
+       *[other] الإعدادات، { $n } قسم. Enter يفتح قسمًا. اكتب للبحث في كل الإعدادات. Escape للإغلاق.
+    }
+# $section is a section-* title, $n its number of settings.
+settings-section-row =
+    { $n ->
+        [0] { $section }، لا إعدادات
+        [one] { $section }، إعداد واحد
+        [two] { $section }، إعدادان
+        [few] { $section }، { $n } إعدادات
+        [many] { $section }، { $n } إعدادًا
+       *[other] { $section }، { $n } إعداد
+    }
+settings-all = كل الإعدادات
+settings-all-row =
+    { $n ->
+        [0] كل الإعدادات، لا إعدادات
+        [one] كل الإعدادات، إعداد واحد
+        [two] كل الإعدادات، إعدادان
+        [few] كل الإعدادات، { $n } إعدادات
+        [many] كل الإعدادات، { $n } إعدادًا
+       *[other] كل الإعدادات، { $n } إعداد
+    }
+settings-title-section = الإعدادات: { $section }
+settings-section-opened =
+    { $n ->
+        [0] { $section }، لا إعدادات. يسار ويمين لتغيير قيمة، Enter لتغيير قيمة أو كتابتها، Delete لإعادة القيمة الافتراضية، Escape للعودة إلى الأقسام.
+        [one] { $section }، إعداد واحد. يسار ويمين لتغيير قيمة، Enter لتغيير قيمة أو كتابتها، Delete لإعادة القيمة الافتراضية، Escape للعودة إلى الأقسام.
+        [two] { $section }، إعدادان. يسار ويمين لتغيير قيمة، Enter لتغيير قيمة أو كتابتها، Delete لإعادة القيمة الافتراضية، Escape للعودة إلى الأقسام.
+        [few] { $section }، { $n } إعدادات. يسار ويمين لتغيير قيمة، Enter لتغيير قيمة أو كتابتها، Delete لإعادة القيمة الافتراضية، Escape للعودة إلى الأقسام.
+        [many] { $section }، { $n } إعدادًا. يسار ويمين لتغيير قيمة، Enter لتغيير قيمة أو كتابتها، Delete لإعادة القيمة الافتراضية، Escape للعودة إلى الأقسام.
+       *[other] { $section }، { $n } إعداد. يسار ويمين لتغيير قيمة، Enter لتغيير قيمة أو كتابتها، Delete لإعادة القيمة الافتراضية، Escape للعودة إلى الأقسام.
+    }
+settings-all-opened =
+    { $n ->
+        [0] كل الإعدادات، لا إعدادات، ومنها ما لا ينطبق الآن. Escape للعودة إلى الأقسام.
+        [one] كل الإعدادات، إعداد واحد، ومنها ما لا ينطبق الآن. Escape للعودة إلى الأقسام.
+        [two] كل الإعدادات، إعدادان، ومنها ما لا ينطبق الآن. Escape للعودة إلى الأقسام.
+        [few] كل الإعدادات، { $n } إعدادات، ومنها ما لا ينطبق الآن. Escape للعودة إلى الأقسام.
+        [many] كل الإعدادات، { $n } إعدادًا، ومنها ما لا ينطبق الآن. Escape للعودة إلى الأقسام.
+       *[other] كل الإعدادات، { $n } إعداد، ومنها ما لا ينطبق الآن. Escape للعودة إلى الأقسام.
+    }
+settings-back = أقسام الإعدادات.
+settings-section-now =
+    { $n ->
+        [0] يعرض { $section } الآن لا إعدادات.
+        [one] يعرض { $section } الآن إعداد واحد.
+        [two] يعرض { $section } الآن إعدادان.
+        [few] يعرض { $section } الآن { $n } إعدادات.
+        [many] يعرض { $section } الآن { $n } إعدادًا.
+       *[other] يعرض { $section } الآن { $n } إعداد.
+    }
+settings-section-help =
+    { $n ->
+        [0] { $section }، لا إعدادات. Enter يفتحه.
+        [one] { $section }، إعداد واحد. Enter يفتحه.
+        [two] { $section }، إعدادان. Enter يفتحه.
+        [few] { $section }، { $n } إعدادات. Enter يفتحه.
+        [many] { $section }، { $n } إعدادًا. Enter يفتحه.
+       *[other] { $section }، { $n } إعداد. Enter يفتحه.
+    }
+# $item is a settings-item row, $why a settings-applies-* sentence.
+settings-item-not-now = { $item }. { $why }
+# $engine, $first and $second are speech engine names, such as Eloquence.
+settings-applies-engine = ينطبق حين يكون { $engine } محرك الكلام.
+settings-applies-engines = ينطبق حين يكون { $first } أو { $second } محرك الكلام.
+settings-applies-not-engine = ينطبق حين لا يكون { $engine } محرك الكلام.
+# $os is Windows, macOS or Linux.
+settings-applies-os = ينطبق على { $os } فقط.

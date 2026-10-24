@@ -53,10 +53,21 @@ fn shift_f10_opens_the_settings_and_the_arrows_change_them() {
     let list = tui.list().expect("the settings list");
     assert_eq!(list.title, "Settings");
     assert!(
-        list.items[0].starts_with("Speech engine: "),
+        list.items[0].starts_with("Voice and speech, "),
         "{:?}",
         list.items[0]
     );
+    // Enter opens the section, on the engine; Escape goes back.
+    tui.handle_key(key(KeyCode::Enter));
+    let list = tui.list().expect("the section");
+    assert_eq!(list.title, "Settings: Voice and speech");
+    assert!(
+        list.items[0].starts_with("Speech engine: "),
+        "{:?}",
+        list.items
+    );
+    tui.handle_key(key(KeyCode::Esc));
+    assert_eq!(tui.list().expect("the sections").title, "Settings");
     // Filter to "rate", then pick "Rate".
     type_str(&mut tui, "words per");
     let items = tui.list().unwrap().items.clone();
