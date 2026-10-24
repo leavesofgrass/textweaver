@@ -71,6 +71,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### For contributors
 
+- **The UI Automation report follows the reorganized Settings.** `crates/textweaver-xilem/tools/uia-report.ps1` names the form after the first section in the Sections list ("Voice and speech settings") instead of a fixed name, and, because the dialog shows one section's rows at a time and Voice and speech has no on/off setting, chooses the following sections through SelectionItemPattern until one shows a check box (Pauses and verbosity), then toggles it through TogglePattern and back as before. If Select does not change the section, the report tries Invoke and then focus, and fails, naming the way that worked. The app's own time limit in the report is now 150 seconds, so a busy machine still reaches the font list.
 - **The Windows accessibility tree dump retries again.** `tools/a11y/tree-dump.ps1` asks accessibility-cli for the tree every two seconds for up to 40 seconds, but Windows PowerShell made the tool's first error fatal, so one try made before the textweaver app showed its window ended the script and left the app running. The script now checks the tool's exit code, keeps trying, always stops the app, and on failure prints the end of the app's log. accessibility-cli's "Could not find window for PID n (found m top-level windows)" means the app had no window yet; m counts every top-level window on the desktop.
 
 ### Packages and the build

@@ -319,6 +319,30 @@ public static class TwXUia
         return true;
     }
 
+    /// Chooses a list option through `route`: "select"
+    /// (SelectionItemPattern.Select), "invoke" (InvokePattern.Invoke), or
+    /// "focus" (SetFocus). False when the option lacks that pattern.
+    public static bool Choose(AutomationElement o, string route)
+    {
+        object p;
+        switch (route)
+        {
+            case "select":
+                if (!o.TryGetCurrentPattern(SelectionItemPattern.Pattern, out p)) return false;
+                ((SelectionItemPattern)p).Select();
+                return true;
+            case "invoke":
+                if (!o.TryGetCurrentPattern(InvokePattern.Pattern, out p)) return false;
+                ((InvokePattern)p).Invoke();
+                return true;
+            case "focus":
+                if (!o.Current.IsKeyboardFocusable) return false;
+                o.SetFocus();
+                return true;
+        }
+        return false;
+    }
+
     static void OnSelection(object sender, AutomationEventArgs e)
     {
         if (!Ours(sender)) return;
@@ -718,7 +742,9 @@ if ($WindowEdge) {
     Say "- Window edge probe: $Document ($($sb.Length) characters, $n paragraphs), read at 900 words per minute"
     Say ""
 }
-$guiArgs = "`"$Document`" --backend $Backend --home `"$scratch`" --read --background --log-file `"$logFile`" --exit-after 90 --announce $Announce $GuiArgs"
+# The probe closes the window itself; --exit-after is a safety net, long
+# enough for a slow, busy machine to reach the last check (the font list).
+$guiArgs = "`"$Document`" --backend $Backend --home `"$scratch`" --read --background --log-file `"$logFile`" --exit-after 150 --announce $Announce $GuiArgs"
 $foregroundBefore = [TwXUia]::GetForegroundWindow()
 [TwXUia]::ListenFor(0)
 $guiPid = [TwXUia]::LaunchInactive($Exe, $guiArgs, $repo)
@@ -899,7 +925,7 @@ try {
 
     # The edge probe checks only the document and the announcements.
     if (-not $WindowEdge) {
-        Say "### Settings dialog (Settings button pressed; settings changed with RangeValuePattern and TogglePattern)"
+        Say "### Settings dialog (Settings button pressed; a section chosen with SelectionItemPattern; settings changed with RangeValuePattern and TogglePattern)"
         Say ""
     }
     if ($WindowEdge) {
@@ -909,9 +935,9 @@ try {
     } else {
         Start-Sleep -Milliseconds 800
         $dlg = [TwXUia]::Named($window, 'Settings')
-        $form = [TwXUia]::Named($window, 'Speech settings')
         if (-not $dlg) { $failures.Add('no Settings dialog') } else { Say "- Dialog: $([TwXUia]::Describe($dlg))" }
         $sections = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::List, 'Sections')
+        $sectionOpts = @()
         if ($sections) {
             Say "- Sections: $([TwXUia]::Describe($sections))"
             $items = [TwXUia]::All($sections, [System.Windows.Automation.ControlType]::ListItem)
@@ -919,8 +945,14 @@ try {
             Say ""
             Fence $items
             if ($items.Count -lt 4) { $failures.Add('too few settings sections') }
+            $sectionOpts = @([TwXUia]::Options($sections))
         } else { $failures.Add('no Sections list') }
-        if ($form) { Say "- Form: $([TwXUia]::Describe($form))" } else { $failures.Add('no settings form') }
+        # A section's option reads "Voice and speech, 9 settings"; its form
+        # is named for the title alone ("Voice and speech settings").
+        function FormNameOf($opt) { ($opt.Current.Name -replace ', \d+ settings?$', '') + ' settings' }
+        $formName = if ($sectionOpts.Count -gt 0) { FormNameOf $sectionOpts[0] } else { '(no first section)' }
+        $form = [TwXUia]::Named($window, $formName)
+        if ($form) { Say "- Form: $([TwXUia]::Describe($form))" } else { $failures.Add("no settings form named $([TwXUia]::Q($formName))") }
         Say ""
         Say "The settings a screen reader finds in the first section:"
         Say ""
@@ -940,7 +972,40 @@ try {
             Say "- Rate set to 300 through RangeValuePattern: before$before; after$after"
             if ($after -notmatch 'range=300 ') { $failures.Add('the Rate slider did not take a value set through RangeValuePattern') }
         } else { $failures.Add('no Rate slider') }
+        # The dialog shows one section's rows at a time, and the first may
+        # have no on/off setting: choose the next sections, as a screen
+        # reader does, until one shows a check box. Each way of choosing an
+        # option is tried on the second section, and the first that works
+        # (the form takes the section's name) is used for the rest.
         $box = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::CheckBox, $null)
+        $route = $null
+        $routeLines = @()
+        for ($i = 1; -not $box -and $i -lt $sectionOpts.Count; $i++) {
+            $want = FormNameOf $sectionOpts[$i]
+            $tries = if ($route) { @($route) } else { @('select', 'invoke', 'focus') }
+            foreach ($r in $tries) {
+                $opts = @([TwXUia]::Options($sections))
+                if (-not [TwXUia]::Choose($opts[$i], $r)) {
+                    if (-not $route) { $routeLines += "$r on $([TwXUia]::Q($opts[$i].Current.Name)): the option has no such pattern" }
+                    continue
+                }
+                Start-Sleep -Milliseconds 600
+                $shown = [TwXUia]::Named($window, $want)
+                if (-not $route) { $routeLines += "$r on $([TwXUia]::Q($opts[$i].Current.Name)): $(if ($shown) { 'the form shows it' } else { 'the form did not change' })" }
+                if ($shown) { $route = $r; break }
+            }
+            if (-not $route) { break }
+            $box = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::CheckBox, $null)
+            if ($box) { Say "- Section chosen with $route to reach a check box: $([TwXUia]::Q($want))" }
+        }
+        if ($routeLines.Count -gt 0) {
+            Say ""
+            Say "Ways of choosing a section (tried on the second one):"
+            Say ""
+            Fence $routeLines
+        }
+        if ($sectionOpts.Count -gt 1 -and -not $route) { $failures.Add('no way of choosing a settings section through UI Automation worked') }
+        elseif ($route -and $route -ne 'select') { $failures.Add("a section option did not change the section through SelectionItemPattern.Select (it did through $route)") }
         if ($box) {
             $name = $box.Current.Name
             $before = [TwXUia]::ValueOf($box)
