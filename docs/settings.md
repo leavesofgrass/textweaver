@@ -324,15 +324,16 @@ The sound of Morse code and keying with a key or paddle. See [CW: reading in Mor
 
 - `speech.cw.wpm`, default `20`: the character speed, 5 to 50 words per minute. While CW is the engine, the rate keys change it by one, and `effective_wpm` with it in proportion.
 - `speech.cw.effective_wpm`, default `10`: the effective (Farnsworth) speed, 5 to 50 words per minute. The gaps between characters and words stretch so the text goes at this speed; at or above `wpm`, the spacing is standard.
-- `speech.cw.tone_hz`, default `600`: the tone, 200 to 1500 hertz. The pitch keys move it by semitones.
+- `speech.cw.tone_hz`, default `600`: the pitch of sent Morse code, 200 to 1500 hertz. The pitch keys move it by semitones. The keying sidetone has its own pitch, `speech.cw.sidetone_hz`.
 - `speech.cw.volume`, default `50`: the tone's level, 0 to 100 percent of full scale, before the speech volume.
 - `speech.cw.keyer`, default `"iambic_b"`: how a paddle's contacts become dits and dahs. `"iambic_b"` is iambic mode B, `"iambic_a"` iambic mode A, both with dot and dash memory; `"straight"` keys the tone from either contact, as a straight key. The keyer runs at the character speed `wpm`.
 - `speech.cw.swap_paddles`, default `false`: swap dit and dah, from MIDI and from keyboard adapters, for a paddle used with the other hand.
-- `speech.cw.sidetone`, default `true`: play the CW tone, at `tone_hz` and `volume`, while the key is down.
+- `speech.cw.sidetone`, default `true`: play a tone, at `sidetone_hz` and `volume`, while the key is down.
+- `speech.cw.sidetone_hz`, default `600`: the sidetone's pitch, 200 to 1500 hertz, apart from `tone_hz`. Both are 600 by default; changing one leaves the other as it is.
 - `speech.cw.dit_note`, default `20`; `speech.cw.dah_note`, default `21`; `speech.cw.straight_note`, default `30`: the MIDI notes of the dit and dah contacts and of a straight key, 0 to 127. The defaults are the N6ARA TinyMIDI's and the CTR2 MIDI's.
 - `speech.cw.midi_channel`, default `0`: the MIDI channel keying listens to, 1 to 16, or 0 for any.
 
-A change to `[speech.cw]` applies from the next sentence; a reading in progress goes on from the last word with it. While keying, a new speed, keyer, note, channel, or paddle swap applies at once; a new tone or level applies to the sidetone the next time keying is turned on. The note numbers and the channel belong to the adapter on each computer, so they are not synced; the other keying settings are.
+A change to `[speech.cw]` applies from the next sentence; a reading in progress goes on from the last word with it. While keying, a new speed, keyer, note, channel, paddle swap, sidetone pitch, or level applies at once; turning `speech.cw.sidetone` on or off applies the next time keying is turned on. The note numbers and the channel belong to the adapter on each computer, so they are not synced; the other keying settings are.
 
 ### Morse practice
 

@@ -211,6 +211,7 @@ pub const SECTIONS: &[Section] = &[
             "speech.cw.keyer",
             "speech.cw.swap_paddles",
             "speech.cw.sidetone",
+            "speech.cw.sidetone_hz",
             "speech.cw.dit_note",
             "speech.cw.dah_note",
             "speech.cw.straight_note",

@@ -41,9 +41,11 @@ Two speeds are set, each from 5 to 50 words per minute:
 
 While CW is the engine, the rate keys (+ and - while reading, as for speech) change the character speed by one word per minute, and the effective speed with it in proportion: at 20 and 10, one step up gives 21 and 11. The reading goes on from the last word at the new speed. "Character speed 21, effective 11 words per minute." is said (in Morse code, since CW is speaking). Repeat sentence slower does not slow CW down.
 
+While CW is the engine, the rate on the title line (the status bar's lower right in the textweaver app, the title line in the terminal reader) shows the CW speeds instead of the speech rate: "CW 20 wpm, effective 10", or "CW 20 wpm" when the effective speed is at or above the character speed, so the spacing is standard. It follows the rate keys and the settings at once. Say Status says it in words: "CW at 20 words per minute, effective 10". On a 40-cell Braille display the character speed comes first, so it stays on the first line of the display when the effective speed does not fit.
+
 ## The tone
 
-The tone is a sine wave, 600 Hz by default (CW tone, 200 to 1500 Hz). Each element rises and falls over 5 milliseconds on a raised-cosine curve, so it starts and stops without a click. The pitch keys move the tone by semitones from the CW tone, and the volume keys change its loudness as they change speech. The CW tone level (default 50 percent) sets how loud the tone is before the speech volume; a lower level is easier on the ears over a long session.
+The tone is a sine wave, 600 Hz by default (CW tone, 200 to 1500 Hz). CW tone is the pitch of sent Morse code: reading, audio export, and practice. The sidetone heard while keying has a pitch of its own (see [the sidetone](#following-along-the-status-line-rsvp-and-the-sidetone)). Each element rises and falls over 5 milliseconds on a raised-cosine curve, so it starts and stops without a click. The pitch keys move the tone by semitones from the CW tone, and the volume keys change its loudness as they change speech. The CW tone level (default 50 percent) sets how loud the tone is before the speech volume; a lower level is easier on the ears over a long session.
 
 ## Following along: highlight, RSVP, and the status line
 
@@ -69,7 +71,7 @@ practice_delay_ms = 1000
 
 - `wpm`: the character speed, 5 to 50 words per minute.
 - `effective_wpm`: the effective (Farnsworth) speed, 5 to 50; at or above `wpm`, standard spacing.
-- `tone_hz`: the tone, 200 to 1500 hertz.
+- `tone_hz`: the pitch of sent Morse code, 200 to 1500 hertz.
 - `volume`: the tone level, 0 to 100 percent of full scale, before the speech volume.
 - `prosigns`: send structure as prosigns (BT, AR) and read prosigns written as `<BT>`.
 - `status_line`: show the characters being sent on the status line.
@@ -99,7 +101,7 @@ Keying is a mode, so ordinary typing is never taken for Morse code by surprise. 
 
 The status line shows what you key, newest last, after "CW:", in at most 40 cells: "CW: cq de". A screen reader shows the status line on a Braille display, so each character appears as it is decoded. It is shown and not spoken, since the sidetone is what you hear. While keying, Alt+Shift+R (RSVP) shows the word being keyed, large, one word at a time; press it again to close it. Outside keying, RSVP is not offered in edit mode.
 
-The sidetone is the CW tone (CW tone and CW tone level, in the settings), with the same soft edges as reading in Morse code, heard while the key is down. It plays through the speech output device of an engine that plays its own audio (Eloquence, eSpeak NG, SAPI and OneCore voices, DECtalk, Piper, or CW). There is none with the silent engine or when a screen reader speaks for textweaver; use your adapter's or your radio's own sidetone then. Turn it off with **CW sidetone** (`[speech.cw] sidetone = false`). Its pitch and level are read when keying turns on.
+The sidetone is a tone at **CW sidetone pitch** (`sidetone_hz`, 600 Hz by default, 200 to 1500 Hz) and the CW tone level, with the same soft edges as reading in Morse code, heard while the key is down. Its pitch is apart from CW tone, so you can key at one pitch and hear documents sent at another; both are 600 Hz until you change one. It plays through the speech output device of an engine that plays its own audio (Eloquence, eSpeak NG, SAPI and OneCore voices, DECtalk, Piper, or CW). There is none with the silent engine or when a screen reader speaks for textweaver; use your adapter's or your radio's own sidetone then. Turn it off with **CW sidetone** (`[speech.cw] sidetone = false`). A new pitch or level is heard at once, even with the key down, and without a click; turning the sidetone on or off applies the next time keying turns on.
 
 ### The keyer and your speed
 
@@ -143,10 +145,11 @@ These adapters are keyboards: dit is Left Control and dah Right Control. While k
 - **CW keyer** (`keyer`): iambic B (the default), iambic A, or straight key.
 - **Swap CW paddles** (`swap_paddles`), off.
 - **CW sidetone** (`sidetone`), on.
+- **CW sidetone pitch** (`sidetone_hz`): 200 to 1500 hertz, 600 by default; typed in hertz, or moved 10 hertz at a time.
 - **CW dit MIDI note** (`dit_note`, 20), **CW dah MIDI note** (`dah_note`, 21), and **CW straight key MIDI note** (`straight_note`, 30), each 0 to 127.
 - **CW MIDI channel** (`midi_channel`): 0 for any channel (the default), or 1 to 16.
 
-A new speed, keyer, note, channel, or swap applies at once while keying. The notes and the channel belong to the adapter on each computer, so they are not synced. See [Settings](settings.md#morse-code).
+A new speed, keyer, note, channel, swap, or sidetone pitch applies at once while keying. The notes and the channel belong to the adapter on each computer, so they are not synced. See [Settings](settings.md#morse-code).
 
 ## Practice and training
 

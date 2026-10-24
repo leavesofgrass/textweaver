@@ -496,6 +496,12 @@ status-hybrid = hybrid
 status-screen-reader = screen reader mode
 status-rate-spoken = { $wpm } words per minute
 status-rate = { $wpm } wpm
+# With CW as the engine: the CW speeds, the effective (Farnsworth) speed
+# when it is below the character speed.
+status-cw-rate = CW { $wpm } wpm
+status-cw-rate-spoken = CW at { $wpm } words per minute
+status-cw-rate-farnsworth = CW { $wpm } wpm, effective { $effective }
+status-cw-rate-farnsworth-spoken = CW at { $wpm } words per minute, effective { $effective }
 # The window's status bar, last: reading time left at the current rate.
 status-time-left =
     { $minutes ->
@@ -3616,7 +3622,7 @@ setting-speech-cw-wpm-help = How fast each Morse character is sent, in words per
 setting-speech-cw-effective-wpm = CW effective speed
 setting-speech-cw-effective-wpm-help = The overall speed, set by stretching the gaps between characters and words (Farnsworth spacing). At or above the character speed, the spacing is standard.
 setting-speech-cw-tone-hz = CW tone
-setting-speech-cw-tone-hz-help = The pitch of the Morse tone. The pitch keys move it by semitones.
+setting-speech-cw-tone-hz-help = The pitch of sent Morse code. The pitch keys move it by semitones. The sidetone heard while keying has its own pitch, CW sidetone pitch.
 setting-speech-cw-volume = CW tone level
 setting-speech-cw-volume-help = How loud the Morse tone is, before the speech volume.
 setting-speech-cw-prosigns = CW prosigns
@@ -3639,7 +3645,9 @@ choice-speech-cw-keyer-straight = straight key
 setting-speech-cw-swap-paddles = Swap CW paddles
 setting-speech-cw-swap-paddles-help = Swap dit and dah, for a paddle used with the other hand. MIDI and keyboard adapters both follow it.
 setting-speech-cw-sidetone = CW sidetone
-setting-speech-cw-sidetone-help = Play the CW tone while the key is down when keying Morse code.
+setting-speech-cw-sidetone-help = Play a tone while the key is down when keying Morse code. Its pitch is CW sidetone pitch.
+setting-speech-cw-sidetone-hz = CW sidetone pitch
+setting-speech-cw-sidetone-hz-help = The pitch of the tone heard while keying Morse code. It is apart from the CW tone of sent Morse, and a change is heard at once, even while keying.
 setting-speech-cw-dit-note = CW dit MIDI note
 setting-speech-cw-dit-note-help = The MIDI note of the dit contact. 20 for the N6ARA TinyMIDI and the CTR2 MIDI.
 setting-speech-cw-dah-note = CW dah MIDI note

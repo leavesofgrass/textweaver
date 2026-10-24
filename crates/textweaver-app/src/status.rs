@@ -123,14 +123,36 @@ impl App {
             AccessMode::Hybrid => parts.push(self.msg("status-hybrid")),
             AccessMode::ScreenReader => parts.push(self.msg("status-screen-reader")),
         }
+        parts.push(self.rate_text(spoken));
+        parts.push(self.backend_name.clone());
+        parts
+    }
+
+    /// The rate part of the title line: the speech rate ("265 wpm"), or
+    /// with CW as the engine the live `[speech.cw]` speeds ("CW 20 wpm,
+    /// effective 10"; "CW 20 wpm" when Farnsworth spacing is off, the
+    /// effective speed at or above the character speed). `spoken` says
+    /// "words per minute".
+    fn rate_text(&self, spoken: bool) -> String {
+        if self.cw_engine() {
+            let cw = &self.settings.speech.cw;
+            let key = match (cw.effective_wpm < cw.wpm, spoken) {
+                (true, true) => "status-cw-rate-farnsworth-spoken",
+                (true, false) => "status-cw-rate-farnsworth",
+                (false, true) => "status-cw-rate-spoken",
+                (false, false) => "status-cw-rate",
+            };
+            return self.msg_args(
+                key,
+                &args!["wpm" => cw.wpm, "effective" => cw.effective_wpm],
+            );
+        }
         let wpm = self.settings.speech.rate.wpm();
-        parts.push(if spoken {
+        if spoken {
             self.msg_args("status-rate-spoken", &args!["wpm" => wpm])
         } else {
             self.msg_args("status-rate", &args!["wpm" => wpm])
-        });
-        parts.push(self.backend_name.clone());
-        parts
+        }
     }
 
     /// The title line as it is said: "essay: line 3 of 40, 7%, Reading,

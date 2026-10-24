@@ -18,8 +18,8 @@
 //!   iambic keyer of `[speech.cw] keyer` (mode B by default, mode A, or
 //!   straight) at the character speed, and the decoder, which adapts to
 //!   the operator's speed (textweaver_cw::keyer, textweaver_cw::decode).
-//! - **The sidetone**, the CW tone at the `[speech.cw]` pitch and level,
-//!   follows the key when `[speech.cw] sidetone` is on and the speech
+//! - **The sidetone**, a tone at `[speech.cw] sidetone_hz` and the CW
+//!   level, follows the key when `[speech.cw] sidetone` is on and the speech
 //!   engine plays its own audio (it uses the same output; never in
 //!   tests).
 //! - **Decoded characters are typed** at the cursor, letters in lower
@@ -45,7 +45,7 @@ use textweaver_core::CharRange;
 use textweaver_cw::{
     AdapterKey, Decoded, Decoder, Input, Keyed, Keyer, KeyerMode, KeyerOptions, MidiMap,
 };
-use textweaver_engines::cw::{CwOptions, Sidetone};
+use textweaver_engines::cw::Sidetone;
 use textweaver_keymap::ActionId;
 use textweaver_lexicon::args;
 use textweaver_speech::Caps;
@@ -70,6 +70,8 @@ enum ToKeyer {
     Contact(Input, bool, Instant),
     /// New keyer options (the settings changed).
     Options(KeyerOptions),
+    /// The sidetone's new pitch in hertz and level in percent.
+    Tone(u16, u8),
     /// Keying ends.
     Stop,
 }
@@ -193,6 +195,11 @@ fn run(
                     keyer.input(input, down, last);
                 }
                 ToKeyer::Options(o) => keyer.set_options(o),
+                ToKeyer::Tone(hz, volume) => {
+                    if let Some(s) = &sidetone {
+                        s.set_tone(hz, volume);
+                    }
+                }
                 ToKeyer::Stop => stop = true,
             }
         }
@@ -261,7 +268,8 @@ impl App {
         let tones = self.speech.capabilities().contains(Caps::TONES);
         let mut sidetone_failed = None;
         let sidetone = if self.settings.speech.cw.sidetone && tones {
-            Sidetone::start(&CwOptions::from_settings(&self.settings))
+            let cw = &self.settings.speech.cw;
+            Sidetone::start(cw.sidetone_hz, cw.volume)
                 .map_err(|e| sidetone_failed = Some(e.to_string()))
                 .ok()
         } else {
@@ -356,14 +364,17 @@ impl App {
         true
     }
 
-    /// `[speech.cw]` changed: keying follows it (the speed, keyer, notes,
-    /// channel and paddle swap at once; the sidetone's pitch and level the
-    /// next time keying turns on).
+    /// `[speech.cw]` changed: keying follows it at once (the speed, keyer,
+    /// notes, channel and paddle swap, and the sidetone's pitch and level;
+    /// the sidetone switch the next time keying turns on).
     pub(crate) fn cw_keying_settings_changed(&mut self) {
         let options = keyer_options(&self.settings);
         let map = midi_map(&self.settings);
+        let cw = &self.settings.speech.cw;
+        let tone = ToKeyer::Tone(cw.sidetone_hz, cw.volume);
         if let Some(k) = self.cw_keying.as_ref() {
             let _ = k.to_keyer.send(ToKeyer::Options(options));
+            let _ = k.to_keyer.send(tone);
             *k.midi_map.lock().unwrap_or_else(|e| e.into_inner()) = map;
         }
     }

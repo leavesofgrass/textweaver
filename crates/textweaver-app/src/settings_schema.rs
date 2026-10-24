@@ -537,7 +537,7 @@ pub const INFO: &[Info] = &[
     number(
         "speech.cw.tone_hz",
         "CW tone",
-        "The pitch of the Morse tone. The pitch keys move it by semitones.",
+        "The pitch of sent Morse code. The pitch keys move it by semitones. The sidetone heard while keying has its own pitch, CW sidetone pitch.",
         (200.0, 1500.0, 10.0),
         "hertz",
     ),
@@ -604,7 +604,14 @@ pub const INFO: &[Info] = &[
     toggle(
         "speech.cw.sidetone",
         "CW sidetone",
-        "Play the CW tone while the key is down when keying Morse code.",
+        "Play a tone while the key is down when keying Morse code. Its pitch is CW sidetone pitch.",
+    ),
+    number(
+        "speech.cw.sidetone_hz",
+        "CW sidetone pitch",
+        "The pitch of the tone heard while keying Morse code. It is apart from the CW tone of sent Morse, and a change is heard at once, even while keying.",
+        (200.0, 1500.0, 10.0),
+        "hertz",
     ),
     number(
         "speech.cw.dit_note",

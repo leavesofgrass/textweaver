@@ -42,6 +42,14 @@ impl Sidetone {
         }
     }
 
+    /// A new pitch `hz` (at `sample_rate`) and `level` (0 to 1). The
+    /// phase and the envelope go on where they were, so a change while
+    /// the tone sounds does not click.
+    pub fn retune(&mut self, sample_rate: u32, hz: f64, level: f64) {
+        self.step = hz / f64::from(sample_rate.max(1));
+        self.level = level.clamp(0.0, 1.0);
+    }
+
     /// The next sample, from -1 to 1, with the key down (`down`) or up.
     pub fn next(&mut self, down: bool) -> f32 {
         if down {
@@ -95,6 +103,31 @@ mod tests {
         }
         assert!(peak > 0.49 && peak <= 0.5, "{peak}");
         assert!(!s.sounding());
+    }
+
+    #[test]
+    fn a_new_pitch_goes_on_without_a_step() {
+        let mut s = Sidetone::new(22_050, 600.0, 0.5, 5.0);
+        let mut last = 0.0f32;
+        for _ in 0..441 {
+            last = s.next(true);
+        }
+        s.retune(22_050, 1200.0, 0.5);
+        // The phase goes on: each sample is at most one step of the new
+        // pitch from the one before, never back at zero.
+        let max_step = 0.5 * TAU * 1200.0 / 22_050.0 + 0.02;
+        let mut crossings = 0;
+        for n in 0..2205 {
+            let v = s.next(true);
+            assert!(f64::from((v - last).abs()) <= max_step, "sample {n}");
+            if (v >= 0.0) != (last >= 0.0) {
+                crossings += 1;
+            }
+            last = v;
+        }
+        // 100 ms at 1200 Hz: 240 zero crossings, give or take one.
+        assert!((239..=241).contains(&crossings), "{crossings}");
+        assert!(s.sounding());
     }
 
     #[test]
