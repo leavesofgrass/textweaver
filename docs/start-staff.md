@@ -7,6 +7,7 @@ This page is for people who prepare documents and computers for students: conver
 - `tw convert` converts a document, or a whole folder, to accessible HTML, EPUB, Word, Braille (BRF), or tagged PDF. See [Converting documents](converting.md).
 - In the app, File, Batch convert processes a folder in the background.
 - Each folder conversion writes `conversion-report.txt` to the output folder. It lists what was converted and which items need review. Keep it with the accommodation file.
+- The Braille view in the textweaver app (Alt+Shift+F2) draws the line being read as braille dots, so a teacher of braille, a transcriber, or a parent can see what a line becomes in uncontracted or contracted braille. It is for looking: it sends nothing to a student's Braille display ([The Braille view](reading-aids.md#the-braille-view)).
 - Scanned pages go through optical character recognition (OCR), which makes errors. Check anything important against the original.
 - Publishing templates (large print, dyslexia-friendly, high contrast, APA, and AMA) are described in the same guide. They are options; none guarantees a result for any particular student.
 

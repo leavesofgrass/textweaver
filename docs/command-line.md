@@ -120,5 +120,6 @@ Results are written so that `tw search essay.md word | head` ends quietly once `
 - [Settings](settings.md), for `tw settings path` and `--home`
 - [Updates](updates.md), for `tw update`; [Notes](notes.md), for `tw notes links`, `tw study due`, and `tw study export` and `tw study import` (Anki packages); [Optional components](components.md), for `tw components`
 - [Converting documents](converting.md), [Citations](citations.md) and [Dictation](dictation.md), for those commands' own options
-- [CW: reading in Morse code](cw.md#record-what-a-key-adapter-sends-tw-cw-monitor), for `tw cw monitor`, which prints what a Morse key adapter sends
+- [CW: reading in Morse code](cw.md#record-what-a-key-adapter-sends-tw-cw-monitor), for `tw cw monitor`, which prints what a Morse key adapter sends, and `tw cw ports`, which lists the MIDI inputs
+- [Obsidian vaults](vault.md), for `tw vault` (import, export, and the read-only `backlinks`, `unresolved`, `tags`, and `properties`)
 - [Troubleshooting](troubleshooting.md)

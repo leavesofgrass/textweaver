@@ -319,6 +319,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `recall_prompts`, default `false`: at a section end, ask you to say what you remember before going on. It stops at the next heading for this when `stop_at` is `"off"`. See [Study with textweaver](notes.md#study-with-textweaver).
 - `book_audio`, default `"auto"`: what reads a DAISY talking book that has a recording. `"auto"` plays its recorded narration and uses speech for text without audio; `"speech"` reads everything with speech. Rate changes do not apply to a recording ([Talking books](reading.md#talking-books-the-recorded-narration)).
 - `after_end`, default `"stop"`: what follows the end of a document when the reading queue has another. `"stop"` does nothing more; `"ask"` names the next document, and the read key opens and reads it; `"next"` opens and reads it at once. A document is never started unless you ask ([The reading queue](library.md#the-reading-queue)).
+- `read_comments`, default `false`: read the comments in Obsidian notes, the text between `%%` marks, without the marks. Off leaves them out, as Obsidian's reading view does. Converted files leave comments out whatever this says; `tw convert --keep-comments` keeps them ([Obsidian notes](converting.md#obsidian-notes)). Syncs between computers.
 
 ### [display]
 
