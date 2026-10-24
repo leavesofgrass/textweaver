@@ -36,7 +36,7 @@ This lists the speech engines textweaver knows about. An engine that can write f
 sapi: Windows SAPI5 voices. Available. Priority 500. Supports word highlighting, pause, pitch, volume, audio files, and tones. Word timing from the engine.
 ```
 
-These engines can write files: ETI-Eloquence (`eci`), Windows SAPI5 voices (`sapi`), DECtalk (`dectalk`), eSpeak NG (`espeak`), and the two Apple engines on macOS (`nsspeech` and `avspeech`). Omnivox (`omnivox`) and Speech Dispatcher (`speechd`) can only speak aloud, so they cannot export. The silent engine (`null`) cannot export either.
+These engines can write files: ETI-Eloquence (`eci`), Windows SAPI5 voices (`sapi`), DECtalk (`dectalk`), eSpeak NG (`espeak`), the two Apple engines on macOS (`nsspeech` and `avspeech`), and CW (`cw`), which writes the document as Morse code (see [CW](cw.md)). Omnivox (`omnivox`) and Speech Dispatcher (`speechd`) can only speak aloud, so they cannot export. The silent engine (`null`) cannot export either.
 
 ### WAV, FLAC, MP3, Opus, and Ogg Vorbis always work
 
@@ -315,6 +315,7 @@ Some engines report the exact moment each word sounds in the file, and with them
 - DECtalk (`dectalk`).
 - eSpeak NG (`espeak`).
 - Apple's AVSpeechSynthesizer (`avspeech`) on macOS 14 and later, which reports where each word starts in the audio it writes.
+- CW (`cw`), Morse code. The same schedule that places each word when CW is read aloud places it in the file, so the cues are exact.
 
 The classic Apple engine (`nsspeech`) and the SAPI Eloquence voices can write files but do not report word times, so their word cues are estimated: each sentence's start and end are still measured, and the interval is divided among its words in proportion to their length. Sentence captions from these engines are as accurate as from any other, because they depend only on the measured sentence times.
 
@@ -380,7 +381,7 @@ tw export-audio reading.md --out reading.mp3 --backend sapi --voice David --rate
 
 Each option is optional:
 
-- `--backend`: the engine, by its id from `tw backends`, such as `eci`, `sapi`, `dectalk`, or `espeak`.
+- `--backend`: the engine, by its id from `tw backends`, such as `eci`, `sapi`, `dectalk`, `espeak`, or `cw`.
 - `--voice`: a voice, by its id or its name. Words from the name are enough: "David" finds "Microsoft David Desktop". `tw voices --backend sapi` lists the voices of an engine.
 - `--rate`: the speaking rate in words per minute, from 50 to 900. Values outside that range are brought inside it.
 - `--pitch`: a pitch change in semitones, from -12 to 12. A negative number lowers the voice.
@@ -388,7 +389,7 @@ Each option is optional:
 Without `--backend`, textweaver chooses in this order:
 
 1. The engine in your `[speech] backend` setting, if it is installed and can write files.
-2. Otherwise, the best installed engine that can write files: ETI-Eloquence first, then Windows SAPI5 voices, DECtalk, the Apple engines, and eSpeak NG. Engines that can only speak aloud are passed over.
+2. Otherwise, the best installed engine that can write files: ETI-Eloquence first, then Windows SAPI5 voices, DECtalk, the Apple engines, and eSpeak NG. Engines that can only speak aloud are passed over, and so is CW, which is used only when you name it with `--backend cw` or choose it in `[speech] backend`.
 
 If the engine you name with `--backend` is not installed, textweaver chooses automatically instead. When that works, you hear, for example, "Backend eci is not available; using sapi." after the result.
 
@@ -404,7 +405,8 @@ Without `--voice`, textweaver uses your `[speech] voice` setting, but only when 
 - `[speech] punctuation` and `[speech] split_caps`: how much punctuation is spoken, and whether capitals inside words are spoken separately.
 - `[speech] skip_code`: whether code blocks are left out (off by default, so code is read).
 - `[speech] verbosity`: how much structure is announced. At `low`, headings are not announced as "heading level 1".
-- `[normalization]`: numbers, abbreviations, your pronunciations, math, and the community lexicon, the same as when reading aloud. Engines that read numbers and abbreviations themselves, such as ETI-Eloquence, are left to do so.
+- `[normalization]`: numbers, abbreviations, your pronunciations, math, and the community lexicon, the same as when reading aloud. Engines that read numbers and abbreviations themselves, such as ETI-Eloquence, are left to do so. CW takes the text exactly as written, so none of these apply to it.
+- `[speech.cw]`: with CW, the character speed (`wpm`), the effective speed (`effective_wpm`), the tone (`tone_hz`), its level (`volume`), and prosigns (`prosigns`). See [CW](cw.md#the-settings).
 - `[normalization] table_mode`: tables read with row and column context (`structured`), as cell text only (`flat`), or left out (`skip`).
 - `[normalization] footnote_mode`: footnotes read where they are referenced (`inline`), at the end of the section (`deferred`), or left out (`skip`).
 - `[export] audio_format`: the format written when `--out` has no extension.

@@ -413,6 +413,8 @@ language = "ENU"
 
 Eloquence reads numbers, dates, times, and abbreviations itself, and does it well. With Eloquence, and with Apple's Eloquence voices, textweaver leaves those to the engine. It still removes Markdown marks and applies your pronunciations, split caps, and punctuation level, and it still reads identifiers digit by digit and spells error-prone medical abbreviations (see [Clinical and scientific text](#clinical-and-scientific-text)). `tw backends` shows this as "reads numbers and abbreviations itself".
 
+CW sends the text exactly as written and skips all of this: it has no numbers or abbreviations to read in words, and no structure spoken as words (headings and paragraphs are sent as prosigns). See [CW](cw.md#what-is-sent).
+
 ## Pauses at headings, paragraphs and list items
 
 When textweaver reads a document, it leaves a short silence after each heading, paragraph, and list item, so the boundaries between them are audible. At high rates this cue is often the first to be lost. No words are added.
@@ -453,6 +455,7 @@ How closely the highlight follows the voice depends on what the engine reports t
 - **Eloquence, DECtalk, and eSpeak NG in its helper program.** textweaver plays their audio itself and learns the moment each word is heard. The highlight is exact.
 - **SAPI, eSpeak NG inside textweaver, and avspeech.** Each word comes with its time in the audio. textweaver shows it at that time plus `[speech] latency_offset_ms`, 120 ms by default, to allow for the sound card's delay. If the highlight runs ahead of what you hear, raise the offset; if it lags, lower it.
 - **nsspeech and Speech Dispatcher.** The engine reports each word as it speaks it, and textweaver shows it at once.
+- **CW (Morse code).** Exact, and not reported by an engine: textweaver works out where every word starts in the tones it plays before it plays them, and shows each word at that time on the audio clock (plus `[speech] latency_offset_ms`, as for SAPI), so the highlight stops when the audio pauses.
 - **Omnivox, and any voice that reports no words.** textweaver estimates: it moves the highlight one word at a time at the speaking rate. `[highlight] speed` (0.5 to 1.5) speeds the estimate up or slows it down. Word-level highlighting with Omnivox is not promised.
 
 Some SAPI voices, such as Code Factory's, report no word times. textweaver tells you when you choose one: "This voice does not report words, so the word highlight is estimated."
@@ -535,6 +538,7 @@ setx TEXTWEAVER_ECI_CODE_FACTORY 1
 
 - [Getting ETI-Eloquence](eloquence.md): Eloquence on Windows, macOS, and Linux.
 - [DECtalk](dectalk.md): using an installed DECtalk.
+- [CW: reading in Morse code](cw.md): sending a document as Morse code, keying it, and practicing.
 - [Settings](settings.md): `[interface] language`, the six built-in interface languages, and `[speech.voices_by_language]`.
 - [Troubleshooting](troubleshooting.md): no speech, wrong voice, and other problems.
 - [ADR-0003: Speech threading and event timing](adr/0003-speech-threading-and-event-timing.md): how the highlight follows speech.
