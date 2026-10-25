@@ -4,7 +4,7 @@ This page summarizes what each release brought, for readers who want the changes
 
 ## 0.1.0-beta.4
 
-Not yet released.
+Released on Saturday, October 24, 2026.
 
 Summary: links between documents with Back and Forward, a Braille view, much fuller support for Obsidian notes and vaults, CW, which reads in Morse code, takes Morse keyed from a key or paddle, and teaches it, selecting with the mouse in the textweaver app, and Settings organized by task.
 
