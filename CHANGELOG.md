@@ -80,6 +80,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - The links in the packaged QUICKSTART.md and INSTALL.md now reach the guides in the package's docs folder, so following them works in an installed copy.
 
+### Package sizes
+
+- `textweaver-0.1.0-beta.4-linux-aarch64.AppImage`: 43.3 MB (45,394,440 bytes)
+- `textweaver-0.1.0-beta.4-linux-aarch64.tar.gz`: 45.6 MB (47,770,646 bytes)
+- `textweaver-0.1.0-beta.4-linux-x86_64.AppImage`: 46.3 MB (48,527,864 bytes)
+- `textweaver-0.1.0-beta.4-linux-x86_64.tar.gz`: 48.7 MB (51,106,803 bytes)
+- `textweaver-0.1.0-beta.4-macos-universal.zip`: 76.7 MB (80,373,686 bytes)
+- `textweaver-0.1.0-beta.4-windows-x86_64.zip`: 49.3 MB (51,712,645 bytes)
+
 ## [0.1.0-beta.3] - 2026-10-17
 
 ### Changed
