@@ -101,7 +101,7 @@ scripts/speech-check.sh
 
 ### Your screen reader does not read the app's messages
 
-1. Open Settings (Ctrl+,), choose the section Window (it holds the app's settings), and change Announcements. The choices are a live region (the default) and UI Automation notifications (Windows only), and the change applies from the next start. To try the other for a single run, start with `--announce uia` or `--announce live`.
+1. Open Settings (Ctrl+,), choose the section Accessibility and announcements, and change Announcements. The choices are a live region (the default) and UI Automation notifications (Windows only), and the change applies from the next start. To try the other for a single run, start with `--announce uia` or `--announce live`.
 2. Check the accessibility mode, which **Alt+Shift+A** changes. In screen reader mode textweaver itself is silent and your screen reader reads its messages.
 3. NVDA announces a button's shortcut key only when its setting for reporting object shortcut keys (Object Presentation) is on.
 

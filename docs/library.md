@@ -17,7 +17,7 @@ The list contains every document in your library folders, followed by recently o
 
 For example: "Cells, 25 percent, in Readings".
 
-**Up** and **Down** move through the list, **Enter** opens a document, **F2** edits its details (below), **Ctrl+Enter** adds it to the reading queue or removes it (below; **Cmd+Enter** in the Mac app), and **Escape** closes the list. When there is nothing to show you hear: "The library is empty. Add a folder in Settings, under Library folders, or open a file with Ctrl+O."
+**Up** and **Down** move through the list, **Enter** opens a document, **F2** edits its details (below), **Ctrl+Enter** adds it to the reading queue or removes it (below; **Cmd+Enter** in the Mac app), and **Escape** closes the list. When there is nothing to show you hear: "The library is empty. Add a folder in Settings, under Library and study tools (Library folders), or open a file with Ctrl+O."
 
 ### Filter the list as you type
 

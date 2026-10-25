@@ -55,6 +55,8 @@ These were planned for earlier betas and arrive in beta 3:
 - **Obsidian notes read as Obsidian writes them.** Highlights, comments, task statuses, inline footnotes, embeds, and Mermaid diagrams; links and embeds resolved across the whole vault, block links, properties, backlinks, unresolved links, tags, and canvases; and in edit mode, insert wiki link, toggle task, cycle task status, and insert callout ([Obsidian vaults](vault.md), [Writing and editing](editing.md#obsidian-notes-wiki-links-tasks-and-callouts)).
 - **The Braille view,** braille dots drawn in the app for learning and teaching, with the braille grade setting that also decides contracted braille in BRF files ([The Braille view](reading-aids.md#the-braille-view)).
 - **CW (Morse code).** A speech engine, keying Morse code from a key or paddle into a document, Koch-method practice, and `tw cw monitor` and `tw cw ports` ([CW](cw.md)).
+- **Selecting with the mouse** in the textweaver app, in reading and edit mode ([Selecting with the mouse](gui.md#selecting-with-the-mouse)).
+- **Settings organized by task.** Twenty-four short sections that follow the speech engine, with All settings and a search, the same in the terminal reader and the app ([The settings screen](settings.md#the-settings-screen)).
 
 ## Shelved
 

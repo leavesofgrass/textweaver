@@ -78,7 +78,7 @@ The terminal version always uses the terminal's own font. A terminal program can
 
 - **Ctrl+D**, or the Font button, opens the font list. The fonts that come with textweaver are first, marked "built in", then Lexend ("download, 206 KB" until it is downloaded), then the fonts installed on your computer. It is a list like textweaver's others: a letter moves to the next font starting with it, and Enter uses the font at once. You hear, for example, "Font: OpenDyslexic." Escape keeps the font you had.
 - **Ctrl+Plus** and **Ctrl+Minus** make the text larger and smaller, from 8 to 72 points, and **Ctrl+0** goes back to 14 points. You hear, for example, "Text size 18 points."
-- The Settings dialog (Ctrl+,) has the same font and size under "Reading aids".
+- The Settings dialog (Ctrl+,) has the same font and size under "Spacing, font and ruler".
 
 The font is saved in `settings.toml` under `[reading_aids.font]`:
 

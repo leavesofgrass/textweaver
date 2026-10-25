@@ -8,7 +8,7 @@ The first time textweaver starts, the list of optional components ends with one 
 
 If your copy of textweaver was installed before this row existed, it asks the same question once, as a yes-or-no question, the first time nothing else is open: "Check for updates automatically, once a day? y or n".
 
-To change your answer later, open Settings and find "Check for updates" in the Updates section; F1 on the setting reads its help. In `settings.toml` it is:
+To change your answer later, open Settings and find "Check for updates" in the Updates and components section; F1 on the setting reads its help. In `settings.toml` it is:
 
 ```toml
 [updates]

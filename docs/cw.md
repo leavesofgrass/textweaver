@@ -4,7 +4,7 @@ textweaver can read a document in Morse code instead of speech. CW (continuous w
 
 ## Choose CW
 
-CW is the engine `cw`. Choose it in Settings (Speech engine: CW (Morse code)), or in `settings.toml`:
+CW is the engine `cw`. Choose it in Settings, under Voice and speech (Speech engine: CW (Morse code)), or in `settings.toml`:
 
 ```toml
 [speech]
@@ -78,6 +78,8 @@ practice_delay_ms = 1000
 - `practice_threshold`, `practice_group`, `practice_groups`, `practice_delay_ms`: Morse code practice (see [Practice and training](#practice-and-training)).
 
 A change applies from the next sentence; while CW is reading, the reading goes on from the last word with the new value. These settings are the same on every computer you sync.
+
+In Settings, while CW is the speech engine, the speeds, the tone, and its level are at the top of Voice and speech, with the prosigns and the status line, and Voice and speech lists no voice, rate, or pitch. With any other engine they are in Morse code, which also holds the keying settings; the practice settings are in Morse practice. Typing a word such as `wpm` or `sidetone` in the search finds a setting from anywhere. See [Settings](settings.md#morse-code).
 
 ## Key Morse code into a document
 
