@@ -2,7 +2,7 @@
 
 The [quick start](quickstart.md) is the short version of this guide. On Windows, the fastest route is to download `textweaver-VERSION-windows-x86_64.zip`, extract it, and run `textweaver.exe`, the textweaver app (see [The app](#the-app)).
 
-textweaver is in beta. The newest release is 0.1.0-beta.3. Since beta 1, each release on GitHub provides one self-contained package for each system and processor:
+textweaver is in beta. The newest release is 0.1.0-beta.4. Since beta 1, each release on GitHub provides one self-contained package for each system and processor:
 
 - `textweaver-VERSION-windows-x86_64.zip`, for Windows on x86-64 computers (it also runs on Windows on ARM, under emulation)
 - `textweaver-VERSION-macos-universal.zip`, for Apple silicon and Intel Macs
@@ -112,7 +112,7 @@ The package holds three programs, which must stay together in one folder:
 
 The `ibmtts-dictionaries` folder must stay there as well. Eloquence, SAPI5 voices, DECtalk, and eSpeak NG each run in a separate process, so a crash in an engine cannot take the reader down. For a 64-bit engine, that process is a copy of the program you are using, started in a hidden `--engine-host` mode. For a 32-bit engine (Code Factory's Eloquence, most DECtalk libraries, older SAPI5 voices), it is the single 32-bit host, `textweaver-host-x86.exe`, which allows 32-bit voices to work with 64-bit textweaver. eSpeak NG itself is installed with its own Windows installer.
 
-Packages before 0.1.0-beta.3 included a separate host program for each engine, such as `textweaver-eci-host.exe` and `textweaver-sapi-host-x86.exe`. These are no longer used; if an update left them in the folder, they can be deleted.
+Packages before 0.1.0-beta.3 included a separate host program for each engine, such as `textweaver-eci-host.exe` and `textweaver-sapi-host-x86.exe`. These are no longer used; if an update left them in the folder, they can be deleted. <!-- history -->
 
 - **SAPI5 voices**, the Windows voices, work immediately, including the OneCore voices and any SAPI5 voices you have installed.
 - **Eloquence** requires an Eloquence library you are entitled to use. See [the Eloquence guide](eloquence.md) (`docs/eloquence.md` in the package), or run `tw eloquence --guide`.
@@ -135,7 +135,7 @@ The macOS build is not yet notarized by Apple, because notarization requires a p
 2. Remove the quarantine flag that the browser added, substituting the name of the folder you extracted:
 
    ```bash
-   xattr -dr com.apple.quarantine textweaver-0.1.0-beta.3-macos-universal
+   xattr -dr com.apple.quarantine textweaver-0.1.0-beta.4-macos-universal
    ```
 
    If you skip this step, macOS reports that the program "cannot be opened because Apple cannot check it for malicious software". In that case, open System Settings, go to Privacy & Security, choose "Open Anyway" next to the message about `textweaver.app` or `tw`, and run the program again.
@@ -225,13 +225,13 @@ A package does not contain every tool textweaver can use. ffmpeg (audio export),
 Each release has a `SHA256SUMS.txt` file. To check a download on Windows:
 
 ```powershell
-certutil -hashfile textweaver-0.1.0-beta.3-windows-x86_64.zip SHA256
+certutil -hashfile textweaver-0.1.0-beta.4-windows-x86_64.zip SHA256
 ```
 
 On macOS:
 
 ```bash
-shasum -a 256 textweaver-0.1.0-beta.3-macos-universal.zip
+shasum -a 256 textweaver-0.1.0-beta.4-macos-universal.zip
 ```
 
 On Linux:
@@ -245,7 +245,7 @@ Compare the result with the line for that file in `SHA256SUMS.txt`. textweaver's
 Every package also carries a build attestation, a signed record of the GitHub workflow that produced it. With the GitHub CLI installed, you can verify one with:
 
 ```bash
-gh attestation verify textweaver-0.1.0-beta.3-windows-x86_64.zip --repo leavesofgrass/textweaver
+gh attestation verify textweaver-0.1.0-beta.4-windows-x86_64.zip --repo leavesofgrass/textweaver
 ```
 
 ## Building from source

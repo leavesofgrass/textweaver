@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-beta.4] - 2026-10-24
+
 ### CW (Morse code)
 
 - **New: CW as a speech engine** (`[speech] backend = "cw"`, "CW (Morse code)" in Settings). Play sends the document in International Morse code (ITU-R M.1677-1) as a tone, exactly as written: the text normalizer is skipped, and a character Morse code does not have is skipped and counted on the status line when the reading ends. Word times come from the computed schedule, so the highlight and RSVP follow the word being sent exactly and stop with the audio when it pauses; audio export writes CW with the same word times. Speeds are PARIS words per minute with Farnsworth spacing by the ARRL formula. The rate keys change the character speed by one word per minute and the effective speed in proportion; the pitch keys move the tone by semitones. While CW is the engine, the title line (the status bar in the textweaver app) shows the CW speeds, "CW 20 wpm, effective 10" or "CW 20 wpm" without Farnsworth spacing, in place of the speech rate, and Say Status says them in words. Each element rises and falls on a 5 ms raised cosine, so it does not click. CW is opt-in: it is never a fallback engine ([CW](docs/cw.md)).
@@ -1147,6 +1149,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-beta.4]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.1
