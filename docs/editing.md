@@ -390,7 +390,7 @@ In the app, the preview can sit beside the editor instead of in a browser: **Alt
 - **Each save**: the page reloads after every save.
 - **Your typing**: the page reloads after every save, and also whenever you pause in your typing, without saving.
 
-Choose it from the View menu (Browser preview follows), from the palette (`browser preview follows`, which moves to the next value and says it), or in Settings under Preview, where F1 explains it. Each choice is saved, and choosing again returns it to nothing. In `settings.toml` it reads:
+Choose it from the View menu (Browser preview follows), from the palette (`browser preview follows`, which moves to the next value and says it), or in Settings under Editing, where F1 explains it. Each choice is saved, and choosing again returns it to nothing. In `settings.toml` it reads:
 
 ```toml
 [preview]

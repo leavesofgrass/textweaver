@@ -72,7 +72,7 @@ The choice is kept in the settings `gui.header_buttons` and `gui.toolbar_buttons
 
 ### Focus mode and full screen
 
-Focus mode gives the text the whole window. With it on, the header, the toolbar, the status bar and the Contents or Notes panel fade from view once the mouse has rested for three seconds, and the document widens and lengthens to fill the space they leave. Moving the mouse brings them back at once, and they fade again after the next rest. Turn it on or off with View, Focus mode, with "Focus mode" in the command palette (F2), or in Settings under Window (`focus_mode = true` in `[gui]`). It is off by default and stays on this computer, and the delay is fixed rather than configurable.
+Focus mode gives the text the whole window. With it on, the header, the toolbar, the status bar and the Contents or Notes panel fade from view once the mouse has rested for three seconds, and the document widens and lengthens to fill the space they leave. Moving the mouse brings them back at once, and they fade again after the next rest. Turn it on or off with View, Focus mode, with "Focus mode" in the command palette (F2), or in Settings under Toolbars and panels (`focus_mode = true` in `[gui]`). It is off by default and stays on this computer, and the delay is fixed rather than configurable.
 
 The keyboard never brings the interface back. Reading keys such as Space, the arrows, the sentence and paragraph keys, and the rate keys leave the screen undisturbed, so a reader who works from the keyboard is not interrupted. The hiding is visual only: every control stays in the accessibility tree with its name, its role and its place, the Tab order and F6's regions are unchanged, and the focus stays where it was. A hidden button still takes the focus and still works; it is simply not drawn until the mouse moves. Nothing is announced when the interface fades or returns, so NVDA, JAWS and a Braille display read the window exactly as they do without focus mode. Turning focus mode on or off is announced, as the result of a command.
 
@@ -86,7 +86,7 @@ The app has the same menus as the terminal reader, built from the same list of c
 - **macOS:** the menu bar at the top of the screen, with each command's key as its keyboard shortcut. VoiceOver reaches it with Control+Option+M.
 - **Linux:** F10 shows the menus as a list inside the app, as the terminal does: "Menus, 1 of 7, File". Enter or Right opens a menu, a letter moves to the item with that letter, Enter runs a command, Left or Backspace goes back up, and Escape closes.
 
-**Hiding the menu bar (Windows).** The menu bar is hidden by default and occupies no space until you call for it; the first-run welcome says so ("Alt or F10 the menus"). To keep it visible, turn off "Hide the menu bar" in Settings, under Window (`auto_hide_menu = false` in `[gui]`); a value you saved earlier is kept. Alt, F10, or Alt with a menu's letter shows the bar and enters it as before, so NVDA and JAWS still announce "menu bar" or the menu's name, and the bar hides again, silently, when the menu closes. Every Alt key the keymap uses still works, and the bar appears briefly when you press Alt for one of those keys. Close any open dialog before using the menus. The setting has no effect on Linux, where the menus are already the F10 list and take no room, or on macOS, whose menu bar is at the top of the screen.
+**Hiding the menu bar (Windows).** The menu bar is hidden by default and occupies no space until you call for it; the first-run welcome says so ("Alt or F10 the menus"). To keep it visible, turn off "Hide the menu bar" in Settings, under Toolbars and panels (`auto_hide_menu = false` in `[gui]`); a value you saved earlier is kept. Alt, F10, or Alt with a menu's letter shows the bar and enters it as before, so NVDA and JAWS still announce "menu bar" or the menu's name, and the bar hides again, silently, when the menu closes. Every Alt key the keymap uses still works, and the bar appears briefly when you press Alt for one of those keys. Close any open dialog before using the menus. The setting has no effect on Linux, where the menus are already the F10 list and take no room, or on macOS, whose menu bar is at the top of the screen.
 
 ### The context menu
 
@@ -120,7 +120,7 @@ When a chooser closes, focus returns to the document, or moves to the next step 
 - **Ctrl+0**: back to the standard size, 14 points.
 - **Ctrl+D**, or the Font button: the font list. The fonts that come with textweaver are first, marked "built in": Atkinson Hyperlegible Next, Atkinson Hyperlegible Mono, and OpenDyslexic. Then your installed fonts. It is a list like textweaver's others: a letter moves to the next font starting with it, F1 says the list's name and size again, and Enter uses the font at once.
 
-Each change is announced, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size ranges from 8 to 72 points, stepping one point at a time around the usual sizes and more quickly above 16 points. The Settings dialog changes the same settings under "Reading aids".
+Each change is announced, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size ranges from 8 to 72 points, stepping one point at a time around the usual sizes and more quickly above 16 points. The Settings dialog changes the same settings under "Spacing, font and ruler".
 
 Until you choose a size, the document's text follows your system's text size, as the rest of the interface does: with Windows' "Text size" at 150 percent, the standard 14 points is drawn as 21. Ctrl+Plus and Ctrl+Minus step from the size you see, and the size you reach is kept as your own. Ctrl+0 returns to the standard size, which follows the system again.
 
@@ -176,7 +176,7 @@ The app uses the same keymap as the terminal reader, plus a few chords the termi
 - **Alt+F5**: the preview pane beside the editor, on or off (see [The preview pane](#the-preview-pane)).
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
 - **k** and **Shift+K** (browse): next and previous link. **Enter** on a link while reading, or **Alt+Shift+F** in any mode, follows it; a link to another document opens it in the app, at the heading the link names. **Alt+Left** and **Alt+Right** go back and forward, across the documents links opened too (see [Follow a link or a footnote](reading.md#follow-a-link-or-a-footnote-enter-or-altshiftf)).
-- **Alt+Shift+A**: the app's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and cursor moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run. The View menu and the Accessibility mode setting show the same two names. In `settings.toml` the mode keeps the terminal reader's three values: "textweaver reads aloud" is saved as `"hybrid"`, and "my screen reader reads" as `"screen-reader"`.
+- **Alt+Shift+A**: the app's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Accessibility and announcements), off by default, has textweaver say its messages, typing and cursor moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run. The View menu and the Accessibility mode setting show the same two names. In `settings.toml` the mode keeps the terminal reader's three values: "textweaver reads aloud" is saved as `"hybrid"`, and "my screen reader reads" as `"screen-reader"`.
 - **F5**: the next color theme.
 - **F9**: single-key shortcuts off or on.
 
@@ -192,7 +192,7 @@ A panel beside the document keeps the document's headings, or its notes, in view
 - The row where the cursor is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the cursor, so going to the panel starts where you are.
 - The panel is a navigation landmark named "Contents" or "Notes".
 
-The panel never takes focus on its own: when the app opens with a panel, or you choose one in the settings, focus stays where it was. The app remembers the panel you showed last (Settings, Window, "Panel beside the document"; `sidebar` in `[gui]`, one of `off`, `contents`, or `notes`). A document without headings shows "No headings." in the Contents panel; a PDF without headings lists its pages, as the outline does. In edit mode, the Contents follow the headings you type once they are parsed again, as the outline does.
+The panel never takes focus on its own: when the app opens with a panel, or you choose one in the settings, focus stays where it was. The app remembers the panel you showed last (Settings, Toolbars and panels, "Panel beside the document"; `sidebar` in `[gui]`, one of `off`, `contents`, or `notes`). A document without headings shows "No headings." in the Contents panel; a PDF without headings lists its pages, as the outline does. In edit mode, the Contents follow the headings you type once they are parsed again, as the outline does.
 
 A closed panel costs nothing. While it is open, its rows are rebuilt only when the document, its headings, or its notes change, not as the reading highlight moves.
 
@@ -234,7 +234,7 @@ List items keep their indentation by depth while you edit, as in reading, and bu
 
 ### The preview pane
 
-While you edit, the window can show the document beside the editor as it will read: headings at their sizes, lists with their bullets and numbers, tables, code, callouts, math, and images by their captions, all drawn by the same view that shows a document you are reading. The pane is off by default because it takes half of the window and most writers want the room. Turn it on with **Alt+F5**, with Show preview in the View menu, or by typing `show preview` in the command palette; textweaver says "Preview shown beside the editor. F6 moves to it." and remembers the choice (Settings, Preview, "Preview pane"; `pane` in `[preview]`). The same key turns it off. Turned on outside edit mode, it waits, and appears the next time you edit.
+While you edit, the window can show the document beside the editor as it will read: headings at their sizes, lists with their bullets and numbers, tables, code, callouts, math, and images by their captions, all drawn by the same view that shows a document you are reading. The pane is off by default because it takes half of the window and most writers want the room. Turn it on with **Alt+F5**, with Show preview in the View menu, or by typing `show preview` in the command palette; textweaver says "Preview shown beside the editor. F6 moves to it." and remembers the choice (Settings, Editing, "Preview pane"; `pane` in `[preview]`). The same key turns it off. Turned on outside edit mode, it waits, and appears the next time you edit.
 
 The preview follows your writing without getting in its way. It is rebuilt only after you pause typing, 300 milliseconds by default ("Preview pause", `pane_delay_ms`, from 100 to 3000), and the work happens away from the keyboard, so typing is never slowed. It tracks the cursor: the block you are writing in scrolls into view and is marked as the spoken sentence is marked while reading, with a band and a line under it, so the mark never depends on color alone. Nothing is announced when the preview changes, and focus and the cursor stay in the editor.
 
@@ -277,14 +277,14 @@ Every button carries its key as its shortcut and a short description, which NVDA
 
 ## Language
 
-The app's own labels (the buttons, the settings dialog, the hints) follow the interface language, `[interface] language` in `settings.toml`, as textweaver's messages do. Change it in Settings, under "Interface", and the app relabels itself immediately.
+The app's own labels (the buttons, the settings dialog, the hints) follow the interface language, `[interface] language` in `settings.toml`, as textweaver's messages do. Change it in Settings, under "Keyboard and language", and the app relabels itself immediately.
 
 ## Announcements
 
 textweaver's messages ("Paused.", "Reading at 300 words per minute.") reach your screen reader in one of two ways:
 
 - **A live region** (the default). NVDA and JAWS both speak it.
-- **UI Automation notifications** (Windows only). Choose it in Settings, under "Window", or with `--announce uia` for one run.
+- **UI Automation notifications** (Windows only). Choose it in Settings, under "Accessibility and announcements", or with `--announce uia` for one run.
 
 The setting is `announce` in the `[gui]` section of `settings.toml`; see [Settings](settings.md#accessibility-and-announcements).
 
@@ -410,7 +410,7 @@ Colors cannot be heard, so the color steps need a sighted helper, a screenshot r
 4. **Light theme, Windows light.** Expected: light, as in step 3.
 5. **High contrast.** Turn on a Contrast theme (Left Alt+Left Shift+Print Screen). Expected: "frame: system", and the title bar and menus in the contrast theme's colors, whatever textweaver's theme. Turn it off: the frame follows the theme again.
 6. **Menus still read.** In each step, Alt, then Down: NVDA and JAWS say "menu bar", then "File" and the first item with its key, as before. Escape twice leaves.
-7. **Hiding the menu bar.** The bar is hidden by default. If you turned it off before, turn "Hide the menu bar" on in Settings, under Window. Expected: the bar disappears and nothing is said beyond the setting's own message. Then:
+7. **Hiding the menu bar.** The bar is hidden by default. If you turned it off before, turn "Hide the menu bar" on in Settings, under Toolbars and panels. Expected: the bar disappears and nothing is said beyond the setting's own message. Then:
    - Alt alone: "menu bar" is said, as before, and the bar is shown. Escape: the bar hides again, silently.
    - F10: the same.
    - Alt+F, Alt+E, Alt+V, and each other menu's letter: that menu opens and is read.

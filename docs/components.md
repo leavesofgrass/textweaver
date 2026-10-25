@@ -129,7 +129,7 @@ None of the three publishes a separate checksum file for these builds, so each S
 
 ## Your own components source
 
-If you maintain components of your own (licensed engines, helper programs, offline copies of the models), point textweaver at them under Settings, Optional components, Components source (`[components] source`). The setting accepts either of these:
+If you maintain components of your own (licensed engines, helper programs, offline copies of the models), point textweaver at them under Settings, Updates and components, Components source (`[components] source`). The setting accepts either of these:
 
 - **A folder on this computer**, such as a clone of your repository or a memory stick. No sign-in is needed.
 - **A GitHub repository**, written `owner/name`. Its releases hold the files, one release per component, and a release tagged `manifest` holds the list. A public repository needs no sign-in; a private one does (see "Signing in to a private repository" below).

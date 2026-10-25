@@ -226,7 +226,7 @@ The highlight palette is `[[highlight.palette]]` in `settings.toml`. It starts w
 | example | pink | dotted underline |
 | review | orange | bold |
 
-Each entry has a `name` (any words you like), a `color` (a color name such as `skyblue` or `orange`, or `#rrggbb`), and a `shape`: `underline`, `double_underline`, `bold`, `dotted`, `brackets`, or `symbol`. The palette holds up to eight entries; textweaver keeps the first eight and tells you if there are more. To change a name, a color, or a shape, edit the file; Settings lists the palette as **Highlight names**. For example:
+Each entry has a `name` (any words you like), a `color` (a color name such as `skyblue` or `orange`, or `#rrggbb`), and a `shape`: `underline`, `double_underline`, `bold`, `dotted`, `brackets`, or `symbol`. The palette holds up to eight entries; textweaver keeps the first eight and tells you if there are more. To change a name, a color, or a shape, edit the file; Settings lists the palette, under Highlight, as **Highlight names**. For example:
 
 ```toml
 [[highlight.palette]]

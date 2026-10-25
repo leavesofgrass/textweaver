@@ -33,6 +33,7 @@ textweaver records your place in each document and returns to it the next time y
 - **?** lists every key.
 - **F1** opens the help. Typing there searches the commands, keys, settings, and guides.
 - **F2** opens the command palette, a list of every command. Type part of a name, then press Enter.
+- **Shift+F10** in the terminal reader, or **Ctrl+comma** in the textweaver app, opens Settings. Settings are grouped by task into short sections, such as Voice and speech, Pauses and verbosity, and Reading; typing a word searches every setting, and the last item, All settings, lists them all ([Settings](settings.md#the-settings-screen)).
 - **Ctrl+Q** quits. Press **y** when asked to confirm.
 
 ## More to try
