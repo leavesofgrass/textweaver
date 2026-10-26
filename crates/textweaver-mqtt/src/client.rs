@@ -55,6 +55,7 @@ impl MqttSource {
             wake,
             dropped: 0,
             status: Status::Idle,
+            ever_connected: false,
         };
         let thread = match std::thread::Builder::new()
             .name("mqtt-receiver".into())
@@ -125,6 +126,10 @@ struct Worker {
     /// Messages dropped while the channel was full, not yet reported.
     dropped: u64,
     status: Status,
+    /// A session reached CONNACK since the source started: after that, a
+    /// dropped link is a broker restart or a network loss, not a wrong
+    /// port, so the TLS hint is left out.
+    ever_connected: bool,
 }
 
 enum End {
@@ -388,6 +393,7 @@ impl Worker {
                     // without a TLS alert (a reset on Windows), so a hint
                     // is all we can give.
                     if !cfg.tls.is_on()
+                        && !self.ever_connected
                         && matches!(
                             e.kind(),
                             io::ErrorKind::UnexpectedEof
@@ -406,6 +412,7 @@ impl Worker {
             return End::Failed(Failure::from_connack(connack.code), false);
         }
         self.status = Status::Connected;
+        self.ever_connected = true;
         self.emit(MqttEvent::Connected {
             encrypted: cfg.tls.is_on(),
             tailscale,

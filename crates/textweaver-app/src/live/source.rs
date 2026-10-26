@@ -76,6 +76,26 @@ pub enum LiveEvent {
         /// How long it has been quiet.
         seconds: u64,
     },
+    /// The connection could not be made or was lost, and the source
+    /// stopped trying: only the user can fix it (a wrong password, an
+    /// untrusted certificate, a settings error). `reason` is a sentence in
+    /// words.
+    Failed {
+        /// Why, in words.
+        reason: String,
+    },
+    /// The broker refused the subscription to `topic`: it may not let
+    /// this account read it.
+    TopicRefused {
+        /// The topic.
+        topic: String,
+    },
+    /// Messages the source left out because the reader fell behind; the
+    /// connection stayed up.
+    Skipped {
+        /// How many.
+        count: u64,
+    },
 }
 
 /// A live source. Implementations run their own threads; the app only

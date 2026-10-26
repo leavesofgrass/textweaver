@@ -46,6 +46,9 @@ fn app(cursor: CursorPlacement) -> App {
 /// A live log fed by a scripted source, on an 80 by 24 screen.
 fn launch(cursor: CursorPlacement) -> Harness {
     let mut app = app(cursor);
+    // Each entry is sent at once here; the announcements would say
+    // entries this close together as one.
+    app.set_live_announce_burst(Duration::ZERO);
     let (source, feed) = ScriptedSource::new();
     app.open_live_source(
         Box::new(source),

@@ -5476,11 +5476,6 @@ live-entries =
         [one] 1 entry
        *[other] { $count } entries
     }
-live-entry-and-more =
-    { $more ->
-        [one] { $line } And 1 more.
-       *[other] { $line } And { $more } more.
-    }
 live-resumed =
     { $count ->
         [0] Updates resumed.
@@ -5488,6 +5483,80 @@ live-resumed =
        *[other] Updates resumed, { $count } updates applied.
     }
 live-resumed-dropped = Updates resumed, { $count } updates applied. { $dropped } older updates were left out while paused.
+
+## Beta 5: live sources' commands, the set-up steps, and new entries said.
+## $name is a source's name, $topic an MQTT topic, $line an entry as one
+## line, $reason a sentence in words.
+name-open-live-source = Open live source
+action-open-live-source = Open a live source: list the live sources set up, and Enter connects to one and shows its log as it grows
+name-set-up-live-source = Set up a live source
+action-set-up-live-source = Set up a live source: its name, the broker's host, encryption, port, topic, user name, and view, asked one at a time
+name-close-live-source = Close live source
+action-close-live-source = Close the live source: stop receiving; the log stays open, read only, and is saved
+name-save-live-log = Save live log now
+action-save-live-log = Save the live log as JSON now, and say where
+name-forget-live-source-password = Forget live source password
+action-forget-live-source-password = Forget the live source's password kept in the system credential store; it is asked for again when needed
+name-live-say-unread = Say unread entries
+action-live-say-unread = Say how many live log entries are unread, and the newest one
+name-live-jump-newest = Jump to newest entry
+action-live-jump-newest = Move to the newest entry of the live log and say it
+name-live-switch-view = Switch list and table
+action-live-switch-view = Switch the live log between the list and the table, keeping your place
+name-live-toggle-pause = Pause or resume updates
+action-live-toggle-pause = Pause or resume the live log's updates; while paused, new entries wait
+name-live-toggle-speak = Speak new entries
+action-live-toggle-speak = Speak new live log entries in textweaver's own voice, on or off
+name-live-toggle-field-show = Show changes of this field
+action-live-toggle-field-show = In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved
+name-live-toggle-field-speak = Speak changes of this field
+action-live-toggle-field-speak = In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved
+menu-live = Live sources
+prompt-live-setup = Set up a live source
+live-failed = Cannot connect to { $name }: { $reason } No more tries; fix this, then open the source again.
+live-topic-refused = The broker refused the topic { $topic }; it may not let this account read it.
+live-skipped =
+    { $count ->
+        [one] 1 message was left out: they came faster than they could be shown.
+       *[other] { $count } messages were left out: they came faster than they could be shown.
+    }
+live-new-entries = { $line } { $count } new entries.
+live-unread-newest = { $count }. Newest: { $line }
+live-not-in-build = Live sources are not in this version of { -brand }.
+live-speak-on = Speak new entries on.
+live-speak-off = Speak new entries off.
+live-none-set-up = No live sources are set up. Set up a live source adds one.
+live-open-title = Live sources
+live-source-item = { $name }, { $host }, { $topic }
+live-forget-title = Forget the password of which live source?
+live-no-passwords = No live source signs in with a user name, so no password is kept.
+live-not-receiving = No live source is receiving.
+live-cannot-open = Cannot open the live source. { $problems }
+live-not-opened = { $name } not opened: no password.
+live-setup-name = Live source name, for example Practice log; Enter cancels
+live-setup-host = Broker host name or address
+live-setup-ca-file = Certificate authority file, PEM
+live-setup-port = Port, Enter keeps the default
+live-setup-topic = Topic to read, for example log/checkins
+live-setup-username = User name, Enter for none
+live-setup-host-needed = A host name or address is needed, with no spaces.
+live-setup-ca-file-needed = A certificate authority file is needed for this encryption.
+live-setup-ca-file-missing = No file at { $path }.
+live-setup-port-bad = The port is a number from 1 to 65535.
+live-setup-topic-needed = A topic is needed.
+live-setup-tls-title = Encryption
+live-setup-tls-off = Off: not encrypted, port 1883; fine over Tailscale
+live-setup-tls-system = TLS, checked against the bundled certificate authorities, port 8883
+live-setup-tls-ca-file = TLS, checked against a certificate authority file, port 8883
+live-setup-view-title = View
+live-setup-view-log = Log: one entry per message
+live-setup-view-values = Values: one line per field, updated in place
+live-setup-saved = Live source { $name } saved.
+live-setup-not-saved = Live source { $name } not saved: { $error } Check that the settings folder can be written to, then set it up again.
+live-setup-offer-title = Open { $name } now?
+live-setup-open-now = Open it now
+live-setup-later = Not now
+live-setup-not-now = Not opened. Open live source opens it later.
 live-values-title = Live values
 live-values-empty = No values yet.
 live-value-none = no value

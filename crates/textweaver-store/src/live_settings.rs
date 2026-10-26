@@ -52,8 +52,8 @@ pub const MQTT_TLS_PORT: u16 = 8883;
 #[serde(default)]
 pub struct LiveSettings {
     /// Where a closed log is saved as JSON. Empty: the `logs` folder in
-    /// textweaver's data folder, made on the first save
-    /// ([`LiveSettings::log_folder_in`]).
+    /// textweaver's data folder, made on the first save; a relative folder
+    /// is inside the data folder ([`LiveSettings::log_folder_in`]).
     pub log_folder: String,
     /// Each new entry is sent, whole, as a polite message, so the screen
     /// reader shows it on the Braille display (and speaks it, unless its
@@ -92,13 +92,19 @@ impl Default for LiveSettings {
 
 impl LiveSettings {
     /// The folder closed logs are saved in: `log_folder`, or the `logs`
-    /// folder in the data folder when it is empty.
+    /// folder in the data folder when it is empty. A relative
+    /// `log_folder` is inside the data folder, never the working folder,
+    /// which changes with how textweaver was started.
     pub fn log_folder_in(&self, paths: &Paths) -> PathBuf {
         let folder = self.log_folder.trim();
         if folder.is_empty() {
-            paths.live_logs_dir()
+            return paths.live_logs_dir();
+        }
+        let folder = PathBuf::from(folder);
+        if folder.is_absolute() {
+            folder
         } else {
-            PathBuf::from(folder)
+            paths.data_dir.join(folder)
         }
     }
 
@@ -548,8 +554,15 @@ order = 2
         };
         assert_eq!(
             elsewhere.log_folder_in(&paths),
-            PathBuf::from("logs-elsewhere")
+            paths.data_dir.join("logs-elsewhere"),
+            "a relative folder is in the data folder"
         );
+        let absolute = std::env::temp_dir().join("net-logs");
+        let there = LiveSettings {
+            log_folder: absolute.display().to_string(),
+            ..elsewhere
+        };
+        assert_eq!(there.log_folder_in(&paths), absolute);
     }
 
     #[test]

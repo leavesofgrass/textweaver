@@ -19,12 +19,14 @@ name = "tw"
 path = "src/bin/tw.rs"
 
 [features]
-default = ["opus", "carta", "cw-midi"]
+default = ["opus", "carta", "cw-midi", "mqtt"]
 # `tw cw monitor` and CW keying in the reader read MIDI key adapters (the
 # TinyMIDI, the CTR2 MIDI) through midir, in textweaver-app; on Windows
 # through its WinRT backend, which also sees Bluetooth LE MIDI devices.
 # On in releases.
 cw-midi = ["textweaver-app/cw-midi"]
+# Live sources over MQTT in the terminal reader (beta 5); on in releases.
+mqtt = ["textweaver-app/mqtt", "textweaver-tui/mqtt"]
 # carta (B1-k2): `tw convert`, `tw text`, and the reader read Org,
 # reStructuredText, MediaWiki, DokuWiki (`--from dokuwiki`), and Jira
 # (`--from jira`) in process, ahead of Pandoc, and `tw convert --to` writes

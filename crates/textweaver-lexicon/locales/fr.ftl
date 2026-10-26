@@ -5398,11 +5398,6 @@ live-entries =
         [one] 1 entrée
        *[other] { $count } entrées
     }
-live-entry-and-more =
-    { $more ->
-        [one] { $line } Et 1 autre.
-       *[other] { $line } Et { $more } autres.
-    }
 live-resumed =
     { $count ->
         [0] Mises à jour reprises.
@@ -5410,6 +5405,80 @@ live-resumed =
        *[other] Mises à jour reprises, { $count } mises à jour appliquées.
     }
 live-resumed-dropped = Mises à jour reprises, { $count } mises à jour appliquées. { $dropped } mises à jour plus anciennes ont été omises pendant la pause.
+
+## Beta 5: live sources' commands, the set-up steps, and new entries said.
+## $name is a source's name, $topic an MQTT topic, $line an entry as one
+## line, $reason a sentence in words.
+name-open-live-source = Ouvrir une source en direct
+action-open-live-source = Ouvrir une source en direct : lister les sources en direct configurées ; Entrée se connecte à l'une et montre son journal à mesure qu'il grandit
+name-set-up-live-source = Configurer une source en direct
+action-set-up-live-source = Configurer une source en direct : son nom, l'hôte du broker, le chiffrement, le port, le topic, le nom d'utilisateur et la vue, demandés un par un
+name-close-live-source = Fermer la source en direct
+action-close-live-source = Fermer la source en direct : la réception s'arrête ; le journal reste ouvert, en lecture seule, et il est enregistré
+name-save-live-log = Enregistrer le journal en direct
+action-save-live-log = Enregistrer le journal en direct en JSON maintenant, et dire où
+name-forget-live-source-password = Oublier le mot de passe de la source
+action-forget-live-source-password = Oublier le mot de passe de la source en direct gardé dans le gestionnaire d'identifiants du système ; il sera redemandé au besoin
+name-live-say-unread = Dire les entrées non lues
+action-live-say-unread = Dire combien d'entrées du journal en direct sont non lues, et la plus récente
+name-live-jump-newest = Aller à l'entrée la plus récente
+action-live-jump-newest = Aller à l'entrée la plus récente du journal en direct et la dire
+name-live-switch-view = Basculer entre liste et tableau
+action-live-switch-view = Basculer le journal en direct entre la liste et le tableau, en gardant la position
+name-live-toggle-pause = Suspendre ou reprendre les mises à jour
+action-live-toggle-pause = Suspendre ou reprendre les mises à jour du journal en direct ; suspendues, les nouvelles entrées attendent
+name-live-toggle-speak = Dire les nouvelles entrées
+action-live-toggle-speak = Dire les nouvelles entrées du journal en direct avec la voix de textweaver, activé ou désactivé
+name-live-toggle-field-show = Montrer les changements du champ
+action-live-toggle-field-show = Dans une vue des valeurs en direct, montrer les changements du champ de la ligne du curseur, activé ou désactivé ; le choix est enregistré
+name-live-toggle-field-speak = Dire les changements du champ
+action-live-toggle-field-speak = Dans une vue des valeurs en direct, dire les changements du champ de la ligne du curseur avec la voix de textweaver, activé ou désactivé ; le choix est enregistré
+menu-live = Sources en direct
+prompt-live-setup = Configurer une source en direct
+live-failed = Connexion impossible à { $name } : { $reason } Plus aucun essai ; corrigez cela, puis rouvrez la source.
+live-topic-refused = Le broker a refusé le topic { $topic } ; il ne laisse peut-être pas ce compte le lire.
+live-skipped =
+    { $count ->
+        [one] 1 message a été omis : ils arrivaient plus vite qu'ils ne pouvaient être affichés.
+       *[other] { $count } messages ont été omis : ils arrivaient plus vite qu'ils ne pouvaient être affichés.
+    }
+live-new-entries = { $line } { $count } nouvelles entrées.
+live-unread-newest = { $count }. La plus récente : { $line }
+live-not-in-build = Les sources en direct ne sont pas dans cette version de { -brand }.
+live-speak-on = Dire les nouvelles entrées : activé.
+live-speak-off = Dire les nouvelles entrées : désactivé.
+live-none-set-up = Aucune source en direct configurée. « Configurer une source en direct » en ajoute une.
+live-open-title = Sources en direct
+live-source-item = { $name }, { $host }, { $topic }
+live-forget-title = Oublier le mot de passe de quelle source en direct ?
+live-no-passwords = Aucune source en direct ne se connecte avec un nom d'utilisateur ; aucun mot de passe n'est gardé.
+live-not-receiving = Aucune source en direct ne reçoit.
+live-cannot-open = Impossible d'ouvrir la source en direct. { $problems }
+live-not-opened = { $name } non ouverte : pas de mot de passe.
+live-setup-name = Nom de la source en direct, par exemple Journal d'entraînement ; Entrée annule
+live-setup-host = Nom d'hôte ou adresse du broker
+live-setup-ca-file = Fichier de l'autorité de certification, PEM
+live-setup-port = Port, Entrée garde celui par défaut
+live-setup-topic = Topic à lire, par exemple log/checkins
+live-setup-username = Nom d'utilisateur, Entrée pour aucun
+live-setup-host-needed = Il faut un nom d'hôte ou une adresse, sans espace.
+live-setup-ca-file-needed = Ce chiffrement demande un fichier de l'autorité de certification.
+live-setup-ca-file-missing = Aucun fichier à { $path }.
+live-setup-port-bad = Le port est un nombre de 1 à 65535.
+live-setup-topic-needed = Il faut un topic.
+live-setup-tls-title = Chiffrement
+live-setup-tls-off = Désactivé : non chiffré, port 1883 ; convient par Tailscale
+live-setup-tls-system = TLS, vérifié avec les autorités de certification fournies, port 8883
+live-setup-tls-ca-file = TLS, vérifié avec un fichier de l'autorité de certification, port 8883
+live-setup-view-title = Vue
+live-setup-view-log = Journal : une entrée par message
+live-setup-view-values = Valeurs : une ligne par champ, mise à jour sur place
+live-setup-saved = Source en direct { $name } enregistrée.
+live-setup-not-saved = Source en direct { $name } non enregistrée : { $error } Vérifiez que le dossier des réglages est accessible en écriture, puis configurez-la de nouveau.
+live-setup-offer-title = Ouvrir { $name } maintenant ?
+live-setup-open-now = L'ouvrir maintenant
+live-setup-later = Pas maintenant
+live-setup-not-now = Non ouverte. « Ouvrir une source en direct » l'ouvre plus tard.
 live-values-title = Valeurs en direct
 live-values-empty = Pas encore de valeurs.
 live-value-none = aucune valeur

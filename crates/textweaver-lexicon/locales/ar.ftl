@@ -5781,17 +5781,86 @@ live-entries =
         [one] إدخال واحد
        *[other] { $count } إدخالات
     }
-live-entry-and-more =
-    { $more ->
-        [one] { $line } وإدخال آخر.
-       *[other] { $line } و{ $more } أخرى.
-    }
 live-resumed =
     { $count ->
         [0] استؤنفت التحديثات.
        *[other] استؤنفت التحديثات، وطُبق { $count } تحديث.
     }
 live-resumed-dropped = استؤنفت التحديثات، وطُبق { $count } تحديث. تم تجاهل { $dropped } تحديثات أقدم أثناء الإيقاف المؤقت.
+
+## Beta 5: live sources' commands, the set-up steps, and new entries said.
+## $name is a source's name, $topic an MQTT topic, $line an entry as one
+## line, $reason a sentence in words.
+name-open-live-source = فتح مصدر مباشر
+action-open-live-source = فتح مصدر مباشر: سرد المصادر المباشرة المُعدّة، ويتصل Enter بأحدها ويعرض سجله وهو ينمو
+name-set-up-live-source = إعداد مصدر مباشر
+action-set-up-live-source = إعداد مصدر مباشر: اسمه، ومضيف الوسيط، والتشفير، والمنفذ، والموضوع، واسم المستخدم، والعرض، يُسأل عنها واحدًا تلو الآخر
+name-close-live-source = إغلاق المصدر المباشر
+action-close-live-source = إغلاق المصدر المباشر: يتوقف الاستقبال؛ ويبقى السجل مفتوحًا للقراءة فقط ويُحفظ
+name-save-live-log = حفظ السجل المباشر الآن
+action-save-live-log = حفظ السجل المباشر بصيغة JSON الآن، وذكر مكانه
+name-forget-live-source-password = نسيان كلمة مرور المصدر المباشر
+action-forget-live-source-password = نسيان كلمة مرور المصدر المباشر المحفوظة في مخزن بيانات الاعتماد في النظام؛ تُطلب مرة أخرى عند الحاجة
+name-live-say-unread = نطق الإدخالات غير المقروءة
+action-live-say-unread = نطق عدد إدخالات السجل المباشر غير المقروءة، وأحدثها
+name-live-jump-newest = الانتقال إلى أحدث إدخال
+action-live-jump-newest = الانتقال إلى أحدث إدخال في السجل المباشر ونطقه
+name-live-switch-view = التبديل بين القائمة والجدول
+action-live-switch-view = تبديل السجل المباشر بين القائمة والجدول، مع الحفاظ على الموضع
+name-live-toggle-pause = إيقاف التحديثات مؤقتًا أو استئنافها
+action-live-toggle-pause = إيقاف تحديثات السجل المباشر مؤقتًا أو استئنافها؛ أثناء الإيقاف تنتظر الإدخالات الجديدة
+name-live-toggle-speak = نطق الإدخالات الجديدة
+action-live-toggle-speak = نطق إدخالات السجل المباشر الجديدة بصوت textweaver نفسه، تشغيل أو إيقاف
+name-live-toggle-field-show = إظهار تغييرات هذا الحقل
+action-live-toggle-field-show = في عرض القيم المباشر، إظهار تغييرات الحقل في سطر المؤشر، تشغيل أو إيقاف؛ ويُحفظ الاختيار
+name-live-toggle-field-speak = نطق تغييرات هذا الحقل
+action-live-toggle-field-speak = في عرض القيم المباشر، نطق تغييرات الحقل في سطر المؤشر بصوت textweaver نفسه، تشغيل أو إيقاف؛ ويُحفظ الاختيار
+menu-live = المصادر المباشرة
+prompt-live-setup = إعداد مصدر مباشر
+live-failed = تعذر الاتصال بـ { $name }: { $reason } لا مزيد من المحاولات؛ أصلح ذلك ثم افتح المصدر مرة أخرى.
+live-topic-refused = رفض الوسيط الموضوع { $topic }؛ قد لا يسمح لهذا الحساب بقراءته.
+live-skipped =
+    { $count ->
+        [one] أُغفلت رسالة واحدة: كانت تصل أسرع مما يمكن عرضه.
+       *[other] أُغفلت { $count } رسائل: كانت تصل أسرع مما يمكن عرضه.
+    }
+live-new-entries = { $line } { $count } إدخالات جديدة.
+live-unread-newest = { $count }. الأحدث: { $line }
+live-not-in-build = المصادر المباشرة غير متاحة في هذا الإصدار من { -brand }.
+live-speak-on = نطق الإدخالات الجديدة: مشغّل.
+live-speak-off = نطق الإدخالات الجديدة: متوقف.
+live-none-set-up = لا توجد مصادر مباشرة مُعدّة. يضيف «إعداد مصدر مباشر» مصدرًا.
+live-open-title = المصادر المباشرة
+live-source-item = { $name }، { $host }، { $topic }
+live-forget-title = نسيان كلمة مرور أي مصدر مباشر؟
+live-no-passwords = لا يسجل أي مصدر مباشر الدخول باسم مستخدم، لذا لا توجد كلمة مرور محفوظة.
+live-not-receiving = لا يستقبل أي مصدر مباشر.
+live-cannot-open = تعذر فتح المصدر المباشر. { $problems }
+live-not-opened = لم يُفتح { $name }: لا توجد كلمة مرور.
+live-setup-name = اسم المصدر المباشر، مثل سجل التدريب؛ Enter يلغي
+live-setup-host = اسم مضيف الوسيط أو عنوانه
+live-setup-ca-file = ملف جهة إصدار الشهادات، PEM
+live-setup-port = المنفذ، Enter يُبقي الافتراضي
+live-setup-topic = الموضوع المراد قراءته، مثل log/checkins
+live-setup-username = اسم المستخدم، Enter لعدم وجوده
+live-setup-host-needed = يلزم اسم مضيف أو عنوان، دون مسافات.
+live-setup-ca-file-needed = يحتاج هذا التشفير إلى ملف جهة إصدار الشهادات.
+live-setup-ca-file-missing = لا يوجد ملف في { $path }.
+live-setup-port-bad = المنفذ رقم من 1 إلى 65535.
+live-setup-topic-needed = يلزم موضوع.
+live-setup-tls-title = التشفير
+live-setup-tls-off = متوقف: غير مشفر، المنفذ 1883؛ مناسب عبر Tailscale
+live-setup-tls-system = TLS، يُتحقق منه بجهات إصدار الشهادات المرفقة، المنفذ 8883
+live-setup-tls-ca-file = TLS، يُتحقق منه بملف جهة إصدار الشهادات، المنفذ 8883
+live-setup-view-title = العرض
+live-setup-view-log = السجل: إدخال واحد لكل رسالة
+live-setup-view-values = القيم: سطر واحد لكل حقل، يُحدَّث في مكانه
+live-setup-saved = حُفظ المصدر المباشر { $name }.
+live-setup-not-saved = لم يُحفظ المصدر المباشر { $name }: { $error } تحقق من إمكانية الكتابة في مجلد الإعدادات، ثم أعد إعداده.
+live-setup-offer-title = فتح { $name } الآن؟
+live-setup-open-now = فتحه الآن
+live-setup-later = ليس الآن
+live-setup-not-now = لم يُفتح. «فتح مصدر مباشر» يفتحه لاحقًا.
 live-values-title = قيم مباشرة
 live-values-empty = لا توجد قيم بعد.
 live-value-none = لا قيمة

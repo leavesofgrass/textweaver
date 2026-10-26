@@ -27,19 +27,30 @@
 //!   pause, the unread count, Save).
 //! - [`json_log`]: the JSON log written while the log runs, and read back
 //!   ([`App::open_live_log`]).
+//! - [`announce`]: new entries said through a throttle that never
+//!   interrupts reading ([`EntryThrottle`]).
+//! - [`wire`]: the commands: open a configured source, set one up, close
+//!   it, and the rest ([`App::open_configured_live_source`]).
+//! - `mqtt` (with the `mqtt` feature): the MQTT client adapted to
+//!   [`LiveSource`].
 //!
 //! A live session ([`Session::live`](crate::Session::live)) is read only:
 //! edit mode is refused in words, no reading position is saved, it gets
 //! no library or recent entry and is never synced, and Save writes the
 //! JSON log.
 
+pub mod announce;
 pub mod hub;
 pub mod json_log;
 pub mod log;
+#[cfg(feature = "mqtt")]
+pub mod mqtt;
 pub mod order;
 pub mod source;
 pub mod values;
+pub mod wire;
 
+pub use announce::{BURST, EntryThrottle, Release};
 pub(crate) use hub::LiveHub;
 pub use hub::{LOG_WRITE_INTERVAL, LiveOptions, PAUSE_QUEUE_CAP};
 pub use log::{
@@ -48,6 +59,7 @@ pub use log::{
 pub use order::{KeyOrder, parse_ordered};
 pub use source::{LiveEvent, LivePayload, LiveSource, ScriptHandle, ScriptedSource};
 pub use values::{FieldChange, LiveValues, ValueField, ValueLabels, ValuesOptions};
+pub(crate) use wire::{LiveList, LiveWire};
 
 use textweaver_a11y::{Importance, Priority};
 use textweaver_core::{Bias, CharPos, CharRange, Edit, EditOutcome};

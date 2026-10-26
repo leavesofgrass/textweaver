@@ -144,6 +144,11 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Switch a talking book between its recorded narration and speech | palette | palette | palette | `toggle_book_audio` |
 | Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves | `Alt+Shift+X` | `Alt+Shift+X` | `Cmd+Option+Shift+X` | `explore_math` |
 | Listen to the document as it will render, without leaving edit mode | palette | palette | palette | `listen_rendered` |
+| Say how many live log entries are unread, and the newest one | `Alt+Shift+F5` | `Alt+Shift+F5` | `Option+Shift+F5` | `live_say_unread` |
+| Pause or resume the live log's updates; while paused, new entries wait | `Alt+Shift+F1` | `Alt+Shift+F1` | `Option+Shift+F1` | `live_toggle_pause` |
+| Speak new live log entries in textweaver's own voice, on or off | palette | palette | palette | `live_toggle_speak` |
+| In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved | palette | palette | palette | `live_toggle_field_show` |
+| In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved | palette | palette | palette | `live_toggle_field_speak` |
 
 ## Navigation
 
@@ -213,6 +218,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move up one screen | `PageUp` (browse) | `PageUp` (browse) | `PageUp` (browse) | `page_up` |
 | Scroll down one line without moving the cursor | `j` (browse) | `j` (browse) | `j` (browse) | `scroll_down` |
 | Scroll up one line without moving the cursor | `Shift+J` (browse) | `Shift+J` (browse) | `Shift+J` (browse) | `scroll_up` |
+| Move to the newest entry of the live log and say it | `Alt+Shift+F6` | `Alt+Shift+F6` | `Option+Shift+F6` | `live_jump_newest` |
 
 ## Speech Cursor
 
@@ -336,6 +342,11 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | List the other computers' places in this document; Enter goes to one | palette | palette | palette | `sync_go_to_place` |
 | List notes replaced by another computer's newer edit; Enter puts one back | palette | palette | palette | `sync_replaced_notes` |
 | Stop syncing on this computer; the sync folder is left as it is | palette | palette | palette | `sync_stop` |
+| Open a live source: list the live sources set up, and Enter connects to one and shows its log as it grows | palette | palette | palette | `open_live_source` |
+| Set up a live source: its name, the broker's host, encryption, port, topic, user name, and view, asked one at a time | palette | palette | palette | `set_up_live_source` |
+| Close the live source: stop receiving; the log stays open, read only, and is saved | palette | palette | palette | `close_live_source` |
+| Save the live log as JSON now, and say where | palette | palette | palette | `save_live_log` |
+| Forget the live source's password kept in the system credential store; it is asked for again when needed | palette | palette | palette | `forget_live_source_password` |
 | Quit, saving the reading position | `Ctrl+Q` | `Ctrl+Q` | `Cmd+Q` | `quit` |
 
 ## Editing
@@ -436,6 +447,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | palette | palette | palette | `manage_components` |
 | Check for updates: look for a newer textweaver on GitHub, and ask before downloading it | palette | palette | palette | `check_for_updates` |
 | Forget the GitHub token kept for your components source; it is asked for again when needed | palette | palette | palette | `forget_github_token` |
+| Switch the live log between the list and the table, keeping your place | `Alt+Shift+F12` | `Alt+Shift+F12` | `Option+Shift+F12` | `live_switch_view` |
 | Open the help | `F1` | `F1` | `F1` | `help` |
 
 ## The terminal on macOS
@@ -592,6 +604,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Switch a talking book between its recorded narration and speech | `toggle_book_audio` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
+| Speak new live log entries in textweaver's own voice, on or off | `live_toggle_speak` |
+| In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved | `live_toggle_field_show` |
+| In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved | `live_toggle_field_speak` |
 | List the notes in the vault that link to this note; Enter opens one | `backlinks` |
 | List this note's links to notes that don't exist | `unresolved_links` |
 | List the tags in this note; Enter lists the notes in the vault with that tag | `note_tags` |
@@ -642,6 +657,11 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | List the other computers' places in this document; Enter goes to one | `sync_go_to_place` |
 | List notes replaced by another computer's newer edit; Enter puts one back | `sync_replaced_notes` |
 | Stop syncing on this computer; the sync folder is left as it is | `sync_stop` |
+| Open a live source: list the live sources set up, and Enter connects to one and shows its log as it grows | `open_live_source` |
+| Set up a live source: its name, the broker's host, encryption, port, topic, user name, and view, asked one at a time | `set_up_live_source` |
+| Close the live source: stop receiving; the log stays open, read only, and is saved | `close_live_source` |
+| Save the live log as JSON now, and say where | `save_live_log` |
+| Forget the live source's password kept in the system credential store; it is asked for again when needed | `forget_live_source_password` |
 | Insert a wiki link to a note in the vault, or to a heading or block in it | `insert_wiki_link` |
 | Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | `cycle_task_status` |
 | Insert a callout of a type you choose; selected lines become its text | `insert_callout` |

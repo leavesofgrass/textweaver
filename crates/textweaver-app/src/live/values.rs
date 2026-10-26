@@ -167,6 +167,10 @@ pub struct LiveValues {
     options: ValuesOptions,
     topics: Vec<Topic>,
     changes: Vec<FieldChange>,
+    /// The same changes, for the announcement throttle
+    /// (crate::live::announce), which takes them on its own, so a
+    /// frontend reading [`take_changes`](Self::take_changes) misses none.
+    announce: Vec<FieldChange>,
     /// The topic and path of the field changed last.
     newest: Option<(String, String)>,
     count: usize,
@@ -344,6 +348,7 @@ impl LiveValues {
             options,
             topics: Vec::new(),
             changes: Vec::new(),
+            announce: Vec::new(),
             newest: None,
             count: 0,
             dropped: 0,
@@ -510,10 +515,7 @@ impl LiveValues {
         let line = line_text(slot, labels);
         let (show, speak) = self.notices(path);
         self.newest = Some((topic.clone(), path.to_owned()));
-        if self.changes.len() >= MAX_CHANGES {
-            self.changes.remove(0);
-        }
-        self.changes.push(FieldChange {
+        let change = FieldChange {
             topic,
             path: path.to_owned(),
             label,
@@ -523,7 +525,13 @@ impl LiveValues {
             show: show == LiveNotice::OnChange,
             speak: speak == LiveNotice::OnChange,
             min_interval: self.options.min_interval,
-        });
+        };
+        for queue in [&mut self.changes, &mut self.announce] {
+            if queue.len() >= MAX_CHANGES {
+                queue.remove(0);
+            }
+            queue.push(change.clone());
+        }
     }
 
     /// The field at `path`'s choices: its mapping's, else the defaults
@@ -541,6 +549,11 @@ impl LiveValues {
     /// The changes since they were last taken, oldest first.
     pub fn take_changes(&mut self) -> Vec<FieldChange> {
         std::mem::take(&mut self.changes)
+    }
+
+    /// The changes since the announcements last took them, oldest first.
+    pub(crate) fn take_announcements(&mut self) -> Vec<FieldChange> {
+        std::mem::take(&mut self.announce)
     }
 
     /// Marks values not updated for the stale time; true when a line

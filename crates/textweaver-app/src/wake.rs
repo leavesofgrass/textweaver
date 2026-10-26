@@ -118,6 +118,7 @@ impl App {
         } else {
             IDLE_TICK
         };
+        let base = self.live_announce_wait(now).map_or(base, |w| w.min(base));
         self.rsvp_wait(now).map_or(base, |w| w.min(base))
     }
 

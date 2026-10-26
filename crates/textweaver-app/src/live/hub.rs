@@ -84,7 +84,7 @@ pub(crate) struct LiveHub {
     full_said: bool,
     /// The status line's sequence number when it last took an entry
     /// ([`App::live_status_is_entry`]).
-    entry_seq: Option<u64>,
+    pub(crate) entry_seq: Option<u64>,
 }
 
 impl std::fmt::Debug for LiveHub {
@@ -268,6 +268,16 @@ impl App {
             .as_mut()
             .and_then(|h| h.values.as_mut())
             .map(LiveValues::take_changes)
+            .unwrap_or_default()
+    }
+
+    /// The values view's field changes not yet given to the announcements
+    /// (crate::live::announce), oldest first.
+    pub(crate) fn live_take_field_announcements(&mut self) -> Vec<FieldChange> {
+        self.live_hub
+            .as_mut()
+            .and_then(|h| h.values.as_mut())
+            .map(LiveValues::take_announcements)
             .unwrap_or_default()
     }
 
@@ -684,6 +694,7 @@ impl App {
         let changed = values.apply(topic, value, order, now, &labels);
         let full = values.dropped > before && !h.full_said;
         if h.paused {
+            values.take_announcements();
             for c in values.take_changes() {
                 h.paused_fields.insert((c.topic, c.path));
             }
@@ -739,12 +750,9 @@ impl App {
                     (false, true) => "live-connected-tailscale",
                     (false, false) => "live-connected-plain",
                 };
+                // Polite, plain or not: only a lost connection interrupts.
                 let m = self.msg_args(key, &args!["name" => name]);
-                if encrypted || tailscale {
-                    self.tell(&m);
-                } else {
-                    self.warn(&m);
-                }
+                self.tell(&m);
             }
             LiveEvent::Disconnected { reason } => {
                 let m = self.msg_args(
@@ -753,8 +761,23 @@ impl App {
                 );
                 self.warn(&m);
             }
+            LiveEvent::Failed { reason } => {
+                let m = self.msg_args(
+                    "live-failed",
+                    &args!["name" => name, "reason" => reason.as_str()],
+                );
+                self.warn(&m);
+            }
             LiveEvent::Quiet { topic, .. } => {
                 let m = self.msg_args("live-quiet", &args!["topic" => topic.as_str()]);
+                self.tell(&m);
+            }
+            LiveEvent::TopicRefused { topic } => {
+                let m = self.msg_args("live-topic-refused", &args!["topic" => topic.as_str()]);
+                self.tell(&m);
+            }
+            LiveEvent::Skipped { count } => {
+                let m = self.msg_args("live-skipped", &args!["count" => count]);
                 self.tell(&m);
             }
             LiveEvent::Message { .. } => {}
@@ -839,50 +862,21 @@ impl App {
             let r = ranges.get(i).or(ranges.last())?;
             Some(CharPos((r.start.0 + p.offset).min(r.end.0.max(r.start.0))))
         });
-        let is_entry = say.is_none();
-        let announce = match (say, last_line) {
-            (Some(s), _) => Some(s),
-            // Only the heading changed: nothing new to say.
-            (None, None) => None,
-            (None, Some(line)) => {
-                let more = count.saturating_sub(1);
-                Some(if more == 0 {
-                    line
-                } else {
-                    self.msg_args(
-                        "live-entry-and-more",
-                        &args!["line" => line.as_str(), "more" => more],
-                    )
-                })
-            }
-        };
         self.live_replace(new, target);
-        if let Some(text) = announce.filter(|t| !t.is_empty()) {
-            let before = self.status.seq;
-            self.live_announce(&text);
-            let seq = self.status.seq;
-            if is_entry
-                && seq != before
-                && let Some(h) = self.live_hub.as_mut()
-            {
-                h.entry_seq = Some(seq);
-            }
+        match (say, last_line) {
+            // The answer to the user's own command (resuming): said now.
+            (Some(text), _) if !text.is_empty() => self.tell(&text),
+            // Closing, or only the heading changed: nothing to say.
+            (Some(_), _) | (None, None) => {}
+            // New entries: through the announcement throttle
+            // (crate::live::announce), said on the tick.
+            (None, Some(line)) => self.live_entries_arrived(count, line),
         }
         if full {
             let m = self.msg_args("live-full", &args!["max" => MAX_ENTRIES]);
             self.warn(&m);
         }
         true
-    }
-
-    /// Says a new or changed entry: politely, as content that is never
-    /// silenced, so it reaches the Braille display as a flash message.
-    fn live_announce(&mut self, text: &str) {
-        self.announce_as(
-            text,
-            textweaver_a11y::Priority::Polite,
-            textweaver_a11y::Importance::Answer,
-        );
     }
 
     /// Shows the log in `view`, keeping the reader on the same entry.

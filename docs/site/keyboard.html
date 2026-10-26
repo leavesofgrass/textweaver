@@ -1228,6 +1228,86 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": []
   },
   {
+   "action": "Say how many live log entries are unread, and the newest one",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+F5",
+     "layer": "global"
+    }
+   ],
+   "id": "live_say_unread",
+   "mac": [
+    {
+     "key": "Alt+Shift+F5",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+F5",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Pause or resume the live log's updates; while paused, new entries wait",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+F1",
+     "layer": "global"
+    }
+   ],
+   "id": "live_toggle_pause",
+   "mac": [
+    {
+     "key": "Alt+Shift+F1",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+F1",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Speak new live log entries in textweaver's own voice, on or off",
+   "category": "Reading",
+   "gui": [],
+   "id": "live_toggle_speak",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved",
+   "category": "Reading",
+   "gui": [],
+   "id": "live_toggle_field_show",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved",
+   "category": "Reading",
+   "gui": [],
+   "id": "live_toggle_field_speak",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
    "action": "Move to the next sentence",
    "category": "Navigation",
    "gui": [
@@ -3147,6 +3227,31 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Shift+J",
      "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the newest entry of the live log and say it",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Alt+Shift+F6",
+     "layer": "global"
+    }
+   ],
+   "id": "live_jump_newest",
+   "mac": [
+    {
+     "key": "Alt+Shift+F6",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+F6",
+     "layer": "global"
     }
    ]
   },
@@ -5132,6 +5237,56 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": []
   },
   {
+   "action": "Open a live source: list the live sources set up, and Enter connects to one and shows its log as it grows",
+   "category": "File",
+   "gui": [],
+   "id": "open_live_source",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Set up a live source: its name, the broker's host, encryption, port, topic, user name, and view, asked one at a time",
+   "category": "File",
+   "gui": [],
+   "id": "set_up_live_source",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Close the live source: stop receiving; the log stays open, read only, and is saved",
+   "category": "File",
+   "gui": [],
+   "id": "close_live_source",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Save the live log as JSON now, and say where",
+   "category": "File",
+   "gui": [],
+   "id": "save_live_log",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Forget the live source's password kept in the system credential store; it is asked for again when needed",
+   "category": "File",
+   "gui": [],
+   "id": "forget_live_source_password",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
    "action": "Quit, saving the reading position",
    "category": "File",
    "gui": [
@@ -7010,6 +7165,31 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
+  },
+  {
+   "action": "Switch the live log between the list and the table, keeping your place",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Alt+Shift+F12",
+     "layer": "global"
+    }
+   ],
+   "id": "live_switch_view",
+   "mac": [
+    {
+     "key": "Alt+Shift+F12",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+F12",
+     "layer": "global"
+    }
+   ]
   },
   {
    "action": "Open the help",

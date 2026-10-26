@@ -244,6 +244,21 @@ actions! {
     ListenRendered = "listen_rendered", Reading,
         "Listen to the document as it will render, without leaving edit mode",
         gui [], term [], shared [];
+    LiveSayUnread = "live_say_unread", Reading,
+        "Say how many live log entries are unread, and the newest one",
+        gui ["g:Alt+Shift+F5"], term ["g:Alt+Shift+F5"], shared [];
+    LiveTogglePause = "live_toggle_pause", Reading,
+        "Pause or resume the live log's updates; while paused, new entries wait",
+        gui ["g:Alt+Shift+F1"], term ["g:Alt+Shift+F1"], shared [];
+    LiveToggleSpeak = "live_toggle_speak", Reading,
+        "Speak new live log entries in textweaver's own voice, on or off",
+        gui [], term [], shared [];
+    LiveToggleFieldShow = "live_toggle_field_show", Reading,
+        "In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved",
+        gui [], term [], shared [];
+    LiveToggleFieldSpeak = "live_toggle_field_speak", Reading,
+        "In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved",
+        gui [], term [], shared [];
 
     // Navigation
     NextSentence = "next_sentence", Navigation, "Move to the next sentence",
@@ -384,6 +399,9 @@ actions! {
         gui [], term [], shared ["b:j"];
     ScrollUp = "scroll_up", Navigation, "Scroll up one line without moving the cursor",
         gui [], term [], shared ["b:Shift+J"];
+    LiveJumpNewest = "live_jump_newest", Navigation,
+        "Move to the newest entry of the live log and say it",
+        gui ["g:Alt+Shift+F6"], term ["g:Alt+Shift+F6"], shared [];
 
     // Speech Cursor
     SpeechCursorToggle = "speech_cursor_toggle", SpeechCursor, "Enter or leave Speech Cursor (line) mode",
@@ -640,6 +658,21 @@ actions! {
         gui [], term [], shared [];
     SyncStop = "sync_stop", File,
         "Stop syncing on this computer; the sync folder is left as it is",
+        gui [], term [], shared [];
+    OpenLiveSource = "open_live_source", File,
+        "Open a live source: list the live sources set up, and Enter connects to one and shows its log as it grows",
+        gui [], term [], shared [];
+    SetUpLiveSource = "set_up_live_source", File,
+        "Set up a live source: its name, the broker's host, encryption, port, topic, user name, and view, asked one at a time",
+        gui [], term [], shared [];
+    CloseLiveSource = "close_live_source", File,
+        "Close the live source: stop receiving; the log stays open, read only, and is saved",
+        gui [], term [], shared [];
+    SaveLiveLog = "save_live_log", File,
+        "Save the live log as JSON now, and say where",
+        gui [], term [], shared [];
+    ForgetLiveSourcePassword = "forget_live_source_password", File,
+        "Forget the live source's password kept in the system credential store; it is asked for again when needed",
         gui [], term [], shared [];
     Quit = "quit", File, "Quit, saving the reading position",
         gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared [];
@@ -906,6 +939,9 @@ actions! {
     ForgetGitHubToken = "forget_github_token", View,
         "Forget the GitHub token kept for your components source; it is asked for again when needed",
         gui [], term [], shared [];
+    LiveSwitchView = "live_switch_view", View,
+        "Switch the live log between the list and the table, keeping your place",
+        gui ["g:Alt+Shift+F12"], term ["g:Alt+Shift+F12"], shared [];
     Help = "help", View, "Open the help",
         gui ["g:F1"], term ["g:F1"], shared [];
 }

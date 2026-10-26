@@ -225,6 +225,52 @@ fn status_is_reported_once_per_change_not_per_attempt() {
     h.stop();
 }
 
+/// After a connection that worked, a link dropped while logging in again
+/// is a broker restart, not a TLS port: the TLS hint is left out.
+#[test]
+fn the_tls_hint_is_only_for_a_first_connection() {
+    use std::io::{Read, Write};
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    listener.set_nonblocking(true).unwrap();
+    let done = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let d = done.clone();
+    let server = std::thread::spawn(move || {
+        let mut first = true;
+        while !d.load(Ordering::SeqCst) {
+            match listener.accept() {
+                Ok((mut s, _)) => {
+                    if first {
+                        // Log the client in (CONNACK, accepted), then
+                        // close, as a broker going down would.
+                        first = false;
+                        s.set_nonblocking(false).unwrap();
+                        s.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+                        let mut buf = [0u8; 256];
+                        let _ = s.read(&mut buf);
+                        let _ = s.write_all(&[0x20, 0x02, 0x00, 0x00]);
+                        std::thread::sleep(Duration::from_millis(300));
+                    }
+                    drop(s);
+                }
+                Err(_) => std::thread::sleep(Duration::from_millis(10)),
+            }
+        }
+    });
+    let mut h = Harness::start(plain(port, &["net/log"]));
+    h.wait_for(5, |e| matches!(e, MqttEvent::Connected { .. }));
+    let seen = h.wait_for(
+        5,
+        |e| matches!(e, MqttEvent::Disconnected { reason, .. } if reason.contains("logging in")),
+    );
+    done.store(true, Ordering::SeqCst);
+    server.join().unwrap();
+    let (why, retrying) = reason(&seen);
+    assert!(retrying);
+    assert!(!why.contains("expects TLS"), "{why}");
+    h.stop();
+}
+
 #[test]
 fn keepalive_pings_and_stays_connected() {
     let broker = TestBroker::start(Opts::default());
