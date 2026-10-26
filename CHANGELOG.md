@@ -4,6 +4,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Live documents
+
+- **New: the live document core.** A live source (such as an MQTT broker, connected in a later change) feeds a log that is read like any document: the text changes in place while the reader's cursor, selection, bookmarks, find matches and spoken range stay on the same text, so a new entry never moves the screen reader or the Braille display. One JSON object adds an entry at the end; a JSON list, or an object wrapping one list, is the whole log and replaces it, keeping the reader on the same entry; an entry whose id (a configured field, or `id`, `uuid`, `serial`, `serialno` or `seq`) or, with none, whose callsign matches an earlier one corrects that entry in place. Common field names are recognized with no setup (callsign, name, location, status, traffic, notes, time, and their usual variants); other fields are kept and shown after them, so nothing is dropped. Text that is not JSON becomes an entry; a binary or oversized message is left out and said.
+- The log shows as a list, one entry per line with the meaning first ("N0CALL, Ada Example. Mobile, portable antenna."), or as a table with real headers; switching keeps the reader on the same entry. The title line's position is frozen for a live document and shows the unread count instead ("3 unread"), counted from the furthest entry the reader has reached. Jump to newest moves to the last entry. Updates can be paused (up to 1,000 messages wait; a whole log replaces what waited) and resume as one change.
+- A live document is read only: edit mode is refused in words, no reading position is saved, it gets no library or recent entry, it is never synced, and Save writes its JSON log.
+- **New: the JSON log.** The entries as received, with their arrival and correction times, are written atomically to `live-log-YYYY-MM-DD-HHMM.json` (prefixed with the source's id when it has one) in the `logs` folder of textweaver's data folder, created on the first entry: at most every 10 seconds while the log runs, and when it closes. Opening such a file shows it in the same log view, read only.
+- The commands, keys, settings and the MQTT source that use this core come in later changes; the core is reached through `App::open_live_source` and the `textweaver_app::live` module.
+
 ## [0.1.0-beta.4] - 2026-10-24
 
 ### CW (Morse code)
