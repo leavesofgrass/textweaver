@@ -5400,3 +5400,65 @@ settings-applies-engines = Applies when { $first } or { $second } is the speech 
 settings-applies-not-engine = Applies when { $engine } is not the speech engine.
 # $os is Windows, macOS or Linux.
 settings-applies-os = Applies on { $os } only.
+
+## Beta 5: live documents (a log fed by a live source, such as an MQTT
+## broker). $name is the source's name, $topic an MQTT topic, $path and
+## $folder file paths, $line a log entry as one line.
+live-log-title = Live log
+live-log-empty = No entries yet.
+live-entry-empty = Empty entry.
+live-field-callsign = Callsign
+live-field-name = Name
+live-field-location = Location
+live-field-status = Status
+live-field-traffic = Traffic
+live-field-notes = Notes
+live-field-time = Time
+live-traffic = Traffic
+live-yes = yes
+live-no = no
+live-read-only = This live log is read only; it cannot be edited.
+live-not-open = No live log is open.
+live-view-list = List view.
+live-view-table = Table view.
+live-newest-none = The log has no entries yet.
+live-paused = Updates paused. New entries wait until you resume.
+live-paused-status = updates paused
+live-stopped = { $name } stopped. The log stays open, read only.
+live-log-saved = Log saved as { $name } in { $folder }.
+live-log-save-failed = Cannot save the live log { $path }: { $error } Check that the logs folder can be written to; textweaver tries again in 10 seconds.
+live-log-empty-not-saved = The log has no entries yet, so nothing was saved.
+live-log-nowhere = There is no folder to save the live log in.
+live-log-saved-already = This log was opened from { $path }; it is already saved.
+live-binary = A message on { $topic } was left out: it is not text ({ $len } bytes).
+live-too-large = A message on { $topic } was left out: it is too large ({ $len } bytes).
+live-full = The log is full at { $max } entries; newer entries are left out.
+live-connecting = Connecting to { $name }.
+live-reconnecting = Reconnecting to { $name }, attempt { $attempt }.
+live-connected = Connected to { $name }, encrypted.
+live-connected-tailscale = Connected to { $name } over Tailscale, which encrypts the link.
+live-connected-plain = Connected to { $name }. The connection is not encrypted.
+live-disconnected = Disconnected from { $name }: { $reason }
+live-quiet = No messages yet on { $topic }. If this lasts, check that the broker lets this account read it.
+live-unread =
+    { $count ->
+        [0] none unread
+       *[other] { $count } unread
+    }
+live-entries =
+    { $count ->
+        [one] 1 entry
+       *[other] { $count } entries
+    }
+live-entry-and-more =
+    { $more ->
+        [one] { $line } And 1 more.
+       *[other] { $line } And { $more } more.
+    }
+live-resumed =
+    { $count ->
+        [0] Updates resumed.
+        [one] Updates resumed, 1 update applied.
+       *[other] Updates resumed, { $count } updates applied.
+    }
+live-resumed-dropped = Updates resumed, { $count } updates applied. { $dropped } older updates were left out while paused.

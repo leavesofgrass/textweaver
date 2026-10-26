@@ -5,7 +5,7 @@
 
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
-use textweaver_app::live::{LogEntry, LogView, NetLog};
+use textweaver_app::live::{Fields, LiveLog, LogLabels, LogOptions, LogView, entry_object};
 use textweaver_app::store::{AccessMode as ModeSetting, CursorPlacement, Settings};
 use textweaver_app::testing::recording_service;
 use textweaver_app::theme::ColorSupport;
@@ -13,15 +13,46 @@ use textweaver_app::{App, AppConfig, Command};
 use textweaver_tui::Tui;
 use textweaver_tui::ui::{BRAILLE_CELLS, braille_cells};
 
+/// The scripted log: the app's log view's entries, in English.
+#[derive(Clone)]
+struct Log(LiveLog);
+
+impl Default for Log {
+    fn default() -> Self {
+        Log(LiveLog::new(LogOptions {
+            title: "Live log".into(),
+            id_field: None,
+        }))
+    }
+}
+
+impl Log {
+    fn upsert(&mut self, e: Fields) {
+        self.0.upsert(e, "2026-10-26T20:10:00Z");
+    }
+
+    fn render(&self, view: LogView) -> String {
+        self.0.render(view, &LogLabels::default())
+    }
+
+    fn line(&self, i: usize) -> String {
+        self.0.line(i, &LogLabels::default())
+    }
+}
+
 struct Harness {
     tui: Tui,
     term: Terminal<TestBackend>,
     width: u16,
-    log: NetLog,
+    log: Log,
 }
 
-fn entry(i: usize, notes: &str) -> LogEntry {
-    LogEntry::new(&format!("K{i:04}X"), &format!("Ada{i}"), notes)
+fn entry(i: usize, notes: &str) -> Fields {
+    entry_object(&[
+        ("callsign", &format!("K{i:04}X")),
+        ("name", &format!("Ada{i}")),
+        ("notes", notes),
+    ])
 }
 
 fn launch(cursor: CursorPlacement, n: usize) -> Harness {
@@ -36,11 +67,11 @@ fn launch(cursor: CursorPlacement, n: usize) -> Harness {
         backend_name: "test-recording".into(),
         ..AppConfig::for_tests()
     });
-    let mut log = NetLog::default();
+    let mut log = Log::default();
     for i in 0..n {
         log.upsert(entry(i, "Mobile, portable antenna."));
     }
-    app.open_live("test", "Net log", &log.render(LogView::List));
+    app.open_live("test", "Live log", &log.render(LogView::List));
     let (width, height) = (80, 24);
     let mut h = Harness {
         tui: Tui::with_color_support(app, ColorSupport::NoColor),
@@ -95,7 +126,7 @@ impl Harness {
 
     fn update(&mut self, announce: bool, i: usize) {
         let md = self.log.render(LogView::List);
-        let said = announce.then(|| NetLog::line(&self.log.entries[i]));
+        let said = announce.then(|| self.log.line(i));
         self.tui
             .app_mut()
             .live_apply(&md, None, said.as_deref())

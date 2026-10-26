@@ -140,6 +140,13 @@ pub(crate) enum Job {
         paths: Paths,
         deltas: Vec<StatsDelta>,
     },
+    /// Write a live document's JSON log (crate::live); `say` reports
+    /// success too.
+    LiveLog {
+        path: PathBuf,
+        bytes: Vec<u8>,
+        say: bool,
+    },
     /// Save a document's study cards (crate::cards).
     Cards {
         store: textweaver_store::CardStore,
@@ -228,6 +235,12 @@ pub(crate) enum Report {
     Sidecar(Result<usize, String>),
     /// Saving hand-edited details on the bookshelf failed (W7m).
     DetailsFailed(String),
+    /// A live document's JSON log was written, or not.
+    LiveLog {
+        path: PathBuf,
+        result: Result<(), String>,
+        say: bool,
+    },
 }
 
 impl Job {
@@ -243,6 +256,7 @@ impl Job {
                 | Job::Sync { .. }
                 | Job::SyncFlush(_)
                 | Job::EditDetails { .. }
+                | Job::LiveLog { .. }
         )
     }
 }
@@ -621,6 +635,10 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
                 log::warn!("cannot save reading statistics: {e}");
             }
             None
+        }
+        Job::LiveLog { path, bytes, say } => {
+            let result = textweaver_store::atomic_write(&path, &bytes).map_err(|e| e.to_string());
+            Some(Report::LiveLog { path, result, say })
         }
         Job::Cards { store, key, deck } => store
             .save(&key, &deck)

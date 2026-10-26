@@ -147,6 +147,51 @@ fn local_date_from_system() -> Option<String> {
     ok.then(|| s.to_owned())
 }
 
+/// Now on this computer, in its local time zone, as `YYYY-MM-DD-HHMM`
+/// (for dated file names), falling back to UTC when the local time cannot
+/// be read.
+pub fn local_minute() -> String {
+    local_minute_from_system().unwrap_or_else(|| {
+        let t = textweaver_store::time::rfc3339(textweaver_store::now_ts());
+        // 2026-10-26T20:10:00Z
+        format!("{}-{}{}", &t[..10], &t[11..13], &t[14..16])
+    })
+}
+
+#[cfg(windows)]
+#[allow(unsafe_code)]
+fn local_minute_from_system() -> Option<String> {
+    // SAFETY: as in local_date_from_system.
+    let t = unsafe { windows::Win32::System::SystemInformation::GetLocalTime() };
+    (t.wYear > 0).then(|| {
+        format!(
+            "{:04}-{:02}-{:02}-{:02}{:02}",
+            t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute
+        )
+    })
+}
+
+#[cfg(not(windows))]
+fn local_minute_from_system() -> Option<String> {
+    let out = std::process::Command::new("date")
+        .arg("+%Y-%m-%d-%H%M")
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .ok()?;
+    let s = String::from_utf8(out.stdout).ok()?;
+    let s = s.trim();
+    let ok = s.len() == 15
+        && s.bytes().enumerate().all(|(i, b)| {
+            if i == 4 || i == 7 || i == 10 {
+                b == b'-'
+            } else {
+                b.is_ascii_digit()
+            }
+        });
+    ok.then(|| s.to_owned())
+}
+
 /// The UTC date of the system clock.
 fn utc_date() -> String {
     let ts = textweaver_store::now_ts();

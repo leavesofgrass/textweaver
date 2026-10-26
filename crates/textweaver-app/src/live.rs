@@ -1,5 +1,5 @@
-//! Live documents (beta 5 spike, task N0): a document whose text a live
-//! source changes from outside edit mode, while the reader's place stays.
+//! Live documents: a document whose text a live source changes from
+//! outside edit mode, while the reader's place stays.
 //!
 //! A live view renders its entries as Markdown; [`App::live_apply`] loads
 //! that Markdown and changes the open document to it by the smallest edits
@@ -10,11 +10,39 @@
 //! matches, bookmarks, notes, highlights and history all stay on the same
 //! text. An append at the end moves none of them.
 //!
-//! [`NetLog`] is the smallest log view (a list, or a table with real
-//! headers), enough to drive the spike's tests.
+//! The parts:
+//!
+//! - [`source`]: [`LiveEvent`], the [`LiveSource`] trait a source
+//!   implements (its poll never blocks), and [`ScriptedSource`], a source
+//!   driven by hand for tests.
+//! - [`log`]: the log view's entries ([`LiveLog`]): one JSON object adds
+//!   or corrects an entry, a list replaces the log; rendered as a list or
+//!   a table.
+//! - [`hub`]: the app's side ([`App::open_live_source`], [`App::live_tick`]
+//!   and the functions commands call: the view switch, jump to newest,
+//!   pause, the unread count, Save).
+//! - [`json_log`]: the JSON log written while the log runs, and read back
+//!   ([`App::open_live_log`]).
+//!
+//! A live session ([`Session::live`](crate::Session::live)) is read only:
+//! edit mode is refused in words, no reading position is saved, it gets
+//! no library or recent entry and is never synced, and Save writes the
+//! JSON log.
+
+pub mod hub;
+pub mod json_log;
+pub mod log;
+pub mod source;
+
+pub(crate) use hub::LiveHub;
+pub use hub::{LOG_WRITE_INTERVAL, LiveOptions, PAUSE_QUEUE_CAP};
+pub use log::{
+    Field, Fields, LiveLog, LogEntry, LogLabels, LogOptions, LogView, Shape, entry_object,
+};
+pub use source::{LiveEvent, LivePayload, LiveSource, ScriptHandle, ScriptedSource};
 
 use textweaver_a11y::{Importance, Priority};
-use textweaver_core::{Bias, CharPos, CharRange, Edit, EditOutcome, MarkerKind};
+use textweaver_core::{Bias, CharPos, CharRange, Edit, EditOutcome};
 use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, Source};
 use textweaver_store::DocKey;
 use textweaver_text::Document;
@@ -28,6 +56,9 @@ use crate::playback::Playback;
 pub struct LiveTag {
     /// The source's id, as its document key carries it.
     pub source: String,
+    /// The source is running; false once stopped, and for a saved log
+    /// reopened.
+    pub receiving: bool,
 }
 
 /// Loads generated Markdown as a document. Markdown never fails to load;
@@ -166,16 +197,11 @@ fn trimmed_edit(at: usize, old: &str, new: &str) -> Option<Edit> {
 impl App {
     /// Opens `markdown` as the live document of source `source`, titled
     /// `title`. Its reading position is never saved.
+    /// The text is the caller's to change ([`App::live_apply`]); a log
+    /// fed by a source opens with [`App::open_live_source`] instead.
     pub fn open_live(&mut self, source: &str, title: &str, markdown: &str) -> Vec<Effect> {
-        let doc = load_markdown(markdown);
-        let key = DocKey(format!("live-{source}"));
-        let effects = self.open_document(doc, key, title.to_owned());
-        if let Some(s) = self.session.as_mut() {
-            s.live = Some(LiveTag {
-                source: source.to_owned(),
-            });
-        }
-        effects
+        self.live_leave();
+        self.open_live_keyed(DocKey(format!("live-{source}")), source, title, markdown)
     }
 
     /// Changes the open live document to `markdown` in place, keeping the
@@ -200,7 +226,7 @@ impl App {
     }
 
     /// [`live_apply`](Self::live_apply) with the document already loaded.
-    fn live_replace(
+    pub(crate) fn live_replace(
         &mut self,
         mut new: Document,
         place: Option<CharPos>,
@@ -266,128 +292,5 @@ fn keep_column(o: &EditOutcome, pos: CharPos) -> CharPos {
         pos.min(o.inserted.end)
     } else {
         o.map_pos(pos, Bias::Before)
-    }
-}
-
-/// One entry of a [`NetLog`].
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LogEntry {
-    /// The callsign (the entry's id when the source sends none).
-    pub call: String,
-    /// The name.
-    pub name: String,
-    /// The notes.
-    pub notes: String,
-}
-
-impl LogEntry {
-    /// An entry.
-    pub fn new(call: &str, name: &str, notes: &str) -> Self {
-        LogEntry {
-            call: call.into(),
-            name: name.into(),
-            notes: notes.into(),
-        }
-    }
-}
-
-/// How a [`NetLog`] is shown.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LogView {
-    /// One entry per line, meaning first.
-    List,
-    /// A table with real headers.
-    Table,
-}
-
-/// The smallest log view: entries rendered as Markdown.
-#[derive(Clone, Debug, Default)]
-pub struct NetLog {
-    /// The entries, in order of arrival.
-    pub entries: Vec<LogEntry>,
-}
-
-impl NetLog {
-    /// Adds an entry at the end, or replaces the one with the same
-    /// callsign in place. Returns its index.
-    pub fn upsert(&mut self, e: LogEntry) -> usize {
-        match self.entries.iter().position(|x| x.call == e.call) {
-            Some(i) => {
-                self.entries[i] = e;
-                i
-            }
-            None => {
-                self.entries.push(e);
-                self.entries.len() - 1
-            }
-        }
-    }
-
-    /// The log as Markdown in `view`.
-    pub fn render(&self, view: LogView) -> String {
-        let mut md = String::from("# Net log\n\n");
-        match view {
-            LogView::List => {
-                for e in &self.entries {
-                    md.push_str("- ");
-                    md.push_str(&Self::line(e));
-                    md.push('\n');
-                }
-            }
-            LogView::Table => {
-                md.push_str("| Callsign | Name | Notes |\n|---|---|---|\n");
-                for e in &self.entries {
-                    md.push_str(&format!("| {} | {} | {} |\n", e.call, e.name, e.notes));
-                }
-            }
-        }
-        md
-    }
-
-    /// An entry as one line, meaning first: "N0CALL, Ada. Mobile."
-    pub fn line(e: &LogEntry) -> String {
-        if e.notes.is_empty() {
-            format!("{}, {}.", e.call, e.name)
-        } else {
-            format!("{}, {}. {}", e.call, e.name, e.notes)
-        }
-    }
-
-    /// Where entry `i` starts in `doc`, rendered in `view`.
-    pub fn entry_start(doc: &Document, view: LogView, i: usize) -> Option<CharPos> {
-        Self::entry_ranges(doc, view).get(i).map(|r| r.start)
-    }
-
-    /// Which entry `pos` is in, in `doc` rendered in `view`.
-    pub fn entry_at(doc: &Document, view: LogView, pos: CharPos) -> Option<usize> {
-        Self::entry_ranges(doc, view)
-            .iter()
-            .position(|r| r.start <= pos && pos < r.end.max(CharPos(r.start.0 + 1)))
-    }
-
-    fn entry_ranges(doc: &Document, view: LogView) -> Vec<CharRange> {
-        let (kind, skip) = match view {
-            LogView::List => (MarkerKind::ListItem, 0),
-            LogView::Table => (MarkerKind::TableRow, 1),
-        };
-        doc.markers()
-            .iter()
-            .filter(|m| m.kind == kind)
-            .skip(skip)
-            .map(|m| m.range)
-            .collect()
-    }
-
-    /// The cursor's place in `old` (shown in `from`) moved to the same
-    /// entry and offset in `new` (shown in `to`).
-    pub fn same_entry(
-        old: &Document,
-        from: LogView,
-        new: &Document,
-        to: LogView,
-        pos: CharPos,
-    ) -> Option<CharPos> {
-        let i = Self::entry_at(old, from, pos)?;
-        Self::entry_start(new, to, i)
     }
 }

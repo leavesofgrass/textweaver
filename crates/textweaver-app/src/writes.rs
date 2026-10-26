@@ -252,6 +252,10 @@ impl App {
                 self.disk_check_pending = false;
                 self.disk_checked(path, stamp)
             }
+            Report::LiveLog { path, result, say } => {
+                self.live_log_written(&path, result, say);
+                Vec::new()
+            }
             Report::CardsFailed(e) => {
                 let m = self.msg_args(
                     "cards-save-failed",

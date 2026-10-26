@@ -16,11 +16,42 @@ use textweaver_app::App;
 use textweaver_app::Command;
 use textweaver_app::a11y::{LogAnnouncer, Shared};
 use textweaver_app::core::CharPos;
-use textweaver_app::live::{LogEntry, LogView, NetLog};
+use textweaver_app::live::{Fields, LiveLog, LogLabels, LogOptions, LogView, entry_object};
 use textweaver_xilem::gui::{self, ANNOUNCER, DOC};
 use textweaver_xilem::setup::{self, Options};
 use textweaver_xilem::theme::{self, Palette};
 use textweaver_xilem::widgets::{Announcer, Message, Root};
+
+/// The scripted log: the app's log view's entries, in English.
+#[derive(Clone)]
+struct Log(LiveLog);
+
+impl Default for Log {
+    fn default() -> Self {
+        Log(LiveLog::new(LogOptions {
+            title: "Live log".into(),
+            id_field: None,
+        }))
+    }
+}
+
+impl Log {
+    fn upsert(&mut self, e: Fields) {
+        self.0.upsert(e, "2026-10-26T20:10:00Z");
+    }
+
+    fn render(&self, view: LogView) -> String {
+        self.0.render(view, &LogLabels::default())
+    }
+
+    fn line(&self, i: usize) -> String {
+        self.0.line(i, &LogLabels::default())
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 
 struct Rig {
     app: App,
@@ -30,12 +61,16 @@ struct Rig {
     said: Shared<LogAnnouncer>,
     /// Messages already passed to the live region.
     heard: usize,
-    log: NetLog,
+    log: Log,
     view: LogView,
 }
 
-fn entry(i: usize, notes: &str) -> LogEntry {
-    LogEntry::new(&format!("K{i:04}X"), &format!("Ada{i}"), notes)
+fn entry(i: usize, notes: &str) -> Fields {
+    entry_object(&[
+        ("callsign", &format!("K{i:04}X")),
+        ("name", &format!("Ada{i}")),
+        ("notes", notes),
+    ])
 }
 
 fn rig(home: &std::path::Path, n: usize) -> Rig {
@@ -46,11 +81,11 @@ fn rig(home: &std::path::Path, n: usize) -> Rig {
     };
     let said = Shared::new(LogAnnouncer::default());
     let (mut app, _) = setup::build_app(&opts, Box::new(said.clone()));
-    let mut log = NetLog::default();
+    let mut log = Log::default();
     for i in 0..n {
         log.upsert(entry(i, "Mobile, portable antenna."));
     }
-    app.open_live("test", "Net log", &log.render(LogView::List));
+    app.open_live("test", "Live log", &log.render(LogView::List));
     let p = Palette::galaxy();
     let tree = gui::build_tree(
         &p,
@@ -191,7 +226,7 @@ fn entries_added_and_corrected_keep_the_screen_readers_place() {
 
     // An append, said as the whole entry.
     r.log.upsert(entry(12, "Fixed station."));
-    let said = NetLog::line(&r.log.entries[12]);
+    let said = r.log.line(12);
     let update = r.update(Some(&said));
     let after = r.runs();
     assert!(after.len() > before.len(), "{after:?}");
@@ -223,7 +258,7 @@ fn entries_added_and_corrected_keep_the_screen_readers_place() {
     let before = r.runs();
     let (live_before, _) = r.live_and_focus();
     r.log.upsert(entry(2, "Mobile, now on battery."));
-    let said = NetLog::line(&r.log.entries[2]);
+    let said = r.log.line(2);
     let update = r.update(Some(&said));
     let after = r.runs();
     assert_eq!(after.len(), before.len());
@@ -273,7 +308,7 @@ fn a_whole_log_resent_keeps_unchanged_entries_nodes() {
     let _ = r.app.dispatch(Command::SetCursor(p));
     r.frame();
     let before = r.runs();
-    let mut log = NetLog::default();
+    let mut log = Log::default();
     for i in 0..13 {
         log.upsert(entry(
             i,
@@ -309,7 +344,7 @@ fn list_to_table_keeps_the_reader_on_the_same_entry() {
     r.view = LogView::Table;
     let md = r.log.render(LogView::Table);
     let new = textweaver_app::live::load_markdown(&md);
-    let place = NetLog::same_entry(&old, LogView::List, &new, LogView::Table, r.cursor());
+    let place = LiveLog::same_entry(&old, LogView::List, &new, LogView::Table, r.cursor());
     r.app.live_apply(&md, place, None).expect("a change");
     r.frame();
     assert_eq!(r.caret(), r.at("K0004X"));
@@ -371,7 +406,7 @@ fn a_log_longer_than_the_window() {
         let _ = r.app.dispatch(Command::SetCursor(p));
         r.frame();
         let before = r.runs();
-        let n = r.log.entries.len();
+        let n = r.log.len();
         r.log.upsert(entry(n, "Mobile, portable antenna."));
         let t = Instant::now();
         let u = r.update(None);
