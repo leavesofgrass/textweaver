@@ -74,6 +74,9 @@ pub(crate) struct LiveHub {
     saved_from: Option<PathBuf>,
     /// The log was full and that was said.
     full_said: bool,
+    /// The status line's sequence number when it last took an entry
+    /// ([`App::live_status_is_entry`]).
+    entry_seq: Option<u64>,
 }
 
 impl std::fmt::Debug for LiveHub {
@@ -150,6 +153,7 @@ impl App {
             }),
             saved_from: None,
             full_said: false,
+            entry_seq: None,
         });
         effects
     }
@@ -190,6 +194,7 @@ impl App {
             file: None,
             saved_from: Some(path.to_owned()),
             full_said: false,
+            entry_seq: None,
         });
         effects
     }
@@ -235,6 +240,15 @@ impl App {
         let h = self.live_hub.as_ref()?;
         let n = h.log.len().checked_sub(1)?;
         Some(h.log.line(n, &self.live_labels()))
+    }
+
+    /// True while the status line shows the message of a new or changed
+    /// entry, and nothing has been said since: a frontend may then show
+    /// the entry in its own form (the terminal reader trims it to a
+    /// Braille line). False with no live document open.
+    pub fn live_status_is_entry(&self) -> bool {
+        self.session.as_ref().is_some_and(|s| s.live.is_some())
+            && self.live_hub.as_ref().and_then(|h| h.entry_seq) == Some(self.status.seq)
     }
 
     /// True while updates are paused.
@@ -508,6 +522,7 @@ impl App {
             let r = ranges.get(i).or(ranges.last())?;
             Some(CharPos((r.start.0 + p.offset).min(r.end.0.max(r.start.0))))
         });
+        let is_entry = say.is_none();
         let announce = match say {
             Some(s) => Some(s),
             None => {
@@ -524,7 +539,15 @@ impl App {
         };
         self.live_replace(new, target);
         if let Some(text) = announce.filter(|t| !t.is_empty()) {
+            let before = self.status.seq;
             self.live_announce(&text);
+            let seq = self.status.seq;
+            if is_entry
+                && seq != before
+                && let Some(h) = self.live_hub.as_mut()
+            {
+                h.entry_seq = Some(seq);
+            }
         }
         if full {
             let m = self.msg_args("live-full", &args!["max" => MAX_ENTRIES]);
