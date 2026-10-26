@@ -41,6 +41,7 @@ members = [
     "crates/textweaver-host",
     "crates/textweaver-launcher",
     "crates/textweaver-cw",
+    "crates/textweaver-mqtt",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
@@ -86,6 +87,7 @@ default-members = [
     "crates/textweaver-host",
     "crates/textweaver-launcher",
     "crates/textweaver-cw",
+    "crates/textweaver-mqtt",
 ]
 
 [workspace.package]
@@ -158,6 +160,8 @@ textweaver-sync = { path = "crates/textweaver-sync" }
 textweaver-components = { path = "crates/textweaver-components", default-features = false }
 # Beta 4: CW (Morse code) tables, timing and tone; pure.
 textweaver-cw = { path = "crates/textweaver-cw" }
+# Beta 5: the receive-only MQTT client for live documents.
+textweaver-mqtt = { path = "crates/textweaver-mqtt" }
 
 # text and formats
 ropey = "1.6"
@@ -422,6 +426,24 @@ opusic-c = "=1.6.1"
 # them statically; no cmake. All BSD-3-Clause. Its default random stream
 # serial (getrandom) is off: export picks the serial itself.
 vorbis_rs = { version = "=0.5.6", default-features = false }
+
+# Beta 5, N3: the receive-only MQTT client for live documents
+# (textweaver-mqtt). rumqttc for its MQTT 3.1.1 packet codec only, pinned
+# exactly; default features off, so it brings no TLS crate and no
+# WebSocket client (deny.toml bans its `use-rustls`, `use-native-tls` and
+# `websocket` features). It still depends on tokio, which compiles but
+# never runs: the client is one std thread of our own. TLS is the rustls,
+# ring and webpki-roots already in the tree through ureq.
+rumqttc = { version = "=0.25.1", default-features = false }
+bytes = "1.12"
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rustls-pki-types = { version = "1.15", features = ["std"] }
+webpki-roots = "1.0.11"
+ring = "0.17.14"
+# Test-only, for textweaver-mqtt's loopback broker and test certificates.
+tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "net", "io-util", "time", "macros", "sync"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+rcgen = { version = "0.14.10", default-features = false, features = ["ring", "pem"] }
 
 # tests
 proptest = "1.11"

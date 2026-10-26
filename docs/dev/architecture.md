@@ -6,7 +6,7 @@ The [interactive architecture page](../site/architecture.html) shows the same cr
 
 ## The big picture
 
-textweaver is one Cargo workspace with 40 crates and a maintenance crate, `xtask`. One program comes out of it, with a name for the terminal:
+textweaver is one Cargo workspace with 41 crates and a maintenance crate, `xtask`. One program comes out of it, with a name for the terminal:
 
 - `textweaver`, built from `crates/textweaver-xilem` (its `textweaver` binary): the app by default, and the terminal program, `crates/textweaver-cli`'s library, with `--tw` or `--cli` first, when started as `tw`, or when the first argument is a `tw` command (`src/dispatch.rs`). On its own or with a file the terminal program runs the terminal reader (the library in `crates/textweaver-tui`), and with a command it runs headless;
 - `tw`, a link to `textweaver` on Linux and macOS, and on Windows `tw.exe`, built from `crates/textweaver-launcher`: a console program that runs `textweaver.exe --tw` beside it and waits, since `textweaver.exe` is a GUI-subsystem program that terminals do not wait for. `textweaver-cli` also builds a terminal-only `tw` for development and its tests, which no package ships.
@@ -53,6 +53,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 
 - **`textweaver-store`**: settings and key overrides, per-document state (position, history, bookmarks, notes, highlights), recent files, the library and its full-text index, folder sidecars and their merge rules, settings import and export, and the star migration. It owns the one notes model (`Note`, `Highlight`, `Relation`, `RelationType`) and the saved form of the `[reading_aids]` settings (`reading_aids`). ADR: [0001](../adr/0001-workspace-and-dependencies.md). Depends on core.
 - **`textweaver-sync`**: sync through a folder the user chooses (ADR-0049, "Sync beyond the place"): the hybrid logical clock, the merge types (newest-wins registers by id with deletion records, add-wins sets, per-computer counters), one record per document (each computer's place, bookmarks, notes, highlights, and statistics) whose merge lists what was replaced, and the folder format, in which each computer writes only its own files. It also keeps the install marker that gives a copied state folder a fresh id, and document identity: a random sync id per document, found by the file's SHA-256, then the SHA-256 of its text, then its library folder's id and path inside it (a DOI or ISBN is only suggested), kept in `sync-ids.json` in the data folder and worked out on the app's background writer. No networking. Depends on core and store.
+- **`textweaver-mqtt`**: the receive-only MQTT 3.1.1 client behind live documents (beta 5). One std thread per live source connects, logs in, subscribes, and turns what arrives into `MqttEvent`s, which the app drains with `MqttSource::poll` after a wake callback; no async runtime runs. rumqttc supplies only its packet codec; TLS is the ring-backed rustls already in the tree, with the bundled Mozilla roots or a CA file, and certificate checks cannot be turned off. It reconnects with backoff and subscribes again on every CONNACK, reports each status change once and in words, names a subscribed topic that stays quiet (Mosquitto grants topics its ACL denies and then sends nothing), tries every resolved address at once, caps payload size, JSON depth and field count, and strips control characters, terminal escape sequences and bidirectional overrides from every string. It never publishes. Depends on no workspace crate.
 - **`textweaver-keymap`**: every action, key chords, layers, the default keys for the terminal and the GUI, overrides, conflict checks, and the generated help. ADR: [0006](../adr/0006-keymap-and-actions.md). Depends on core.
 - **`textweaver-a11y`**: the `Announcer` trait, the announcement catalog, verbosity, the accessibility mode with `route` (which decides whether each message, echo, caret move, and piece of read text goes to the voice, the status line, or both), and screen reader detection (`detect`). ADR: [0006](../adr/0006-keymap-and-actions.md). Depends on core.
 - **`textweaver-editor`**: undo and redo over a rope, Markdown commands, find and replace, typing echo, autosave and recovery, and saving. Depends on core.
@@ -106,7 +107,7 @@ Three more engine-shaped crates were added on the same pattern. `textweaver-pipe
 
 The crates in levels, from the bottom up. Each crate depends only on crates in lower levels:
 
-1. core, fonts, theme, lexicon, ocr, cw, and launcher, which depend on no workspace crate;
+1. core, fonts, theme, lexicon, ocr, cw, mqtt, and launcher, which depend on no workspace crate;
 2. text, math, cite, store, keymap, a11y, editor, and dictation;
 3. aids, speech, writers, vault, and mathcat;
 4. formats, render, enginehost, apple, and export;

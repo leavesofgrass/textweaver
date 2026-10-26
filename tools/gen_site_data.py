@@ -109,6 +109,7 @@ CRATE_ADRS = {
     "host": ["0007", "0012"],
     "piper": ["0023", "0012"],
     "cw": [],  # no ADR; beta 4, the design is in the CW guide
+    "mqtt": [],  # no ADR; beta 5, the design is in the architecture guide
     "fonts": ["0017", "0022"],
     "lexicon": ["0025"],
     "engines": ["0001", "0012"],
@@ -122,6 +123,7 @@ CRATE_NO_ADR_NOTE = {
     "components": ("Optional components", "../components.md#for-developers"),
     "launcher": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
     "cw": ("CW: reading in Morse code", "../cw.md"),
+    "mqtt": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
 }
 
 # ---------------------------------------------------------------------------
@@ -139,7 +141,7 @@ LAYERS = [
     ("output", "Output and aids", "Writing other formats, and what changes how text looks.",
      ["render", "convert", "writers", "fonts", "theme", "aids", "summary", "lexicon", "vault", "dictation"]),
     ("state", "State and input", "Settings, saved positions, sync between computers, keys, announcements, and editing.",
-     ["store", "sync", "keymap", "a11y", "editor"]),
+     ["store", "sync", "mqtt", "keymap", "a11y", "editor"]),
     ("speech", "Speech", "The speech service, its backends, and audio export.",
      ["speech", "engines", "enginehost", "host", "eci", "sapi", "apple", "dectalk", "espeak", "piper", "cw", "export"]),
     ("document", "Document", "The document model and what loads, speaks, and cites it.",
@@ -185,6 +187,7 @@ JOB_OVERRIDES = {
     "store": "Persistence: settings (the reading-aid settings included), key overrides, per-document state with notes and highlights, recent files, and the library.",
     "vault": "Obsidian vaults: export and import of notes and highlights, the one link resolver and front matter parser, and the index behind backlinks, unresolved links, and tags.",
     "cw": "CW (Morse code): the tables, timing, and tone renderer behind the CW speech engine, and the keyer, decoder, and sidetone for keying Morse code into a document.",
+    "mqtt": "Live sources: a receive-only MQTT client on one thread, with TLS, reconnecting, status in words, and every payload capped and cleaned before it is shown or spoken.",
     "xtask": "Maintenance tasks run with cargo xtask: keyboard.md, benchmarks and the soak test, engine hosts, release packages and the AppImage, the dependency check, licence notices, and the star parity report.",
 }
 

@@ -4,6 +4,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Live documents
+
+- New crate `textweaver-mqtt`: the receive-only MQTT 3.1.1 client for live sources, not yet connected to the app. One std thread per source, with rumqttc 0.25.1 for its packet codec only (default features off; `deny.toml` bans its TLS and WebSocket features) and TLS through the ring-backed rustls already in the tree, trusting the bundled Mozilla roots or a CA file; there is no way to skip certificate checks. It never publishes. It reconnects with backoff (1 s doubling to 60 s) and subscribes again after every login, and stops retrying when only the user can fix the problem, so a wrong password never hammers a broker. Connecting, connected and disconnected are reported once per change, not once per attempt, each reason a sentence in words with its meaning first, including Mosquitto 2's answer to a wrong password ("Not authorized: the broker refused the login. Check the user name and password."). Connected says whether the link is TLS and whether the broker is on a Tailscale address (a hint). A subscribed topic with no message for a set time (60 s) is named once, since Mosquitto grants a topic its ACL denies and then sends nothing. Every resolved address is tried at once, so `localhost` no longer costs two seconds on Windows when the broker listens on IPv4 only (TLS by `localhost` to Mosquitto: 94 ms, from 2142 ms in the spike). Payloads are capped (256 KiB, an oversize message skipped as it streams in and named; JSON nesting 8 deep; 5000 values; strings 2000 characters), and control characters, terminal escape sequences and bidirectional overrides are stripped from every topic, key and string. The client id is `tw-` and 16 random hex digits, never a personal identifier.
+- Tests: a loopback broker inside the test program, plain and TLS with certificates made at test time (login, refusals, retained lists, QoS 1, keepalive, reconnecting, the quiet hint, caps, cleaning, a slow reader); an ignored test against Debian 13's Mosquitto 2.0.21 in Docker, run by `crates/textweaver-mqtt/docker/run-mosquitto-test.sh`; and a cargo-fuzz target, `mqtt`, for the packet reader and the payload decoder.
+
+### Security
+
+- tokio 1.53.1 to 1.53.3 in the lock, for RUSTSEC-2026-0386 (`AsyncFd` constructors). cargo deny, which checks every feature, found it through AccessKit's Linux adapter and rumqttc; textweaver-mqtt compiles tokio through rumqttc but never starts a runtime.
+
 ## [0.1.0-beta.4] - 2026-10-24
 
 ### CW (Morse code)
