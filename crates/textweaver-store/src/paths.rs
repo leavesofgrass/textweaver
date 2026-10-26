@@ -68,6 +68,13 @@ impl Paths {
         self.data_dir.join(COMPONENTS_DIR)
     }
 
+    /// The folder closed live logs are saved in by default, `logs/` in
+    /// the data folder (`[live] log_folder` can name another). Made on
+    /// the first save.
+    pub fn live_logs_dir(&self) -> PathBuf {
+        self.data_dir.join("logs")
+    }
+
     /// Per-document state directory.
     pub fn state_dir(&self) -> PathBuf {
         self.data_dir.join("state")

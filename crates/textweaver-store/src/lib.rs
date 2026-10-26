@@ -52,6 +52,7 @@ pub mod fulltext;
 pub mod graph;
 pub mod helpers;
 pub mod library;
+pub mod live_settings;
 pub mod migrate;
 pub mod notes;
 mod paths;
@@ -80,6 +81,10 @@ pub use graph::{Graph, GraphEdge, GraphFormat, GraphNode};
 pub use helpers::{find_helper, find_helper_in, lou_translate};
 pub use library::{
     Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, QueueEntry, ScannedDoc,
+};
+pub use live_settings::{
+    LIVE_DECIMALS_MAX, LIVE_SECONDS_MAX, LiveField, LiveNotice, LiveSettings, LiveSourceSettings,
+    LiveTls, LiveView, MQTT_PORT, MQTT_TLS_PORT, field_path_segments, live_source_id_ok,
 };
 pub use notes::{
     Annotation, Backlink, Backlinks, Highlight, Note, NotesExport, Relation, RelationType,

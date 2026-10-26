@@ -272,6 +272,28 @@ fn everything_changed() -> Settings {
     s.updates.asked = true;
     s.updates.last_check = 1_791_000_000;
     s.updates.declined = "0.2.0".into();
+    s.live.log_folder = "D:/logs".into();
+    s.live.announce_new_entries = false;
+    s.live.speak_new_entries = true;
+    s.live.min_interval_seconds = 30;
+    s.live.quiet_hint_seconds = 0;
+    s.live.sources.insert(
+        "practice".into(),
+        crate::LiveSourceSettings {
+            name: "Practice log".into(),
+            host: "logger.example.ts.net".into(),
+            port: Some(1884),
+            username: "reader".into(),
+            topics: vec!["log/checkins".into()],
+            fields: vec![crate::LiveField {
+                path: "/sensor/temp".into(),
+                label: "Temperature".into(),
+                decimals: Some(1),
+                ..crate::LiveField::default()
+            }],
+            ..crate::LiveSourceSettings::default()
+        },
+    );
     s.interface.language = "en-XA".into();
     s.interface.rtl = crate::RtlDisplay::Off;
     s.interface.recent_settings = vec!["speech.rate".into()];

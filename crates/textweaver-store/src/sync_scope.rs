@@ -345,6 +345,15 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("sync.glossary", Machine),
     ("sync.favorite_voices", Machine),
     ("sync.position_policy", Machine),
+    // [live] (beta 5): how new entries reach the reader travels; the log
+    // folder is a path, and the sources (host names, topics, user names)
+    // belong to this computer's network.
+    ("live.log_folder", Machine),
+    ("live.announce_new_entries", Portable),
+    ("live.speak_new_entries", Portable),
+    ("live.min_interval_seconds", Portable),
+    ("live.quiet_hint_seconds", Portable),
+    ("live.sources", Machine),
 ];
 
 /// Portable settings that travel in a group of their own, not with the

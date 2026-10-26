@@ -2355,6 +2355,8 @@ pub struct Settings {
     pub components: ComponentsSettings,
     /// `[updates]`
     pub updates: UpdatesSettings,
+    /// `[live]`: live documents and their sources.
+    pub live: crate::LiveSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -2507,6 +2509,15 @@ impl Settings {
             lenient_section("normalization.community_lexicon", lexicon, &mut w);
         normalization.medical_lexicon =
             lenient_section("normalization.medical_lexicon", medical, &mut w);
+        // Each live source is read on its own, so one bad value drops
+        // that value, not every source.
+        let mut live_table = table.remove("live");
+        let live_sources = match &mut live_table {
+            Some(toml::Value::Table(t)) => t.remove("sources"),
+            _ => None,
+        };
+        let mut live: crate::LiveSettings = lenient_section("live", live_table, &mut w);
+        live.sources = crate::live_settings::live_sources_leniently(live_sources, &mut w);
         let s = Settings {
             speech,
             highlight: lenient_section("highlight", table.remove("highlight"), &mut w),
@@ -2532,6 +2543,7 @@ impl Settings {
             sync: lenient_section("sync", table.remove("sync"), &mut w),
             components: lenient_section("components", table.remove("components"), &mut w),
             updates: lenient_section("updates", table.remove("updates"), &mut w),
+            live,
             extra: table,
         };
         (s, w)
@@ -2866,6 +2878,20 @@ impl Settings {
             );
             self.summary.sentences = fixed;
         }
+        let max = crate::live_settings::LIVE_SECONDS_MAX;
+        for (key, seconds) in [
+            ("min_interval_seconds", &mut self.live.min_interval_seconds),
+            ("quiet_hint_seconds", &mut self.live.quiet_hint_seconds),
+        ] {
+            if *seconds > max {
+                fix(
+                    format!("live.{key}"),
+                    format!("{seconds} is outside 0 to {max} seconds"),
+                    max.to_string(),
+                );
+                *seconds = max;
+            }
+        }
         w
     }
 
@@ -2924,7 +2950,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 39] = [
+pub(crate) const STRUCT_TABLES: [&str; 40] = [
     "keyboard",
     "colors",
     "sync",
@@ -2964,6 +2990,7 @@ pub(crate) const STRUCT_TABLES: [&str; 39] = [
     "editing",
     "authoring",
     "library",
+    "live",
 ];
 
 /// `table` without the values equal to `defaults`, descending into the
