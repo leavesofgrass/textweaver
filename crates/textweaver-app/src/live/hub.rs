@@ -1,7 +1,7 @@
 //! The live hub: the app's side of an open live document. It owns the
 //! source, the log view's entries, the view (list or table), the reader's
 //! furthest entry for the unread count, the pause queue, and the JSON log
-//! file. [`App::live_tick`] polls the source on every tick.
+//! file. `App::live_tick` polls the source on every tick.
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};

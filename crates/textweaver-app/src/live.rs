@@ -18,7 +18,7 @@
 //! - [`log`]: the log view's entries ([`LiveLog`]): one JSON object adds
 //!   or corrects an entry, a list replaces the log; rendered as a list or
 //!   a table.
-//! - [`hub`]: the app's side ([`App::open_live_source`], [`App::live_tick`]
+//! - [`hub`]: the app's side ([`App::open_live_source`], `App::live_tick`
 //!   and the functions commands call: the view switch, jump to newest,
 //!   pause, the unread count, Save).
 //! - [`json_log`]: the JSON log written while the log runs, and read back
