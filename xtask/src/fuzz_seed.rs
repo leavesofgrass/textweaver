@@ -132,6 +132,11 @@ const TARGETS: &[(&str, &[Seeds])] = &[
             seeds("fixtures/w7f/sync_group", &["json"], false),
         ],
     ),
+    // Beta 5, N3: MQTT payloads of live sources.
+    (
+        "mqtt",
+        &[seeds("fixtures/b5/mqtt", &["json", "txt"], false)],
+    ),
 ];
 
 /// The repository root.
