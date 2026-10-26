@@ -321,7 +321,7 @@ The notes commands return `status` and `effects` but no `pending`.
 
 #### Prompt purposes
 
-A prompt's `purpose` is one of these 32 purposes. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
+A prompt's `purpose` is one of these 33 purposes. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
 
 - `find`: the text to find.
 - `go_to`: a line, a percentage, `start`, or `end`.
@@ -355,6 +355,7 @@ A prompt's `purpose` is one of these 32 purposes. The names are fixed: within pr
 - `import_cards`: an Anki package (`.apkg`) whose cards to add to the open document's cards.
 - `cw_copy`: what the learner copied of the Morse code practice group just sent; empty sends the group again.
 - `github_token`: a GitHub token for a private components source; empty skips. It is secret: `text` in the prompt state is one star per character, and a client should mask what it shows and never log it.
+- `live_password`: the password of a live source, kept in the system credential store; empty cancels. The `label` names the source. It is secret, like `github_token`.
 
 The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before responding, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
 

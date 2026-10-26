@@ -590,6 +590,9 @@ pub struct App {
     /// Optional components: the registry, questions, and downloads
     /// (crate::components).
     pub(crate) components: crate::components::ComponentsState,
+    /// Live sources' passwords: the one asked for, and those known this
+    /// session (crate::source_passwords).
+    pub(crate) live_passwords: crate::source_passwords::LivePasswords,
     /// Updates: the check, the question, and the download
     /// (crate::updates, B1-u1).
     pub(crate) updates: crate::updates::UpdatesState,
@@ -739,6 +742,7 @@ impl App {
             sync: crate::sync::SyncState::default(),
             fonts: crate::font_download::FontDownloads::default(),
             components: crate::components::ComponentsState::default(),
+            live_passwords: crate::source_passwords::LivePasswords::default(),
             updates: crate::updates::UpdatesState::default(),
             relations: crate::relations::RelationsState::default(),
             vault: crate::vault::VaultState::default(),
@@ -1845,6 +1849,9 @@ impl App {
         let label = if purpose == PromptPurpose::GoTo && self.has_pages() {
             // A paged document (a PDF) goes to pages too (crate::pages).
             self.msg("prompt-go-to-pages")
+        } else if let Some(name) = self.live_password_prompt_name(purpose) {
+            // Which live source the password is for (crate::source_passwords).
+            self.msg_args("prompt-live-password", &args!["source" => name])
         } else {
             crate::study::prompt_label(&self.study.catalog, purpose)
         };
@@ -1945,6 +1952,7 @@ impl App {
             PromptPurpose::ImportCards => return self.answer_import_cards(text),
             PromptPurpose::CwCopy => return self.answer_cw_copy(text),
             PromptPurpose::GitHubToken => return self.answer_github_token(text),
+            PromptPurpose::LivePassword => return self.answer_live_password(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {

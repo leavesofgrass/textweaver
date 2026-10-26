@@ -238,6 +238,7 @@ fn purpose_name(p: PromptPurpose) -> &'static str {
         PromptPurpose::CommentReply => "comment_reply",
         PromptPurpose::CommentText => "comment_text",
         PromptPurpose::GitHubToken => "github_token",
+        PromptPurpose::LivePassword => "live_password",
         PromptPurpose::ImportCards => "import_cards",
         PromptPurpose::CwCopy => "cw_copy",
     }
@@ -1188,7 +1189,7 @@ mod tests {
 
     /// Every prompt purpose and its protocol name: a change here is a
     /// protocol change, so clients are told (see the protocol version rule).
-    const PURPOSES: [(PromptPurpose, &str); 32] = [
+    const PURPOSES: [(PromptPurpose, &str); 33] = [
         (PromptPurpose::Find, "find"),
         (PromptPurpose::GoTo, "go_to"),
         (PromptPurpose::Open, "open"),
@@ -1219,12 +1220,13 @@ mod tests {
         (PromptPurpose::CommentReply, "comment_reply"),
         (PromptPurpose::CommentText, "comment_text"),
         (PromptPurpose::GitHubToken, "github_token"),
+        (PromptPurpose::LivePassword, "live_password"),
         (PromptPurpose::ImportCards, "import_cards"),
         (PromptPurpose::CwCopy, "cw_copy"),
     ];
 
     #[test]
-    fn the_32_purpose_names_are_pinned() {
+    fn the_33_purpose_names_are_pinned() {
         let mut seen = std::collections::HashSet::new();
         for (p, name) in PURPOSES {
             assert_eq!(purpose_name(p), name, "{p:?}");
@@ -1261,6 +1263,7 @@ mod tests {
                 | PromptPurpose::CommentReply
                 | PromptPurpose::CommentText
                 | PromptPurpose::GitHubToken
+                | PromptPurpose::LivePassword
                 | PromptPurpose::ImportCards
                 | PromptPurpose::CwCopy => name,
             };

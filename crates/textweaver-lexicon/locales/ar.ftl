@@ -5269,6 +5269,32 @@ section-updates = التحديثات والمكونات
 setting-updates-check = البحث عن تحديثات
 setting-updates-check-help = البحث عن إصدار أحدث من textweaver مرة يوميًا عند البدء. يقرأ القائمة العامة للإصدارات على GitHub ويسأل قبل التنزيل. لا يُرسل شيء عنك. المساعدة، البحث عن تحديثات يبحث في أي وقت.
 
+## Live documents (beta 5): settings, and live sources' passwords. $source
+## is a live source's name; $reason says why the credential store failed.
+section-live = المستندات الحية
+setting-live-log-folder = مجلد السجلات الحية
+setting-live-log-folder-help = مكان حفظ السجلات الحية المغلقة بصيغة JSON. الفارغ يستخدم logs في مجلد البيانات.
+setting-live-announce-new-entries = إعلان الإدخالات الحية الجديدة
+setting-live-announce-new-entries-help = إرسال كل إدخال جديد كاملًا إلى قارئ الشاشة وسطر برايل.
+setting-live-speak-new-entries = نطق الإدخالات الحية الجديدة
+setting-live-speak-new-entries-help = صوت textweaver نفسه يقرأ كل إدخال جديد. متوقف افتراضيًا.
+setting-live-min-interval-seconds = فاصل القيم الحية
+setting-live-min-interval-seconds-help = في عرض القيم، أقل عدد من الثواني بين إعلانين لحقل واحد.
+setting-live-quiet-hint-seconds = تلميح المصدر الصامت
+setting-live-quiet-hint-seconds-help = الثواني دون رسائل قبل تلميح بالكلمات. 0 لا يلمّح أبدًا.
+setting-live-sources = المصادر الحية
+setting-live-sources-help = اتصالات MQTT تُفتح كمستندات حية. تُحرَّر في settings.toml؛ وكلمات المرور تبقى في مخزن بيانات الاعتماد.
+prompt-live-password = كلمة مرور { $source }، Enter للإلغاء
+prompt-live-password-any = كلمة مرور المصدر الحي، Enter للإلغاء
+live-source-unknown = لا مصدر حيًا باسم { $source }. راجع المصادر في settings.toml.
+live-password-no-store = لا مخزن لبيانات الاعتماد في هذا الإصدار: لا يستطيع { $source } الدخول بكلمة مرور. استخدم حزمة إصدار.
+live-password-invalid = ليست كلمة مرور: حتى 1024 حرفًا، دون فواصل أسطر أو علامات جدولة.
+live-password-kept = حُفظت كلمة مرور { $source } في مخزن بيانات الاعتماد في النظام.
+live-password-not-kept = لم تُحفظ كلمة مرور { $source }: { $reason }. تُستخدم في هذه الجلسة فقط.
+live-password-forgotten = نُسيت كلمة مرور { $source }.
+live-password-none = لا كلمة مرور محفوظة لـ { $source }.
+live-password-not-forgotten = لم تُنسَ كلمة مرور { $source }: { $reason }. حاول مجددًا، أو احذفها من مخزن بيانات الاعتماد في النظام.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

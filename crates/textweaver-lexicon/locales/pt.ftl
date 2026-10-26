@@ -4913,6 +4913,32 @@ section-updates = Atualizações e componentes
 setting-updates-check = Procurar atualizações
 setting-updates-check-help = Procurar um textweaver mais novo uma vez por dia ao iniciar. Ele lê a lista pública de versões no GitHub e pergunta antes de baixar. Nada sobre você é enviado. Ajuda, Procurar atualizações procura a qualquer hora.
 
+## Live documents (beta 5): settings, and live sources' passwords. $source
+## is a live source's name; $reason says why the credential store failed.
+section-live = Documentos ao vivo
+setting-live-log-folder = Pasta de registros ao vivo
+setting-live-log-folder-help = Onde os registros ao vivo fechados são salvos como JSON. Vazio usa logs na pasta de dados.
+setting-live-announce-new-entries = Anunciar novas entradas ao vivo
+setting-live-announce-new-entries-help = Enviar cada nova entrada, inteira, ao leitor de tela e à linha braille.
+setting-live-speak-new-entries = Falar novas entradas ao vivo
+setting-live-speak-new-entries-help = A voz do próprio textweaver lê cada nova entrada. Desligado por padrão.
+setting-live-min-interval-seconds = Intervalo de valores ao vivo
+setting-live-min-interval-seconds-help = Na vista de valores, o mínimo de segundos entre dois anúncios de um campo.
+setting-live-quiet-hint-seconds = Aviso de origem em silêncio
+setting-live-quiet-hint-seconds-help = Segundos sem mensagens antes de um aviso em palavras. 0 nunca avisa.
+setting-live-sources = Origens ao vivo
+setting-live-sources-help = Conexões MQTT abertas como documentos ao vivo. Edite em settings.toml; as senhas ficam no armazenamento de credenciais.
+prompt-live-password = Senha de { $source }, Enter cancela
+prompt-live-password-any = Senha da origem ao vivo, Enter cancela
+live-source-unknown = Nenhuma origem ao vivo chamada { $source }. Verifique as origens em settings.toml.
+live-password-no-store = Sem armazenamento de credenciais nesta versão: { $source } não pode entrar com senha. Use um pacote de versão.
+live-password-invalid = Não é uma senha: até 1024 caracteres, sem quebras de linha nem tabulações.
+live-password-kept = Senha de { $source } guardada no armazenamento de credenciais do sistema.
+live-password-not-kept = Senha de { $source } não guardada: { $reason }. Usada só nesta sessão.
+live-password-forgotten = Senha de { $source } esquecida.
+live-password-none = Nenhuma senha guardada para { $source }.
+live-password-not-forgotten = Senha de { $source } não esquecida: { $reason }. Tente de novo, ou remova-a no armazenamento de credenciais do sistema.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

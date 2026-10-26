@@ -4921,6 +4921,32 @@ section-updates = Updates und Komponenten
 setting-updates-check = Nach Updates suchen
 setting-updates-check-help = Einmal täglich beim Start nach einem neueren textweaver suchen. Es liest die öffentliche Liste der Versionen auf GitHub und fragt vor dem Herunterladen. Nichts über Sie wird gesendet. Hilfe, Nach Updates suchen sucht jederzeit.
 
+## Live documents (beta 5): settings, and live sources' passwords. $source
+## is a live source's name; $reason says why the credential store failed.
+section-live = Live-Dokumente
+setting-live-log-folder = Ordner für Live-Protokolle
+setting-live-log-folder-help = Wohin geschlossene Live-Protokolle als JSON gespeichert werden. Leer nutzt logs im Datenordner.
+setting-live-announce-new-entries = Neue Live-Einträge ansagen
+setting-live-announce-new-entries-help = Jeden neuen Eintrag vollständig an Screenreader und Braillezeile senden.
+setting-live-speak-new-entries = Neue Live-Einträge sprechen
+setting-live-speak-new-entries-help = textweavers eigene Stimme liest jeden neuen Eintrag. Standardmäßig aus.
+setting-live-min-interval-seconds = Abstand für Live-Werte
+setting-live-min-interval-seconds-help = In der Werteansicht die wenigsten Sekunden zwischen zwei Ansagen eines Feldes.
+setting-live-quiet-hint-seconds = Hinweis bei stiller Quelle
+setting-live-quiet-hint-seconds-help = Sekunden ohne Nachrichten bis zu einem Hinweis in Worten. 0 gibt nie einen Hinweis.
+setting-live-sources = Live-Quellen
+setting-live-sources-help = MQTT-Verbindungen, als Live-Dokumente geöffnet. In settings.toml bearbeiten; Passwörter bleiben im Anmeldeinformationsspeicher.
+prompt-live-password = Passwort für { $source }, Eingabe bricht ab
+prompt-live-password-any = Passwort für die Live-Quelle, Eingabe bricht ab
+live-source-unknown = Keine Live-Quelle namens { $source }. Prüfen Sie die Quellen in settings.toml.
+live-password-no-store = Kein Anmeldeinformationsspeicher in dieser Version: { $source } kann sich nicht mit Passwort anmelden. Nutzen Sie ein Release-Paket.
+live-password-invalid = Kein Passwort: höchstens 1024 Zeichen, ohne Zeilenumbrüche oder Tabulatoren.
+live-password-kept = Passwort für { $source } im Anmeldeinformationsspeicher des Systems gespeichert.
+live-password-not-kept = Passwort für { $source } nicht gespeichert: { $reason }. Nur in dieser Sitzung verwendet.
+live-password-forgotten = Passwort für { $source } vergessen.
+live-password-none = Kein Passwort für { $source } gespeichert.
+live-password-not-forgotten = Passwort für { $source } nicht vergessen: { $reason }. Versuchen Sie es erneut oder entfernen Sie es im Anmeldeinformationsspeicher des Systems.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

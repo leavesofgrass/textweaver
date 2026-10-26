@@ -365,6 +365,10 @@ pub enum PromptPurpose {
     /// Answer is a GitHub token for a private components source; empty
     /// skips. It is secret ([`PromptPurpose::is_secret`]).
     GitHubToken,
+    /// Answer is the password of a live source, kept in the system
+    /// credential store; empty cancels. It is secret
+    /// ([`PromptPurpose::is_secret`]).
+    LivePassword,
     /// Answer is an Anki package (`.apkg`) whose cards to import into the
     /// open document's cards.
     ImportCards,
@@ -413,18 +417,23 @@ impl PromptPurpose {
             PromptPurpose::CommentReply => "Reply",
             PromptPurpose::CommentText => "Comment",
             PromptPurpose::GitHubToken => "GitHub token for your components source, Enter skips",
+            // The app names the source from the message catalog.
+            PromptPurpose::LivePassword => "Password for the live source, Enter cancels",
             PromptPurpose::ImportCards => "Import study cards from Anki package",
             // The app labels each group from the message catalog.
             PromptPurpose::CwCopy => "Type what you heard",
         }
     }
 
-    /// True for a prompt whose answer is secret (a token): a frontend
+    /// True for a prompt whose answer is secret (a token or a password): a frontend
     /// shows [`PromptModel::shown_text`](crate::PromptModel::shown_text),
     /// one star per character, and never logs the keys or the answer; the
     /// app echoes nothing typed and keeps no history of it.
     pub fn is_secret(self) -> bool {
-        self == PromptPurpose::GitHubToken
+        matches!(
+            self,
+            PromptPurpose::GitHubToken | PromptPurpose::LivePassword
+        )
     }
 }
 

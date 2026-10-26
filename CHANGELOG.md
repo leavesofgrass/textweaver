@@ -4,6 +4,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Live documents
+
+- **New: `[live]` settings**, in a new Settings section, Live documents: `announce_new_entries` (on: each new entry, whole, goes to the screen reader and so to the Braille display), `speak_new_entries` (off: textweaver's own voice stays quiet), `min_interval_seconds` (10, 0 to 3600: the values view's fewest seconds between announcements of one field), `quiet_hint_seconds` (60, 0 to 3600, 0 never: when a silent source gets a hint in words), and `log_folder` (empty: `logs` in the data folder).
+- **New: live sources, `[live.sources.<id>]`**, edited in `settings.toml`: `name`, `host`, `port` (1883, or 8883 with TLS), `tls` (`off`, `system`, `ca_file`), `ca_file`, `username`, `topics`, `view` (`log` or `values`), `id_field`, and `[[live.sources.<id>.fields]]` with `path` (dotted, or a JSON Pointer), `label`, `unit`, `decimals`, `values`, `show`, `speak` and `order`. A value that does not fit is dropped with a warning in words ("live.sources.net.port 70000 is outside 1 to 65535; using the default"), and the rest of the source is kept. Sources and the log folder are this computer's settings and never sync.
+- **New: live source passwords** are kept only in the system credential store, under the account `live:<id>`, beside the GitHub token, and asked for in a masked prompt (purpose `live_password` over JSON-RPC). A version without the credential store says so in words instead of asking. The credential store is now its own feature of `textweaver-components`, `credentials`, which `download` brings.
+
 ## [0.1.0-beta.4] - 2026-10-24
 
 ### CW (Morse code)
