@@ -1771,9 +1771,12 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             // Edit mode: the same document with its text changed (a key,
             // undo, a command): the paragraphs that stay keep their nodes,
             // as in a slide, so the screen reader keeps its place.
-            let edited = app.is_editing()
-                && shown.editing
-                && shown.doc.as_ref().is_some_and(|(k, _)| *k == s.key);
+            let same_key = shown.doc.as_ref().is_some_and(|(k, _)| *k == s.key);
+            // A live document (a live source's entries, crate::live in
+            // the app): its text changes outside edit mode, and takes the
+            // same path, so an entry added or corrected never moves the
+            // screen reader off the nodes it is on.
+            let edited = same_key && ((app.is_editing() && shown.editing) || s.live.is_some());
             let mut w = match shown.window {
                 Some(w) if !new_doc => w,
                 _ => DocWindow::with_budget(&s.doc, focus, WINDOW_UNITS),

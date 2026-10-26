@@ -1032,7 +1032,7 @@ impl DocumentView {
         let old = &w.model;
         let (n_old, n_new) = (old.paragraphs.len(), model.paragraphs.len());
         let delta = model.doc_len as isize - old.doc_len as isize;
-        let shift = |p: CharPos| CharPos((p.0 as isize + delta).max(0) as usize);
+        let shift_by = |p: CharPos, d: isize| CharPos((p.0 as isize + d).max(0) as usize);
         let same_text = |a: &Paragraph, b: &Paragraph| {
             a.text == b.text
                 && a.heading == b.heading
@@ -1044,46 +1044,96 @@ impl DocumentView {
         }
         let old_styles = old.styles_by_paragraph();
         let new_styles = model.styles_by_paragraph();
-        let shifted = |s: &(Vec<StyledSpan>, Vec<CharPos>)| {
+        let shifted = |s: &(Vec<StyledSpan>, Vec<CharPos>), d: isize| {
             (
                 s.0.iter()
                     .map(|x| StyledSpan {
-                        range: CharRange::new(shift(x.range.start).0, shift(x.range.end).0),
+                        range: CharRange::new(
+                            shift_by(x.range.start, d).0,
+                            shift_by(x.range.end, d).0,
+                        ),
                         style: x.style,
                     })
                     .collect::<Vec<_>>(),
-                s.1.iter().map(|&b| shift(b)).collect::<Vec<_>>(),
+                s.1.iter().map(|&b| shift_by(b, d)).collect::<Vec<_>>(),
             )
+        };
+        // Old paragraph `i` is new paragraph `j`, moved by their starts'
+        // difference: the same text and styles.
+        let same = |i: usize, j: usize| {
+            let (a, b) = (&old.paragraphs[i], &model.paragraphs[j]);
+            let d = b.start.0 as isize - a.start.0 as isize;
+            same_text(a, b) && shifted(&old_styles[i], d) == new_styles[j]
         };
         let limit = n_old.min(n_new);
         let mut pre = 0;
         while pre < limit
             && old.paragraphs[pre].start == model.paragraphs[pre].start
-            && same_text(&old.paragraphs[pre], &model.paragraphs[pre])
-            && old_styles[pre] == new_styles[pre]
+            && same(pre, pre)
         {
             pre += 1;
         }
         let mut suf = 0;
         while suf < limit - pre {
             let (i, j) = (n_old - 1 - suf, n_new - 1 - suf);
-            let (a, b) = (&old.paragraphs[i], &model.paragraphs[j]);
-            if shift(a.start) != b.start
-                || !same_text(a, b)
-                || shifted(&old_styles[i]) != new_styles[j]
+            if shift_by(old.paragraphs[i].start, delta) != model.paragraphs[j].start || !same(i, j)
             {
                 break;
             }
             suf += 1;
         }
-        if pre == 0 && suf == 0 {
+        // Between them, paragraphs both models have, in order, keep their
+        // nodes too: a live document's entry corrected above others, with
+        // new ones added below, changes two places at once.
+        let mut mid = Vec::new();
+        let (end_old, end_new) = (n_old - suf, n_new - suf);
+        let (mut i, mut j) = (pre, pre);
+        while i < end_old && j < end_new {
+            if same(i, j) {
+                mid.push((i, j));
+                i += 1;
+                j += 1;
+            } else if let Some(k) = (j + 1..end_new).find(|&k| same(i, k)) {
+                // New paragraphs before old paragraph `i`.
+                j = k;
+            } else {
+                // Old paragraph `i` is gone or changed.
+                i += 1;
+            }
+        }
+        if pre == 0 && suf == 0 && mid.is_empty() {
             return Err(Box::new(model));
         }
-        // Where the old suffix starts: runs at or after it move by `delta`;
-        // runs of the old middle paragraphs are gone.
-        let old_mid = pre..n_old - suf;
-        let suf_start = old.paragraphs.get(n_old - suf).map(|p| p.start);
+        // Each kept paragraph: old index, new index, and how far it moved.
+        let keep: Vec<(usize, usize, isize)> = (0..pre)
+            .map(|i| (i, i))
+            .chain(mid.iter().copied())
+            .chain((0..suf).map(|k| (n_old - suf + k, n_new - suf + k)))
+            .map(|(i, j)| {
+                let d = model.paragraphs[j].start.0 as isize - old.paragraphs[i].start.0 as isize;
+                (i, j, d)
+            })
+            .collect();
+        // Where an old position goes: with its kept paragraph, else
+        // nowhere (`None`).
+        let old_end = |i: usize| {
+            old.paragraphs
+                .get(i + 1)
+                .map_or(CharPos(usize::MAX), |p| p.start)
+        };
+        let moves: Vec<(CharPos, CharPos, isize)> = keep
+            .iter()
+            .filter(|(_, _, d)| *d != 0)
+            .map(|&(i, _, d)| (old.paragraphs[i].start, old_end(i), d))
+            .collect();
+        let kept_old: std::collections::HashSet<usize> = keep.iter().map(|k| k.0).collect();
         let anchor_pos = old.paragraphs.get(w.top.0).map(|p| p.start);
+        let move_pos = |p: CharPos| {
+            moves
+                .iter()
+                .find(|(s, e, _)| *s <= p && p < *e)
+                .map_or(p, |&(_, _, d)| shift_by(p, d))
+        };
 
         let mut layouts = std::mem::take(&mut w.layouts);
         let old_lines = std::mem::take(&mut w.line_starts);
@@ -1101,25 +1151,22 @@ impl DocumentView {
         let mut runs = vec![None; n_new];
         let mut ids = vec![None; n_new];
         let mut dirty = vec![true; n_new];
-        let keep = (0..pre)
-            .map(|i| (i, i))
-            .chain((0..suf).map(|k| (n_old - suf + k, n_new - suf + k)));
-        for (i, j) in keep {
+        for &(i, j, _) in &keep {
             if let Some(l) = layouts.remove(&i) {
                 new_layouts.insert(j, l);
             }
             lines[j] = old_lines.get(i).cloned().flatten();
             ids[j] = old_ids.get_mut(i).and_then(Option::take);
             dirty[j] = old_dirty.get(i).copied().unwrap_or(true);
-            // The prefix's runs are where they were; the suffix's are
+            // The prefix's runs are where they were; the others' are
             // rebuilt from the paragraph when next asked for.
             if i < pre {
                 runs[j] = old_runs.get_mut(i).and_then(Option::take);
             }
         }
-        // The ids of runs in the old middle paragraphs are forgotten; the
-        // suffix's ids move with their text.
-        for i in old_mid {
+        // The ids of runs in old paragraphs not kept are forgotten; the
+        // kept paragraphs' ids move with their text.
+        for i in (pre..n_old).filter(|i| !kept_old.contains(i)) {
             for id in old_ids
                 .get_mut(i)
                 .and_then(Option::take)
@@ -1132,20 +1179,17 @@ impl DocumentView {
                 }
             }
         }
-        if let Some(from) = suf_start
-            && delta != 0
-        {
-            let moved: Vec<(NodeId, CharPos)> = w
+        if !moves.is_empty() {
+            let moved: Vec<(NodeId, CharPos, CharPos)> = w
                 .ids_to_pos
                 .iter()
-                .filter(|(_, p)| **p >= from)
-                .map(|(id, p)| (*id, *p))
+                .map(|(id, p)| (*id, *p, move_pos(*p)))
+                .filter(|(_, from, to)| from != to)
                 .collect();
-            for (_, p) in &moved {
-                w.run_ids.remove(p);
+            for (_, from, _) in &moved {
+                w.run_ids.remove(from);
             }
-            for (id, p) in moved {
-                let to = shift(p);
+            for (id, _, to) in moved {
                 w.ids_to_pos.insert(id, to);
                 w.run_ids.insert(to, id);
             }
@@ -1157,13 +1201,7 @@ impl DocumentView {
         w.para_runs = runs;
         w.para_ids = ids;
         w.dirty_paras = dirty;
-        let anchor = anchor_pos.map(|p| {
-            if suf_start.is_some_and(|s| p >= s) {
-                shift(p)
-            } else {
-                p
-            }
-        });
+        let anchor = anchor_pos.map(move_pos);
         w.top = (
             anchor.map_or(0, |pos| caret::paragraph_at(&w.model.paragraphs, pos)),
             w.top.1,
