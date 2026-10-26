@@ -5335,3 +5335,66 @@ settings-applies-engines = Aplica-se quando { $first } ou { $second } é o motor
 settings-applies-not-engine = Aplica-se quando { $engine } não é o motor de fala.
 # $os is Windows, macOS or Linux.
 settings-applies-os = Aplica-se só no { $os }.
+
+## Beta 5: live documents (a log fed by a live source, such as an MQTT
+## broker). $name is the source's name, $topic an MQTT topic, $path and
+## $folder file paths, $line a log entry as one line.
+live-log-title = Registro ao vivo
+live-log-empty = Ainda não há entradas.
+live-entry-empty = Entrada vazia.
+live-field-callsign = Indicativo
+live-field-name = Nome
+live-field-location = Local
+live-field-status = Estado
+live-field-traffic = Tráfego
+live-field-notes = Notas
+live-field-time = Hora
+live-traffic = Tráfego
+live-yes = sim
+live-no = não
+live-read-only = Este registro ao vivo é somente leitura; não pode ser editado.
+live-not-open = Nenhum registro ao vivo está aberto.
+live-view-list = Exibição em lista.
+live-view-table = Exibição em tabela.
+live-newest-none = O registro ainda não tem entradas.
+live-paused = Atualizações pausadas. As novas entradas aguardam até você retomar.
+live-paused-status = atualizações pausadas
+live-stopped = { $name } parou. O registro continua aberto, somente leitura.
+live-log-saved = Registro salvo como { $name } em { $folder }.
+live-log-save-failed = Não é possível salvar o registro ao vivo { $path }: { $error } Verifique se a pasta de registros pode ser gravada; o textweaver tenta de novo em 10 segundos.
+live-log-empty-not-saved = O registro ainda não tem entradas, então nada foi salvo.
+live-log-nowhere = Não há pasta para salvar o registro ao vivo.
+live-log-saved-already = Este registro foi aberto de { $path }; já está salvo.
+live-binary = Uma mensagem em { $topic } foi deixada de fora: não é texto ({ $len } bytes).
+live-too-large = Uma mensagem em { $topic } foi deixada de fora: é grande demais ({ $len } bytes).
+live-full = O registro está cheio com { $max } entradas; as entradas mais novas são deixadas de fora.
+live-connecting = Conectando a { $name }.
+live-reconnecting = Reconectando a { $name }, tentativa { $attempt }.
+live-connected = Conectado a { $name }, criptografado.
+live-connected-tailscale = Conectado a { $name } pelo Tailscale, que criptografa o enlace.
+live-connected-plain = Conectado a { $name }. A conexão não é criptografada.
+live-disconnected = Desconectado de { $name }: { $reason }
+live-quiet = Ainda não há mensagens em { $topic }. Se isso continuar, verifique se o broker permite que esta conta leia.
+live-unread =
+    { $count ->
+        [0] nenhuma não lida
+        [one] 1 não lida
+       *[other] { $count } não lidas
+    }
+live-entries =
+    { $count ->
+        [one] 1 entrada
+       *[other] { $count } entradas
+    }
+live-entry-and-more =
+    { $more ->
+        [one] { $line } E mais 1.
+       *[other] { $line } E mais { $more }.
+    }
+live-resumed =
+    { $count ->
+        [0] Atualizações retomadas.
+        [one] Atualizações retomadas, 1 atualização aplicada.
+       *[other] Atualizações retomadas, { $count } atualizações aplicadas.
+    }
+live-resumed-dropped = Atualizações retomadas, { $count } atualizações aplicadas. { $dropped } atualizações mais antigas foram deixadas de fora durante a pausa.

@@ -387,6 +387,10 @@ impl App {
     /// engine. `None` while editing (positions are in the source text then)
     /// or with no document.
     fn sync_snapshot(&self, publish_place: bool) -> Option<Snapshot> {
+        // A live document is never synced.
+        if self.session_is_live() {
+            return None;
+        }
         let state = self.state_now()?;
         let key = self.session.as_ref()?.key.clone();
         Some(Snapshot {
@@ -469,7 +473,9 @@ impl App {
         // was opened while editing): find it now.
         let unmerged = self.edit.is_none()
             && self.session.as_ref().is_some_and(|s| {
-                s.doc.meta.path.is_some() && self.sync.doc.as_ref().is_none_or(|d| d.key != s.key)
+                s.live.is_none()
+                    && s.doc.meta.path.is_some()
+                    && self.sync.doc.as_ref().is_none_or(|d| d.key != s.key)
             });
         if unmerged && let Some(path) = self.session.as_ref().and_then(|s| s.doc.meta.path.clone())
         {

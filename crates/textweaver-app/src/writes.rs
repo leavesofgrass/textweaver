@@ -117,6 +117,10 @@ impl App {
     /// positions are in the source text; leaving edit mode saves them).
     /// Returns false when there is nothing to save or nowhere to save it.
     pub(crate) fn save_state(&mut self, note: StateNote) -> bool {
+        // A live document's text is generated: no place in it is kept.
+        if self.session.as_ref().is_some_and(|s| s.live.is_some()) {
+            return false;
+        }
         let Some(store) = self.state_store() else {
             return false;
         };
@@ -247,6 +251,10 @@ impl App {
             Report::Disk { path, stamp } => {
                 self.disk_check_pending = false;
                 self.disk_checked(path, stamp)
+            }
+            Report::LiveLog { path, result, say } => {
+                self.live_log_written(&path, result, say);
+                Vec::new()
             }
             Report::CardsFailed(e) => {
                 let m = self.msg_args(

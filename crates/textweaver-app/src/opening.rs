@@ -215,6 +215,9 @@ impl App {
     /// Opens `path` in the background when it is large or may be slow,
     /// else at once (announcing failures either way).
     pub(crate) fn open_maybe_in_background(&mut self, path: &Path) -> Vec<Effect> {
+        if let Some(effects) = self.open_live_log(path) {
+            return effects;
+        }
         let size = std::fs::metadata(path).map_or(0, |m| m.len());
         let slow = self.background_open_bytes != u64::MAX && may_be_slow(path);
         if size < self.background_open_bytes && !slow {

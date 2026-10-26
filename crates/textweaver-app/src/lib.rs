@@ -204,6 +204,7 @@ mod links;
 pub mod lint;
 pub mod list_model;
 mod lists;
+pub mod live;
 pub mod logfile;
 mod marks;
 mod math_display;

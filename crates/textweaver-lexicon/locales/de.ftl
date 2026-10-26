@@ -5343,3 +5343,65 @@ settings-applies-engines = Gilt, wenn { $first } oder { $second } die Sprachausg
 settings-applies-not-engine = Gilt, wenn { $engine } nicht die Sprachausgabe ist.
 # $os is Windows, macOS or Linux.
 settings-applies-os = Gilt nur unter { $os }.
+
+## Beta 5: live documents (a log fed by a live source, such as an MQTT
+## broker). $name is the source's name, $topic an MQTT topic, $path and
+## $folder file paths, $line a log entry as one line.
+live-log-title = Live-Protokoll
+live-log-empty = Noch keine Einträge.
+live-entry-empty = Leerer Eintrag.
+live-field-callsign = Rufzeichen
+live-field-name = Name
+live-field-location = Ort
+live-field-status = Status
+live-field-traffic = Verkehr
+live-field-notes = Notizen
+live-field-time = Zeit
+live-traffic = Verkehr
+live-yes = ja
+live-no = nein
+live-read-only = Dieses Live-Protokoll ist schreibgeschützt; es kann nicht bearbeitet werden.
+live-not-open = Kein Live-Protokoll ist geöffnet.
+live-view-list = Listenansicht.
+live-view-table = Tabellenansicht.
+live-newest-none = Das Protokoll hat noch keine Einträge.
+live-paused = Aktualisierungen angehalten. Neue Einträge warten, bis Sie fortsetzen.
+live-paused-status = Aktualisierungen angehalten
+live-stopped = { $name } beendet. Das Protokoll bleibt schreibgeschützt geöffnet.
+live-log-saved = Protokoll gespeichert als { $name } in { $folder }.
+live-log-save-failed = Das Live-Protokoll { $path } kann nicht gespeichert werden: { $error } Prüfen Sie, ob in den Protokollordner geschrieben werden kann; textweaver versucht es in 10 Sekunden erneut.
+live-log-empty-not-saved = Das Protokoll hat noch keine Einträge, daher wurde nichts gespeichert.
+live-log-nowhere = Es gibt keinen Ordner, in dem das Live-Protokoll gespeichert werden kann.
+live-log-saved-already = Dieses Protokoll wurde aus { $path } geöffnet; es ist bereits gespeichert.
+live-binary = Eine Nachricht auf { $topic } wurde ausgelassen: Sie ist kein Text ({ $len } Bytes).
+live-too-large = Eine Nachricht auf { $topic } wurde ausgelassen: Sie ist zu groß ({ $len } Bytes).
+live-full = Das Protokoll ist mit { $max } Einträgen voll; neuere Einträge werden ausgelassen.
+live-connecting = Verbindung zu { $name } wird hergestellt.
+live-reconnecting = Neue Verbindung zu { $name }, Versuch { $attempt }.
+live-connected = Verbunden mit { $name }, verschlüsselt.
+live-connected-tailscale = Verbunden mit { $name } über Tailscale, das die Verbindung verschlüsselt.
+live-connected-plain = Verbunden mit { $name }. Die Verbindung ist nicht verschlüsselt.
+live-disconnected = Verbindung zu { $name } getrennt: { $reason }
+live-quiet = Noch keine Nachrichten auf { $topic }. Wenn das anhält, prüfen Sie, ob der Broker diesem Konto das Lesen erlaubt.
+live-unread =
+    { $count ->
+        [0] keine ungelesen
+       *[other] { $count } ungelesen
+    }
+live-entries =
+    { $count ->
+        [one] 1 Eintrag
+       *[other] { $count } Einträge
+    }
+live-entry-and-more =
+    { $more ->
+        [one] { $line } Und 1 weiterer.
+       *[other] { $line } Und { $more } weitere.
+    }
+live-resumed =
+    { $count ->
+        [0] Aktualisierungen fortgesetzt.
+        [one] Aktualisierungen fortgesetzt, 1 Aktualisierung übernommen.
+       *[other] Aktualisierungen fortgesetzt, { $count } Aktualisierungen übernommen.
+    }
+live-resumed-dropped = Aktualisierungen fortgesetzt, { $count } Aktualisierungen übernommen. { $dropped } ältere Aktualisierungen wurden während der Pause ausgelassen.

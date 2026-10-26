@@ -5731,3 +5731,64 @@ settings-applies-engines = ينطبق حين يكون { $first } أو { $second 
 settings-applies-not-engine = ينطبق حين لا يكون { $engine } محرك الكلام.
 # $os is Windows, macOS or Linux.
 settings-applies-os = ينطبق على { $os } فقط.
+
+## Beta 5: live documents (a log fed by a live source, such as an MQTT
+## broker). $name is the source's name, $topic an MQTT topic, $path and
+## $folder file paths, $line a log entry as one line.
+live-log-title = سجل مباشر
+live-log-empty = لا توجد إدخالات بعد.
+live-entry-empty = إدخال فارغ.
+live-field-callsign = رمز النداء
+live-field-name = الاسم
+live-field-location = الموقع
+live-field-status = الحالة
+live-field-traffic = الرسائل
+live-field-notes = ملاحظات
+live-field-time = الوقت
+live-traffic = رسائل
+live-yes = نعم
+live-no = لا
+live-read-only = هذا السجل المباشر للقراءة فقط؛ لا يمكن تحريره.
+live-not-open = لا يوجد سجل مباشر مفتوح.
+live-view-list = عرض القائمة.
+live-view-table = عرض الجدول.
+live-newest-none = لا توجد في السجل إدخالات بعد.
+live-paused = تم إيقاف التحديثات مؤقتًا. تنتظر الإدخالات الجديدة حتى تستأنف.
+live-paused-status = التحديثات متوقفة مؤقتًا
+live-stopped = توقف { $name }. يبقى السجل مفتوحًا للقراءة فقط.
+live-log-saved = تم حفظ السجل باسم { $name } في { $folder }.
+live-log-save-failed = تعذر حفظ السجل المباشر { $path }: { $error } تحقّق من إمكانية الكتابة في مجلد السجلات؛ يعيد textweaver المحاولة بعد 10 ثوانٍ.
+live-log-empty-not-saved = لا توجد في السجل إدخالات بعد، لذا لم يُحفظ شيء.
+live-log-nowhere = لا يوجد مجلد لحفظ السجل المباشر فيه.
+live-log-saved-already = فُتح هذا السجل من { $path }؛ وهو محفوظ بالفعل.
+live-binary = تم تجاهل رسالة على { $topic }: ليست نصًا ({ $len } بايت).
+live-too-large = تم تجاهل رسالة على { $topic }: حجمها كبير جدًا ({ $len } بايت).
+live-full = السجل ممتلئ عند { $max } إدخال؛ يتم تجاهل الإدخالات الأحدث.
+live-connecting = جارٍ الاتصال بـ { $name }.
+live-reconnecting = إعادة الاتصال بـ { $name }، المحاولة { $attempt }.
+live-connected = متصل بـ { $name }، مشفر.
+live-connected-tailscale = متصل بـ { $name } عبر Tailscale، الذي يشفر الوصلة.
+live-connected-plain = متصل بـ { $name }. الاتصال غير مشفر.
+live-disconnected = انقطع الاتصال بـ { $name }: { $reason }
+live-quiet = لا توجد رسائل بعد على { $topic }. إذا استمر ذلك، فتحقق من أن الوسيط يسمح لهذا الحساب بالقراءة.
+live-unread =
+    { $count ->
+        [0] لا شيء غير مقروء
+       *[other] { $count } غير مقروء
+    }
+live-entries =
+    { $count ->
+        [one] إدخال واحد
+       *[other] { $count } إدخالات
+    }
+live-entry-and-more =
+    { $more ->
+        [one] { $line } وإدخال آخر.
+       *[other] { $line } و{ $more } أخرى.
+    }
+live-resumed =
+    { $count ->
+        [0] استؤنفت التحديثات.
+       *[other] استؤنفت التحديثات، وطُبق { $count } تحديث.
+    }
+live-resumed-dropped = استؤنفت التحديثات، وطُبق { $count } تحديث. تم تجاهل { $dropped } تحديثات أقدم أثناء الإيقاف المؤقت.

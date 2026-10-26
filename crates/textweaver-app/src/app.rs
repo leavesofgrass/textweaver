@@ -164,6 +164,10 @@ pub struct Session {
     /// A frontend that keeps a copy of the text, such as a GUI's
     /// [`DocWindow`](crate::DocWindow), reloads it when this changes.
     pub revision: u64,
+    /// Set when the document is a live document, fed by a live source
+    /// (crate::live): its text changes from outside edit mode, and its
+    /// reading position is never saved.
+    pub live: Option<crate::live::LiveTag>,
 }
 
 /// A fresh text revision (see [`Session::revision`]).
@@ -197,6 +201,7 @@ impl Session {
             disk: None,
             text_stamp: None,
             review: crate::changes::Review::default(),
+            live: None,
         }
     }
 
@@ -531,6 +536,9 @@ pub struct App {
     pub(crate) study: crate::study::Study,
     /// The frontend's waker, rung from other threads (crate::wake).
     pub(crate) wake: crate::wake::WakeSlot,
+    /// The open live document's source, entries and log file
+    /// (crate::live).
+    pub(crate) live_hub: Option<crate::live::LiveHub>,
     /// How deep in public entry points the app is (`App::entry`).
     pub(crate) depth: u32,
     /// Files this large open in the background (crate::opening).
@@ -716,6 +724,7 @@ impl App {
             preview_server: None,
             study,
             wake,
+            live_hub: None,
             depth: 0,
             background_open_bytes: crate::opening::BACKGROUND_OPEN_BYTES,
             spell_count: None,
@@ -1200,6 +1209,10 @@ impl App {
     /// Opens a document and makes it current. The previous document's
     /// position is saved first.
     pub fn open(&mut self, path: &Path) -> Result<Vec<Effect>, AppError> {
+        // A JSON log saved from a live document opens in the log view.
+        if let Some(effects) = self.open_live_log(path) {
+            return Ok(effects);
+        }
         // Taken before reading, so a change made while loading is noticed.
         let stamp = crate::disk::FileStamp::of(path);
         let doc = self
@@ -1272,6 +1285,8 @@ impl App {
         title: String,
         text: Option<textweaver_store::TextStamp>,
     ) -> Vec<Effect> {
+        // A live document closing stops its source and writes its log.
+        self.live_leave();
         self.dictation_finish();
         if self.edit.take().is_some() {
             log::warn!("a document was opened over unsaved edit mode");
@@ -1536,6 +1551,7 @@ impl App {
     /// background writer (at most ten seconds, saying so when it takes more
     /// than a moment). Safe to call more than once.
     pub fn shutdown(&mut self) {
+        self.live_leave();
         self.dictation_shutdown();
         if let Err(e) = self.save_position() {
             log::warn!("cannot save position: {e}");
@@ -1801,6 +1817,7 @@ impl App {
         effects.extend(self.components_tick());
         effects.extend(self.updates_tick());
         effects.extend(self.cw_practice_tick(now));
+        effects.extend(self.live_tick(now));
         self.reading_timer_tick(now);
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now) | self.cw_tick();
         effects.extend(self.authoring_tick(now));

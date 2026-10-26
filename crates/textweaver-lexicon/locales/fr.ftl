@@ -5347,3 +5347,66 @@ settings-applies-engines = S'applique quand { $first } ou { $second } est le mot
 settings-applies-not-engine = S'applique quand { $engine } n'est pas le moteur vocal.
 # $os is Windows, macOS or Linux.
 settings-applies-os = S'applique seulement sous { $os }.
+
+## Beta 5: live documents (a log fed by a live source, such as an MQTT
+## broker). $name is the source's name, $topic an MQTT topic, $path and
+## $folder file paths, $line a log entry as one line.
+live-log-title = Journal en direct
+live-log-empty = Aucune entrée pour l'instant.
+live-entry-empty = Entrée vide.
+live-field-callsign = Indicatif
+live-field-name = Nom
+live-field-location = Lieu
+live-field-status = Statut
+live-field-traffic = Trafic
+live-field-notes = Notes
+live-field-time = Heure
+live-traffic = Trafic
+live-yes = oui
+live-no = non
+live-read-only = Ce journal en direct est en lecture seule ; il ne peut pas être modifié.
+live-not-open = Aucun journal en direct n'est ouvert.
+live-view-list = Vue en liste.
+live-view-table = Vue en tableau.
+live-newest-none = Le journal n'a encore aucune entrée.
+live-paused = Mises à jour en pause. Les nouvelles entrées attendent que vous repreniez.
+live-paused-status = mises à jour en pause
+live-stopped = { $name } arrêté. Le journal reste ouvert, en lecture seule.
+live-log-saved = Journal enregistré sous { $name } dans { $folder }.
+live-log-save-failed = Impossible d'enregistrer le journal en direct { $path } : { $error } Vérifiez que le dossier des journaux est accessible en écriture ; textweaver réessaie dans 10 secondes.
+live-log-empty-not-saved = Le journal n'a encore aucune entrée, rien n'a donc été enregistré.
+live-log-nowhere = Il n'y a aucun dossier où enregistrer le journal en direct.
+live-log-saved-already = Ce journal a été ouvert depuis { $path } ; il est déjà enregistré.
+live-binary = Un message sur { $topic } a été omis : ce n'est pas du texte ({ $len } octets).
+live-too-large = Un message sur { $topic } a été omis : il est trop volumineux ({ $len } octets).
+live-full = Le journal est plein à { $max } entrées ; les entrées plus récentes sont omises.
+live-connecting = Connexion à { $name }.
+live-reconnecting = Nouvelle connexion à { $name }, tentative { $attempt }.
+live-connected = Connecté à { $name }, chiffré.
+live-connected-tailscale = Connecté à { $name } par Tailscale, qui chiffre la liaison.
+live-connected-plain = Connecté à { $name }. La connexion n'est pas chiffrée.
+live-disconnected = Déconnecté de { $name } : { $reason }
+live-quiet = Aucun message pour l'instant sur { $topic }. Si cela dure, vérifiez que le broker autorise ce compte à le lire.
+live-unread =
+    { $count ->
+        [0] aucune non lue
+        [one] 1 non lue
+       *[other] { $count } non lues
+    }
+live-entries =
+    { $count ->
+        [one] 1 entrée
+       *[other] { $count } entrées
+    }
+live-entry-and-more =
+    { $more ->
+        [one] { $line } Et 1 autre.
+       *[other] { $line } Et { $more } autres.
+    }
+live-resumed =
+    { $count ->
+        [0] Mises à jour reprises.
+        [one] Mises à jour reprises, 1 mise à jour appliquée.
+       *[other] Mises à jour reprises, { $count } mises à jour appliquées.
+    }
+live-resumed-dropped = Mises à jour reprises, { $count } mises à jour appliquées. { $dropped } mises à jour plus anciennes ont été omises pendant la pause.

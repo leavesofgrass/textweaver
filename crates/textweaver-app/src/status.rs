@@ -35,7 +35,14 @@ impl App {
     /// The position the title line shows, as its place and its
     /// percentage: `["line 3 of 40", "7%"]`, or in a paged document (a
     /// PDF) `["page 12 of 30", "40%"]`; `None` without a document.
+    ///
+    /// A live document's position is frozen: the unread count stands in
+    /// for it ([`App::live_position`]), so the line does not change with
+    /// every entry.
     pub fn title_position(&self) -> Option<Vec<String>> {
+        if let Some(live) = self.live_position() {
+            return Some(live);
+        }
         let s = self.session.as_ref()?;
         let place = match self.page_of(s.cursor) {
             Some(page) => self.page_words(&page, "status-page", "status-page-labelled"),

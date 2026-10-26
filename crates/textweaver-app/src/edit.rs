@@ -325,7 +325,7 @@ impl App {
     /// Enters edit mode on the open document (Ctrl+E). With `source`, the
     /// editor holds that text instead of the file's (recovered work).
     pub(crate) fn enter_edit(&mut self, source: Option<String>) {
-        if self.edit.is_some() {
+        if self.edit.is_some() || self.live_refuse_edit() {
             return;
         }
         self.stop_speech();
@@ -826,6 +826,10 @@ impl App {
     /// Ctrl+S: saves in place, or asks for a name (new and converted
     /// documents). Stays in edit mode.
     pub(crate) fn save(&mut self, save_as: Option<PathBuf>) -> Vec<Effect> {
+        // A live document's Save writes its JSON log.
+        if self.edit.is_none() && self.session_is_live() {
+            return self.live_save_log();
+        }
         if self.edit.is_none() {
             let k = self.keys(ActionId::ToggleEditMode);
             let msg = self.msg_args("edit-nothing-to-save", &args!["key" => k]);
