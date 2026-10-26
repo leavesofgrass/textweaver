@@ -5410,3 +5410,27 @@ live-resumed =
        *[other] Mises à jour reprises, { $count } mises à jour appliquées.
     }
 live-resumed-dropped = Mises à jour reprises, { $count } mises à jour appliquées. { $dropped } mises à jour plus anciennes ont été omises pendant la pause.
+live-values-title = Valeurs en direct
+live-values-empty = Pas encore de valeurs.
+live-value-none = aucune valeur
+live-value-stale = aucune valeur récente
+live-values-more = { $count } de plus
+live-values-count =
+    { $count ->
+        [one] 1 champ
+       *[other] { $count } champs
+    }
+live-values-no-table = La vue des valeurs n'a pas de tableau : chaque champ occupe une ligne.
+live-values-no-log = La vue des valeurs ne tient pas de journal à enregistrer.
+live-values-full = La vue des valeurs contient au plus { $max } champs ; les autres sont omis.
+live-values-resumed =
+    { $count ->
+        [0] Mises à jour reprises. Aucun champ n'a changé.
+        [one] Mises à jour reprises, 1 champ a changé.
+       *[other] Mises à jour reprises, { $count } champs ont changé.
+    }
+live-field-none = Il n'y a pas de champ sur cette ligne.
+live-field-show-on = Les changements de { $field } sont affichés.
+live-field-show-off = Les changements de { $field } ne sont plus affichés.
+live-field-speak-on = Les changements de { $field } sont lus à voix haute.
+live-field-speak-off = Les changements de { $field } ne sont plus lus à voix haute.

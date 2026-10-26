@@ -5405,3 +5405,27 @@ live-resumed =
        *[other] Aktualisierungen fortgesetzt, { $count } Aktualisierungen übernommen.
     }
 live-resumed-dropped = Aktualisierungen fortgesetzt, { $count } Aktualisierungen übernommen. { $dropped } ältere Aktualisierungen wurden während der Pause ausgelassen.
+live-values-title = Live-Werte
+live-values-empty = Noch keine Werte.
+live-value-none = kein Wert
+live-value-stale = kein aktueller Wert
+live-values-more = { $count } weitere
+live-values-count =
+    { $count ->
+        [one] 1 Feld
+       *[other] { $count } Felder
+    }
+live-values-no-table = Die Werteansicht hat keine Tabelle: Jedes Feld ist eine Zeile.
+live-values-no-log = Die Werteansicht führt kein Protokoll, das gespeichert werden könnte.
+live-values-full = Die Werteansicht fasst höchstens { $max } Felder; weitere Felder werden ausgelassen.
+live-values-resumed =
+    { $count ->
+        [0] Aktualisierungen fortgesetzt. Kein Feld hat sich geändert.
+        [one] Aktualisierungen fortgesetzt, 1 Feld geändert.
+       *[other] Aktualisierungen fortgesetzt, { $count } Felder geändert.
+    }
+live-field-none = In dieser Zeile ist kein Feld.
+live-field-show-on = Änderungen von { $field } werden angezeigt.
+live-field-show-off = Änderungen von { $field } werden nicht mehr angezeigt.
+live-field-speak-on = Änderungen von { $field } werden gesprochen.
+live-field-speak-off = Änderungen von { $field } werden nicht mehr gesprochen.
