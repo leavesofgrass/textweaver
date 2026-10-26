@@ -1,0 +1,30 @@
+[package]
+name = "textweaver-mqtt"
+description = "Receive-only MQTT 3.1.1 client for textweaver's live documents: one std thread, rumqttc's packet codec, textweaver's own rustls with ring, reconnect with backoff, caps and sanitizing of every payload"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# No other textweaver crate. The app adapts MqttEvent to its own LiveEvent.
+[dependencies]
+rumqttc.workspace = true
+bytes.workspace = true
+rustls.workspace = true
+rustls-pki-types.workspace = true
+webpki-roots.workspace = true
+ring.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+# The loopback test broker (tests/support) runs a tokio runtime; the
+# client itself starts none. Certificates are made at test time.
+tokio.workspace = true
+tokio-rustls.workspace = true
+rcgen.workspace = true
+
+[lints]
+workspace = true

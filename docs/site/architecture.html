@@ -973,6 +973,27 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "version": "0.1.0-beta.4"
   },
   {
+   "adr_note": {
+    "href": "../dev/architecture.md#the-crates",
+    "text": "Architecture guide: the crates"
+   },
+   "adrs": [],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [],
+   "deps": [],
+   "description": "Receive-only MQTT 3.1.1 client for textweaver's live documents: one std thread, rumqttc's packet codec, textweaver's own rustls with ring, reconnect with backoff, caps and sanitizing of every payload",
+   "dev_deps": [],
+   "job": "Live sources: a receive-only MQTT client on one thread, with TLS, reconnecting, status in words, and every payload capped and cleaned before it is shown or spoken.",
+   "layer": "state",
+   "name": "textweaver-mqtt",
+   "path": "crates/textweaver-mqtt",
+   "short": "mqtt",
+   "tool": false,
+   "version": "0.1.0-beta.4"
+  },
+  {
    "adr_note": null,
    "adrs": [
     {
@@ -1862,6 +1883,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "crates": [
     "textweaver-store",
     "textweaver-sync",
+    "textweaver-mqtt",
     "textweaver-keymap",
     "textweaver-a11y",
     "textweaver-editor"

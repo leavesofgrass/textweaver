@@ -101,6 +101,14 @@ wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
 
+# Beta 5, N3: textweaver-mqtt uses rumqttc for its packet codec only, over
+# textweaver's own rustls. Its TLS and WebSocket features would bring
+# aws-lc, rustls-webpki 0.102 and rustls-pemfile (advisories in beta 4)
+# and a second TLS stack, so they must never be turned on.
+[[bans.features]]
+crate = "rumqttc"
+deny = ["use-rustls", "use-rustls-no-provider", "use-native-tls", "websocket", "proxy"]
+
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
