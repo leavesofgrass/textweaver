@@ -23,6 +23,7 @@
 - `[keyboard]`: Keyboard and language.
 - `[lexicon]`: Library and study tools.
 - `[library]`: Library and study tools.
+- `[live]`: Live documents.
 - `[normalization]`: Speaking text, Math.
 - `[preview]`: Editing.
 - `[reading]`: Reading, Documents, Math.
@@ -305,6 +306,15 @@ Only the speech engine's own settings are listed here: the voice, rate and pitch
 - `export.subtitle_chapters`: default off (`false`). Chapters file. Also write a WebVTT chapters file beside the subtitles or the audio. On or off: `true` or `false`. Syncs between computers.
 - `export.subtitle_word_level`: default off (`false`). Word subtitles. One subtitle per word instead of caption lines. On or off: `true` or `false`. Syncs between computers.
 - `export.subtitles_with_audio`: default off (`false`). Subtitles with audio. Always write subtitles beside exported audio. On or off: `true` or `false`. Syncs between computers.
+
+## Live documents
+
+- `live.sources`: default none. Live sources. MQTT connections opened as live documents. Edit in settings.toml; passwords stay in the credential store. A table of names and values, edited in the file. Stays on this computer.
+- `live.announce_new_entries`: default on (`true`). Announce new live entries. Send each new entry, whole, to the screen reader and Braille display. On or off: `true` or `false`. Syncs between computers.
+- `live.speak_new_entries`: default off (`false`). Speak new live entries. textweaver's own voice reads each new entry. Off by default. On or off: `true` or `false`. Syncs between computers.
+- `live.min_interval_seconds`: default 10 seconds. Live value interval. In the values view, the fewest seconds between announcements of one field. From 0 to 3600 seconds, in steps of 5. Syncs between computers.
+- `live.quiet_hint_seconds`: default 60 seconds. Quiet source hint. Seconds without messages before a hint in words. 0 never hints. From 0 to 3600 seconds, in steps of 10. Syncs between computers.
+- `live.log_folder`: default empty (`""`). Live log folder. Where closed live logs are saved as JSON. Empty uses logs in the data folder. Text; empty means not set. Stays on this computer.
 
 ## Sync
 

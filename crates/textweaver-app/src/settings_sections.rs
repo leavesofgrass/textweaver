@@ -396,6 +396,18 @@ pub const SECTIONS: &[Section] = &[
         ],
     },
     Section {
+        id: "live",
+        title: "Live documents",
+        paths: &[
+            "live.sources",
+            "live.announce_new_entries",
+            "live.speak_new_entries",
+            "live.min_interval_seconds",
+            "live.quiet_hint_seconds",
+            "live.log_folder",
+        ],
+    },
+    Section {
         id: "sync",
         title: "Sync",
         paths: &[
