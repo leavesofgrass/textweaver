@@ -1,0 +1,6 @@
+# The logger publishes the net log; the reader may only read it.
+user logger
+topic readwrite netlog/#
+
+user reader
+topic read netlog/#
