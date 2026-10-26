@@ -4988,6 +4988,32 @@ section-updates = Updates and components
 setting-updates-check = Check for updates
 setting-updates-check-help = Look for a newer textweaver once a day at start. It reads the public list of releases on GitHub and asks before downloading. Nothing about you is sent. Help, Check for updates checks any time.
 
+## Live documents (beta 5): settings, and live sources' passwords. $source
+## is a live source's name; $reason says why the credential store failed.
+section-live = Live documents
+setting-live-log-folder = Live log folder
+setting-live-log-folder-help = Where closed live logs are saved as JSON. Empty uses logs in the data folder.
+setting-live-announce-new-entries = Announce new live entries
+setting-live-announce-new-entries-help = Send each new entry, whole, to the screen reader and Braille display.
+setting-live-speak-new-entries = Speak new live entries
+setting-live-speak-new-entries-help = textweaver's own voice reads each new entry. Off by default.
+setting-live-min-interval-seconds = Live value interval
+setting-live-min-interval-seconds-help = In the values view, the fewest seconds between announcements of one field.
+setting-live-quiet-hint-seconds = Quiet source hint
+setting-live-quiet-hint-seconds-help = Seconds without messages before a hint in words. 0 never hints.
+setting-live-sources = Live sources
+setting-live-sources-help = MQTT connections opened as live documents. Edit in settings.toml; passwords stay in the credential store.
+prompt-live-password = Password for { $source }, Enter cancels
+prompt-live-password-any = Password for the live source, Enter cancels
+live-source-unknown = No live source named { $source }. Check the sources in settings.toml.
+live-password-no-store = No credential store in this version: { $source } cannot sign in with a password. Use a release package.
+live-password-invalid = Not a password: up to 1024 characters, with no line breaks or tabs.
+live-password-kept = Password kept for { $source }, in the system credential store.
+live-password-not-kept = Password not kept for { $source }: { $reason }. Used this session only.
+live-password-forgotten = Password forgotten for { $source }.
+live-password-none = No password kept for { $source }.
+live-password-not-forgotten = Password not forgotten for { $source }: { $reason }. Try again, or remove it in the system credential store.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

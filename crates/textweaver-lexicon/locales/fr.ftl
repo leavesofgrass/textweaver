@@ -4925,6 +4925,32 @@ section-updates = Mises à jour et composants
 setting-updates-check = Rechercher les mises à jour
 setting-updates-check-help = Chercher un textweaver plus récent une fois par jour au démarrage. Il lit la liste publique des versions sur GitHub et demande avant de télécharger. Rien sur vous n'est envoyé. Aide, Rechercher les mises à jour le fait à tout moment.
 
+## Live documents (beta 5): settings, and live sources' passwords. $source
+## is a live source's name; $reason says why the credential store failed.
+section-live = Documents en direct
+setting-live-log-folder = Dossier des journaux en direct
+setting-live-log-folder-help = Où les journaux en direct fermés sont enregistrés en JSON. Vide utilise logs dans le dossier de données.
+setting-live-announce-new-entries = Annoncer les nouvelles entrées en direct
+setting-live-announce-new-entries-help = Envoyer chaque nouvelle entrée, entière, au lecteur d'écran et à l'afficheur braille.
+setting-live-speak-new-entries = Lire les nouvelles entrées en direct
+setting-live-speak-new-entries-help = La voix de textweaver lit chaque nouvelle entrée. Désactivé par défaut.
+setting-live-min-interval-seconds = Intervalle des valeurs en direct
+setting-live-min-interval-seconds-help = Dans la vue des valeurs, le minimum de secondes entre deux annonces d'un champ.
+setting-live-quiet-hint-seconds = Indication de source silencieuse
+setting-live-quiet-hint-seconds-help = Secondes sans message avant une indication en mots. 0 n'indique jamais.
+setting-live-sources = Sources en direct
+setting-live-sources-help = Connexions MQTT ouvertes comme documents en direct. À modifier dans settings.toml ; les mots de passe restent dans le magasin d'identifiants.
+prompt-live-password = Mot de passe de { $source }, Entrée annule
+prompt-live-password-any = Mot de passe de la source en direct, Entrée annule
+live-source-unknown = Aucune source en direct nommée { $source }. Vérifiez les sources dans settings.toml.
+live-password-no-store = Pas de magasin d'identifiants dans cette version : { $source } ne peut pas se connecter avec un mot de passe. Utilisez un paquet de version.
+live-password-invalid = Pas un mot de passe : 1024 caractères au plus, sans saut de ligne ni tabulation.
+live-password-kept = Mot de passe de { $source } gardé dans le magasin d'identifiants du système.
+live-password-not-kept = Mot de passe de { $source } non gardé : { $reason }. Utilisé pour cette session seulement.
+live-password-forgotten = Mot de passe de { $source } oublié.
+live-password-none = Aucun mot de passe gardé pour { $source }.
+live-password-not-forgotten = Mot de passe de { $source } non oublié : { $reason }. Réessayez, ou retirez-le dans le magasin d'identifiants du système.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

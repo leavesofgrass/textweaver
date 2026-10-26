@@ -1811,6 +1811,42 @@ pub const INFO: &[Info] = &[
         "Declined update",
         "The release you said no to; only a newer one is offered.",
     ),
+    // [live] (beta 5): live documents. Sources are edited in
+    // settings.toml; their passwords are in the credential store.
+    optional(
+        "live.log_folder",
+        "Live log folder",
+        "Where closed live logs are saved as JSON. Empty uses logs in the data folder.",
+    ),
+    toggle(
+        "live.announce_new_entries",
+        "Announce new live entries",
+        "Send each new entry, whole, to the screen reader and Braille display.",
+    ),
+    toggle(
+        "live.speak_new_entries",
+        "Speak new live entries",
+        "textweaver's own voice reads each new entry. Off by default.",
+    ),
+    number(
+        "live.min_interval_seconds",
+        "Live value interval",
+        "In the values view, the fewest seconds between announcements of one field.",
+        (0.0, 3600.0, 5.0),
+        "seconds",
+    ),
+    number(
+        "live.quiet_hint_seconds",
+        "Quiet source hint",
+        "Seconds without messages before a hint in words. 0 never hints.",
+        (0.0, 3600.0, 10.0),
+        "seconds",
+    ),
+    table(
+        "live.sources",
+        "Live sources",
+        "MQTT connections opened as live documents. Edit in settings.toml; passwords stay in the credential store.",
+    ),
 ];
 
 /// The leaf paths of a settings JSON tree, with their values, in order.

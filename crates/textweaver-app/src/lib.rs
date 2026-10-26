@@ -244,6 +244,7 @@ mod search_options;
 pub mod settings_io;
 pub mod settings_schema;
 pub mod settings_sections;
+mod source_passwords;
 mod speech_cursor;
 pub mod speech_start;
 mod spell;

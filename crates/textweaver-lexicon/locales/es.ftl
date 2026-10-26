@@ -4897,6 +4897,32 @@ section-updates = Actualizaciones y componentes
 setting-updates-check = Buscar actualizaciones
 setting-updates-check-help = Buscar un textweaver más nuevo una vez al día al iniciar. Lee la lista pública de versiones en GitHub y pregunta antes de descargar. No se envía nada sobre usted. Ayuda, Buscar actualizaciones busca en cualquier momento.
 
+## Live documents (beta 5): settings, and live sources' passwords. $source
+## is a live source's name; $reason says why the credential store failed.
+section-live = Documentos en vivo
+setting-live-log-folder = Carpeta de registros en vivo
+setting-live-log-folder-help = Dónde se guardan como JSON los registros en vivo cerrados. Vacío usa logs en la carpeta de datos.
+setting-live-announce-new-entries = Anunciar entradas en vivo nuevas
+setting-live-announce-new-entries-help = Enviar cada entrada nueva, completa, al lector de pantalla y la línea braille.
+setting-live-speak-new-entries = Leer entradas en vivo nuevas
+setting-live-speak-new-entries-help = La propia voz de textweaver lee cada entrada nueva. Desactivado por omisión.
+setting-live-min-interval-seconds = Intervalo de valores en vivo
+setting-live-min-interval-seconds-help = En la vista de valores, los segundos mínimos entre dos anuncios de un campo.
+setting-live-quiet-hint-seconds = Aviso de origen en silencio
+setting-live-quiet-hint-seconds-help = Segundos sin mensajes antes de un aviso en palabras. 0 nunca avisa.
+setting-live-sources = Orígenes en vivo
+setting-live-sources-help = Conexiones MQTT abiertas como documentos en vivo. Se editan en settings.toml; las contraseñas quedan en el almacén de credenciales.
+prompt-live-password = Contraseña de { $source }, Intro cancela
+prompt-live-password-any = Contraseña del origen en vivo, Intro cancela
+live-source-unknown = No hay ningún origen en vivo llamado { $source }. Revise los orígenes en settings.toml.
+live-password-no-store = Esta versión no tiene almacén de credenciales: { $source } no puede iniciar sesión con contraseña. Use un paquete de versión.
+live-password-invalid = No es una contraseña: hasta 1024 caracteres, sin saltos de línea ni tabulaciones.
+live-password-kept = Contraseña de { $source } guardada en el almacén de credenciales del sistema.
+live-password-not-kept = Contraseña de { $source } no guardada: { $reason }. Se usa solo en esta sesión.
+live-password-forgotten = Contraseña de { $source } olvidada.
+live-password-none = No hay contraseña guardada para { $source }.
+live-password-not-forgotten = Contraseña de { $source } no olvidada: { $reason }. Inténtelo de nuevo o quítela en el almacén de credenciales del sistema.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

@@ -15,7 +15,11 @@ default = []
 # reader links no HTTP client: without it only a mirror that is a folder
 # on this computer, and Install from a file, work.
 # It also brings the credential store for a private components source.
-download = ["dep:ureq", "dep:keyring"]
+download = ["dep:ureq", "credentials"]
+# The system credential store (keyring): the GitHub token of a private
+# components source, and live sources' passwords. Without it nothing is
+# kept, and a source that needs a password says so in words.
+credentials = ["dep:keyring"]
 
 [dependencies]
 thiserror.workspace = true
