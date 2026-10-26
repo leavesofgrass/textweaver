@@ -21,8 +21,8 @@
 //!   waits and goes out as one digest when reading stops.
 //! - **Bursts become one message.** The first entry after a quiet spell is
 //!   said at once; entries arriving within [`BURST`] of the last
-//!   announcement wait and are said together: "3 new entries. Newest:"
-//!   and the newest entry whole.
+//!   announcement wait and are said together: the newest entry whole,
+//!   meaning first, then how many ("3 new entries").
 //! - **Fields have their own pace.** In the values view, each field's
 //!   change waits at least its minimum interval (`[live]
 //!   min_interval_seconds`) after that field was last said; only its latest
@@ -54,6 +54,10 @@ struct FieldSlot {
     last: Option<Instant>,
     /// The latest change not yet said.
     pending: Option<String>,
+    /// The fewest time between two of its announcements.
+    interval: Duration,
+    /// Its changes are spoken in textweaver's own voice.
+    speak: bool,
 }
 
 /// Entries waiting to be said.
@@ -70,8 +74,9 @@ struct Held {
 pub struct Release {
     /// New or changed entries: how many, and the newest one whole.
     pub entries: Option<(usize, String)>,
-    /// Field changes of the values view, in field order.
-    pub fields: Vec<String>,
+    /// Field changes of the values view, in the order they first
+    /// changed: each line, and whether textweaver's own voice says it.
+    pub fields: Vec<(String, bool)>,
 }
 
 impl Release {
@@ -85,6 +90,9 @@ impl Release {
 /// module).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct EntryThrottle {
+    /// The shortest time between two announcements of entries ([`BURST`],
+    /// unless changed for a test).
+    burst: Option<Duration>,
     held: Option<Held>,
     /// When entries were last said.
     last_entries: Option<Instant>,
@@ -108,20 +116,24 @@ impl EntryThrottle {
         }
     }
 
-    /// Notes a change of the values view's field `key`, said as `text`; a
-    /// later change of the same field replaces one not yet said.
-    pub fn field(&mut self, key: &str, text: String) {
+    /// Notes a change of the values view's field `key`, said as `text` at
+    /// most once each `interval`, in textweaver's own voice when `speak`;
+    /// a later change of the same field replaces one not yet said.
+    pub fn field(&mut self, key: &str, text: String, interval: Duration, speak: bool) {
         if !self.fields.contains_key(key) {
             self.order.push(key.to_owned());
         }
-        self.fields.entry(key.to_owned()).or_default().pending = Some(text);
+        let slot = self.fields.entry(key.to_owned()).or_default();
+        slot.pending = Some(text);
+        slot.interval = interval;
+        slot.speak = speak;
     }
 
     /// What may be said at `now`: nothing while `reading`; held entries
     /// once [`BURST`] has passed since the last ones were said; each
-    /// field's change once `field_interval` has passed since that field
-    /// was last said.
-    pub fn release(&mut self, now: Instant, reading: bool, field_interval: Duration) -> Release {
+    /// field's change once its interval has passed since that field was
+    /// last said.
+    pub fn release(&mut self, now: Instant, reading: bool) -> Release {
         let mut out = Release::default();
         if reading {
             return out;
@@ -138,10 +150,10 @@ impl EntryThrottle {
             };
             let ready = slot
                 .last
-                .is_none_or(|t| now.saturating_duration_since(t) >= field_interval);
+                .is_none_or(|t| now.saturating_duration_since(t) >= slot.interval);
             if ready && let Some(text) = slot.pending.take() {
                 slot.last = Some(now);
-                out.fields.push(text);
+                out.fields.push((text, slot.speak));
             }
         }
         out
@@ -150,7 +162,7 @@ impl EntryThrottle {
     /// How long until something held may be said, when something is held
     /// and nothing blocks it but time; `None` when nothing waits, or while
     /// `reading` (the end of reading wakes the app).
-    pub fn wait(&self, now: Instant, reading: bool, field_interval: Duration) -> Option<Duration> {
+    pub fn wait(&self, now: Instant, reading: bool) -> Option<Duration> {
         if reading {
             return None;
         }
@@ -159,12 +171,15 @@ impl EntryThrottle {
                 interval.saturating_sub(now.saturating_duration_since(t))
             })
         };
-        let entries = self.held.as_ref().map(|_| left(self.last_entries, BURST));
+        let entries = self
+            .held
+            .as_ref()
+            .map(|_| left(self.last_entries, self.burst()));
         let fields = self
             .fields
             .values()
             .filter(|s| s.pending.is_some())
-            .map(|s| left(s.last, field_interval))
+            .map(|s| left(s.last, s.interval))
             .min();
         entries.into_iter().chain(fields).min()
     }
@@ -175,14 +190,27 @@ impl EntryThrottle {
     }
 
     /// Forgets everything held (the live document closed, or announcing
-    /// was turned off).
+    /// was turned off); a changed burst time stays.
     pub fn clear(&mut self) {
-        *self = EntryThrottle::default();
+        *self = EntryThrottle {
+            burst: self.burst,
+            ..EntryThrottle::default()
+        };
     }
 
     fn entries_ready(&self, now: Instant) -> bool {
         self.last_entries
-            .is_none_or(|t| now.saturating_duration_since(t) >= BURST)
+            .is_none_or(|t| now.saturating_duration_since(t) >= self.burst())
+    }
+
+    fn burst(&self) -> Duration {
+        self.burst.unwrap_or(BURST)
+    }
+
+    /// Changes the time between two announcements of entries, for a test
+    /// that sends entries faster than a person would.
+    pub fn set_burst(&mut self, burst: Duration) {
+        self.burst = Some(burst);
     }
 }
 
@@ -198,17 +226,20 @@ impl App {
         self.live_wire.throttle.entries(count, newest);
     }
 
-    /// A field of the values view changed: `key` names the field, `text`
-    /// is its line ("Temperature: 21.4 C"). Said through the throttle, at
-    /// most once each `[live] min_interval_seconds` per field, when
-    /// `[live] announce_new_entries` is on. For the values view
-    /// (crate::live, N2v).
-    #[allow(dead_code)]
-    pub(crate) fn live_field_changed(&mut self, key: &str, text: String) {
-        if !self.settings.live.announce_new_entries || text.is_empty() {
-            return;
+    /// Takes the values view's field changes into the throttle: a field
+    /// whose changes are shown or spoken (its `show` and `speak`) is said
+    /// at most once each of its intervals (`[live] min_interval_seconds`),
+    /// its latest value only; spoken in textweaver's own voice only when
+    /// `speak`.
+    fn live_take_fields(&mut self) {
+        for c in self.live_take_field_announcements() {
+            if (c.show || c.speak) && !c.line.is_empty() {
+                let key = format!("{}{}", c.topic, c.path);
+                self.live_wire
+                    .throttle
+                    .field(&key, c.line, c.min_interval, c.speak);
+            }
         }
-        self.live_wire.throttle.field(key, text);
     }
 
     /// True while textweaver reads aloud, or reads on the status line for a
@@ -217,57 +248,64 @@ impl App {
         self.playback == Playback::Reading || self.screen_say_all.is_some()
     }
 
-    fn live_field_interval(&self) -> Duration {
-        Duration::from_secs(u64::from(self.settings.live.min_interval_seconds))
-    }
-
     /// Says what the throttle releases at `now` (called from
     /// [`App::tick`]).
     pub(crate) fn live_announce_tick(&mut self, now: Instant) -> Vec<Effect> {
+        self.live_take_fields();
         if !self.live_wire.throttle.holding() {
             return Vec::new();
         }
-        if !self.settings.live.announce_new_entries {
-            self.live_wire.throttle.clear();
-            return Vec::new();
-        }
         let reading = self.live_reading_now();
-        let interval = self.live_field_interval();
-        let release = self.live_wire.throttle.release(now, reading, interval);
+        let release = self.live_wire.throttle.release(now, reading);
         if release.is_empty() {
             return Vec::new();
         }
-        let mut parts = Vec::new();
         if let Some((count, newest)) = release.entries {
-            parts.push(if count <= 1 {
+            let text = if count <= 1 {
                 newest
             } else {
                 self.msg_args(
                     "live-new-entries",
                     &args!["count" => count, "line" => newest.as_str()],
                 )
-            });
+            };
+            let before = self.status.seq;
+            self.say_live_entry(&text, self.settings.live.speak_new_entries);
+            // The status line shows an entry: the terminal reader may show
+            // it in its own form (App::live_status_is_entry).
+            let seq = self.status.seq;
+            if seq != before
+                && let Some(h) = self.live_hub.as_mut()
+            {
+                h.entry_seq = Some(seq);
+            }
         }
-        parts.extend(release.fields);
-        let text = parts.join(" ");
-        self.say_live_entry(&text);
+        for (line, speak) in release.fields {
+            self.say_live_entry(&line, speak);
+        }
         vec![Effect::Redraw]
+    }
+
+    /// Says new entries arriving within `burst` of the last announcement
+    /// together ([`BURST`] by default): for a test that sends entries
+    /// faster than a person would, and must see each one.
+    #[doc(hidden)]
+    pub fn set_live_announce_burst(&mut self, burst: Duration) {
+        self.live_wire.throttle.set_burst(burst);
     }
 
     /// How long the frontend may wait before the throttle has something
     /// to say ([`App::tick_interval`]).
     pub(crate) fn live_announce_wait(&self, now: Instant) -> Option<Duration> {
         let reading = self.live_reading_now();
-        self.live_wire
-            .throttle
-            .wait(now, reading, self.live_field_interval())
+        self.live_wire.throttle.wait(now, reading)
     }
 
-    /// Says a live entry: politely, never silenced by the interface level,
-    /// to the status line and the screen reader; in textweaver's own voice
-    /// only with `[live] speak_new_entries`.
-    pub(crate) fn say_live_entry(&mut self, text: &str) {
-        let voice = self.settings.live.speak_new_entries;
+    /// Says a live entry or field change: politely, never silenced by the
+    /// interface level, to the status line and the screen reader; in
+    /// textweaver's own voice only when `voice` (`[live]
+    /// speak_new_entries`, or a field's `speak`).
+    pub(crate) fn say_live_entry(&mut self, text: &str, voice: bool) {
         self.say_kind_voiced(
             text,
             Verbosity::Low,
@@ -293,10 +331,10 @@ mod tests {
         let t0 = Instant::now();
         let mut t = EntryThrottle::default();
         t.entries(1, line(1));
-        let r = t.release(t0, false, FIELD);
+        let r = t.release(t0, false);
         assert_eq!(r.entries, Some((1, line(1))));
         assert!(!t.holding());
-        assert_eq!(t.wait(t0, false, FIELD), None);
+        assert_eq!(t.wait(t0, false), None);
     }
 
     #[test]
@@ -304,16 +342,16 @@ mod tests {
         let t0 = Instant::now();
         let mut t = EntryThrottle::default();
         t.entries(1, line(1));
-        assert_eq!(t.release(t0, false, FIELD).entries, Some((1, line(1))));
+        assert_eq!(t.release(t0, false).entries, Some((1, line(1))));
         // Three more within the burst window: held.
         for (i, ms) in [(2, 300), (3, 700), (4, 1200)] {
             let now = t0 + Duration::from_millis(ms);
             t.entries(1, line(i));
-            assert!(t.release(now, false, FIELD).is_empty(), "held at {ms} ms");
+            assert!(t.release(now, false).is_empty(), "held at {ms} ms");
         }
         let now = t0 + Duration::from_millis(1200);
-        assert_eq!(t.wait(now, false, FIELD), Some(Duration::from_millis(800)));
-        let r = t.release(t0 + BURST, false, FIELD);
+        assert_eq!(t.wait(now, false), Some(Duration::from_millis(800)));
+        let r = t.release(t0 + BURST, false);
         assert_eq!(r.entries, Some((3, line(4))));
         assert!(!t.holding());
     }
@@ -324,11 +362,11 @@ mod tests {
         let mut t = EntryThrottle::default();
         t.entries(1, line(1));
         t.entries(2, line(3));
-        assert!(t.release(t0, true, FIELD).is_empty());
-        assert_eq!(t.wait(t0, true, FIELD), None, "reading's end wakes the app");
+        assert!(t.release(t0, true).is_empty());
+        assert_eq!(t.wait(t0, true), None, "reading's end wakes the app");
         let later = t0 + Duration::from_secs(60);
-        assert!(t.release(later, true, FIELD).is_empty());
-        let r = t.release(later, false, FIELD);
+        assert!(t.release(later, true).is_empty());
+        let r = t.release(later, false);
         assert_eq!(r.entries, Some((3, line(3))));
     }
 
@@ -336,30 +374,42 @@ mod tests {
     fn each_field_keeps_its_own_minimum_interval_and_only_its_latest_value() {
         let t0 = Instant::now();
         let mut t = EntryThrottle::default();
-        t.field("temp", "Temperature: 21.4 C".into());
-        t.field("door", "Door: closed".into());
-        let r = t.release(t0, false, FIELD);
-        assert_eq!(r.fields, ["Temperature: 21.4 C", "Door: closed"]);
+        t.field("temp", "Temperature: 21.4 C".into(), FIELD, true);
+        t.field("door", "Door: closed".into(), FIELD, false);
+        let r = t.release(t0, false);
+        assert_eq!(
+            r.fields,
+            [
+                ("Temperature: 21.4 C".to_owned(), true),
+                ("Door: closed".to_owned(), false)
+            ]
+        );
 
         // Three seconds on, both change; neither may be said yet.
         let t3 = t0 + Duration::from_secs(3);
-        t.field("temp", "Temperature: 21.5 C".into());
-        t.field("temp", "Temperature: 21.6 C".into());
-        assert!(t.release(t3, false, FIELD).is_empty());
-        assert_eq!(t.wait(t3, false, FIELD), Some(Duration::from_secs(7)));
+        t.field("temp", "Temperature: 21.5 C".into(), FIELD, false);
+        t.field("temp", "Temperature: 21.6 C".into(), FIELD, false);
+        assert!(t.release(t3, false).is_empty());
+        assert_eq!(t.wait(t3, false), Some(Duration::from_secs(7)));
 
         // At ten seconds the temperature goes, with its latest value only.
         let t10 = t0 + FIELD;
-        t.field("door", "Door: open".into());
-        let r = t.release(t10, false, FIELD);
-        assert_eq!(r.fields, ["Temperature: 21.6 C", "Door: open"]);
+        t.field("door", "Door: open".into(), FIELD, false);
+        let r = t.release(t10, false);
+        assert_eq!(
+            r.fields,
+            [
+                ("Temperature: 21.6 C".to_owned(), false),
+                ("Door: open".to_owned(), false)
+            ]
+        );
 
         // A field said at 10 s waits until 20 s; another is not held up.
         let t12 = t0 + Duration::from_secs(12);
-        t.field("door", "Door: closed".into());
-        assert!(t.release(t12, false, FIELD).is_empty());
-        let r = t.release(t0 + Duration::from_secs(20), false, FIELD);
-        assert_eq!(r.fields, ["Door: closed"]);
+        t.field("door", "Door: closed".into(), FIELD, false);
+        assert!(t.release(t12, false).is_empty());
+        let r = t.release(t0 + Duration::from_secs(20), false);
+        assert_eq!(r.fields, [("Door: closed".to_owned(), false)]);
     }
 
     #[test]
@@ -367,12 +417,12 @@ mod tests {
         let t0 = Instant::now();
         let mut t = EntryThrottle::default();
         t.entries(1, line(1));
-        t.field("temp", "Temperature: 20 C".into());
-        let r = t.release(t0, false, FIELD);
+        t.field("temp", "Temperature: 20 C".into(), FIELD, false);
+        let r = t.release(t0, false);
         assert_eq!(r.entries, Some((1, line(1))));
-        assert_eq!(r.fields, ["Temperature: 20 C"]);
+        assert_eq!(r.fields, [("Temperature: 20 C".to_owned(), false)]);
         t.entries(1, line(2));
-        let r = t.release(t0 + BURST, false, Duration::ZERO);
+        let r = t.release(t0 + BURST, false);
         assert_eq!(r.entries, Some((1, line(2))));
         t.clear();
         assert!(!t.holding());

@@ -147,6 +147,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Say how many live log entries are unread, and the newest one | `Alt+Shift+F5` | `Alt+Shift+F5` | `Option+Shift+F5` | `live_say_unread` |
 | Pause or resume the live log's updates; while paused, new entries wait | `Alt+Shift+F1` | `Alt+Shift+F1` | `Option+Shift+F1` | `live_toggle_pause` |
 | Speak new live log entries in textweaver's own voice, on or off | palette | palette | palette | `live_toggle_speak` |
+| In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved | palette | palette | palette | `live_toggle_field_show` |
+| In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved | palette | palette | palette | `live_toggle_field_speak` |
 
 ## Navigation
 
@@ -603,6 +605,8 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Switch a talking book between its recorded narration and speech | `toggle_book_audio` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Speak new live log entries in textweaver's own voice, on or off | `live_toggle_speak` |
+| In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved | `live_toggle_field_show` |
+| In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved | `live_toggle_field_speak` |
 | List the notes in the vault that link to this note; Enter opens one | `backlinks` |
 | List this note's links to notes that don't exist | `unresolved_links` |
 | List the tags in this note; Enter lists the notes in the vault with that tag | `note_tags` |

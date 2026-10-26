@@ -16,6 +16,7 @@ use textweaver_components::credentials::Password;
 use textweaver_mqtt::{MqttConfig, MqttEvent, MqttSource, Payload, Secret, Tls};
 use textweaver_store::{LiveSettings, LiveSourceSettings, LiveTls};
 
+use super::KeyOrder;
 use super::source::{LiveEvent, LivePayload, LiveSource};
 
 /// What an MQTT live source reads from: the running client, or a test's
@@ -89,10 +90,12 @@ pub fn live_event(event: MqttEvent) -> LiveEvent {
             topic,
             payload,
             retained,
+            key_order,
         } => LiveEvent::Message {
             topic,
             payload: match payload {
-                Payload::Json(v) => LivePayload::Json(v),
+                // The message's key order, so the views keep it.
+                Payload::Json(v) => LivePayload::OrderedJson(v, KeyOrder::from(key_order)),
                 Payload::Text(t) => LivePayload::Text(t),
                 Payload::Binary { len } => LivePayload::Binary { len },
                 Payload::TooLarge { len } => LivePayload::TooLarge { len },
@@ -189,6 +192,9 @@ mod tests {
         let script = Script::default();
         let mut source = MqttLiveSource::from_feed(Box::new(script.clone()));
         let json = serde_json::json!({"call": "N0CALL", "name": "Ada Example"});
+        // The sender's order: name before call.
+        let order: std::collections::BTreeMap<String, Vec<String>> =
+            [(String::new(), vec!["name".to_owned(), "call".to_owned()])].into();
         for e in [
             MqttEvent::Connecting { attempt: 1 },
             MqttEvent::Connected {
@@ -199,11 +205,13 @@ mod tests {
                 topic: "log/checkins".into(),
                 payload: Payload::Json(json.clone()),
                 retained: true,
+                key_order: order.clone(),
             },
             MqttEvent::Message {
                 topic: "log/checkins".into(),
                 payload: Payload::Binary { len: 3 },
                 retained: false,
+                key_order: Default::default(),
             },
             MqttEvent::Disconnected {
                 reason: "Connection lost to logger:1883.".into(),
@@ -235,7 +243,7 @@ mod tests {
                 },
                 LiveEvent::Message {
                     topic: "log/checkins".into(),
-                    payload: LivePayload::Json(json),
+                    payload: LivePayload::OrderedJson(json, KeyOrder::from(order)),
                     retained: true
                 },
                 LiveEvent::Message {

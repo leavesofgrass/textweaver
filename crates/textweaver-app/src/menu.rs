@@ -309,6 +309,8 @@ impl MenuId {
                 Do(A::LiveSwitchView),
                 Do(A::LiveTogglePause),
                 Do(A::LiveToggleSpeak),
+                Do(A::LiveToggleFieldShow),
+                Do(A::LiveToggleFieldSpeak),
                 Sep,
                 Do(A::SaveLiveLog),
                 Do(A::ForgetLiveSourcePassword),

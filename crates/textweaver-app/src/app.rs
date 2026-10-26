@@ -2550,6 +2550,8 @@ impl App {
             | A::LiveJumpNewest
             | A::LiveTogglePause
             | A::LiveToggleSpeak
+            | A::LiveToggleFieldShow
+            | A::LiveToggleFieldSpeak
             | A::LiveSayUnread
             | A::SaveLiveLog
             | A::ForgetLiveSourcePassword => return self.live_action(a),

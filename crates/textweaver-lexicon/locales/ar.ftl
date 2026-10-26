@@ -5811,6 +5811,10 @@ name-live-toggle-pause = إيقاف التحديثات مؤقتًا أو است�
 action-live-toggle-pause = إيقاف تحديثات السجل المباشر مؤقتًا أو استئنافها؛ أثناء الإيقاف تنتظر الإدخالات الجديدة
 name-live-toggle-speak = نطق الإدخالات الجديدة
 action-live-toggle-speak = نطق إدخالات السجل المباشر الجديدة بصوت textweaver نفسه، تشغيل أو إيقاف
+name-live-toggle-field-show = إظهار تغييرات هذا الحقل
+action-live-toggle-field-show = في عرض القيم المباشر، إظهار تغييرات الحقل في سطر المؤشر، تشغيل أو إيقاف؛ ويُحفظ الاختيار
+name-live-toggle-field-speak = نطق تغييرات هذا الحقل
+action-live-toggle-field-speak = في عرض القيم المباشر، نطق تغييرات الحقل في سطر المؤشر بصوت textweaver نفسه، تشغيل أو إيقاف؛ ويُحفظ الاختيار
 menu-live = المصادر المباشرة
 prompt-live-setup = إعداد مصدر مباشر
 live-failed = تعذر الاتصال بـ { $name }: { $reason } لا مزيد من المحاولات؛ أصلح ذلك ثم افتح المصدر مرة أخرى.
@@ -5820,7 +5824,7 @@ live-skipped =
         [one] أُغفلت رسالة واحدة: كانت تصل أسرع مما يمكن عرضه.
        *[other] أُغفلت { $count } رسائل: كانت تصل أسرع مما يمكن عرضه.
     }
-live-new-entries = { $count } إدخالات جديدة. الأحدث: { $line }
+live-new-entries = { $line } { $count } إدخالات جديدة.
 live-unread-newest = { $count }. الأحدث: { $line }
 live-not-in-build = المصادر المباشرة غير متاحة في هذا الإصدار من { -brand }.
 live-speak-on = نطق الإدخالات الجديدة: مشغّل.
@@ -5857,3 +5861,26 @@ live-setup-offer-title = فتح { $name } الآن؟
 live-setup-open-now = فتحه الآن
 live-setup-later = ليس الآن
 live-setup-not-now = لم يُفتح. «فتح مصدر مباشر» يفتحه لاحقًا.
+live-values-title = قيم مباشرة
+live-values-empty = لا توجد قيم بعد.
+live-value-none = لا قيمة
+live-value-stale = لا قيمة حديثة
+live-values-more = { $count } أخرى
+live-values-count =
+    { $count ->
+        [one] حقل واحد
+       *[other] { $count } حقول
+    }
+live-values-no-table = لا جدول في عرض القيم: كل حقل سطر واحد.
+live-values-no-log = لا يحتفظ عرض القيم بسجل للحفظ.
+live-values-full = يتسع عرض القيم لـ { $max } حقل على الأكثر؛ يتم تجاهل الحقول الأخرى.
+live-values-resumed =
+    { $count ->
+        [0] استؤنفت التحديثات. لم يتغير أي حقل.
+       *[other] استؤنفت التحديثات، وتغير { $count } حقل.
+    }
+live-field-none = لا يوجد حقل في هذا السطر.
+live-field-show-on = تُعرض تغييرات { $field }.
+live-field-show-off = لم تعد تغييرات { $field } تُعرض.
+live-field-speak-on = تُنطق تغييرات { $field }.
+live-field-speak-off = لم تعد تغييرات { $field } تُنطق.

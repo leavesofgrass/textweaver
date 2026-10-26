@@ -5507,6 +5507,10 @@ name-live-toggle-pause = Pause or resume updates
 action-live-toggle-pause = Pause or resume the live log's updates; while paused, new entries wait
 name-live-toggle-speak = Speak new entries
 action-live-toggle-speak = Speak new live log entries in textweaver's own voice, on or off
+name-live-toggle-field-show = Show changes of this field
+action-live-toggle-field-show = In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved
+name-live-toggle-field-speak = Speak changes of this field
+action-live-toggle-field-speak = In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved
 menu-live = Live sources
 prompt-live-setup = Set up a live source
 live-failed = Cannot connect to { $name }: { $reason } No more tries; fix this, then open the source again.
@@ -5516,7 +5520,7 @@ live-skipped =
         [one] 1 message was left out: they came faster than they could be shown.
        *[other] { $count } messages were left out: they came faster than they could be shown.
     }
-live-new-entries = { $count } new entries. Newest: { $line }
+live-new-entries = { $line } { $count } new entries.
 live-unread-newest = { $count }. Newest: { $line }
 live-not-in-build = Live sources are not in this version of { -brand }.
 live-speak-on = Speak new entries on.
@@ -5553,3 +5557,27 @@ live-setup-offer-title = Open { $name } now?
 live-setup-open-now = Open it now
 live-setup-later = Not now
 live-setup-not-now = Not opened. Open live source opens it later.
+live-values-title = Live values
+live-values-empty = No values yet.
+live-value-none = no value
+live-value-stale = no recent value
+live-values-more = { $count } more
+live-values-count =
+    { $count ->
+        [one] 1 field
+       *[other] { $count } fields
+    }
+live-values-no-table = The values view has no table: each field is one line.
+live-values-no-log = The values view keeps no log to save.
+live-values-full = The values view holds at most { $max } fields; further fields are left out.
+live-values-resumed =
+    { $count ->
+        [0] Updates resumed. No field changed.
+        [one] Updates resumed, 1 field changed.
+       *[other] Updates resumed, { $count } fields changed.
+    }
+live-field-none = There is no field on this line.
+live-field-show-on = Changes of { $field } are shown.
+live-field-show-off = Changes of { $field } are no longer shown.
+live-field-speak-on = Changes of { $field } are spoken.
+live-field-speak-off = Changes of { $field } are no longer spoken.

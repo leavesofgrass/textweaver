@@ -18,8 +18,12 @@ use std::sync::{Arc, Mutex};
 /// A message's body, as the source received it.
 #[derive(Clone, Debug, PartialEq)]
 pub enum LivePayload {
-    /// JSON, parsed.
+    /// JSON, parsed, its key order unknown: objects show their keys in
+    /// sorted order.
     Json(serde_json::Value),
+    /// JSON, parsed, with the order its keys came in, so the views keep
+    /// the message's order. Prefer this to [`LivePayload::Json`].
+    OrderedJson(serde_json::Value, super::KeyOrder),
     /// Text that is not JSON.
     Text(String),
     /// Bytes that are not text: only their length is kept.
@@ -178,9 +182,9 @@ impl ScriptHandle {
 
     /// Queues a JSON message on `topic`, as a source would deliver it.
     pub fn push_json(&self, topic: &str, json: &str) {
-        let payload = match serde_json::from_str(json) {
-            Ok(v) => LivePayload::Json(v),
-            Err(_) => LivePayload::Text(json.to_owned()),
+        let payload = match super::order::parse_ordered(json) {
+            Some((v, order)) => LivePayload::OrderedJson(v, order),
+            None => LivePayload::Text(json.to_owned()),
         };
         self.push(LiveEvent::Message {
             topic: topic.to_owned(),

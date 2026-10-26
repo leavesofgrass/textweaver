@@ -52,8 +52,8 @@ pub const MQTT_TLS_PORT: u16 = 8883;
 #[serde(default)]
 pub struct LiveSettings {
     /// Where a closed log is saved as JSON. Empty: the `logs` folder in
-    /// textweaver's data folder, made on the first save
-    /// ([`LiveSettings::log_folder_in`]).
+    /// textweaver's data folder, made on the first save; a relative folder
+    /// is inside the data folder ([`LiveSettings::log_folder_in`]).
     pub log_folder: String,
     /// Each new entry is sent, whole, as a polite message, so the screen
     /// reader shows it on the Braille display (and speaks it, unless its
@@ -92,13 +92,19 @@ impl Default for LiveSettings {
 
 impl LiveSettings {
     /// The folder closed logs are saved in: `log_folder`, or the `logs`
-    /// folder in the data folder when it is empty.
+    /// folder in the data folder when it is empty. A relative
+    /// `log_folder` is inside the data folder, never the working folder,
+    /// which changes with how textweaver was started.
     pub fn log_folder_in(&self, paths: &Paths) -> PathBuf {
         let folder = self.log_folder.trim();
         if folder.is_empty() {
-            paths.live_logs_dir()
+            return paths.live_logs_dir();
+        }
+        let folder = PathBuf::from(folder);
+        if folder.is_absolute() {
+            folder
         } else {
-            PathBuf::from(folder)
+            paths.data_dir.join(folder)
         }
     }
 
@@ -206,6 +212,11 @@ pub struct LiveSourceSettings {
     /// The field that identifies an entry, so a later message with the
     /// same value corrects it. Empty: `id`, else the callsign.
     pub id_field: String,
+    /// In the values view, a value not updated for this many seconds
+    /// reads "no recent value" (0 never, at most 3600). Unset: the
+    /// `[live] quiet_hint_seconds` time, when a quiet topic is named.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stale_after_seconds: Option<u32>,
     /// How fields are labeled and shown (`[[live.sources.<id>.fields]]`).
     /// Fields not listed are still shown, after these.
     pub fields: Vec<LiveField>,
@@ -215,6 +226,17 @@ pub struct LiveSourceSettings {
 }
 
 impl LiveSourceSettings {
+    /// How long a values-view value may go without an update before it
+    /// reads "no recent value": `stale_after_seconds`, else
+    /// `quiet_hint_seconds` from `[live]`; `None` when that is 0.
+    pub fn stale_after(&self, live: &LiveSettings) -> Option<std::time::Duration> {
+        let secs = self
+            .stale_after_seconds
+            .unwrap_or(live.quiet_hint_seconds)
+            .min(LIVE_SECONDS_MAX);
+        (secs > 0).then(|| std::time::Duration::from_secs(u64::from(secs)))
+    }
+
     /// The port to connect to: the one set, or 1883 with TLS off and
     /// 8883 with TLS on.
     pub fn port_or_default(&self) -> u16 {
@@ -381,6 +403,9 @@ fn describe(key: &str, value: &toml::Value) -> Option<String> {
         "speak" => format!("{shown} is not off or on_change; using off"),
         "decimals" => format!("{shown} is outside 0 to {LIVE_DECIMALS_MAX}; using as sent"),
         "order" => format!("{shown} is not a whole number from 0; using the order listed"),
+        "stale_after_seconds" => format!(
+            "{shown} is not a whole number of seconds from 0; using live.quiet_hint_seconds"
+        ),
         _ => return None,
     })
 }
@@ -477,6 +502,7 @@ tls = "ca_file"
 ca_file = "certs/ca.pem"
 view = "values"
 topics = ["weather/#"]
+stale_after_seconds = 600
 
 [[live.sources.weather.fields]]
 path = "/sensor/temp"
@@ -528,8 +554,15 @@ order = 2
         };
         assert_eq!(
             elsewhere.log_folder_in(&paths),
-            PathBuf::from("logs-elsewhere")
+            paths.data_dir.join("logs-elsewhere"),
+            "a relative folder is in the data folder"
         );
+        let absolute = std::env::temp_dir().join("net-logs");
+        let there = LiveSettings {
+            log_folder: absolute.display().to_string(),
+            ..elsewhere
+        };
+        assert_eq!(there.log_folder_in(&paths), absolute);
     }
 
     #[test]
@@ -546,6 +579,15 @@ order = 2
         assert_eq!((wx.tls, wx.view), (LiveTls::CaFile, LiveView::Values));
         assert_eq!(wx.port_or_default(), 8883);
         assert_eq!(wx.fields.len(), 2);
+        assert_eq!(
+            wx.stale_after(&s.live),
+            Some(std::time::Duration::from_secs(600))
+        );
+        assert_eq!(
+            p.stale_after(&s.live),
+            Some(std::time::Duration::from_secs(60)),
+            "unset: the quiet hint time"
+        );
         assert_eq!(wx.fields[0].decimals, Some(1));
         assert_eq!(wx.fields[0].speak, LiveNotice::OnChange);
         assert_eq!(wx.fields[1].values["1"], "open");

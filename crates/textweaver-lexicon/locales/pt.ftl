@@ -5417,6 +5417,10 @@ name-live-toggle-pause = Pausar ou retomar as atualizações
 action-live-toggle-pause = Pausar ou retomar as atualizações do registro ao vivo; em pausa, as novas entradas esperam
 name-live-toggle-speak = Falar as novas entradas
 action-live-toggle-speak = Falar as novas entradas do registro ao vivo com a própria voz do textweaver, ligado ou desligado
+name-live-toggle-field-show = Mostrar as mudanças deste campo
+action-live-toggle-field-show = Numa visualização de valores ao vivo, mostrar as mudanças do campo da linha do cursor, ligado ou desligado; a escolha é salva
+name-live-toggle-field-speak = Falar as mudanças deste campo
+action-live-toggle-field-speak = Numa visualização de valores ao vivo, falar as mudanças do campo da linha do cursor com a própria voz do textweaver, ligado ou desligado; a escolha é salva
 menu-live = Fontes ao vivo
 prompt-live-setup = Configurar uma fonte ao vivo
 live-failed = Não é possível conectar a { $name }: { $reason } Sem novas tentativas; corrija isso e abra a fonte de novo.
@@ -5426,7 +5430,7 @@ live-skipped =
         [one] 1 mensagem foi omitida: chegavam mais rápido do que podiam ser mostradas.
        *[other] { $count } mensagens foram omitidas: chegavam mais rápido do que podiam ser mostradas.
     }
-live-new-entries = { $count } novas entradas. A mais recente: { $line }
+live-new-entries = { $line } { $count } novas entradas.
 live-unread-newest = { $count }. A mais recente: { $line }
 live-not-in-build = As fontes ao vivo não estão nesta versão do { -brand }.
 live-speak-on = Falar as novas entradas: ligado.
@@ -5463,3 +5467,27 @@ live-setup-offer-title = Abrir { $name } agora?
 live-setup-open-now = Abrir agora
 live-setup-later = Agora não
 live-setup-not-now = Não foi aberta. Abrir fonte ao vivo a abre mais tarde.
+live-values-title = Valores ao vivo
+live-values-empty = Ainda não há valores.
+live-value-none = sem valor
+live-value-stale = sem valor recente
+live-values-more = mais { $count }
+live-values-count =
+    { $count ->
+        [one] 1 campo
+       *[other] { $count } campos
+    }
+live-values-no-table = A vista de valores não tem tabela: cada campo é uma linha.
+live-values-no-log = A vista de valores não mantém um registro para salvar.
+live-values-full = A vista de valores comporta no máximo { $max } campos; os demais são deixados de fora.
+live-values-resumed =
+    { $count ->
+        [0] Atualizações retomadas. Nenhum campo mudou.
+        [one] Atualizações retomadas, 1 campo mudou.
+       *[other] Atualizações retomadas, { $count } campos mudaram.
+    }
+live-field-none = Não há campo nesta linha.
+live-field-show-on = As mudanças de { $field } são mostradas.
+live-field-show-off = As mudanças de { $field } não são mais mostradas.
+live-field-speak-on = As mudanças de { $field } são faladas.
+live-field-speak-off = As mudanças de { $field } não são mais faladas.

@@ -444,7 +444,7 @@ mod fed {
         let _ = r.app.tick(Instant::now() + textweaver_app::live::BURST);
         assert_eq!(
             r.last_said(),
-            "3 new entries. Newest: n1 test, Grace Sample. Traffic, one message."
+            "n1 test, Grace Sample. Traffic, one message. 3 new entries."
         );
         // By id.
         r.send(r#"{"id": 9, "call": "N3TEST"}"#);

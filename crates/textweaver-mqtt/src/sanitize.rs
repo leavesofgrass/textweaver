@@ -4,6 +4,9 @@
 //! stripped from every string and key before anything is shown, spoken or
 //! written to Braille.
 
+use std::collections::BTreeMap;
+
+use serde::de::{DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde_json::{Map, Value};
 
 use crate::Payload;
@@ -59,6 +62,138 @@ pub fn decode_payload(payload: &[u8], limits: &Limits) -> Payload {
             }
         }
         Err(_) => Payload::Text(clean_text(text, limits.max_string)),
+    }
+}
+
+/// The order a JSON payload's keys came in: for each object, by its JSON
+/// Pointer (`""` for the payload itself, `"/checkins/0"` for the first
+/// item of its `checkins` list), its keys as sent, each cleaned as the
+/// decoded value's keys are. serde_json keeps keys sorted (textweaver
+/// leaves its `preserve_order` feature off, since it would change every
+/// crate's JSON output), so the order is read from the text beside it.
+pub type KeyOrder = BTreeMap<String, Vec<String>>;
+
+/// [`decode_payload`], with the key order of a JSON payload (empty for
+/// any other).
+pub fn decode_payload_ordered(payload: &[u8], limits: &Limits) -> (Payload, KeyOrder) {
+    let decoded = decode_payload(payload, limits);
+    let order = match &decoded {
+        Payload::Json(_) => std::str::from_utf8(payload)
+            .ok()
+            .and_then(|text| key_order(text, limits.max_string))
+            .unwrap_or_default(),
+        _ => KeyOrder::new(),
+    };
+    (decoded, order)
+}
+
+/// The key order of `text`, a JSON document already checked against the
+/// caps; `None` when it is not JSON.
+fn key_order(text: &str, max_string: usize) -> Option<KeyOrder> {
+    let mut out = KeyOrder::new();
+    let mut de = serde_json::Deserializer::from_str(text);
+    Walk {
+        at: String::new(),
+        out: &mut out,
+        max_string,
+    }
+    .deserialize(&mut de)
+    .ok()?;
+    Some(out)
+}
+
+/// The JSON Pointer of member `key` of the object at `at` (RFC 6901).
+fn child(at: &str, key: &str) -> String {
+    format!("{at}/{}", key.replace('~', "~0").replace('/', "~1"))
+}
+
+/// Walks a JSON document, recording each object's cleaned keys under its
+/// pointer; values are skipped.
+struct Walk<'a> {
+    at: String,
+    out: &'a mut KeyOrder,
+    max_string: usize,
+}
+
+impl<'de> DeserializeSeed<'de> for Walk<'_> {
+    type Value = ();
+
+    fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<(), D::Error> {
+        d.deserialize_any(self)
+    }
+}
+
+impl<'de> Visitor<'de> for Walk<'_> {
+    type Value = ();
+
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("JSON")
+    }
+
+    fn visit_bool<E>(self, _: bool) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_i64<E>(self, _: i64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_u64<E>(self, _: u64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_f64<E>(self, _: f64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_str<E>(self, _: &str) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_unit<E>(self) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
+        let Walk {
+            at,
+            out,
+            max_string,
+        } = self;
+        let mut i = 0usize;
+        while seq
+            .next_element_seed(Walk {
+                at: format!("{at}/{i}"),
+                out: &mut *out,
+                max_string,
+            })?
+            .is_some()
+        {
+            i += 1;
+        }
+        Ok(())
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<(), A::Error> {
+        let Walk {
+            at,
+            out,
+            max_string,
+        } = self;
+        let mut keys: Vec<String> = Vec::new();
+        while let Some(key) = map.next_key::<String>()? {
+            let key = clean_text(&key, max_string);
+            map.next_value_seed(Walk {
+                at: child(&at, &key),
+                out: &mut *out,
+                max_string,
+            })?;
+            if !keys.contains(&key) {
+                keys.push(key);
+            }
+        }
+        out.insert(at, keys);
+        Ok(())
     }
 }
 
@@ -255,6 +390,21 @@ mod tests {
             clean("Ada \u{1f44b}\u{1f3fd} caf\u{e9}"),
             "Ada \u{1f44b}\u{1f3fd} caf\u{e9}"
         );
+    }
+
+    #[test]
+    fn json_keeps_its_key_order_beside_the_value() {
+        let (p, order) = decode_payload_ordered(
+            br#"{"zeta":1,"call\u001b[2J":{"b":1,"a":2},"list":[{"y":1,"x":2}]}"#,
+            &Limits::default(),
+        );
+        assert!(matches!(p, Payload::Json(_)));
+        assert_eq!(order[""], ["zeta", "call", "list"]);
+        assert_eq!(order["/call"], ["b", "a"]);
+        assert_eq!(order["/list/0"], ["y", "x"]);
+        let (p, order) = decode_payload_ordered(b"plain", &Limits::default());
+        assert_eq!(p, Payload::Text("plain".into()));
+        assert!(order.is_empty());
     }
 
     #[test]

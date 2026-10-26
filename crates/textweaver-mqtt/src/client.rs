@@ -17,7 +17,7 @@ use rumqttc::mqttbytes::v4::{
 use rumqttc::mqttbytes::{Error as CodecError, QoS, check};
 
 use crate::error::{Failure, Kind, Stage};
-use crate::sanitize::{clean_text, decode_payload};
+use crate::sanitize::{KeyOrder, clean_text, decode_payload_ordered};
 use crate::{MqttConfig, MqttEvent, Payload, new_client_id, tls, topic};
 
 /// The read timeout: how often the thread checks its stop flag, the
@@ -460,6 +460,7 @@ impl Worker {
                         topic,
                         payload: Payload::TooLarge { len: o.len },
                         retained: o.retain,
+                        key_order: KeyOrder::new(),
                     });
                 }
                 Ok(Some(Frame::Packet(p))) => match p {
@@ -484,10 +485,12 @@ impl Worker {
                         }
                         let topic = clean_text(&p.topic, 2000);
                         heard(watches, &topic);
+                        let (payload, key_order) = decode_payload_ordered(&p.payload, &cfg.limits);
                         self.emit(MqttEvent::Message {
                             topic,
-                            payload: decode_payload(&p.payload, &cfg.limits),
+                            payload,
                             retained: p.retain,
+                            key_order,
                         });
                     }
                     Packet::SubAck(ack) => {

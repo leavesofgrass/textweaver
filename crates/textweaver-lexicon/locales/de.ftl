@@ -5424,6 +5424,10 @@ name-live-toggle-pause = Updates anhalten oder fortsetzen
 action-live-toggle-pause = Die Aktualisierungen des Live-Protokolls anhalten oder fortsetzen; angehalten warten neue Einträge
 name-live-toggle-speak = Neue Einträge sprechen
 action-live-toggle-speak = Neue Einträge des Live-Protokolls mit der eigenen Stimme von textweaver sprechen, ein oder aus
+name-live-toggle-field-show = Änderungen dieses Felds zeigen
+action-live-toggle-field-show = In einer Live-Werteansicht die Änderungen des Felds in der Zeile des Cursors zeigen, ein oder aus; die Wahl wird gespeichert
+name-live-toggle-field-speak = Änderungen dieses Felds sprechen
+action-live-toggle-field-speak = In einer Live-Werteansicht die Änderungen des Felds in der Zeile des Cursors mit der eigenen Stimme von textweaver sprechen, ein oder aus; die Wahl wird gespeichert
 menu-live = Live-Quellen
 prompt-live-setup = Live-Quelle einrichten
 live-failed = Keine Verbindung zu { $name }: { $reason } Keine weiteren Versuche; beheben Sie das und öffnen Sie die Quelle erneut.
@@ -5433,7 +5437,7 @@ live-skipped =
         [one] 1 Nachricht wurde ausgelassen: sie kamen schneller, als sie gezeigt werden konnten.
        *[other] { $count } Nachrichten wurden ausgelassen: sie kamen schneller, als sie gezeigt werden konnten.
     }
-live-new-entries = { $count } neue Einträge. Neuester: { $line }
+live-new-entries = { $line } { $count } neue Einträge.
 live-unread-newest = { $count }. Neuester: { $line }
 live-not-in-build = Live-Quellen gibt es in dieser Version von { -brand } nicht.
 live-speak-on = Neue Einträge sprechen: ein.
@@ -5470,3 +5474,27 @@ live-setup-offer-title = { $name } jetzt öffnen?
 live-setup-open-now = Jetzt öffnen
 live-setup-later = Nicht jetzt
 live-setup-not-now = Nicht geöffnet. „Live-Quelle öffnen“ öffnet sie später.
+live-values-title = Live-Werte
+live-values-empty = Noch keine Werte.
+live-value-none = kein Wert
+live-value-stale = kein aktueller Wert
+live-values-more = { $count } weitere
+live-values-count =
+    { $count ->
+        [one] 1 Feld
+       *[other] { $count } Felder
+    }
+live-values-no-table = Die Werteansicht hat keine Tabelle: Jedes Feld ist eine Zeile.
+live-values-no-log = Die Werteansicht führt kein Protokoll, das gespeichert werden könnte.
+live-values-full = Die Werteansicht fasst höchstens { $max } Felder; weitere Felder werden ausgelassen.
+live-values-resumed =
+    { $count ->
+        [0] Aktualisierungen fortgesetzt. Kein Feld hat sich geändert.
+        [one] Aktualisierungen fortgesetzt, 1 Feld geändert.
+       *[other] Aktualisierungen fortgesetzt, { $count } Felder geändert.
+    }
+live-field-none = In dieser Zeile ist kein Feld.
+live-field-show-on = Änderungen von { $field } werden angezeigt.
+live-field-show-off = Änderungen von { $field } werden nicht mehr angezeigt.
+live-field-speak-on = Änderungen von { $field } werden gesprochen.
+live-field-speak-off = Änderungen von { $field } werden nicht mehr gesprochen.

@@ -19,6 +19,9 @@
 //!   updates**, **Say unread**, **Save live log now**: the open log's
 //!   commands (crate::live::hub).
 //! - **Speak new entries** turns `[live] speak_new_entries` on or off.
+//! - **Show changes of this field** and **Speak changes of this field**
+//!   set the values view's field on the cursor's line, saved to the
+//!   source.
 //! - **Forget live source password** removes the open source's password
 //!   (or a chosen source's) from the system credential store.
 //!
@@ -53,6 +56,8 @@ pub const COMMANDS: &[ActionId] = &[
     ActionId::LiveJumpNewest,
     ActionId::LiveTogglePause,
     ActionId::LiveToggleSpeak,
+    ActionId::LiveToggleFieldShow,
+    ActionId::LiveToggleFieldSpeak,
     ActionId::LiveSayUnread,
     ActionId::SaveLiveLog,
     ActionId::ForgetLiveSourcePassword,
@@ -146,6 +151,8 @@ impl App {
             ActionId::LiveJumpNewest => self.live_jump_newest(),
             ActionId::LiveTogglePause => self.live_toggle_pause(),
             ActionId::LiveToggleSpeak => self.live_toggle_speak(),
+            ActionId::LiveToggleFieldShow => self.live_toggle_field_show(),
+            ActionId::LiveToggleFieldSpeak => self.live_toggle_field_speak(),
             ActionId::LiveSayUnread => self.live_say_unread(),
             ActionId::SaveLiveLog => self.live_save_log(),
             _ => vec![Effect::Redraw],
@@ -810,6 +817,7 @@ mod tests {
             topic: "log/checkins".into(),
             payload: Payload::Json(serde_json::json!({"call": call, "name": name})),
             retained: false,
+            key_order: Default::default(),
         }
     }
 
@@ -965,7 +973,7 @@ mod tests {
         let texts = r.texts();
         assert_eq!(texts.len(), 1, "{texts:?}");
         assert!(
-            texts[0].starts_with("3 new entries. Newest: N3CALL"),
+            texts[0].starts_with("N3CALL, Ada Example.") && texts[0].ends_with("3 new entries."),
             "{texts:?}"
         );
     }
@@ -985,7 +993,11 @@ mod tests {
         assert!(!r.any("CALL"), "{:?}", r.texts());
         r.app.playback = crate::playback::Playback::Idle;
         r.tick(t0 + Duration::from_secs(31));
-        assert!(r.any("2 new entries. Newest: N5CALL"), "{:?}", r.texts());
+        assert!(
+            r.any("N5CALL, Ada Example. 2 new entries."),
+            "{:?}",
+            r.texts()
+        );
     }
 
     #[test]
@@ -1204,6 +1216,44 @@ mod tests {
             );
             escape(&mut r.app);
         }
+    }
+
+    /// The values view's field changes go through the throttle, each
+    /// field at most once each `[live] min_interval_seconds`.
+    #[test]
+    fn a_values_view_says_each_field_change_at_its_own_pace() {
+        let source = LiveSourceSettings {
+            view: LiveView::Values,
+            ..practice("")
+        };
+        let mut r = rig(&[("sensor", source)]);
+        r.app.settings.live.min_interval_seconds = 10;
+        r.app.open_configured_live_source("sensor");
+        assert!(r.app.live_shows_values());
+        let s = r.wire.script.clone();
+        let reading = |t: f64| MqttEvent::Message {
+            topic: "log/checkins".into(),
+            payload: Payload::Json(serde_json::json!({ "temp": t })),
+            retained: false,
+            key_order: Default::default(),
+        };
+        let t0 = Instant::now();
+        s.push(reading(21.4));
+        r.tick(t0);
+        s.push(reading(21.5));
+        r.tick(t0 + Duration::from_secs(1));
+        r.clear();
+        s.push(reading(21.6));
+        r.tick(t0 + Duration::from_secs(3));
+        assert!(!r.any("21.6"), "held: {:?}", r.texts());
+        r.tick(t0 + Duration::from_secs(10));
+        let said: Vec<String> = r
+            .texts()
+            .into_iter()
+            .filter(|t| t.contains("21."))
+            .collect();
+        assert_eq!(said.len(), 1, "{said:?}");
+        assert!(said[0].contains("21.6"), "the latest value only: {said:?}");
     }
 
     #[test]

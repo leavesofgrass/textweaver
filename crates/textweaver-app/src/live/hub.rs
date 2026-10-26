@@ -3,17 +3,20 @@
 //! furthest entry for the unread count, the pause queue, and the JSON log
 //! file. `App::live_tick` polls the source on every tick.
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use serde_json::Value;
 use textweaver_core::CharPos;
 use textweaver_lexicon::args;
-use textweaver_store::DocKey;
+use textweaver_store::{DocKey, LiveNotice, LiveView};
 
 use super::json_log::{self, SavedLog};
-use super::log::{LiveLog, LogLabels, LogOptions, LogView, MAX_ENTRIES, Shape};
+use super::log::{LiveLog, LogLabels, LogOptions, LogView, MAX_ENTRIES, Message};
+use super::order::KeyOrder;
 use super::source::{LiveEvent, LivePayload, LiveSource};
+use super::values::{FieldChange, LiveValues, MAX_VALUES, ValueField, ValueLabels, ValuesOptions};
 use super::{LiveTag, load_markdown};
 use crate::app::App;
 use crate::command::Effect;
@@ -64,8 +67,13 @@ pub(crate) struct LiveHub {
     id: String,
     pub(crate) log: LiveLog,
     pub(crate) view: LogView,
+    /// The values view's fields, when the source shows values instead of
+    /// a log.
+    pub(crate) values: Option<LiveValues>,
+    /// Fields changed while paused, by topic and path (values view).
+    paused_fields: HashSet<(String, String)>,
     paused: bool,
-    queue: VecDeque<Shape>,
+    queue: VecDeque<Message>,
     queue_dropped: usize,
     /// The furthest entry the reader has been on.
     furthest: Option<usize>,
@@ -74,6 +82,9 @@ pub(crate) struct LiveHub {
     saved_from: Option<PathBuf>,
     /// The log was full and that was said.
     full_said: bool,
+    /// The status line's sequence number when it last took an entry
+    /// ([`App::live_status_is_entry`]).
+    pub(crate) entry_seq: Option<u64>,
 }
 
 impl std::fmt::Debug for LiveHub {
@@ -110,15 +121,26 @@ impl App {
         Box::new(move || slot.wake())
     }
 
-    /// Opens a live document fed by `source`, in the log view: empty
-    /// until its first message. The document before it closes, as when
-    /// any document opens. Closing this one ([`App::live_close`], opening
-    /// another, quitting) stops the source.
+    /// Opens a live document fed by `source`, in the view its settings
+    /// choose (`[live.sources.<id>] view`): the log view, or the values
+    /// view ([`App::open_live_values`]). Empty until its first message.
+    /// The document before it closes, as when any document opens. Closing
+    /// this one ([`App::live_close`], opening another, quitting) stops the
+    /// source.
     pub fn open_live_source(
         &mut self,
         source: Box<dyn LiveSource>,
         options: LiveOptions,
     ) -> Vec<Effect> {
+        let values = self
+            .settings
+            .live
+            .sources
+            .get(&options.id)
+            .is_some_and(|s| s.view == LiveView::Values);
+        if values {
+            return self.open_live_values(source, options);
+        }
         let title = if options.title.trim().is_empty() {
             self.msg("live-log-title")
         } else {
@@ -136,6 +158,8 @@ impl App {
             id: options.id,
             log,
             view: options.view,
+            values: None,
+            paused_fields: HashSet::new(),
             paused: false,
             queue: VecDeque::new(),
             queue_dropped: 0,
@@ -150,8 +174,219 @@ impl App {
             }),
             saved_from: None,
             full_said: false,
+            entry_seq: None,
         });
         effects
+    }
+
+    /// Opens a live document fed by `source` in the values view: one line
+    /// per field, updated in place. The field mapping, the stale time and
+    /// the announcement interval come from the source's settings
+    /// (`[live.sources.<id>]`, by `options.id`) and `[live]`; a source with
+    /// no settings shows every field as it comes. No JSON log is kept.
+    pub fn open_live_values(
+        &mut self,
+        source: Box<dyn LiveSource>,
+        options: LiveOptions,
+    ) -> Vec<Effect> {
+        let named = self
+            .settings
+            .live
+            .sources
+            .get(&options.id)
+            .map(|s| s.display_name(&options.id).to_owned());
+        let title = match (options.title.trim().is_empty(), named) {
+            (false, _) => options.title.clone(),
+            (true, Some(name)) => name,
+            (true, None) => self.msg("live-values-title"),
+        };
+        let live = &self.settings.live;
+        let settings = live.sources.get(&options.id);
+        let values = LiveValues::new(ValuesOptions {
+            title: title.clone(),
+            fields: settings.map(|s| s.fields.clone()).unwrap_or_default(),
+            stale_after: match settings {
+                Some(s) => s.stale_after(live),
+                None => textweaver_store::LiveSourceSettings::default().stale_after(live),
+            },
+            min_interval: Duration::from_secs(u64::from(live.min_interval_seconds)),
+        });
+        let md = values.render(&self.live_value_labels());
+        let key = DocKey(format!("live-{}", options.id));
+        let effects = self.open_live_keyed(key, &options.id, &title, &md);
+        self.live_hub = Some(LiveHub {
+            source: Some(source),
+            id: options.id,
+            log: LiveLog::new(LogOptions {
+                title,
+                id_field: None,
+            }),
+            view: LogView::List,
+            values: Some(values),
+            paused_fields: HashSet::new(),
+            paused: false,
+            queue: VecDeque::new(),
+            queue_dropped: 0,
+            furthest: None,
+            file: None,
+            saved_from: None,
+            full_said: false,
+            entry_seq: None,
+        });
+        effects
+    }
+
+    /// The words the values view is rendered with, in the interface's
+    /// language.
+    pub fn live_value_labels(&self) -> ValueLabels {
+        let catalog = std::sync::Arc::clone(&self.study.catalog);
+        ValueLabels {
+            empty: self.msg("live-values-empty"),
+            no_value: self.msg("live-value-none"),
+            no_recent: self.msg("live-value-stale"),
+            more: Box::new(move |n| catalog.fmt("live-values-more", &args!["count" => n])),
+        }
+    }
+
+    /// True when the open live document shows values, not a log.
+    pub fn live_shows_values(&self) -> bool {
+        self.live_hub.as_ref().is_some_and(|h| h.values.is_some())
+    }
+
+    /// The open values view's fields; `None` when no values view is open.
+    pub fn live_values(&self) -> Option<&LiveValues> {
+        self.live_hub.as_ref().and_then(|h| h.values.as_ref())
+    }
+
+    /// The values view's field changes since this was last called, oldest
+    /// first: for the announcements, which choose by each change's `show`
+    /// and `speak` and its `min_interval`. Changes made while updates were
+    /// paused are not kept (resuming says how many fields changed). Empty
+    /// without a values view.
+    pub fn live_take_field_changes(&mut self) -> Vec<FieldChange> {
+        self.live_hub
+            .as_mut()
+            .and_then(|h| h.values.as_mut())
+            .map(LiveValues::take_changes)
+            .unwrap_or_default()
+    }
+
+    /// The values view's field changes not yet given to the announcements
+    /// (crate::live::announce), oldest first.
+    pub(crate) fn live_take_field_announcements(&mut self) -> Vec<FieldChange> {
+        self.live_hub
+            .as_mut()
+            .and_then(|h| h.values.as_mut())
+            .map(LiveValues::take_announcements)
+            .unwrap_or_default()
+    }
+
+    /// The values view's field on the cursor's line.
+    pub fn live_field_at_cursor(&self) -> Option<ValueField> {
+        let h = self.live_hub.as_ref()?;
+        let values = h.values.as_ref()?;
+        let s = self.session.as_ref().filter(|s| s.live.is_some())?;
+        let n = LiveLog::entry_at(&s.doc, LogView::List, s.cursor)?;
+        values.field(n)
+    }
+
+    /// Sets whether the changes of the values view's field at `path` (its
+    /// JSON Pointer, as [`FieldChange::path`] and
+    /// [`App::live_field_at_cursor`] give it) are shown and spoken, `None`
+    /// leaving a choice as it is. The choice is saved to the source's
+    /// settings (`[[live.sources.<id>.fields]]`, a new entry with only
+    /// `path`, `show` and `speak` for a field with none), and said.
+    pub fn live_set_field_notice(
+        &mut self,
+        path: &str,
+        show: Option<LiveNotice>,
+        speak: Option<LiveNotice>,
+    ) -> Vec<Effect> {
+        let Some(h) = self.live_hub.as_mut() else {
+            return self.live_not_open();
+        };
+        let id = h.id.clone();
+        let Some(values) = h.values.as_mut() else {
+            let m = self.msg("live-field-none");
+            self.tell(&m);
+            return vec![Effect::Redraw];
+        };
+        let fields = values.set_notice(path, show, speak).to_vec();
+        let label = values
+            .field_by_path(path)
+            .map(|f| f.label)
+            .unwrap_or_else(|| path.to_owned());
+        if self.settings.live.sources.contains_key(&id)
+            && let Err(e) = self.update_settings(|s| {
+                if let Some(src) = s.live.sources.get_mut(&id) {
+                    src.fields = fields;
+                }
+            })
+        {
+            log::warn!("cannot save the live field choice: {e}");
+        }
+        let mut said = Vec::new();
+        if let Some(s) = show {
+            said.push(self.msg_args(
+                match s {
+                    LiveNotice::OnChange => "live-field-show-on",
+                    LiveNotice::Off => "live-field-show-off",
+                },
+                &args!["field" => label.as_str()],
+            ));
+        }
+        if let Some(s) = speak {
+            said.push(self.msg_args(
+                match s {
+                    LiveNotice::OnChange => "live-field-speak-on",
+                    LiveNotice::Off => "live-field-speak-off",
+                },
+                &args!["field" => label.as_str()],
+            ));
+        }
+        if !said.is_empty() {
+            self.tell(&said.join(" "));
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// Turns showing the changes of the field on the cursor's line on or
+    /// off, and saves the choice ([`App::live_set_field_notice`]).
+    pub fn live_toggle_field_show(&mut self) -> Vec<Effect> {
+        match self.live_field_at_cursor() {
+            Some(f) => {
+                let next = match f.show {
+                    LiveNotice::Off => LiveNotice::OnChange,
+                    LiveNotice::OnChange => LiveNotice::Off,
+                };
+                self.live_set_field_notice(&f.path, Some(next), None)
+            }
+            None => self.live_no_field(),
+        }
+    }
+
+    /// Turns speaking the changes of the field on the cursor's line on or
+    /// off, and saves the choice ([`App::live_set_field_notice`]).
+    pub fn live_toggle_field_speak(&mut self) -> Vec<Effect> {
+        match self.live_field_at_cursor() {
+            Some(f) => {
+                let next = match f.speak {
+                    LiveNotice::Off => LiveNotice::OnChange,
+                    LiveNotice::OnChange => LiveNotice::Off,
+                };
+                self.live_set_field_notice(&f.path, None, Some(next))
+            }
+            None => self.live_no_field(),
+        }
+    }
+
+    fn live_no_field(&mut self) -> Vec<Effect> {
+        if self.live_hub.is_none() {
+            return self.live_not_open();
+        }
+        let m = self.msg("live-field-none");
+        self.tell(&m);
+        vec![Effect::Redraw]
     }
 
     /// Opens a saved JSON log (`path`) in the log view, read only and not
@@ -183,6 +418,8 @@ impl App {
             id: source,
             log,
             view: LogView::List,
+            values: None,
+            paused_fields: HashSet::new(),
             paused: false,
             queue: VecDeque::new(),
             queue_dropped: 0,
@@ -190,6 +427,7 @@ impl App {
             file: None,
             saved_from: Some(path.to_owned()),
             full_said: false,
+            entry_seq: None,
         });
         effects
     }
@@ -231,10 +469,23 @@ impl App {
     }
 
     /// The newest entry as one line, meaning first, for a status line.
+    /// In the values view, the field changed last, as its line.
     pub fn live_newest_line(&self) -> Option<String> {
         let h = self.live_hub.as_ref()?;
+        if let Some(v) = &h.values {
+            return v.newest(&self.live_value_labels()).map(|(_, line)| line);
+        }
         let n = h.log.len().checked_sub(1)?;
         Some(h.log.line(n, &self.live_labels()))
+    }
+
+    /// True while the status line shows the message of a new or changed
+    /// entry, and nothing has been said since: a frontend may then show
+    /// the entry in its own form (the terminal reader trims it to a
+    /// Braille line). False with no live document open.
+    pub fn live_status_is_entry(&self) -> bool {
+        self.session.as_ref().is_some_and(|s| s.live.is_some())
+            && self.live_hub.as_ref().and_then(|h| h.entry_seq) == Some(self.status.seq)
     }
 
     /// True while updates are paused.
@@ -265,8 +516,12 @@ impl App {
 
     /// Entries after the furthest one the reader has been on (the cursor
     /// on an entry counts as reading it); `None` with no live document.
+    /// The values view has nothing unread: 0.
     pub fn live_unread(&self) -> Option<usize> {
         let h = self.live_hub.as_ref()?;
+        if h.values.is_some() {
+            return Some(0);
+        }
         let furthest = h.furthest.max(self.live_cursor_entry());
         Some(match furthest {
             Some(i) => h.log.len().saturating_sub(i + 1),
@@ -290,6 +545,13 @@ impl App {
     pub fn live_position(&self) -> Option<Vec<String>> {
         let h = self.live_hub.as_ref()?;
         self.session.as_ref().filter(|s| s.live.is_some())?;
+        if let Some(v) = &h.values {
+            let mut parts = vec![self.msg_args("live-values-count", &args!["count" => v.len()])];
+            if h.paused {
+                parts.push(self.msg("live-paused-status"));
+            }
+            return Some(parts);
+        }
         if h.source.is_none() {
             let n = h.log.len();
             return Some(vec![self.msg_args("live-entries", &args!["count" => n])]);
@@ -337,14 +599,33 @@ impl App {
             .unwrap_or_default();
         let mut effects = Vec::new();
         let mut shapes = Vec::new();
+        let values = self.live_shows_values();
+        let mut changed_values = false;
         for event in events {
             match event {
                 LiveEvent::Message { topic, payload, .. } => match payload {
-                    LivePayload::Json(v) => shapes.push(Shape::of(v)),
+                    LivePayload::Json(v) if values => {
+                        changed_values |=
+                            self.live_values_take(&topic, &v, &KeyOrder::default(), now);
+                    }
+                    LivePayload::OrderedJson(v, order) if values => {
+                        changed_values |= self.live_values_take(&topic, &v, &order, now);
+                    }
+                    LivePayload::Text(t) if values => {
+                        // Numeric text is a number, so its decimals apply.
+                        let v = match serde_json::from_str::<serde_json::Number>(t.trim()) {
+                            Ok(n) => Value::Number(n),
+                            Err(_) => Value::String(t),
+                        };
+                        changed_values |=
+                            self.live_values_take(&topic, &v, &KeyOrder::default(), now);
+                    }
+                    LivePayload::Json(v) => shapes.push(Message::of(v, &KeyOrder::default())),
+                    LivePayload::OrderedJson(v, order) => shapes.push(Message::of(v, &order)),
                     LivePayload::Text(t) => {
                         let mut m = serde_json::Map::new();
-                        m.insert("text".into(), serde_json::Value::String(t));
-                        shapes.push(Shape::One(m));
+                        m.insert("text".into(), Value::String(t));
+                        shapes.push(Message::of(Value::Object(m), &KeyOrder::default()));
                     }
                     LivePayload::Binary { len } => {
                         let m = self.msg_args(
@@ -377,8 +658,67 @@ impl App {
                 effects.push(Effect::Redraw);
             }
         }
+        if values {
+            let stale = self
+                .live_hub
+                .as_mut()
+                .and_then(|h| h.values.as_mut())
+                .is_some_and(|v| v.refresh_stale(now));
+            if (changed_values || stale) && !self.live_paused() {
+                self.live_values_show();
+                effects.push(Effect::Redraw);
+            }
+        }
         self.live_write_due(now);
         effects
+    }
+
+    /// Applies a message to the values view. While paused, the values
+    /// change but are not shown, and their changes are only counted.
+    /// True when a value changed.
+    fn live_values_take(
+        &mut self,
+        topic: &str,
+        value: &Value,
+        order: &KeyOrder,
+        now: Instant,
+    ) -> bool {
+        let labels = self.live_value_labels();
+        let Some(h) = self.live_hub.as_mut() else {
+            return false;
+        };
+        let Some(values) = h.values.as_mut() else {
+            return false;
+        };
+        let before = values.dropped;
+        let changed = values.apply(topic, value, order, now, &labels);
+        let full = values.dropped > before && !h.full_said;
+        if h.paused {
+            values.take_announcements();
+            for c in values.take_changes() {
+                h.paused_fields.insert((c.topic, c.path));
+            }
+        }
+        if full {
+            h.full_said = true;
+            let m = self.msg_args("live-values-full", &args!["max" => MAX_VALUES]);
+            self.warn(&m);
+        }
+        changed
+    }
+
+    /// Shows the values view's fields as they are now, in place.
+    fn live_values_show(&mut self) {
+        let labels = self.live_value_labels();
+        let Some(md) = self
+            .live_hub
+            .as_ref()
+            .and_then(|h| h.values.as_ref())
+            .map(|v| v.render(&labels))
+        else {
+            return;
+        };
+        self.live_replace(load_markdown(&md), None);
     }
 
     /// Says a connection change.
@@ -445,12 +785,12 @@ impl App {
     }
 
     /// Queues messages while paused. A whole log replaces what is queued.
-    fn live_queue(&mut self, shapes: Vec<Shape>) {
+    fn live_queue(&mut self, shapes: Vec<Message>) {
         let Some(h) = self.live_hub.as_mut() else {
             return;
         };
         for shape in shapes {
-            if matches!(shape, Shape::Whole(_)) {
+            if shape.is_whole() {
                 h.queue.clear();
             }
             if h.queue.len() >= PAUSE_QUEUE_CAP {
@@ -465,7 +805,7 @@ impl App {
     /// keeping the reader on their entry. `say` replaces the announcement
     /// of the changed entry (resuming says how many updates it applied).
     /// True when the log changed.
-    fn live_take(&mut self, shapes: Vec<Shape>, say: Option<String>) -> bool {
+    fn live_take(&mut self, shapes: Vec<Message>, say: Option<String>) -> bool {
         let place = self.live_place();
         let labels = self.live_labels();
         let Some(h) = self.live_hub.as_mut() else {
@@ -479,9 +819,10 @@ impl App {
         let mut last_line: Option<String> = None;
         let mut count = 0;
         let before = h.log.dropped;
+        let head_before = h.log.head().0.clone();
         for shape in shapes {
-            whole |= matches!(shape, Shape::Whole(_));
-            let changed = h.log.apply(shape, &now);
+            whole |= shape.is_whole();
+            let changed = h.log.apply_message(shape, &now);
             if let Some(&last) = changed.last() {
                 last_line = Some(h.log.line(last, &labels));
                 count += changed.len();
@@ -491,13 +832,14 @@ impl App {
         if full {
             h.full_said = true;
         }
-        let Some(line) = last_line else {
+        let head_changed = *h.log.head().0 != head_before;
+        if last_line.is_none() && !head_changed {
             if full {
                 let m = self.msg_args("live-full", &args!["max" => MAX_ENTRIES]);
                 self.warn(&m);
             }
             return false;
-        };
+        }
         if let Some(f) = h.file.as_mut() {
             f.dirty = true;
         }
@@ -521,13 +863,14 @@ impl App {
             Some(CharPos((r.start.0 + p.offset).min(r.end.0.max(r.start.0))))
         });
         self.live_replace(new, target);
-        match say {
+        match (say, last_line) {
             // The answer to the user's own command (resuming): said now.
-            Some(text) if !text.is_empty() => self.tell(&text),
-            Some(_) => {}
+            (Some(text), _) if !text.is_empty() => self.tell(&text),
+            // Closing, or only the heading changed: nothing to say.
+            (Some(_), _) | (None, None) => {}
             // New entries: through the announcement throttle
             // (crate::live::announce), said on the tick.
-            None => self.live_entries_arrived(count, line),
+            (None, Some(line)) => self.live_entries_arrived(count, line),
         }
         if full {
             let m = self.msg_args("live-full", &args!["max" => MAX_ENTRIES]);
@@ -537,11 +880,17 @@ impl App {
     }
 
     /// Shows the log in `view`, keeping the reader on the same entry.
+    /// The values view has one layout: it says so.
     pub fn live_set_view(&mut self, view: LogView) -> Vec<Effect> {
         let labels = self.live_labels();
         let Some(h) = self.live_hub.as_mut() else {
             return self.live_not_open();
         };
+        if h.values.is_some() {
+            let m = self.msg("live-values-no-table");
+            self.tell(&m);
+            return vec![Effect::Redraw];
+        }
         let from = h.view;
         h.view = view;
         let md = h.log.render(view, &labels);
@@ -569,11 +918,29 @@ impl App {
     }
 
     /// Moves to the newest entry and says it; every entry counts as read.
+    /// In the values view, moves to the field changed last.
     pub fn live_jump_newest(&mut self) -> Vec<Effect> {
         let labels = self.live_labels();
+        let value_labels = self.live_value_labels();
         let Some(h) = self.live_hub.as_mut() else {
             return self.live_not_open();
         };
+        if let Some(v) = &h.values {
+            let Some((n, line)) = v.newest(&value_labels) else {
+                let m = self.msg("live-values-empty");
+                self.tell(&m);
+                return vec![Effect::Redraw];
+            };
+            let Some(target) = self
+                .session
+                .as_ref()
+                .and_then(|s| LiveLog::entry_start(&s.doc, LogView::List, n))
+            else {
+                return Vec::new();
+            };
+            self.jump(target, true, ReadAfter::Follow, &line);
+            return vec![Effect::Redraw];
+        }
         let Some(last) = h.log.len().checked_sub(1) else {
             let m = self.msg("live-newest-none");
             self.tell(&m);
@@ -594,7 +961,9 @@ impl App {
     }
 
     /// Pauses updates (they wait, up to [`PAUSE_QUEUE_CAP`] messages), or
-    /// resumes them, applying everything that waited as one change.
+    /// resumes them, applying everything that waited as one change. In
+    /// the values view, the values keep changing while paused but are
+    /// shown only on resuming, which says how many fields changed.
     pub fn live_set_paused(&mut self, paused: bool) -> Vec<Effect> {
         let Some(h) = self.live_hub.as_mut() else {
             return self.live_not_open();
@@ -608,7 +977,14 @@ impl App {
             self.tell(&m);
             return vec![Effect::Redraw];
         }
-        let queued: Vec<Shape> = h.queue.drain(..).collect();
+        if h.values.is_some() {
+            let n = std::mem::take(&mut h.paused_fields).len();
+            let m = self.msg_args("live-values-resumed", &args!["count" => n]);
+            self.live_values_show();
+            self.tell(&m);
+            return vec![Effect::Redraw];
+        }
+        let queued: Vec<Message> = h.queue.drain(..).collect();
         let dropped = std::mem::take(&mut h.queue_dropped);
         let n = queued.len();
         let m = if dropped > 0 {
@@ -653,8 +1029,13 @@ impl App {
         source.stop();
         if h.paused {
             h.paused = false;
-            let queued: Vec<Shape> = h.queue.drain(..).collect();
-            self.live_take(queued, Some(String::new()));
+            if h.values.is_some() {
+                h.paused_fields.clear();
+                self.live_values_show();
+            } else {
+                let queued: Vec<Message> = h.queue.drain(..).collect();
+                self.live_take(queued, Some(String::new()));
+            }
         }
         if let Some(s) = self.session.as_mut()
             && let Some(tag) = s.live.as_mut()
@@ -680,10 +1061,10 @@ impl App {
             if let Some(h) = self.live_hub.as_mut() {
                 // What waited while paused is kept in the file, if not
                 // shown.
-                let queued: Vec<Shape> = h.queue.drain(..).collect();
+                let queued: Vec<Message> = h.queue.drain(..).collect();
                 let now = now_utc();
                 for shape in queued {
-                    if !h.log.apply(shape, &now).is_empty()
+                    if !h.log.apply_message(shape, &now).is_empty()
                         && let Some(f) = h.file.as_mut()
                     {
                         f.dirty = true;
@@ -696,10 +1077,16 @@ impl App {
     }
 
     /// Save on a live document: writes the JSON log now and says where.
+    /// The values view keeps no log, and says so.
     pub fn live_save_log(&mut self) -> Vec<Effect> {
         let Some(h) = self.live_hub.as_ref() else {
             return self.live_not_open();
         };
+        if h.values.is_some() {
+            let m = self.msg("live-values-no-log");
+            self.tell(&m);
+            return vec![Effect::Redraw];
+        }
         if let Some(path) = h.saved_from.clone() {
             let m = self.msg_args(
                 "live-log-saved-already",
@@ -722,11 +1109,13 @@ impl App {
         vec![Effect::Redraw]
     }
 
-    /// The folder JSON logs go in: the `logs` folder in textweaver's data
-    /// folder, created on the first save; `None` without one (tests that
-    /// keep nothing).
+    /// The folder JSON logs go in: `[live] log_folder`, or when it is
+    /// empty the `logs` folder in textweaver's data folder, created on the
+    /// first save; `None` without a data folder (tests that keep nothing).
     pub fn live_log_folder(&self) -> Option<PathBuf> {
-        self.paths.as_ref().map(|p| p.data_dir.join("logs"))
+        self.paths
+            .as_ref()
+            .map(|p| self.settings.live.log_folder_in(p))
     }
 
     /// Writes the JSON log when it changed and the last write was

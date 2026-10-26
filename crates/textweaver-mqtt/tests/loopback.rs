@@ -338,6 +338,7 @@ fn oversize_message_is_named_acknowledged_and_skipped() {
         topic: "net/log".into(),
         payload: Payload::TooLarge { len: 200 * 1024 },
         retained: false,
+        key_order: Default::default(),
     }));
     assert!(
         !seen

@@ -210,6 +210,19 @@ pub struct Tui {
     /// The title line's position while it is frozen (`[accessibility]
     /// quiet_screen` during continuous reading).
     frozen_position: Option<Vec<String>>,
+    /// A live document's title position (its unread count) as last
+    /// drawn, with the source's state (receiving, paused) it was taken
+    /// in: new entries leave it alone, so the title row does not change
+    /// with every entry; the reader's own keys and a change of state
+    /// bring it up to date.
+    live_position: Option<((bool, bool), Vec<String>)>,
+    /// A key, a paste or a command arrived since the last draw.
+    user_acted: bool,
+    /// The status line for a live entry, by the status message's
+    /// sequence number: taken once, so the unread count in it does not
+    /// change (and the screen reader does not read the line again) as
+    /// the reader moves.
+    live_status: Option<(u64, String)>,
     /// What was probed about the terminal ([`TerminalInfo`]).
     terminal: TerminalInfo,
     /// The window title last handed out ([`Tui::take_window_title`]).
@@ -314,6 +327,9 @@ impl Tui {
             system_clipboard: crate::clipboard::SystemClipboard::default(),
             system_clipboard_said: false,
             frozen_position: None,
+            live_position: None,
+            user_acted: false,
+            live_status: None,
             terminal: TerminalInfo {
                 color: support,
                 reorders_rtl: crate::bidi::terminal_reorders(),
@@ -419,6 +435,7 @@ impl Tui {
         let effects = self.app.tick(Instant::now());
         let more = !effects.is_empty();
         self.apply(effects);
+        self.refresh_live_status();
         redraw || more
     }
 
@@ -450,6 +467,7 @@ impl Tui {
     /// Dispatches a command and acts on its effects.
     pub fn dispatch(&mut self, cmd: Command) {
         self.needs_draw = true;
+        self.user_acted = true;
         let effects = self.app.dispatch(cmd);
         self.apply(effects);
     }
@@ -525,6 +543,7 @@ impl Tui {
         // Any event (a key, a paste, a resize, focus) may change the
         // screen.
         self.needs_draw = true;
+        self.user_acted = true;
         match event {
             Event::Key(k) if matches!(k.kind, KeyEventKind::Press | KeyEventKind::Repeat) => {
                 self.handle_key(*k);
@@ -549,6 +568,7 @@ impl Tui {
 
     /// Handles one key press.
     pub fn handle_key(&mut self, k: KeyEvent) {
+        self.user_acted = true;
         if self.app.math_exploring() && !self.app.confirmation_pending() {
             if let Some(mv) = math_move(&k) {
                 self.dispatch(Command::MathStep(mv));
@@ -787,8 +807,45 @@ impl Tui {
                     .trim_end()
                     .to_owned()
             }
-            _ => self.app.status_text().to_owned(),
+            _ => self
+                .live_status
+                .as_ref()
+                .filter(|(seq, _)| *seq == self.app.status().seq && self.live_status_shown())
+                .map_or_else(|| self.app.status_text().to_owned(), |(_, s)| s.clone()),
         }
+    }
+
+    /// True when the status line is the live document's to use: it shows
+    /// the message of a new or changed entry, or nothing at all with
+    /// entries in the log.
+    fn live_status_shown(&self) -> bool {
+        self.app.live_status_is_entry()
+            || (self.app.status_text().is_empty()
+                && self.app.live_log().is_some_and(|l| !l.is_empty()))
+    }
+
+    /// Takes the live status line ([`live_status_line`]) for the current
+    /// status message, once per message.
+    fn refresh_live_status(&mut self) {
+        let seq = self.app.status().seq;
+        if self.live_status.as_ref().is_some_and(|(s, _)| *s == seq) {
+            return;
+        }
+        self.live_status = None;
+        if !self.live_status_shown() {
+            return;
+        }
+        let entry = if self.app.status_text().is_empty() {
+            self.app.live_newest_line().unwrap_or_default()
+        } else {
+            self.app.status_text().to_owned()
+        };
+        let unread = self
+            .app
+            .live_unread()
+            .filter(|&n| n > 0 && self.app.live_receiving())
+            .map(|n| self.app.catalog().fmt("live-unread", &args!["count" => n]));
+        self.live_status = Some((seq, live_status_line(&entry, unread.as_deref())));
     }
 
     /// The status line for this frame. A message announced again with the
@@ -973,6 +1030,11 @@ impl Tui {
             (r.index(), r.is_playing()).hash(&mut h);
         }
         app.quiet_screen_active().hash(&mut h);
+        // A live document: the unread count and the source's state.
+        app.live_unread().hash(&mut h);
+        app.live_receiving().hash(&mut h);
+        app.live_paused().hash(&mut h);
+        app.live_view().map(|v| v as u8).hash(&mut h);
         h.finish()
     }
 
@@ -1012,6 +1074,7 @@ impl Tui {
         self.needs_draw = false;
         self.drawn_at = Some(now);
         self.refresh_theme();
+        self.refresh_live_status();
         let theme = self.theme.clone();
         let areas = self.areas(f.area());
         let text_width = self.text_width(areas.body);
@@ -1090,12 +1153,25 @@ impl Tui {
     /// [`App::quiet_screen_active`], so a screen reader that reads the
     /// changing screen does not hear it tick over as textweaver reads.
     fn title_position(&mut self) -> Option<Vec<String>> {
+        let acted = std::mem::take(&mut self.user_acted);
         let now = self.app.title_position()?;
         if self.app.quiet_screen_active() {
-            Some(self.frozen_position.get_or_insert(now).clone())
-        } else {
-            self.frozen_position = None;
-            Some(now)
+            return Some(self.frozen_position.get_or_insert(now).clone());
+        }
+        self.frozen_position = None;
+        if self.app.live_view().is_none() {
+            self.live_position = None;
+            return Some(now);
+        }
+        // A live document: the unread count follows the reader's own
+        // keys, not each entry (the status line says those).
+        let state = (self.app.live_receiving(), self.app.live_paused());
+        match &self.live_position {
+            Some((was, kept)) if *was == state && !acted => Some(kept.clone()),
+            _ => {
+                self.live_position = Some((state, now.clone()));
+                Some(now)
+            }
         }
     }
 
@@ -1956,6 +2032,60 @@ pub fn braille_cells(text: &str) -> usize {
         i += 1;
     }
     cells
+}
+
+/// The status line for a live document's entry: the entry trimmed at a
+/// word boundary to one Braille line ([`BRAILLE_CELLS`]), meaning first,
+/// with "..." where words were left out (the log keeps them all), then
+/// the `unread` count when the whole still fits the line.
+pub fn live_status_line(entry: &str, unread: Option<&str>) -> String {
+    let head = trim_to_cells(entry.trim(), BRAILLE_CELLS);
+    match unread {
+        Some(u) => {
+            let line = format!("{head}  {u}");
+            if braille_cells(&line) <= BRAILLE_CELLS {
+                line
+            } else {
+                head
+            }
+        }
+        None => head,
+    }
+}
+
+/// `text` cut at a word boundary to at most `cells` Braille cells
+/// ([`braille_cells`]), ending in "..." when cut; `text` itself when it
+/// fits. A first word too long for the line is cut inside the word.
+pub fn trim_to_cells(text: &str, cells: usize) -> String {
+    const MORE: &str = "...";
+    if braille_cells(text) <= cells {
+        return text.to_owned();
+    }
+    let room = cells.saturating_sub(braille_cells(MORE));
+    let mut out = String::new();
+    for word in text.split_whitespace() {
+        let next = if out.is_empty() {
+            word.to_owned()
+        } else {
+            format!("{out} {word}")
+        };
+        if braille_cells(&next) > room {
+            break;
+        }
+        out = next;
+    }
+    if out.is_empty() {
+        for c in text.chars() {
+            out.push(c);
+            if braille_cells(&out) > room {
+                out.pop();
+                break;
+            }
+        }
+    }
+    // A comma or colon just before the cut reads badly before "...".
+    let out = out.trim_end_matches([',', ';', ':']);
+    format!("{out}{MORE}")
 }
 
 /// The most cells a prompt's label takes on the line drawn: with ": "

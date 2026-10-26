@@ -18,6 +18,7 @@ mod ending;
 mod event_loop;
 mod gaps;
 mod live_document;
+mod live_terminal;
 mod quick_wins;
 mod screen_readers;
 mod scripted;

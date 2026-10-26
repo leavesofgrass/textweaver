@@ -5429,6 +5429,10 @@ name-live-toggle-pause = Suspendre ou reprendre les mises à jour
 action-live-toggle-pause = Suspendre ou reprendre les mises à jour du journal en direct ; suspendues, les nouvelles entrées attendent
 name-live-toggle-speak = Dire les nouvelles entrées
 action-live-toggle-speak = Dire les nouvelles entrées du journal en direct avec la voix de textweaver, activé ou désactivé
+name-live-toggle-field-show = Montrer les changements du champ
+action-live-toggle-field-show = Dans une vue des valeurs en direct, montrer les changements du champ de la ligne du curseur, activé ou désactivé ; le choix est enregistré
+name-live-toggle-field-speak = Dire les changements du champ
+action-live-toggle-field-speak = Dans une vue des valeurs en direct, dire les changements du champ de la ligne du curseur avec la voix de textweaver, activé ou désactivé ; le choix est enregistré
 menu-live = Sources en direct
 prompt-live-setup = Configurer une source en direct
 live-failed = Connexion impossible à { $name } : { $reason } Plus aucun essai ; corrigez cela, puis rouvrez la source.
@@ -5438,7 +5442,7 @@ live-skipped =
         [one] 1 message a été omis : ils arrivaient plus vite qu'ils ne pouvaient être affichés.
        *[other] { $count } messages ont été omis : ils arrivaient plus vite qu'ils ne pouvaient être affichés.
     }
-live-new-entries = { $count } nouvelles entrées. La plus récente : { $line }
+live-new-entries = { $line } { $count } nouvelles entrées.
 live-unread-newest = { $count }. La plus récente : { $line }
 live-not-in-build = Les sources en direct ne sont pas dans cette version de { -brand }.
 live-speak-on = Dire les nouvelles entrées : activé.
@@ -5475,3 +5479,27 @@ live-setup-offer-title = Ouvrir { $name } maintenant ?
 live-setup-open-now = L'ouvrir maintenant
 live-setup-later = Pas maintenant
 live-setup-not-now = Non ouverte. « Ouvrir une source en direct » l'ouvre plus tard.
+live-values-title = Valeurs en direct
+live-values-empty = Pas encore de valeurs.
+live-value-none = aucune valeur
+live-value-stale = aucune valeur récente
+live-values-more = { $count } de plus
+live-values-count =
+    { $count ->
+        [one] 1 champ
+       *[other] { $count } champs
+    }
+live-values-no-table = La vue des valeurs n'a pas de tableau : chaque champ occupe une ligne.
+live-values-no-log = La vue des valeurs ne tient pas de journal à enregistrer.
+live-values-full = La vue des valeurs contient au plus { $max } champs ; les autres sont omis.
+live-values-resumed =
+    { $count ->
+        [0] Mises à jour reprises. Aucun champ n'a changé.
+        [one] Mises à jour reprises, 1 champ a changé.
+       *[other] Mises à jour reprises, { $count } champs ont changé.
+    }
+live-field-none = Il n'y a pas de champ sur cette ligne.
+live-field-show-on = Les changements de { $field } sont affichés.
+live-field-show-off = Les changements de { $field } ne sont plus affichés.
+live-field-speak-on = Les changements de { $field } sont lus à voix haute.
+live-field-speak-off = Les changements de { $field } ne sont plus lus à voix haute.

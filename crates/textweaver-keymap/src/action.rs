@@ -253,6 +253,12 @@ actions! {
     LiveToggleSpeak = "live_toggle_speak", Reading,
         "Speak new live log entries in textweaver's own voice, on or off",
         gui [], term [], shared [];
+    LiveToggleFieldShow = "live_toggle_field_show", Reading,
+        "In a live values view, show the changes of the field on the cursor's line, on or off; the choice is saved",
+        gui [], term [], shared [];
+    LiveToggleFieldSpeak = "live_toggle_field_speak", Reading,
+        "In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved",
+        gui [], term [], shared [];
 
     // Navigation
     NextSentence = "next_sentence", Navigation, "Move to the next sentence",

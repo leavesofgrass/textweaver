@@ -53,7 +53,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub use client::MqttSource;
-pub use sanitize::{Limits, clean_text, decode_payload};
+pub use sanitize::{KeyOrder, Limits, clean_text, decode_payload, decode_payload_ordered};
 pub use tls::{is_tailscale_addr, is_tailscale_host};
 
 /// Everything a live source needs to connect. The password is held only in
@@ -223,6 +223,9 @@ pub enum MqttEvent {
         /// The broker's retained copy, sent on subscribing: a retained
         /// whole list should replace the view.
         retained: bool,
+        /// For a JSON payload, the order its keys came in ([`KeyOrder`]),
+        /// so a view can keep the message's order; empty otherwise.
+        key_order: KeyOrder,
     },
     /// The link was lost or could not be made, or the reason it stays down
     /// changed. Reported once per change, not once per retry.
