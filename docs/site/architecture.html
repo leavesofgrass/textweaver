@@ -539,6 +539,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-lexicon",
     "textweaver-math",
     "textweaver-mathcat",
+    "textweaver-mqtt",
     "textweaver-ocr",
     "textweaver-render",
     "textweaver-speech",
@@ -981,7 +982,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "bins": [],
    "build_deps": [],
    "default_member": true,
-   "dependents": [],
+   "dependents": [
+    "textweaver-app"
+   ],
    "deps": [],
    "description": "Receive-only MQTT 3.1.1 client for textweaver's live documents: one std thread, rumqttc's packet codec, textweaver's own rustls with ring, reconnect with backoff, caps and sanitizing of every payload",
    "dev_deps": [],
