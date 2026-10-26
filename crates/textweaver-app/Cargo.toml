@@ -10,7 +10,7 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["publish", "lint", "grammar", "dictation", "audio-export", "opus", "carta"]
+default = ["publish", "lint", "grammar", "dictation", "audio-export", "opus", "carta", "mqtt"]
 # Export audio from the reader (Agent W6v, ADR-0011): FLAC, MP3, Ogg Vorbis
 # (W9x-o) and WAV in process, M4B through ffmpeg when it is found. Off, the Export audio
 # command stays hidden.
@@ -65,6 +65,12 @@ publish = [
 # and Org offered in Batch convert (with `publish`). On by default in the
 # terminal reader, `tw`, and the GUI; the lean reader leaves it out.
 carta = ["textweaver-formats/carta", "textweaver-convert?/carta"]
+# Live sources over MQTT (beta 5): the receive-only client and the
+# system credential store for their passwords. On by default and in
+# releases. Off, the commands that open, set up, or close a live source
+# are hidden and say in words that live sources are not in this build;
+# a saved live log still opens.
+mqtt = ["dep:textweaver-mqtt", "textweaver-components/credentials"]
 # Speech engines, passed through to textweaver-engines.
 espeak = ["textweaver-engines/espeak"]
 omnivox = ["textweaver-engines/omnivox"]
@@ -120,6 +126,8 @@ textweaver-summary.workspace = true
 textweaver-dictation = { workspace = true, optional = true, features = ["rten", "mic"] }
 # Agent W6v: audio export from the reader.
 textweaver-export = { workspace = true, optional = true }
+# Beta 5: live sources over MQTT (crate::live::mqtt).
+textweaver-mqtt = { workspace = true, optional = true }
 pulldown-cmark.workspace = true
 # Anki packages (B1-f3): the SQLite collection, the zip, and the newest
 # format's zstd collection; sha1 for the checksum Anki keeps per note.

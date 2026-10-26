@@ -350,6 +350,9 @@ pub(crate) enum ListKind {
     /// Edit mode's Obsidian aids: notes and their headings to link to,
     /// or callout types (crate::obsidian_edit).
     EditAid(crate::obsidian_edit::EditAidList),
+    /// Live sources: open one, forget a password, or a step of setting one
+    /// up (crate::live::wire).
+    Live(crate::live::LiveList),
 }
 
 /// The application: the only owner of mutable state.
@@ -601,6 +604,8 @@ pub struct App {
     /// Live sources' passwords: the one asked for, and those known this
     /// session (crate::source_passwords).
     pub(crate) live_passwords: crate::source_passwords::LivePasswords,
+    /// Live sources' commands and the new-entry throttle (crate::live).
+    pub(crate) live_wire: crate::live::LiveWire,
     /// Updates: the check, the question, and the download
     /// (crate::updates, B1-u1).
     pub(crate) updates: crate::updates::UpdatesState,
@@ -752,6 +757,7 @@ impl App {
             fonts: crate::font_download::FontDownloads::default(),
             components: crate::components::ComponentsState::default(),
             live_passwords: crate::source_passwords::LivePasswords::default(),
+            live_wire: crate::live::LiveWire::default(),
             updates: crate::updates::UpdatesState::default(),
             relations: crate::relations::RelationsState::default(),
             vault: crate::vault::VaultState::default(),
@@ -768,6 +774,7 @@ impl App {
         crate::audio_export::register(&mut app);
         crate::components::register(&mut app);
         crate::updates::register(&mut app);
+        crate::live::wire::register(&mut app);
         app
     }
 
@@ -1092,6 +1099,23 @@ impl App {
         priority: Priority,
         importance: Importance,
     ) {
+        self.say_kind_voiced(text, min, priority, importance, None);
+    }
+
+    /// [`say_kind`](Self::say_kind), choosing textweaver's own voice:
+    /// `None` speaks as the accessibility mode routes every message;
+    /// `Some(on)` speaks only when `on`, in self-voicing and hybrid modes
+    /// (never in screen-reader mode, where textweaver does not speak), as
+    /// a live document's new entries are ([`App::say_live_entry`]). The
+    /// status line and the announcer get the message either way.
+    pub(crate) fn say_kind_voiced(
+        &mut self,
+        text: &str,
+        min: Verbosity,
+        priority: Priority,
+        importance: Importance,
+        voice: Option<bool>,
+    ) {
         let current = self.settings.speech.verbosity;
         if current < min || text.is_empty() || !self.interface_allows(importance) {
             return;
@@ -1106,7 +1130,11 @@ impl App {
         }
         self.announcer.announce(&written, priority);
         let reading = matches!(self.playback, Playback::Reading);
-        if route.speak && (!reading || priority == Priority::Assertive) {
+        let speak = match voice {
+            None => route.speak,
+            Some(on) => on && self.access_mode != AccessMode::ScreenReader && self.has_voice(),
+        };
+        if speak && (!reading || priority == Priority::Assertive) {
             self.voice_message(
                 crate::help::spoken_text(text).into_owned(),
                 SayMode::Announce,
@@ -1818,6 +1846,7 @@ impl App {
         effects.extend(self.updates_tick());
         effects.extend(self.cw_practice_tick(now));
         effects.extend(self.live_tick(now));
+        effects.extend(self.live_announce_tick(now));
         self.reading_timer_tick(now);
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now) | self.cw_tick();
         effects.extend(self.authoring_tick(now));
@@ -1869,6 +1898,9 @@ impl App {
         } else if let Some(name) = self.live_password_prompt_name(purpose) {
             // Which live source the password is for (crate::source_passwords).
             self.msg_args("prompt-live-password", &args!["source" => name])
+        } else if let Some(label) = self.live_setup_label(purpose) {
+            // The step of Set up a live source (crate::live::wire).
+            label
         } else {
             crate::study::prompt_label(&self.study.catalog, purpose)
         };
@@ -1969,7 +2001,8 @@ impl App {
             PromptPurpose::ImportCards => return self.answer_import_cards(text),
             PromptPurpose::CwCopy => return self.answer_cw_copy(text),
             PromptPurpose::GitHubToken => return self.answer_github_token(text),
-            PromptPurpose::LivePassword => return self.answer_live_password(text),
+            PromptPurpose::LivePassword => return self.answer_live_password_then_open(text),
+            PromptPurpose::LiveSetup => return self.answer_live_setup(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -2043,6 +2076,7 @@ impl App {
             Some(ListKind::Buttons(l)) => return self.choose_buttons(l, n),
             Some(ListKind::Vault(l)) => return self.choose_vault(l, n),
             Some(ListKind::EditAid(l)) => return self.choose_edit_aid(l, n),
+            Some(ListKind::Live(l)) => return self.choose_live(l, n),
             Some(ListKind::Info) | Some(ListKind::Help) | None => {}
         }
         vec![Effect::Redraw]
@@ -2509,6 +2543,16 @@ impl App {
             | A::ForgetGitHubToken => {
                 return self.run_registered(a);
             }
+            A::OpenLiveSource
+            | A::SetUpLiveSource
+            | A::CloseLiveSource
+            | A::LiveSwitchView
+            | A::LiveJumpNewest
+            | A::LiveTogglePause
+            | A::LiveToggleSpeak
+            | A::LiveSayUnread
+            | A::SaveLiveLog
+            | A::ForgetLiveSourcePassword => return self.live_action(a),
             A::ColorSettings => return self.open_color_settings(),
             A::CustomizeButtons => return self.customize_buttons(),
             A::ReadingForm => return self.open_reading_form(),
@@ -2625,7 +2669,12 @@ fn needs_document(a: ActionId) -> bool {
     use textweaver_keymap::Category as C;
     !matches!(
         a,
-        ActionId::Stop | ActionId::DefineWord | ActionId::SayStatus | ActionId::RepeatMessage
+        ActionId::Stop
+            | ActionId::DefineWord
+            | ActionId::SayStatus
+            | ActionId::RepeatMessage
+            // A setting: it applies to the next live source opened.
+            | ActionId::LiveToggleSpeak
     ) && matches!(
         a.category(),
         C::Reading | C::Navigation | C::SpeechCursor | C::Search | C::Bookmarks

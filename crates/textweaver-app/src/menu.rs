@@ -57,6 +57,11 @@ pub const PENDING: &[ActionId] = &[
     ActionId::Dictate,
     ActionId::PauseDictation,
     ActionId::DownloadDictationModel,
+    // Live sources over MQTT (crate::live::wire), with the `mqtt` feature.
+    ActionId::OpenLiveSource,
+    ActionId::SetUpLiveSource,
+    ActionId::CloseLiveSource,
+    ActionId::ForgetLiveSourcePassword,
 ];
 
 /// Commands that are deliberately in no menu: the keys that open the
@@ -152,6 +157,8 @@ pub enum MenuId {
     Cards,
     /// Tools, Morse code practice.
     CwPractice,
+    /// Tools, Live sources.
+    Live,
 }
 
 /// One entry of a menu's definition.
@@ -179,7 +186,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 31] = [
+    pub const ALL: [MenuId; 32] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
@@ -211,6 +218,7 @@ impl MenuId {
         MenuId::Sync,
         MenuId::Cards,
         MenuId::CwPractice,
+        MenuId::Live,
     ];
 
     /// The stable id, used in catalog ids (`menu-export-as`) and JSON-RPC.
@@ -247,6 +255,7 @@ impl MenuId {
             MenuId::Sync => "sync",
             MenuId::Cards => "cards",
             MenuId::CwPractice => "cw-practice",
+            MenuId::Live => "live",
         }
     }
 
@@ -290,6 +299,20 @@ impl MenuId {
                 Do(A::Quit),
             ],
             MenuId::Recent => &[Entry::RecentDocuments],
+            MenuId::Live => &[
+                Do(A::OpenLiveSource),
+                Do(A::SetUpLiveSource),
+                Do(A::CloseLiveSource),
+                Sep,
+                Do(A::LiveSayUnread),
+                Do(A::LiveJumpNewest),
+                Do(A::LiveSwitchView),
+                Do(A::LiveTogglePause),
+                Do(A::LiveToggleSpeak),
+                Sep,
+                Do(A::SaveLiveLog),
+                Do(A::ForgetLiveSourcePassword),
+            ],
             MenuId::ExportAs => &[
                 Do(A::ExportPdf),
                 Do(A::ExportHtml),
@@ -615,6 +638,7 @@ impl MenuId {
                 Sub(MenuId::CwPractice),
                 Sep,
                 Sub(MenuId::Sync),
+                Sub(MenuId::Live),
                 Sep,
                 Do(A::ManageComponents),
                 Do(A::ForgetGitHubToken),
@@ -693,6 +717,7 @@ pub fn bound_setting(a: ActionId) -> Option<&'static str> {
         A::ToggleToolbar => "gui.toolbar",
         A::ToggleFocusMode => "gui.focus_mode",
         A::ShowPreview => "preview.pane",
+        A::LiveToggleSpeak => "live.speak_new_entries",
         _ => return None,
     })
 }
@@ -998,6 +1023,9 @@ impl App {
         {
             return h(self);
         }
+        if crate::live::wire::NEEDS_MQTT.contains(&action) {
+            return self.live_not_in_build();
+        }
         let name = action_name(self.cat(), action);
         let msg = self.msg_args("menu-not-available", &args!["name" => name]);
         self.error(&msg);
@@ -1149,6 +1177,7 @@ impl App {
             A::TogglePreview => return (Some(self.previewing()), None),
             A::RsvpToggle => return (Some(self.rsvp.is_some()), None),
             A::SpeechCursorToggle => return (Some(self.mode == Mode::SpeechCursor), None),
+            A::LiveTogglePause => return (Some(self.live_paused()), None),
             A::NextTheme => {
                 let name = self
                     .themes

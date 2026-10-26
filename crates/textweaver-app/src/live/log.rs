@@ -705,7 +705,7 @@ fn value_text(v: &Value, labels: &LogLabels) -> String {
 }
 
 /// `s` with control, escape and direction characters dropped, runs of
-/// white space made one space, and at most [`MAX_VALUE_CHARS`] chars.
+/// white space made one space, and at most `MAX_VALUE_CHARS` chars.
 pub fn clean(s: &str) -> String {
     let mut out = String::with_capacity(s.len().min(MAX_VALUE_CHARS * 4));
     let mut space = false;

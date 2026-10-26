@@ -5369,11 +5369,6 @@ live-entries =
         [one] 1 entrada
        *[other] { $count } entradas
     }
-live-entry-and-more =
-    { $more ->
-        [one] { $line } Y 1 más.
-       *[other] { $line } Y { $more } más.
-    }
 live-resumed =
     { $count ->
         [0] Actualizaciones reanudadas.
@@ -5381,3 +5376,73 @@ live-resumed =
        *[other] Actualizaciones reanudadas, { $count } actualizaciones aplicadas.
     }
 live-resumed-dropped = Actualizaciones reanudadas, { $count } actualizaciones aplicadas. Se omitieron { $dropped } actualizaciones anteriores durante la pausa.
+
+## Beta 5: live sources' commands, the set-up steps, and new entries said.
+## $name is a source's name, $topic an MQTT topic, $line an entry as one
+## line, $reason a sentence in words.
+name-open-live-source = Abrir fuente en vivo
+action-open-live-source = Abrir una fuente en vivo: listar las fuentes en vivo configuradas; Intro conecta con una y muestra su registro mientras crece
+name-set-up-live-source = Configurar una fuente en vivo
+action-set-up-live-source = Configurar una fuente en vivo: su nombre, el host del broker, el cifrado, el puerto, el tema, el nombre de usuario y la vista, preguntados de uno en uno
+name-close-live-source = Cerrar la fuente en vivo
+action-close-live-source = Cerrar la fuente en vivo: deja de recibir; el registro sigue abierto, de solo lectura, y se guarda
+name-save-live-log = Guardar ahora el registro en vivo
+action-save-live-log = Guardar ahora el registro en vivo como JSON y decir dónde
+name-forget-live-source-password = Olvidar contraseña de la fuente en vivo
+action-forget-live-source-password = Olvidar la contraseña de la fuente en vivo guardada en el almacén de credenciales del sistema; se vuelve a pedir cuando haga falta
+name-live-say-unread = Decir las entradas sin leer
+action-live-say-unread = Decir cuántas entradas del registro en vivo están sin leer, y la más reciente
+name-live-jump-newest = Ir a la entrada más reciente
+action-live-jump-newest = Ir a la entrada más reciente del registro en vivo y decirla
+name-live-switch-view = Cambiar entre lista y tabla
+action-live-switch-view = Cambiar el registro en vivo entre la lista y la tabla, manteniendo el lugar
+name-live-toggle-pause = Pausar o reanudar las actualizaciones
+action-live-toggle-pause = Pausar o reanudar las actualizaciones del registro en vivo; en pausa, las entradas nuevas esperan
+name-live-toggle-speak = Decir las entradas nuevas
+action-live-toggle-speak = Decir las entradas nuevas del registro en vivo con la voz propia de textweaver, sí o no
+menu-live = Fuentes en vivo
+prompt-live-setup = Configurar una fuente en vivo
+live-failed = No se puede conectar con { $name }: { $reason } No habrá más intentos; corríjalo y vuelva a abrir la fuente.
+live-topic-refused = El broker rechazó el tema { $topic }; puede que no deje leerlo a esta cuenta.
+live-skipped =
+    { $count ->
+        [one] Se omitió 1 mensaje: llegaban más rápido de lo que podían mostrarse.
+       *[other] Se omitieron { $count } mensajes: llegaban más rápido de lo que podían mostrarse.
+    }
+live-new-entries = { $count } entradas nuevas. La más reciente: { $line }
+live-unread-newest = { $count }. La más reciente: { $line }
+live-not-in-build = Las fuentes en vivo no están en esta versión de { -brand }.
+live-speak-on = Decir las entradas nuevas: sí.
+live-speak-off = Decir las entradas nuevas: no.
+live-none-set-up = No hay fuentes en vivo configuradas. Configurar una fuente en vivo añade una.
+live-open-title = Fuentes en vivo
+live-source-item = { $name }, { $host }, { $topic }
+live-forget-title = ¿Olvidar la contraseña de qué fuente en vivo?
+live-no-passwords = Ninguna fuente en vivo inicia sesión con un nombre de usuario, así que no hay contraseña guardada.
+live-not-receiving = Ninguna fuente en vivo está recibiendo.
+live-cannot-open = No se puede abrir la fuente en vivo. { $problems }
+live-not-opened = { $name } no se abrió: no hay contraseña.
+live-setup-name = Nombre de la fuente en vivo, por ejemplo Registro de práctica; Intro cancela
+live-setup-host = Nombre de host o dirección del broker
+live-setup-ca-file = Archivo de la autoridad de certificación, PEM
+live-setup-port = Puerto, Intro mantiene el predeterminado
+live-setup-topic = Tema que leer, por ejemplo log/checkins
+live-setup-username = Nombre de usuario, Intro para ninguno
+live-setup-host-needed = Hace falta un nombre de host o una dirección, sin espacios.
+live-setup-ca-file-needed = Este cifrado necesita un archivo de la autoridad de certificación.
+live-setup-ca-file-missing = No hay ningún archivo en { $path }.
+live-setup-port-bad = El puerto es un número de 1 a 65535.
+live-setup-topic-needed = Hace falta un tema.
+live-setup-tls-title = Cifrado
+live-setup-tls-off = No: sin cifrar, puerto 1883; válido a través de Tailscale
+live-setup-tls-system = TLS, comprobado con las autoridades de certificación incluidas, puerto 8883
+live-setup-tls-ca-file = TLS, comprobado con un archivo de la autoridad de certificación, puerto 8883
+live-setup-view-title = Vista
+live-setup-view-log = Registro: una entrada por mensaje
+live-setup-view-values = Valores: una línea por campo, actualizada en su sitio
+live-setup-saved = Fuente en vivo { $name } guardada.
+live-setup-not-saved = Fuente en vivo { $name } no guardada: { $error } Compruebe que se puede escribir en la carpeta de ajustes y vuelva a configurarla.
+live-setup-offer-title = ¿Abrir { $name } ahora?
+live-setup-open-now = Abrirla ahora
+live-setup-later = Ahora no
+live-setup-not-now = No se abrió. Abrir fuente en vivo la abre más tarde.

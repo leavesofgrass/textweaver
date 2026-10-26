@@ -256,7 +256,7 @@ mod tests {
         ];
         // File, and the function each sink may be called in.
         let allowed: &[(&str, &str)] = &[
-            ("app.rs", "fn say_kind"),
+            ("app.rs", "fn say_kind_voiced"),
             ("app.rs", "fn announce_queued"),
             ("app.rs", "fn show"),
             // Document text read on the status line (screen-reader say

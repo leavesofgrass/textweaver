@@ -1,7 +1,7 @@
 //! The live hub: the app's side of an open live document. It owns the
 //! source, the log view's entries, the view (list or table), the reader's
 //! furthest entry for the unread count, the pause queue, and the JSON log
-//! file. [`App::live_tick`] polls the source on every tick.
+//! file. `App::live_tick` polls the source on every tick.
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -410,12 +410,9 @@ impl App {
                     (false, true) => "live-connected-tailscale",
                     (false, false) => "live-connected-plain",
                 };
+                // Polite, plain or not: only a lost connection interrupts.
                 let m = self.msg_args(key, &args!["name" => name]);
-                if encrypted || tailscale {
-                    self.tell(&m);
-                } else {
-                    self.warn(&m);
-                }
+                self.tell(&m);
             }
             LiveEvent::Disconnected { reason } => {
                 let m = self.msg_args(
@@ -424,8 +421,23 @@ impl App {
                 );
                 self.warn(&m);
             }
+            LiveEvent::Failed { reason } => {
+                let m = self.msg_args(
+                    "live-failed",
+                    &args!["name" => name, "reason" => reason.as_str()],
+                );
+                self.warn(&m);
+            }
             LiveEvent::Quiet { topic, .. } => {
                 let m = self.msg_args("live-quiet", &args!["topic" => topic.as_str()]);
+                self.tell(&m);
+            }
+            LiveEvent::TopicRefused { topic } => {
+                let m = self.msg_args("live-topic-refused", &args!["topic" => topic.as_str()]);
+                self.tell(&m);
+            }
+            LiveEvent::Skipped { count } => {
+                let m = self.msg_args("live-skipped", &args!["count" => count]);
                 self.tell(&m);
             }
             LiveEvent::Message { .. } => {}
@@ -508,39 +520,20 @@ impl App {
             let r = ranges.get(i).or(ranges.last())?;
             Some(CharPos((r.start.0 + p.offset).min(r.end.0.max(r.start.0))))
         });
-        let announce = match say {
-            Some(s) => Some(s),
-            None => {
-                let more = count.saturating_sub(1);
-                Some(if more == 0 {
-                    line
-                } else {
-                    self.msg_args(
-                        "live-entry-and-more",
-                        &args!["line" => line.as_str(), "more" => more],
-                    )
-                })
-            }
-        };
         self.live_replace(new, target);
-        if let Some(text) = announce.filter(|t| !t.is_empty()) {
-            self.live_announce(&text);
+        match say {
+            // The answer to the user's own command (resuming): said now.
+            Some(text) if !text.is_empty() => self.tell(&text),
+            Some(_) => {}
+            // New entries: through the announcement throttle
+            // (crate::live::announce), said on the tick.
+            None => self.live_entries_arrived(count, line),
         }
         if full {
             let m = self.msg_args("live-full", &args!["max" => MAX_ENTRIES]);
             self.warn(&m);
         }
         true
-    }
-
-    /// Says a new or changed entry: politely, as content that is never
-    /// silenced, so it reaches the Braille display as a flash message.
-    fn live_announce(&mut self, text: &str) {
-        self.announce_as(
-            text,
-            textweaver_a11y::Priority::Polite,
-            textweaver_a11y::Importance::Answer,
-        );
     }
 
     /// Shows the log in `view`, keeping the reader on the same entry.

@@ -438,9 +438,13 @@ mod fed {
         assert_eq!(r.app.live_log().unwrap().len(), 3);
         assert!(r.text().contains("Grace Sample. Traffic, one message."));
         assert_eq!(r.word(), "N2TEST", "the reader stays");
+        // Sent within two seconds of the first entry, the two after it and
+        // the correction are said together once the announcement throttle
+        // lets them go, the newest whole.
+        let _ = r.app.tick(Instant::now() + textweaver_app::live::BURST);
         assert_eq!(
             r.last_said(),
-            "n1 test, Grace Sample. Traffic, one message."
+            "3 new entries. Newest: n1 test, Grace Sample. Traffic, one message."
         );
         // By id.
         r.send(r#"{"id": 9, "call": "N3TEST"}"#);

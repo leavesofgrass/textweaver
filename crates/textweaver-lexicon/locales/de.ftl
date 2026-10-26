@@ -5393,11 +5393,6 @@ live-entries =
         [one] 1 Eintrag
        *[other] { $count } Einträge
     }
-live-entry-and-more =
-    { $more ->
-        [one] { $line } Und 1 weiterer.
-       *[other] { $line } Und { $more } weitere.
-    }
 live-resumed =
     { $count ->
         [0] Aktualisierungen fortgesetzt.
@@ -5405,3 +5400,73 @@ live-resumed =
        *[other] Aktualisierungen fortgesetzt, { $count } Aktualisierungen übernommen.
     }
 live-resumed-dropped = Aktualisierungen fortgesetzt, { $count } Aktualisierungen übernommen. { $dropped } ältere Aktualisierungen wurden während der Pause ausgelassen.
+
+## Beta 5: live sources' commands, the set-up steps, and new entries said.
+## $name is a source's name, $topic an MQTT topic, $line an entry as one
+## line, $reason a sentence in words.
+name-open-live-source = Live-Quelle öffnen
+action-open-live-source = Eine Live-Quelle öffnen: die eingerichteten Live-Quellen auflisten; Eingabe verbindet mit einer und zeigt ihr Protokoll, während es wächst
+name-set-up-live-source = Live-Quelle einrichten
+action-set-up-live-source = Eine Live-Quelle einrichten: Name, Host des Brokers, Verschlüsselung, Port, Topic, Benutzername und Ansicht, nacheinander abgefragt
+name-close-live-source = Live-Quelle schließen
+action-close-live-source = Die Live-Quelle schließen: der Empfang endet; das Protokoll bleibt schreibgeschützt geöffnet und wird gespeichert
+name-save-live-log = Live-Protokoll jetzt speichern
+action-save-live-log = Das Live-Protokoll jetzt als JSON speichern und sagen, wo
+name-forget-live-source-password = Passwort der Live-Quelle vergessen
+action-forget-live-source-password = Das in der Anmeldeinformationsverwaltung des Systems gespeicherte Passwort der Live-Quelle vergessen; es wird bei Bedarf neu erfragt
+name-live-say-unread = Ungelesene Einträge ansagen
+action-live-say-unread = Sagen, wie viele Einträge des Live-Protokolls ungelesen sind, und den neuesten
+name-live-jump-newest = Zum neuesten Eintrag
+action-live-jump-newest = Zum neuesten Eintrag des Live-Protokolls gehen und ihn sagen
+name-live-switch-view = Zwischen Liste und Tabelle wechseln
+action-live-switch-view = Das Live-Protokoll zwischen Liste und Tabelle umschalten; die Stelle bleibt
+name-live-toggle-pause = Updates anhalten oder fortsetzen
+action-live-toggle-pause = Die Aktualisierungen des Live-Protokolls anhalten oder fortsetzen; angehalten warten neue Einträge
+name-live-toggle-speak = Neue Einträge sprechen
+action-live-toggle-speak = Neue Einträge des Live-Protokolls mit der eigenen Stimme von textweaver sprechen, ein oder aus
+menu-live = Live-Quellen
+prompt-live-setup = Live-Quelle einrichten
+live-failed = Keine Verbindung zu { $name }: { $reason } Keine weiteren Versuche; beheben Sie das und öffnen Sie die Quelle erneut.
+live-topic-refused = Der Broker hat das Topic { $topic } abgelehnt; vielleicht darf dieses Konto es nicht lesen.
+live-skipped =
+    { $count ->
+        [one] 1 Nachricht wurde ausgelassen: sie kamen schneller, als sie gezeigt werden konnten.
+       *[other] { $count } Nachrichten wurden ausgelassen: sie kamen schneller, als sie gezeigt werden konnten.
+    }
+live-new-entries = { $count } neue Einträge. Neuester: { $line }
+live-unread-newest = { $count }. Neuester: { $line }
+live-not-in-build = Live-Quellen gibt es in dieser Version von { -brand } nicht.
+live-speak-on = Neue Einträge sprechen: ein.
+live-speak-off = Neue Einträge sprechen: aus.
+live-none-set-up = Keine Live-Quellen eingerichtet. „Live-Quelle einrichten“ fügt eine hinzu.
+live-open-title = Live-Quellen
+live-source-item = { $name }, { $host }, { $topic }
+live-forget-title = Das Passwort welcher Live-Quelle vergessen?
+live-no-passwords = Keine Live-Quelle meldet sich mit Benutzernamen an, also ist kein Passwort gespeichert.
+live-not-receiving = Keine Live-Quelle empfängt.
+live-cannot-open = Die Live-Quelle kann nicht geöffnet werden. { $problems }
+live-not-opened = { $name } nicht geöffnet: kein Passwort.
+live-setup-name = Name der Live-Quelle, zum Beispiel Übungsprotokoll; Eingabe bricht ab
+live-setup-host = Hostname oder Adresse des Brokers
+live-setup-ca-file = Datei der Zertifizierungsstelle, PEM
+live-setup-port = Port, Eingabe behält den Standard
+live-setup-topic = Zu lesendes Topic, zum Beispiel log/checkins
+live-setup-username = Benutzername, Eingabe für keinen
+live-setup-host-needed = Ein Hostname oder eine Adresse wird gebraucht, ohne Leerzeichen.
+live-setup-ca-file-needed = Für diese Verschlüsselung wird eine Datei der Zertifizierungsstelle gebraucht.
+live-setup-ca-file-missing = Keine Datei unter { $path }.
+live-setup-port-bad = Der Port ist eine Zahl von 1 bis 65535.
+live-setup-topic-needed = Ein Topic wird gebraucht.
+live-setup-tls-title = Verschlüsselung
+live-setup-tls-off = Aus: nicht verschlüsselt, Port 1883; über Tailscale in Ordnung
+live-setup-tls-system = TLS, geprüft mit den mitgelieferten Zertifizierungsstellen, Port 8883
+live-setup-tls-ca-file = TLS, geprüft mit einer Datei der Zertifizierungsstelle, Port 8883
+live-setup-view-title = Ansicht
+live-setup-view-log = Protokoll: ein Eintrag pro Nachricht
+live-setup-view-values = Werte: eine Zeile pro Feld, an Ort und Stelle aktualisiert
+live-setup-saved = Live-Quelle { $name } gespeichert.
+live-setup-not-saved = Live-Quelle { $name } nicht gespeichert: { $error } Prüfen Sie, ob der Einstellungsordner beschreibbar ist, und richten Sie sie erneut ein.
+live-setup-offer-title = { $name } jetzt öffnen?
+live-setup-open-now = Jetzt öffnen
+live-setup-later = Nicht jetzt
+live-setup-not-now = Nicht geöffnet. „Live-Quelle öffnen“ öffnet sie später.

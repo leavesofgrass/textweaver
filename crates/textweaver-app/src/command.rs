@@ -369,6 +369,10 @@ pub enum PromptPurpose {
     /// credential store; empty cancels. It is secret
     /// ([`PromptPurpose::is_secret`]).
     LivePassword,
+    /// Answer is one step of Set up a live source: its name, host,
+    /// certificate authority file, port, topic, or user name
+    /// (crate::live::wire).
+    LiveSetup,
     /// Answer is an Anki package (`.apkg`) whose cards to import into the
     /// open document's cards.
     ImportCards,
@@ -419,6 +423,8 @@ impl PromptPurpose {
             PromptPurpose::GitHubToken => "GitHub token for your components source, Enter skips",
             // The app names the source from the message catalog.
             PromptPurpose::LivePassword => "Password for the live source, Enter cancels",
+            // The app labels each step from the message catalog.
+            PromptPurpose::LiveSetup => "Set up a live source",
             PromptPurpose::ImportCards => "Import study cards from Anki package",
             // The app labels each group from the message catalog.
             PromptPurpose::CwCopy => "Type what you heard",
