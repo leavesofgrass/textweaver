@@ -17,13 +17,18 @@
 //! ```
 //!
 //! A corrected entry carries `"updated"` too, the time of its last
-//! correction.
+//! correction. A log whose source wraps its list carries `"head"` too, the
+//! wrapper's plain values, shown as the heading line. Every object keeps
+//! its keys in the order the source sent them.
 
 use std::path::{Path, PathBuf};
 
-use serde_json::{Map, Value, json};
+use serde::Serialize;
+use serde::ser::{SerializeMap, SerializeSeq, Serializer};
+use serde_json::Value;
 
 use super::log::{LiveLog, LogEntry, LogOptions};
+use super::order::{KeyOrder, child, parse_ordered};
 
 /// The `format` value that marks a file as a textweaver live log.
 pub const FORMAT: &str = "textweaver live log";
@@ -66,34 +71,109 @@ pub fn free_path(folder: &Path, name: &str) -> PathBuf {
         .unwrap_or(first)
 }
 
-/// The log as the file's JSON.
+/// A JSON value written with its objects' keys in message order.
+struct Ordered<'a> {
+    value: &'a Value,
+    order: &'a KeyOrder,
+    at: String,
+}
+
+impl Serialize for Ordered<'_> {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        match self.value {
+            Value::Object(map) => {
+                let members = self.order.members(&self.at, map);
+                let mut m = s.serialize_map(Some(members.len()))?;
+                for (k, v) in members {
+                    m.serialize_entry(
+                        k,
+                        &Ordered {
+                            value: v,
+                            order: self.order,
+                            at: child(&self.at, k),
+                        },
+                    )?;
+                }
+                m.end()
+            }
+            Value::Array(items) => {
+                let mut q = s.serialize_seq(Some(items.len()))?;
+                for (i, v) in items.iter().enumerate() {
+                    q.serialize_element(&Ordered {
+                        value: v,
+                        order: self.order,
+                        at: format!("{}/{i}", self.at),
+                    })?;
+                }
+                q.end()
+            }
+            other => other.serialize(s),
+        }
+    }
+}
+
+/// One entry as the file holds it.
+#[derive(Serialize)]
+struct EntryOut<'a> {
+    received: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    updated: Option<&'a str>,
+    entry: Ordered<'a>,
+}
+
+/// The file, its keys in the order of the example above.
+#[derive(Serialize)]
+struct FileOut<'a> {
+    format: &'a str,
+    version: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source: Option<&'a str>,
+    title: &'a str,
+    started: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    id_field: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    head: Option<Ordered<'a>>,
+    entries: Vec<EntryOut<'a>>,
+}
+
+/// The log as the file's JSON. Each entry's keys, and the heading's, keep
+/// the order they came in.
 pub fn to_json(log: &LiveLog, source: &str, started: &str) -> Vec<u8> {
-    let entries: Vec<Value> = log
+    let (head, head_order) = log.head();
+    let head_value = Value::Object(head.clone());
+    let fields: Vec<Value> = log
         .entries()
         .iter()
-        .map(|e| {
-            let mut m = Map::new();
-            m.insert("received".into(), Value::String(e.received.clone()));
-            if let Some(u) = &e.updated {
-                m.insert("updated".into(), Value::String(u.clone()));
-            }
-            m.insert("entry".into(), Value::Object(e.fields.clone()));
-            Value::Object(m)
-        })
+        .map(|e| Value::Object(e.fields.clone()))
         .collect();
-    let mut doc = json!({
-        "format": FORMAT,
-        "version": VERSION,
-        "title": log.options.title,
-        "started": started,
-        "entries": entries,
-    });
-    if !source.is_empty() {
-        doc["source"] = Value::String(source.to_owned());
-    }
-    if let Some(id) = &log.options.id_field {
-        doc["id_field"] = Value::String(id.clone());
-    }
+    let doc = FileOut {
+        format: FORMAT,
+        version: VERSION,
+        source: (!source.is_empty()).then_some(source),
+        title: &log.options.title,
+        started,
+        id_field: log.options.id_field.as_deref(),
+        head: (!head.is_empty()).then(|| Ordered {
+            value: &head_value,
+            order: head_order,
+            at: String::new(),
+        }),
+        entries: log
+            .entries()
+            .iter()
+            .zip(&fields)
+            .map(|(e, f)| EntryOut {
+                received: &e.received,
+                updated: e.updated.as_deref(),
+                entry: Ordered {
+                    value: f,
+                    order: &e.order,
+                    at: String::new(),
+                },
+            })
+            .collect(),
+    };
     let mut out = serde_json::to_vec_pretty(&doc).unwrap_or_default();
     out.push(b'\n');
     out
@@ -110,7 +190,7 @@ pub struct SavedLog {
 
 /// Reads `bytes` as a saved live log; `None` when it is not one.
 pub fn parse(bytes: &[u8]) -> Option<SavedLog> {
-    let v: Value = serde_json::from_slice(bytes).ok()?;
+    let (v, order) = parse_ordered(std::str::from_utf8(bytes).ok()?)?;
     if v.get("format")?.as_str()? != FORMAT {
         return None;
     }
@@ -119,11 +199,13 @@ pub fn parse(bytes: &[u8]) -> Option<SavedLog> {
         .get("entries")?
         .as_array()?
         .iter()
-        .filter_map(|e| {
+        .enumerate()
+        .filter_map(|(i, e)| {
             Some(LogEntry {
                 fields: e.get("entry")?.as_object()?.clone(),
                 received: e.get("received")?.as_str()?.to_owned(),
                 updated: e.get("updated").and_then(Value::as_str).map(str::to_owned),
+                order: order.sub(&format!("/entries/{i}/entry")),
             })
         })
         .collect();
@@ -131,8 +213,12 @@ pub fn parse(bytes: &[u8]) -> Option<SavedLog> {
         title: text("title").unwrap_or_default(),
         id_field: text("id_field"),
     };
+    let mut log = LiveLog::with_entries(options, entries);
+    if let Some(head) = v.get("head").and_then(Value::as_object) {
+        log.set_head(head.clone(), order.sub("/head"));
+    }
     Some(SavedLog {
-        log: LiveLog::with_entries(options, entries),
+        log,
         source: text("source").unwrap_or_default(),
     })
 }
@@ -183,11 +269,40 @@ mod tests {
             "t1",
         );
         log.upsert(entry_object(&[("call", "N0CALL"), ("name", "Ada")]), "t2");
+        // An entry whose keys came name first, and a heading.
+        let mut order = KeyOrder::default();
+        order.set("", vec!["name".into(), "call".into()]);
+        log.upsert_ordered(
+            entry_object(&[("call", "N1TEST"), ("name", "Grace Sample")]),
+            order.clone(),
+            "t3",
+        );
+        let mut head_order = KeyOrder::default();
+        head_order.set("", vec!["net".into(), "frequency".into()]);
+        log.set_head(
+            entry_object(&[("net", "Practice"), ("frequency", "147.040")]),
+            head_order.clone(),
+        );
         let bytes = to_json(&log, "club", "t0");
+        let text = String::from_utf8(bytes.clone()).unwrap();
+        assert!(
+            text.find("Grace Sample").unwrap() < text.find("N1TEST").unwrap(),
+            "{text}"
+        );
+        assert!(text.find("Practice").unwrap() < text.find("147.040").unwrap());
         let back = parse(&bytes).expect("a live log");
         assert_eq!(back.source, "club");
         assert_eq!(back.log.options, log.options);
-        assert_eq!(back.log.entries(), log.entries());
+        let plain = |l: &LiveLog| -> Vec<_> {
+            l.entries()
+                .iter()
+                .map(|e| (e.fields.clone(), e.received.clone(), e.updated.clone()))
+                .collect()
+        };
+        assert_eq!(plain(&back.log), plain(&log));
+        assert_eq!(back.log.entries()[1].order, order);
+        assert_eq!(back.log.head(), log.head());
+        assert_eq!(*back.log.head().1, head_order);
         assert!(parse(br#"{"entries": []}"#).is_none());
     }
 }

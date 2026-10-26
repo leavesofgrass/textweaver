@@ -5488,3 +5488,27 @@ live-resumed =
        *[other] Updates resumed, { $count } updates applied.
     }
 live-resumed-dropped = Updates resumed, { $count } updates applied. { $dropped } older updates were left out while paused.
+live-values-title = Live values
+live-values-empty = No values yet.
+live-value-none = no value
+live-value-stale = no recent value
+live-values-more = { $count } more
+live-values-count =
+    { $count ->
+        [one] 1 field
+       *[other] { $count } fields
+    }
+live-values-no-table = The values view has no table: each field is one line.
+live-values-no-log = The values view keeps no log to save.
+live-values-full = The values view holds at most { $max } fields; further fields are left out.
+live-values-resumed =
+    { $count ->
+        [0] Updates resumed. No field changed.
+        [one] Updates resumed, 1 field changed.
+       *[other] Updates resumed, { $count } fields changed.
+    }
+live-field-none = There is no field on this line.
+live-field-show-on = Changes of { $field } are shown.
+live-field-show-off = Changes of { $field } are no longer shown.
+live-field-speak-on = Changes of { $field } are spoken.
+live-field-speak-off = Changes of { $field } are no longer spoken.

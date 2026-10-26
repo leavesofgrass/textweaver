@@ -9,7 +9,8 @@
 //! - a JSON list is the whole log: it replaces the entries;
 //! - an object wrapping one list (under `checkins`, `entries`, `log`,
 //!   `stations`, `items` or `records`, or its only list of objects) is the
-//!   whole log too.
+//!   whole log too; its other plain values (a net's name, say) are the
+//!   log's heading line, above the entries.
 //!
 //! An entry matches an earlier one by its id field (the source's
 //! configured `id_field`, else the first of `id`, `uuid`, `serial`,
@@ -21,6 +22,8 @@
 use serde_json::{Map, Value};
 use textweaver_core::{CharPos, CharRange, MarkerKind};
 use textweaver_text::Document;
+
+use super::order::{KeyOrder, child};
 
 /// An entry's fields, as a JSON object.
 pub type Fields = Map<String, Value>;
@@ -129,6 +132,10 @@ pub const FIELD_GROUPS: &[(Field, &[&str])] = &[
     ),
 ];
 
+/// Keys of a wrapper object's heading line said first, bare: what the log
+/// is ("Practice net"). The others follow as "key: value".
+const HEAD_NAMES: &[&str] = &["net", "name", "title", "event", "session"];
+
 /// Keys whose value is the whole log, in an object wrapping it.
 const WRAPPER_NAMES: &[&str] = &["checkins", "entries", "log", "stations", "items", "records"];
 
@@ -196,6 +203,8 @@ pub struct LogEntry {
     pub received: String,
     /// When it was last corrected, if it was.
     pub updated: Option<String>,
+    /// The order its keys came in (empty: unknown).
+    pub order: KeyOrder,
 }
 
 /// What a message is.
@@ -212,19 +221,79 @@ impl Shape {
     /// the whole log; any other object is one entry; a bare value is an
     /// entry with one field, `value`.
     pub fn of(value: Value) -> Shape {
+        Message::of(value, &KeyOrder::default()).shape
+    }
+}
+
+/// A message read for the log: its shape, the key order of each entry in
+/// it, and, for a whole log, its heading.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Message {
+    /// One entry, or the whole log.
+    pub shape: Shape,
+    /// Each entry's key order, in the shape's order.
+    pub orders: Vec<KeyOrder>,
+    /// For a whole log: the plain values of the object wrapping it, the
+    /// log's heading (empty for a bare list). `None` for one entry, which
+    /// leaves the heading as it was.
+    pub head: Option<(Fields, KeyOrder)>,
+}
+
+impl Message {
+    /// Reads `value`, whose key order is `order`, as [`Shape::of`] does.
+    pub fn of(value: Value, order: &KeyOrder) -> Message {
+        let whole = |items: Vec<Value>, at: &str| {
+            let orders = (0..items.len())
+                .map(|i| order.sub(&format!("{at}/{i}")))
+                .collect();
+            (
+                Shape::Whole(items.into_iter().map(as_object).collect()),
+                orders,
+            )
+        };
         match value {
-            Value::Array(items) => Shape::Whole(items.into_iter().map(as_object).collect()),
+            Value::Array(items) => {
+                let (shape, orders) = whole(items, "");
+                Message {
+                    shape,
+                    orders,
+                    head: Some((Fields::new(), KeyOrder::default())),
+                }
+            }
             Value::Object(mut map) => match wrapped_list(&map) {
                 Some(key) => match map.remove(&key) {
                     Some(Value::Array(items)) => {
-                        Shape::Whole(items.into_iter().map(as_object).collect())
+                        let (shape, orders) = whole(items, &child("", &key));
+                        map.retain(|_, v| !v.is_object() && !v.is_array() && !v.is_null());
+                        let mut head_order = KeyOrder::default();
+                        if let Some(keys) = order.keys("") {
+                            head_order.set("", keys.to_vec());
+                        }
+                        Message {
+                            shape,
+                            orders,
+                            head: Some((map, head_order)),
+                        }
                     }
-                    _ => Shape::One(map),
+                    _ => Message::one(map, order.clone()),
                 },
-                None => Shape::One(map),
+                None => Message::one(map, order.clone()),
             },
-            other => Shape::One(as_object(other)),
+            other => Message::one(as_object(other), KeyOrder::default()),
         }
+    }
+
+    fn one(fields: Fields, order: KeyOrder) -> Message {
+        Message {
+            shape: Shape::One(fields),
+            orders: vec![order],
+            head: None,
+        }
+    }
+
+    /// True for the whole log.
+    pub fn is_whole(&self) -> bool {
+        matches!(self.shape, Shape::Whole(_))
     }
 }
 
@@ -299,6 +368,10 @@ pub struct LiveLog {
     entries: Vec<LogEntry>,
     /// Entries left out at [`MAX_ENTRIES`].
     pub dropped: usize,
+    /// The heading's values (a wrapper object's plain values) and their
+    /// order.
+    head: Fields,
+    head_order: KeyOrder,
 }
 
 /// An entry's fields sorted for showing.
@@ -314,6 +387,8 @@ impl LiveLog {
             options,
             entries: Vec::new(),
             dropped: 0,
+            head: Fields::new(),
+            head_order: KeyOrder::default(),
         }
     }
 
@@ -323,7 +398,50 @@ impl LiveLog {
             options,
             entries,
             dropped: 0,
+            head: Fields::new(),
+            head_order: KeyOrder::default(),
         }
+    }
+
+    /// The heading's values: the plain values of the object that wrapped
+    /// the last whole log, and their order.
+    pub fn head(&self) -> (&Fields, &KeyOrder) {
+        (&self.head, &self.head_order)
+    }
+
+    /// Sets the heading's values.
+    pub fn set_head(&mut self, head: Fields, order: KeyOrder) {
+        self.head = head;
+        self.head_order = order;
+    }
+
+    /// The heading as one line, meaning first: what the log is, bare
+    /// ("Practice net."), then the other values as "key: value", in
+    /// message order. Empty without a heading.
+    pub fn head_line(&self, labels: &LogLabels) -> String {
+        let members = self.head_order.members("", &self.head);
+        let first = members
+            .iter()
+            .position(|(k, _)| HEAD_NAMES.contains(&k.to_lowercase().as_str()));
+        let text = |k: &str, v: &Value| value_text(v, labels, &self.head_order, &child("", k));
+        let mut parts = Vec::new();
+        if let Some(i) = first {
+            parts.push(text(members[i].0, members[i].1));
+        }
+        for (i, (k, v)) in members.iter().enumerate() {
+            if Some(i) != first {
+                let v = text(k, v);
+                if !v.is_empty() {
+                    parts.push(format!("{}: {v}", clean(k)));
+                }
+            }
+        }
+        parts
+            .iter()
+            .filter(|p| !p.is_empty())
+            .map(|p| sentence(p))
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 
     /// The entries, in order.
@@ -384,16 +502,61 @@ impl LiveLog {
     /// replaced. Returns the indices of the entries added or changed, in
     /// order (empty when nothing changed). `now` is the arrival time.
     pub fn apply(&mut self, shape: Shape, now: &str) -> Vec<usize> {
+        let n = match &shape {
+            Shape::One(_) => 1,
+            Shape::Whole(items) => items.len(),
+        };
+        self.apply_message(
+            Message {
+                shape,
+                orders: vec![KeyOrder::default(); n],
+                head: None,
+            },
+            now,
+        )
+    }
+
+    /// Applies a message as [`apply`](Self::apply) does, keeping each
+    /// entry's key order, and taking a whole log's heading.
+    pub fn apply_message(&mut self, msg: Message, now: &str) -> Vec<usize> {
+        let Message {
+            shape,
+            orders,
+            head,
+        } = msg;
+        if let Some((fields, order)) = head {
+            self.set_head(fields, order);
+        }
+        let mut orders = orders.into_iter();
         match shape {
-            Shape::One(fields) => self.upsert(fields, now).into_iter().collect(),
-            Shape::Whole(items) => self.replace(items, now),
+            Shape::One(fields) => self
+                .upsert_ordered(fields, orders.next().unwrap_or_default(), now)
+                .into_iter()
+                .collect(),
+            Shape::Whole(items) => {
+                let items = items
+                    .into_iter()
+                    .map(|f| (f, orders.next().unwrap_or_default()))
+                    .collect();
+                self.replace_ordered(items, now)
+            }
         }
     }
 
     /// Adds an entry at the end, or updates the one it matches in place.
     /// Returns its index, or `None` when nothing changed (the same entry
     /// sent again, or the log is full).
-    pub fn upsert(&mut self, mut fields: Map<String, Value>, now: &str) -> Option<usize> {
+    pub fn upsert(&mut self, fields: Map<String, Value>, now: &str) -> Option<usize> {
+        self.upsert_ordered(fields, KeyOrder::default(), now)
+    }
+
+    /// [`upsert`](Self::upsert), with the entry's key order.
+    pub fn upsert_ordered(
+        &mut self,
+        mut fields: Map<String, Value>,
+        order: KeyOrder,
+        now: &str,
+    ) -> Option<usize> {
         cap_fields(&mut fields);
         let found = self.key(&fields).and_then(|k| self.find_key(&k));
         match found {
@@ -401,6 +564,7 @@ impl LiveLog {
             Some(i) => {
                 let e = &mut self.entries[i];
                 e.fields = fields;
+                e.order = order;
                 e.updated = Some(now.to_owned());
                 Some(i)
             }
@@ -413,6 +577,7 @@ impl LiveLog {
                     fields,
                     received: now.to_owned(),
                     updated: None,
+                    order,
                 });
                 Some(self.entries.len() - 1)
             }
@@ -423,10 +588,25 @@ impl LiveLog {
     /// an entry already here keeps its arrival time. Returns the indices
     /// (in the new log) of items new or changed.
     pub fn replace(&mut self, items: Vec<Map<String, Value>>, now: &str) -> Vec<usize> {
+        self.replace_ordered(
+            items
+                .into_iter()
+                .map(|f| (f, KeyOrder::default()))
+                .collect(),
+            now,
+        )
+    }
+
+    /// [`replace`](Self::replace), with each item's key order.
+    pub fn replace_ordered(
+        &mut self,
+        items: Vec<(Map<String, Value>, KeyOrder)>,
+        now: &str,
+    ) -> Vec<usize> {
         let mut changed = Vec::new();
         let mut next = Vec::with_capacity(items.len().min(MAX_ENTRIES));
         let mut dropped = 0;
-        for (i, mut fields) in items.into_iter().enumerate() {
+        for (i, (mut fields, order)) in items.into_iter().enumerate() {
             if i >= MAX_ENTRIES {
                 dropped += 1;
                 continue;
@@ -449,11 +629,13 @@ impl LiveLog {
                     fields,
                     received: e.received.clone(),
                     updated: Some(now.to_owned()),
+                    order,
                 },
                 None => LogEntry {
                     fields,
                     received: now.to_owned(),
                     updated: None,
+                    order,
                 },
             };
             if self.entries.get(i) != Some(&entry) {
@@ -482,7 +664,7 @@ impl LiveLog {
                 let text = match (f, v) {
                     (Field::Traffic, Value::Bool(true)) => labels.traffic.clone(),
                     (Field::Traffic, Value::Bool(false)) => String::new(),
-                    _ => value_text(v, labels),
+                    _ => value_text(v, labels, &e.order, &child("", k)),
                 };
                 if !text.is_empty() {
                     known.push((*f, text));
@@ -501,10 +683,11 @@ impl LiveLog {
         });
         used.extend(id);
         let unknown = e
-            .fields
-            .iter()
+            .order
+            .members("", &e.fields)
+            .into_iter()
             .filter(|(k, _)| !used.contains(k))
-            .map(|(k, v)| (clean(k), value_text(v, labels)))
+            .map(|(k, v)| (clean(k), value_text(v, labels, &e.order, &child("", k))))
             .filter(|(_, v)| !v.is_empty())
             .collect();
         Shown { known, unknown }
@@ -551,6 +734,11 @@ impl LiveLog {
     /// entries.
     pub fn render(&self, view: LogView, labels: &LogLabels) -> String {
         let mut md = format!("# {}\n\n", escape(&clean(&self.options.title)));
+        let head = self.head_line(labels);
+        if !head.is_empty() {
+            md.push_str(&escape(&head));
+            md.push_str("\n\n");
+        }
         if self.entries.is_empty() {
             md.push_str(&escape(&labels.empty));
             md.push('\n');
@@ -695,11 +883,13 @@ fn plain(v: &Value) -> String {
 }
 
 /// A value as text, for showing: true and false in words, lists and
-/// objects as compact JSON.
-fn value_text(v: &Value, labels: &LogLabels) -> String {
+/// objects as compact JSON in message order (`order` and `at` place it in
+/// its message).
+fn value_text(v: &Value, labels: &LogLabels, order: &KeyOrder, at: &str) -> String {
     match v {
         Value::Bool(true) => labels.yes.clone(),
         Value::Bool(false) => labels.no.clone(),
+        Value::Object(_) | Value::Array(_) => clean(&order.compact(at, v)),
         other => plain(other),
     }
 }
@@ -745,7 +935,7 @@ fn sentence(s: &str) -> String {
 
 /// `s` as literal Markdown text: every ASCII punctuation char escaped, so
 /// data never becomes markup.
-fn escape(s: &str) -> String {
+pub(crate) fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 8);
     for c in s.chars() {
         if c.is_ascii_punctuation() {

@@ -18,6 +18,10 @@
 //! - [`log`]: the log view's entries ([`LiveLog`]): one JSON object adds
 //!   or corrects an entry, a list replaces the log; rendered as a list or
 //!   a table.
+//! - [`values`]: the values view's fields ([`LiveValues`]): one line per
+//!   field, updated in place, for sensor-style sources.
+//! - [`order`]: the order a message's keys came in ([`KeyOrder`]), which
+//!   both views keep.
 //! - [`hub`]: the app's side ([`App::open_live_source`], `App::live_tick`
 //!   and the functions commands call: the view switch, jump to newest,
 //!   pause, the unread count, Save).
@@ -32,14 +36,18 @@
 pub mod hub;
 pub mod json_log;
 pub mod log;
+pub mod order;
 pub mod source;
+pub mod values;
 
 pub(crate) use hub::LiveHub;
 pub use hub::{LOG_WRITE_INTERVAL, LiveOptions, PAUSE_QUEUE_CAP};
 pub use log::{
-    Field, Fields, LiveLog, LogEntry, LogLabels, LogOptions, LogView, Shape, entry_object,
+    Field, Fields, LiveLog, LogEntry, LogLabels, LogOptions, LogView, Message, Shape, entry_object,
 };
+pub use order::{KeyOrder, parse_ordered};
 pub use source::{LiveEvent, LivePayload, LiveSource, ScriptHandle, ScriptedSource};
+pub use values::{FieldChange, LiveValues, ValueField, ValueLabels, ValuesOptions};
 
 use textweaver_a11y::{Importance, Priority};
 use textweaver_core::{Bias, CharPos, CharRange, Edit, EditOutcome};

@@ -5792,3 +5792,26 @@ live-resumed =
        *[other] استؤنفت التحديثات، وطُبق { $count } تحديث.
     }
 live-resumed-dropped = استؤنفت التحديثات، وطُبق { $count } تحديث. تم تجاهل { $dropped } تحديثات أقدم أثناء الإيقاف المؤقت.
+live-values-title = قيم مباشرة
+live-values-empty = لا توجد قيم بعد.
+live-value-none = لا قيمة
+live-value-stale = لا قيمة حديثة
+live-values-more = { $count } أخرى
+live-values-count =
+    { $count ->
+        [one] حقل واحد
+       *[other] { $count } حقول
+    }
+live-values-no-table = لا جدول في عرض القيم: كل حقل سطر واحد.
+live-values-no-log = لا يحتفظ عرض القيم بسجل للحفظ.
+live-values-full = يتسع عرض القيم لـ { $max } حقل على الأكثر؛ يتم تجاهل الحقول الأخرى.
+live-values-resumed =
+    { $count ->
+        [0] استؤنفت التحديثات. لم يتغير أي حقل.
+       *[other] استؤنفت التحديثات، وتغير { $count } حقل.
+    }
+live-field-none = لا يوجد حقل في هذا السطر.
+live-field-show-on = تُعرض تغييرات { $field }.
+live-field-show-off = لم تعد تغييرات { $field } تُعرض.
+live-field-speak-on = تُنطق تغييرات { $field }.
+live-field-speak-off = لم تعد تغييرات { $field } تُنطق.
