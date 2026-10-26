@@ -32,6 +32,7 @@ mod idea_cards;
 mod keys_from_keymap;
 mod language;
 mod list_contract;
+mod live;
 mod markup_pauses;
 mod obsidian_editing;
 mod obsidian_vault;

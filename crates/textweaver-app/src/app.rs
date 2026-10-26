@@ -164,6 +164,10 @@ pub struct Session {
     /// A frontend that keeps a copy of the text, such as a GUI's
     /// [`DocWindow`](crate::DocWindow), reloads it when this changes.
     pub revision: u64,
+    /// Set when the document is a live document, fed by a live source
+    /// (crate::live): its text changes from outside edit mode, and its
+    /// reading position is never saved.
+    pub live: Option<crate::live::LiveTag>,
 }
 
 /// A fresh text revision (see [`Session::revision`]).
@@ -197,6 +201,7 @@ impl Session {
             disk: None,
             text_stamp: None,
             review: crate::changes::Review::default(),
+            live: None,
         }
     }
 
