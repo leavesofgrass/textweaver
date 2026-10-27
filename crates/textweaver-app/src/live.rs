@@ -52,7 +52,7 @@ pub mod wire;
 
 pub use announce::{BURST, EntryThrottle, Release};
 pub(crate) use hub::LiveHub;
-pub use hub::{LOG_WRITE_INTERVAL, LiveOptions, PAUSE_QUEUE_CAP};
+pub use hub::{LOG_WRITE_INTERVAL, LiveConnection, LiveOptions, PAUSE_QUEUE_CAP};
 pub use log::{
     Field, Fields, LiveLog, LogEntry, LogLabels, LogOptions, LogView, Message, Shape, entry_object,
 };
