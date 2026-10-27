@@ -31,6 +31,8 @@
 //!   interrupts reading ([`EntryThrottle`]).
 //! - [`wire`]: the commands: open a configured source, set one up, close
 //!   it, and the rest ([`App::open_configured_live_source`]).
+//! - `form`: the one form that sets up or edits a source, and the live
+//!   source files (`.twlive`) that fill it ([`App::live_setup`]).
 //! - `mqtt` (with the `mqtt` feature): the MQTT client adapted to
 //!   [`LiveSource`].
 //!
@@ -49,6 +51,8 @@ pub mod order;
 pub mod source;
 pub mod values;
 pub mod wire;
+
+mod form;
 
 pub use announce::{BURST, EntryThrottle, Release};
 pub(crate) use hub::LiveHub;

@@ -1237,8 +1237,9 @@ impl App {
     /// Opens a document and makes it current. The previous document's
     /// position is saved first.
     pub fn open(&mut self, path: &Path) -> Result<Vec<Effect>, AppError> {
-        // A JSON log saved from a live document opens in the log view.
-        if let Some(effects) = self.open_live_log(path) {
+        // A JSON log saved from a live document opens in the log view; a
+        // live source file opens the live source form.
+        if let Some(effects) = self.open_live_file(path) {
             return Ok(effects);
         }
         // Taken before reading, so a change made while loading is noticed.
@@ -1768,6 +1769,9 @@ impl App {
                 if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::DocumentDetails {
                     return self.cancel_details();
                 }
+                if self.prompt_is_live_form() {
+                    return self.cancel_live_form();
+                }
                 if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::CwCopy {
                     self.leave_prompt();
                     return self.cw_practice_stop();
@@ -1898,9 +1902,6 @@ impl App {
         } else if let Some(name) = self.live_password_prompt_name(purpose) {
             // Which live source the password is for (crate::source_passwords).
             self.msg_args("prompt-live-password", &args!["source" => name])
-        } else if let Some(label) = self.live_setup_label(purpose) {
-            // The step of Set up a live source (crate::live::wire).
-            label
         } else {
             crate::study::prompt_label(&self.study.catalog, purpose)
         };
@@ -2002,7 +2003,8 @@ impl App {
             PromptPurpose::CwCopy => return self.answer_cw_copy(text),
             PromptPurpose::GitHubToken => return self.answer_github_token(text),
             PromptPurpose::LivePassword => return self.answer_live_password_then_open(text),
-            PromptPurpose::LiveSetup => return self.answer_live_setup(text),
+            PromptPurpose::LiveSetup => return self.answer_live_form(text),
+            PromptPurpose::SaveLiveSourceFile => return self.answer_live_save_file(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -2177,6 +2179,13 @@ impl App {
                 return vec![Effect::Redraw];
             };
             return self.edit_library_details(list, n);
+        }
+        // In Open live source, F2 edits the source.
+        if matches!(
+            self.list,
+            Some(ListKind::Live(crate::live::LiveList::Open(_)))
+        ) {
+            return self.live_edit_row(n);
         }
         match self.list.clone() {
             Some(ListKind::Bookmarks) => self.rename_bookmark_prompt(n),
@@ -2545,6 +2554,8 @@ impl App {
             }
             A::OpenLiveSource
             | A::SetUpLiveSource
+            | A::EditLiveSource
+            | A::SaveLiveSourceFile
             | A::CloseLiveSource
             | A::LiveSwitchView
             | A::LiveJumpNewest

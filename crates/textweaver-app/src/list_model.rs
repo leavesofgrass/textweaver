@@ -285,12 +285,14 @@ pub enum PromptKey {
     /// Deletes the word before the caret (Ctrl+W).
     DeleteWordBack,
     /// Up: an earlier answer to this prompt, or the previous command
-    /// palette match.
+    /// palette match; on a choice of the live source form, the previous
+    /// choice.
     Up,
-    /// Down: a later answer, or the next command palette match.
+    /// Down: a later answer, or the next command palette match; on a
+    /// choice of the live source form, the next choice.
     Down,
     /// Tab: completes a command name or a file path; in a form (the edit
-    /// details form), moves to the next field.
+    /// details form, the live source form), moves to the next field.
     Tab,
     /// Shift+Tab: in a form, moves to the previous field; elsewhere
     /// nothing.
@@ -804,10 +806,22 @@ impl App {
             }
             PromptKey::Home => mb.home(),
             PromptKey::End => mb.end(),
-            PromptKey::Tab | PromptKey::BackTab if mb.purpose == PromptPurpose::DocumentDetails => {
+            PromptKey::Tab | PromptKey::BackTab if mb.purpose.is_form() => {
                 let text = mb.text();
                 let step = if key == PromptKey::Tab { 1 } else { -1 };
+                if mb.purpose == PromptPurpose::LiveSetup {
+                    return self.live_form_move(text, step);
+                }
                 return self.details_move(text, step);
+            }
+            // A choice of the live source form changes in place.
+            PromptKey::Up | PromptKey::Down if mb.purpose == PromptPurpose::LiveSetup => {
+                let step = if key == PromptKey::Down { 1 } else { -1 };
+                if let Some(effects) = self.live_form_cycle(step) {
+                    return effects;
+                }
+                self.recall(step);
+                return vec![Effect::Redraw];
             }
             PromptKey::Tab => {
                 self.complete_prompt();

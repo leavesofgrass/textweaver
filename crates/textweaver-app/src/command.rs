@@ -369,10 +369,15 @@ pub enum PromptPurpose {
     /// credential store; empty cancels. It is secret
     /// ([`PromptPurpose::is_secret`]).
     LivePassword,
-    /// Answer is one step of Set up a live source: its name, host,
-    /// certificate authority file, port, topic, or user name
-    /// (crate::live::wire).
+    /// Answer is one field of the live source form (Set up or Edit a
+    /// live source, or a `.twlive` file opened): its name, host,
+    /// encryption, certificate authority file, port, topic, user name, or
+    /// view (crate::live::form). Tab and Shift+Tab move between the
+    /// fields, Up and Down change a choice; Enter saves them all.
     LiveSetup,
+    /// Answer is the file to save a live source to (`.twlive`), without
+    /// its password.
+    SaveLiveSourceFile,
     /// Answer is an Anki package (`.apkg`) whose cards to import into the
     /// open document's cards.
     ImportCards,
@@ -423,8 +428,9 @@ impl PromptPurpose {
             PromptPurpose::GitHubToken => "GitHub token for your components source, Enter skips",
             // The app names the source from the message catalog.
             PromptPurpose::LivePassword => "Password for the live source, Enter cancels",
-            // The app labels each step from the message catalog.
-            PromptPurpose::LiveSetup => "Set up a live source",
+            // The app labels each field from the message catalog.
+            PromptPurpose::LiveSetup => "Live source",
+            PromptPurpose::SaveLiveSourceFile => "Save live source as file",
             PromptPurpose::ImportCards => "Import study cards from Anki package",
             // The app labels each group from the message catalog.
             PromptPurpose::CwCopy => "Type what you heard",
@@ -439,6 +445,16 @@ impl PromptPurpose {
         matches!(
             self,
             PromptPurpose::GitHubToken | PromptPurpose::LivePassword
+        )
+    }
+
+    /// True for a field of a form (the edit details form, the live source
+    /// form): Tab and Shift+Tab move between its fields, each a prompt of
+    /// its own, instead of completing, and Escape cancels the whole form.
+    pub fn is_form(self) -> bool {
+        matches!(
+            self,
+            PromptPurpose::DocumentDetails | PromptPurpose::LiveSetup
         )
     }
 }

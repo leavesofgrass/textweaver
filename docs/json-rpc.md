@@ -321,7 +321,7 @@ The notes commands return `status` and `effects` but no `pending`.
 
 #### Prompt purposes
 
-A prompt's `purpose` is one of these 34 purposes. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
+A prompt's `purpose` is one of these 35 purposes. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
 
 - `find`: the text to find.
 - `go_to`: a line, a percentage, `start`, or `end`.
@@ -356,7 +356,8 @@ A prompt's `purpose` is one of these 34 purposes. The names are fixed: within pr
 - `cw_copy`: what the learner copied of the Morse code practice group just sent; empty sends the group again.
 - `github_token`: a GitHub token for a private components source; empty skips. It is secret: `text` in the prompt state is one star per character, and a client should mask what it shows and never log it.
 - `live_password`: the password of a live source, kept in the system credential store; empty cancels. The `label` names the source. It is secret, like `github_token`. Answered while Open live source waits for it, the source connects at once.
-- `live_setup`: one step of Set up a live source: its name (empty cancels the setup), the broker's host, the certificate authority file, the port (the default for the chosen encryption is filled in), the topic, or the user name (empty for none). The `label` names the step; the encryption and the view are chosen from lists between the steps.
+- `live_setup`: one field of the live source form (Set up or Edit a live source, or a `.twlive` file opened): its name, broker host, encryption, certificate authority file (only with that encryption), port, topic, user name, or view. The `label` names the field and its place ("Broker host, 2 of 7"). `prompt_key` with `tab` and `shift_tab` moves between the fields, keeping each value; `up` and `down` change the encryption or the view in place; `answer` checks and saves them all, and a wrong field opens the prompt again on it.
+- `save_live_source_file`: the file to save a live source to, as a `.twlive` file without its password; `.twlive` is added when the name has no extension.
 
 The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before responding, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
 
@@ -380,7 +381,7 @@ textweaver itself keeps the displayed list and its focused item, identically for
 ### prompt_state and prompt_key: type into a prompt
 
 - `prompt_state` takes no parameters. It returns the prompt open as `{label, purpose, text, caret}`, or null. `caret` counts characters from the start of `text`.
-- `prompt_key` takes either `key` (string): one character, or `backspace`, `delete`, `left`, `right`, `home`, `end`, `up` and `down` (earlier answers to the same prompt, or command palette matches), `tab` (completes a command name or a file path, or moves to the next field of the edit details form), `shift_tab` (the form's previous field), `kill_to_start`, `kill_to_end`, `delete_word_back`, `enter`, or `escape`; or `text` (string): the whole text of the prompt at once. It returns `{status, effects, prompt}`.
+- `prompt_key` takes either `key` (string): one character, or `backspace`, `delete`, `left`, `right`, `home`, `end`, `up` and `down` (earlier answers to the same prompt, command palette matches, or on a choice of the live source form the previous or next choice), `tab` (completes a command name or a file path, or moves to the next field of a form: the edit details form or the live source form), `shift_tab` (the form's previous field), `kill_to_start`, `kill_to_end`, `delete_word_back`, `enter`, or `escape`; or `text` (string): the whole text of the prompt at once. It returns `{status, effects, prompt}`.
 
 `answer` still works: it answers the open prompt with the text you give.
 

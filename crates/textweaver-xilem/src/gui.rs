@@ -3092,9 +3092,9 @@ impl Gui {
             .prompt_model()
             .map(textweaver_app::PromptModel::shown_text)
             .unwrap_or_default();
-        // The edit details form (W7m): Tab and Shift+Tab move between its
-        // fields, each the app's prompt.
-        let fields = purpose == PromptPurpose::DocumentDetails;
+        // The edit details form (W7m) and the live source form: Tab and
+        // Shift+Tab move between their fields, each the app's prompt.
+        let fields = purpose.is_form();
         self.show_prompt(ctx, label_text, &hint, &initial, paths, fields);
         self.dialog = Some(OpenDialog::Prompt);
         if self.log {
@@ -3128,9 +3128,13 @@ impl Gui {
         };
         let c = self.app.catalog();
         let registry = textweaver_app::formats::Registry::with_builtins();
+        // Open lists live source files too, which open the live source
+        // form rather than a document.
+        let mut extensions = registry.extensions();
+        extensions.push(textweaver_app::store::LIVE_SOURCE_FILE_EXTENSION);
         let filters = file_chooser::spec_filters(
             &spec,
-            &registry.extensions(),
+            &extensions,
             &c.tr("gui-open-documents"),
             &c.tr("gui-open-all-files"),
         );

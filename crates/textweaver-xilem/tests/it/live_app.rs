@@ -13,13 +13,16 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use masonry::accesskit::{Live, Role, TreeUpdate};
-use masonry::core::WidgetId;
+use masonry::core::keyboard::{Key, NamedKey};
+use masonry::core::{TextEvent, WidgetId};
+use masonry::widgets::TextArea;
 use masonry_testing::{TestHarness, TestHarnessParams};
 use textweaver_app::a11y::{LogAnnouncer, Shared};
 use textweaver_app::core::CharPos;
 use textweaver_app::keymap::ActionId;
 use textweaver_app::live::{BURST, LiveEvent, LiveOptions, ScriptHandle, ScriptedSource};
-use textweaver_app::{App, Command};
+use textweaver_app::{App, Command, PromptKey};
+use textweaver_xilem::dialog::DialogAction;
 use textweaver_xilem::gui::{self, ANNOUNCER, Buttons, DOC, POSITION, STATUS_BAR};
 use textweaver_xilem::setup::{self, Options};
 use textweaver_xilem::theme::{self, Palette};
@@ -552,11 +555,16 @@ fn set_up_and_open_go_through_the_prompt_and_the_list() {
         assert!(r.app.is_available(a), "{a:?} in the menus and palette");
     }
     r.act(ActionId::SetUpLiveSource);
-    let label = r.app.prompt_model().expect("the name prompt").label.clone();
-    assert!(label.starts_with("Live source name"), "{label}");
+    let label = r
+        .app
+        .prompt_model()
+        .expect("the form's first field")
+        .label
+        .clone();
+    assert_eq!(label, "Name, 1 of 7");
     let p = Palette::galaxy();
     let c = r.app.catalog();
-    let (modal, field) = gui::prompt_dialog(&p, &c, &label, "", "", false, false);
+    let (modal, field) = gui::prompt_dialog(&p, &c, &label, "", "", false, true);
     let mut back = None;
     gui::open_dialog_in(&mut r.h, modal, field, &mut back);
     let _ = r.h.redraw();
@@ -568,7 +576,8 @@ fn set_up_and_open_go_through_the_prompt_and_the_list() {
     let node = r.h.access_node(field).unwrap();
     assert_eq!(node.label().as_deref(), Some(label.as_str()));
     gui::close_dialog_in(&mut r.h, &mut back);
-    let _ = r.app.dispatch(Command::Answer(String::new()));
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Escape));
+    assert!(r.app.prompt_model().is_none(), "Escape cancels the form");
 
     // Open live source: the sources by name, in a list.
     let _ = r.app.update_settings(|s| {
@@ -612,4 +621,108 @@ fn set_up_and_open_go_through_the_prompt_and_the_list() {
         )));
     let shown = r.app.prompt_model().unwrap().shown_text();
     assert_eq!(shown, "*******");
+}
+
+/// The keys the open dialog sent, as dialog actions.
+fn dialog_actions(h: &mut TestHarness<Root>) -> Vec<DialogAction> {
+    let mut out = Vec::new();
+    while let Some((a, _)) = h.pop_action_erased() {
+        if let Ok(a) = a.downcast::<DialogAction>() {
+            out.push(*a);
+        }
+    }
+    out
+}
+
+/// The live source form in the textweaver app: each field is the app's
+/// prompt in a dialog, a text field named by its label ("Port, 4 of 7"),
+/// in the form's order; Tab and Shift+Tab ask the app for the next or
+/// previous field, and Up and Down on a choice reach the app, which
+/// changes it in place. The password asked after saving is a password
+/// field to the screen reader.
+#[cfg(feature = "mqtt")]
+#[test]
+fn the_live_source_form_names_each_field_and_tab_moves_between_them() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut r = rig(dir.path(), false);
+    r.act(ActionId::SetUpLiveSource);
+    let p = Palette::galaxy();
+    let c = r.app.catalog();
+    let mut back = None;
+    let mut labels = Vec::new();
+    for _ in 0..7 {
+        let model = r.app.prompt_model().expect("a field").clone();
+        assert!(model.purpose.is_form());
+        let (modal, field) = gui::prompt_dialog(
+            &p,
+            &c,
+            &model.label,
+            "",
+            &model.shown_text(),
+            false,
+            model.purpose.is_form(),
+        );
+        gui::open_dialog_in(&mut r.h, modal, field, &mut back);
+        let _ = r.h.redraw();
+        assert_eq!(r.h.focused_widget_id(), Some(field), "{}", model.label);
+        let node = r.h.access_node(field).unwrap();
+        assert_eq!(node.role(), Role::TextInput, "{}", model.label);
+        assert_eq!(node.label().as_deref(), Some(model.label.as_str()));
+        labels.push(model.label.clone());
+        if model.label.starts_with("Encryption") {
+            // Up and Down are the app's: they change the choice.
+            r.h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::ArrowDown)));
+            assert_eq!(dialog_actions(&mut r.h), [DialogAction::Recall(false)]);
+            let _ = r.app.dispatch(Command::PromptKey(PromptKey::Down));
+            assert_eq!(r.app.prompt_model().unwrap().text(), "Bundled roots");
+        }
+        r.h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::Tab)));
+        assert_eq!(
+            dialog_actions(&mut r.h),
+            [DialogAction::Field(true)],
+            "{}: Tab moves to the next field",
+            model.label
+        );
+        gui::close_dialog_in(&mut r.h, &mut back);
+        let _ = r.app.dispatch(Command::PromptKey(PromptKey::Tab));
+    }
+    assert_eq!(
+        labels,
+        [
+            "Name, 1 of 7",
+            "Broker host, 2 of 7",
+            "Encryption, 3 of 7, Up or Down Arrow changes",
+            "Port, 4 of 7",
+            "Topic, 5 of 7",
+            "User name, 6 of 7",
+            "View, 7 of 7, Up or Down Arrow changes",
+        ]
+    );
+    // Shift+Tab goes back.
+    let model = r.app.prompt_model().unwrap().clone();
+    let (modal, field) = gui::prompt_dialog(&p, &c, &model.label, "", "", false, true);
+    gui::open_dialog_in(&mut r.h, modal, field, &mut back);
+    let mut k = masonry::core::KeyboardEvent {
+        state: masonry::core::keyboard::KeyState::Down,
+        key: Key::Named(NamedKey::Tab),
+        ..Default::default()
+    };
+    k.modifiers = masonry::core::Modifiers::SHIFT;
+    r.h.process_text_event(TextEvent::Keyboard(k));
+    assert_eq!(dialog_actions(&mut r.h), [DialogAction::Field(false)]);
+    gui::close_dialog_in(&mut r.h, &mut back);
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Escape));
+
+    // A secret prompt's field is a password field.
+    let (modal, field) =
+        gui::prompt_dialog(&p, &c, "Password for Practice log", "", "", false, false);
+    gui::open_dialog_in(&mut r.h, modal, field, &mut back);
+    r.h.edit_widget(gui::PROMPT_FIELD, |mut f| {
+        TextArea::set_password(&mut f, true)
+    });
+    let _ = r.h.redraw();
+    let node = r.h.access_node(field).unwrap();
+    assert_eq!(node.role(), Role::PasswordInput);
+    assert_eq!(node.label().as_deref(), Some("Password for Practice log"));
+    gui::close_dialog_in(&mut r.h, &mut back);
 }
