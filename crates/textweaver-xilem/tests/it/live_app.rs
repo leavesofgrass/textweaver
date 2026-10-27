@@ -726,3 +726,127 @@ fn the_live_source_form_names_each_field_and_tab_moves_between_them() {
     assert_eq!(node.label().as_deref(), Some("Password for Practice log"));
     gui::close_dialog_in(&mut r.h, &mut back);
 }
+
+/// A live document message as `tw share` or Share this document live
+/// sends it.
+fn shared(rev: u64, text: &str) -> String {
+    serde_json::json!({
+        "type": "textweaver.document", "rev": rev, "title": "Agenda",
+        "format": "markdown", "text": text
+    })
+    .to_string()
+}
+
+/// The document view in place: a new revision replaces only the lines
+/// that changed; every other node keeps its id and text, the caret and
+/// the focus stay, and the only live-region message is the short
+/// revision line, never the document read again.
+#[test]
+fn a_new_revision_keeps_every_other_node_and_says_one_short_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut r = rig(dir.path(), false);
+    let agenda = "# Agenda\n\n- Check-ins\n- Traffic\n- Announcements\n- Close\n";
+    r.send_at(&shared(1, agenda), 0);
+    r.frame();
+    assert!(r.app.live_shows_document());
+    r.go("Traffic");
+    let caret = r.h.get_widget(DOC).inner().state().caret;
+    let before = r.runs();
+    let live_before = r.live_nodes();
+    let heard = r.heard;
+    let changed = agenda.replace("- Announcements", "- Announcements from Ada Example");
+    r.send_at(&shared(2, &changed), 1_000);
+    let update = r.frame();
+    let after = r.runs();
+    assert_eq!(after.len(), before.len(), "{before:?} {after:?}");
+    let differ: Vec<usize> = (0..after.len())
+        .filter(|&i| after[i] != before[i])
+        .collect();
+    assert_eq!(differ.len(), 1, "{before:?} {after:?}");
+    assert!(after[differ[0]].1.contains("Ada Example"), "{after:?}");
+    assert_eq!(r.h.get_widget(DOC).inner().state().caret, caret);
+    assert_eq!(r.h.focused_widget_id(), Some(r.doc));
+    assert_eq!(r.heard - heard, 1, "the app asks for one message");
+    let new_live: Vec<String> = r
+        .live_nodes()
+        .into_iter()
+        .filter(|(k, _)| !live_before.contains_key(k))
+        .map(|(_, v)| v)
+        .collect();
+    assert!(
+        new_live.iter().all(|m| m == "Agenda updated, revision 2."),
+        "{new_live:?} {:?}",
+        live_sent(&update)
+    );
+    assert!(
+        !live_sent(&update).iter().any(|m| m.contains("Check-ins")),
+        "nothing read again: {:?}",
+        live_sent(&update)
+    );
+    // The status bar says the revision, meaning first; no log buttons.
+    assert!(r.position().starts_with("Revision 2"), "{}", r.position());
+    let names = r.names();
+    assert!(
+        !names.iter().any(|n| n.contains("Table") || n == "Save log"),
+        "{names:?}"
+    );
+}
+
+/// Send a check-in: each field is a text input named by its label and
+/// place, Tab moves to the next; the broker's state is in the status bar
+/// in words.
+#[cfg(feature = "mqtt")]
+#[test]
+fn the_check_in_form_names_each_field_and_the_broker_is_in_the_status_bar() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut r = rig(dir.path(), false);
+    let _ = r
+        .app
+        .update_settings(|s| s.live.broker.listen = vec!["127.0.0.1:0".into()]);
+    r.act(ActionId::StartBroker);
+    assert!(r.app.live_broker_running());
+    assert!(
+        r.status_bar().contains("Broker on, 0 clients"),
+        "{}",
+        r.status_bar()
+    );
+    r.act(ActionId::SendCheckIn);
+    let p = Palette::galaxy();
+    let c = r.app.catalog();
+    let mut back = None;
+    let mut labels = Vec::new();
+    for _ in 0..3 {
+        let model = r.app.prompt_model().expect("a field").clone();
+        assert!(model.purpose.is_form());
+        assert!(!model.purpose.is_secret());
+        let (modal, field) = gui::prompt_dialog(
+            &p,
+            &c,
+            &model.label,
+            "",
+            &model.shown_text(),
+            false,
+            model.purpose.is_form(),
+        );
+        gui::open_dialog_in(&mut r.h, modal, field, &mut back);
+        let _ = r.h.redraw();
+        assert_eq!(r.h.focused_widget_id(), Some(field), "{}", model.label);
+        let node = r.h.access_node(field).unwrap();
+        assert_eq!(node.role(), Role::TextInput, "{}", model.label);
+        assert_eq!(node.label().as_deref(), Some(model.label.as_str()));
+        labels.push(model.label.clone());
+        r.h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::Tab)));
+        assert_eq!(dialog_actions(&mut r.h), [DialogAction::Field(true)]);
+        gui::close_dialog_in(&mut r.h, &mut back);
+        let _ = r.app.dispatch(Command::PromptKey(PromptKey::Tab));
+    }
+    assert_eq!(
+        labels,
+        ["Callsign, 1 of 3", "Name, 2 of 3", "Notes, 3 of 3"]
+    );
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Escape));
+    assert!(r.app.prompt_model().is_none());
+    r.act(ActionId::StopBroker);
+    assert!(!r.status_bar().contains("Broker on"), "{}", r.status_bar());
+    r.app.shutdown();
+}
