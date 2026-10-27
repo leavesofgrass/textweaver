@@ -1,0 +1,30 @@
+[package]
+name = "textweaver-broker"
+description = "textweaver's own small MQTT 3.1.1 broker for live documents: std threads, rumqttc's packet codec, textweaver's rustls with a pinned key or a join code, named accounts with PBKDF2 hashes, readers that can never publish, caps and a failed-login limit, and a real stop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Beta 5, phase 5a. No async runtime: one listener thread per address and
+# one thread per client. rcgen makes the broker's key and self-signed
+# certificate (approved in the beta 4 broker spike).
+[dependencies]
+textweaver-mqtt.workspace = true
+rumqttc.workspace = true
+bytes.workspace = true
+rustls.workspace = true
+rustls-pki-types.workspace = true
+ring.workspace = true
+rcgen.workspace = true
+serde.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
