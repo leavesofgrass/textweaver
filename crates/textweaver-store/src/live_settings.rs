@@ -126,7 +126,8 @@ pub enum LiveTls {
     /// WireGuard link is encrypted already.
     #[default]
     Off,
-    /// TLS, trusting the system's certificate authorities (port 8883).
+    /// TLS, trusting textweaver's bundled Mozilla root certificates, not
+    /// the operating system's store (port 8883).
     System,
     /// TLS, trusting the certificate authority in `ca_file` (port 8883).
     CaFile,
