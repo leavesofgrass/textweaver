@@ -12,6 +12,7 @@ mod document_view;
 mod edit_mode;
 mod frame_theme;
 mod highlight_paint;
+mod live_app;
 mod live_document;
 mod mouse_select;
 mod preview;
