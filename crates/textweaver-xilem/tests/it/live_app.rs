@@ -727,6 +727,105 @@ fn the_live_source_form_names_each_field_and_tab_moves_between_them() {
     gui::close_dialog_in(&mut r.h, &mut back);
 }
 
+/// The join code field in the textweaver app: a password field of
+/// stars, with an unchecked Show box right after it, named in words. Tab
+/// goes from the field to the box and from the box to the next field;
+/// F3 asks the app to show the code. Shown, the field is an ordinary
+/// text field holding the code, the box checked and the caret kept;
+/// hidden again, it is a password field of stars.
+#[cfg(feature = "mqtt")]
+#[test]
+fn the_join_code_is_a_password_field_with_a_show_box() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut r = rig(dir.path(), false);
+    r.act(ActionId::SetUpLiveSource);
+    let _ = r
+        .app
+        .dispatch(Command::PromptKey(PromptKey::SetText("Club".into())));
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Tab));
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Tab));
+    for _ in 0..4 {
+        let _ = r.app.dispatch(Command::PromptKey(PromptKey::Down));
+    }
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Tab));
+    let _ = r
+        .app
+        .dispatch(Command::PromptKey(PromptKey::SetText("abcd".into())));
+    let model = r.app.prompt_model().expect("the join code field").clone();
+    assert!(
+        model.label.starts_with("Join code, 4 of 7"),
+        "{}",
+        model.label
+    );
+    assert!(model.is_masked());
+    let p = Palette::galaxy();
+    let c = r.app.catalog();
+    let show_name = c.tr(model.show_message_ids().0);
+    assert_eq!(show_name, "Show the join code");
+    let mut back = None;
+    let (modal, field) = gui::secret_prompt_dialog(
+        &p,
+        &c,
+        &model.label,
+        "",
+        &model.shown_text(),
+        true,
+        &show_name,
+    );
+    gui::open_dialog_in(&mut r.h, modal, field, &mut back);
+    r.h.edit_widget(gui::PROMPT_FIELD, |mut f| {
+        TextArea::set_password(&mut f, true)
+    });
+    let _ = r.h.redraw();
+    let node = r.h.access_node(field).unwrap();
+    assert_eq!(node.role(), Role::PasswordInput);
+    assert_eq!(node.value().as_deref(), Some("****"));
+    let show = r.h.get_widget(gui::PROMPT_SHOW).id();
+    let node = r.h.access_node(show).unwrap();
+    assert_eq!(node.role(), Role::CheckBox);
+    assert_eq!(node.label().as_deref(), Some("Show the join code"));
+    assert_eq!(node.toggled(), Some(masonry::accesskit::Toggled::False));
+    // Tab from the field reaches the box, and from the box the next field.
+    r.h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::Tab)));
+    assert_eq!(dialog_actions(&mut r.h), []);
+    assert_eq!(r.h.focused_widget_id(), Some(show));
+    r.h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::Tab)));
+    assert_eq!(dialog_actions(&mut r.h), [DialogAction::Field(true)]);
+    // F3 anywhere in the dialog asks for the code shown.
+    r.h.focus_on(Some(field));
+    r.h.edit_widget(gui::PROMPT_FIELD, |mut f| {
+        TextArea::select_byte_range(&mut f, 2, 2)
+    });
+    r.h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::F3)));
+    assert_eq!(dialog_actions(&mut r.h), [DialogAction::ToggleShown]);
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::ToggleShown));
+    let model = r.app.prompt_model().unwrap().clone();
+    gui::show_secret_in(&mut r.h, &model);
+    let _ = r.h.redraw();
+    let node = r.h.access_node(field).unwrap();
+    assert_eq!(node.role(), Role::TextInput);
+    assert_eq!(node.value().as_deref(), Some("abcd"));
+    let caret =
+        r.h.get_widget(gui::PROMPT_FIELD)
+            .inner()
+            .selection_byte_range();
+    assert_eq!(caret, 2..2, "the caret stays");
+    let node = r.h.access_node(show).unwrap();
+    assert_eq!(node.toggled(), Some(masonry::accesskit::Toggled::True));
+    // Hidden again.
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::ToggleShown));
+    let model = r.app.prompt_model().unwrap().clone();
+    gui::show_secret_in(&mut r.h, &model);
+    let _ = r.h.redraw();
+    let node = r.h.access_node(field).unwrap();
+    assert_eq!(node.role(), Role::PasswordInput);
+    assert_eq!(node.value().as_deref(), Some("****"));
+    let node = r.h.access_node(show).unwrap();
+    assert_eq!(node.toggled(), Some(masonry::accesskit::Toggled::False));
+    gui::close_dialog_in(&mut r.h, &mut back);
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Escape));
+}
+
 /// A live document message as `tw share` or Share this document live
 /// sends it.
 fn shared(rev: u64, text: &str) -> String {

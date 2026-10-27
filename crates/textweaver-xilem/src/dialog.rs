@@ -19,8 +19,8 @@ use masonry::core::keyboard::{Key, KeyState, NamedKey};
 use masonry::core::{
     AccessCtx, AccessEvent, BrushIndex, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget,
     PaintCtx, PointerButtonEvent, PointerEvent, PointerScrollEvent, PropertiesMut, PropertiesRef,
-    RegisterCtx, StyleProperty, TextEvent, Update, UpdateCtx, Widget, WidgetMut, WidgetPod,
-    render_text,
+    RegisterCtx, StyleProperty, TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut,
+    WidgetPod, render_text,
 };
 use masonry::dpi::{LogicalPosition, PhysicalPosition};
 use masonry::imaging::Painter;
@@ -65,6 +65,9 @@ pub enum DialogAction {
     /// Ctrl+L in the command palette (`Modal::with_show_matches`): the
     /// focus moves to the list of matches.
     ShowMatches,
+    /// The show key (F3) in a secret prompt (`Modal::with_show_box`): its
+    /// text shown as typed, or hidden again (`PromptKey::ToggleShown`).
+    ToggleShown,
     /// A key typed in a question (`Modal::with_answer_keys`): `y` is yes,
     /// `n` and `a` are no, any other character asks again, as in the
     /// terminal (`Command::Confirm`).
@@ -113,6 +116,9 @@ pub struct Modal {
     app_chords: bool,
     /// Whose command modifier the dialog follows ([`crate::keys`]).
     platform: Platform,
+    /// A secret prompt's Show box: the show key toggles it, and in a form
+    /// Tab reaches it from the field before the next field.
+    show_box: Option<WidgetId>,
 }
 
 impl Modal {
@@ -134,7 +140,17 @@ impl Modal {
             show_matches: false,
             app_chords: false,
             platform: Platform::current(),
+            show_box: None,
         }
+    }
+
+    /// A secret prompt with a Show box, `id`, right after its field: the
+    /// show key (F3) toggles it from anywhere in the dialog. In a form
+    /// (`with_tab_fields`), Tab goes from the field to the box and from
+    /// the box to the next field; Shift+Tab goes back the same way.
+    pub fn with_show_box(mut self, id: Option<WidgetId>) -> Self {
+        self.show_box = id;
+        self
     }
 
     /// The command palette: the command key with L (Ctrl+L, Command+L on
@@ -227,8 +243,25 @@ impl Widget for Modal {
             Key::Named(NamedKey::Escape) => DialogAction::Cancel,
             Key::Named(NamedKey::ArrowUp) if !k.modifiers.shift() => DialogAction::Recall(true),
             Key::Named(NamedKey::ArrowDown) if !k.modifiers.shift() => DialogAction::Recall(false),
+            // In a form with a Show box, Tab from the field and Shift+Tab
+            // from the box move between the two as usual.
+            Key::Named(NamedKey::Tab)
+                if self.tab_fields
+                    && self
+                        .show_box
+                        .is_some_and(|b| (ctx.target() == b) == k.modifiers.shift()) =>
+            {
+                return;
+            }
             Key::Named(NamedKey::Tab) if self.tab_fields => {
                 DialogAction::Field(!k.modifiers.shift())
+            }
+            Key::Named(_)
+                if self.show_box.is_some()
+                    && crate::keys::chord(k, self.platform)
+                        == Some(textweaver_app::list_model::show_key()) =>
+            {
+                DialogAction::ToggleShown
             }
             Key::Named(NamedKey::Tab) if self.tab_completes && !k.modifiers.shift() => {
                 DialogAction::Complete
