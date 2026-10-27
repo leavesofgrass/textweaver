@@ -248,7 +248,7 @@ impl LiveForm {
 enum Checked {
     /// The source, and the password a join code gives, to keep.
     Ok(
-        LiveSourceSettings,
+        Box<LiveSourceSettings>,
         Option<textweaver_components::credentials::Password>,
     ),
     Bad(FormField, String),
@@ -637,7 +637,7 @@ impl App {
             return Checked::Bad(FormField::View, m);
         };
         s.view = view;
-        Checked::Ok(s, join_password)
+        Checked::Ok(Box::new(s), join_password)
     }
 
     /// A pinned key's pin as typed: checked, and kept in groups of four.
@@ -695,7 +695,7 @@ impl App {
         };
         self.live_form_keep(&mut form, text.to_owned());
         let (source, join_password) = match self.live_form_check(&form) {
-            Checked::Ok(s, p) => (s, p),
+            Checked::Ok(s, p) => (*s, p),
             Checked::Bad(field, why) => {
                 self.error(&why);
                 form.focus = field;
