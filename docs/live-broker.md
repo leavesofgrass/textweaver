@@ -209,6 +209,36 @@ A reader who joins in the middle of the net receives only retained messages. The
 
 The list plan is simpler for readers. Do not retain a single check-in on a topic where you also retain a list, since a late reader would receive the old retained check-in as an entry of its own.
 
+## A live source file for your readers
+
+Rather than read out a host, a port, and a topic for each reader to type, you can send them one small file. A live source file is TOML with the extension `.twlive`, holding the keys of one source. A reader opens it in textweaver (File, Open, or `tw netlog.twlive`), checks the form it fills, and presses Enter to add the source. The keys are the ones a reader's `settings.toml` uses, listed in [Live documents](live-documents.md#settings-for-a-source).
+
+For the plain Tailscale setup above:
+
+```toml
+# A textweaver live source. Open this file in textweaver to add it.
+name = "Practice net"
+host = "broker.example.ts.net"
+username = "reader"
+topics = ["netlog/#"]
+id_field = "serial"
+```
+
+For TLS with your own certificate authority, send `ca.crt` beside the file and name it without a folder; textweaver reads a relative `ca_file` from the folder the `.twlive` file is in:
+
+```toml
+name = "Practice net"
+host = "broker.example.org"
+tls = "ca_file"
+ca_file = "ca.crt"
+topics = ["netlog/#"]
+username = "reader"
+```
+
+Never put a password in the file. textweaver refuses a `password` key, says so to the reader, and asks for the password after the source is saved, keeping it in the reader's system credential store. Send the password some other way, or let each reader have an account of their own.
+
+You do not have to write the file by hand. Set the source up once in your own textweaver, then run **Save live source as file** (Tools, Live sources): it writes the source without its password, ready to send.
+
 ## Checks before the net
 
 1. From another computer, subscribe as `reader` and publish as `logger`. The message arrives.
@@ -216,6 +246,7 @@ The list plan is simpler for readers. Do not retain a single check-in on a topic
 3. Subscribe with a wrong password. The login is refused.
 4. Restart the broker and check that it comes up with the network, then check it again after a reboot.
 5. With a retained list in place, open the source in textweaver and read the log.
+6. If you send readers a live source file, open it yourself first in a textweaver with no sources, and check that the form it fills connects.
 
 ## See also
 
