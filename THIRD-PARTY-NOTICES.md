@@ -1172,8 +1172,8 @@ textweaver is built from these Rust crates. Each licence below lists the crates 
 
 Licences, with the number of crates under each:
 
-- Apache License 2.0: 587
-- MIT License: 195
+- Apache License 2.0: 589
+- MIT License: 196
 - BSD 3-Clause "New" or "Revised" License: 31
 - Unicode License v3: 27
 - ISC License: 24
@@ -13864,6 +13864,7 @@ Used by:
 - web_atoms 0.2.6, https://github.com/servo/html5ever
 - wl-clipboard-rs 0.9.4, https://github.com/YaLTeR/wl-clipboard-rs
 - yaml-rust 0.4.5, https://github.com/chyh1990/yaml-rust
+- yasna 0.6.0, https://github.com/qnighy/yasna.rs
 
 ```text
                               Apache License
@@ -18244,6 +18245,7 @@ Used by:
 - rand_chacha 0.9.0, https://github.com/rust-random/rand
 - range-alloc 0.1.5, https://github.com/gfx-rs/range-alloc
 - raw-window-handle 0.6.2, https://github.com/rust-windowing/raw-window-handle
+- rcgen 0.14.10, https://github.com/rustls/rcgen
 - resvg 0.47.0, https://github.com/linebender/resvg
 - rodio 0.22.2, https://github.com/RustAudio/rodio
 - rten-base 0.26.0, https://github.com/robertknight/rten
@@ -24206,6 +24208,37 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+```
+
+### MIT License (MIT)
+
+Used by:
+
+- pem 4.0.0, https://github.com/jcreekmore/pem-rs.git
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2016 Jonathan Creekmore
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ```
 

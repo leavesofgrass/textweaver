@@ -412,6 +412,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ],
    "deps": [
     "textweaver-app",
+    "textweaver-broker",
     "textweaver-cite",
     "textweaver-convert",
     "textweaver-dictation",
@@ -419,6 +420,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-export",
     "textweaver-formats",
     "textweaver-host",
+    "textweaver-mqtt",
     "textweaver-ocr",
     "textweaver-render",
     "textweaver-tui",
@@ -983,16 +985,40 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-app"
+    "textweaver-app",
+    "textweaver-broker",
+    "textweaver-cli"
    ],
    "deps": [],
-   "description": "Receive-only MQTT 3.1.1 client for textweaver's live documents: one std thread, rumqttc's packet codec, textweaver's own rustls with ring, reconnect with backoff, caps and sanitizing of every payload",
+   "description": "MQTT 3.1.1 client for textweaver's live documents: a receive-only source on one std thread and a small blocking publisher, on rumqttc's packet codec and textweaver's own rustls with ring (bundled roots, a CA file, or a pinned key and join codes), with reconnect and backoff, and caps and sanitizing of every payload",
    "dev_deps": [],
    "job": "Live sources: a receive-only MQTT client on one thread, with TLS, reconnecting, status in words, and every payload capped and cleaned before it is shown or spoken.",
    "layer": "state",
    "name": "textweaver-mqtt",
    "path": "crates/textweaver-mqtt",
    "short": "mqtt",
+   "tool": false,
+   "version": "0.1.0-beta.4"
+  },
+  {
+   "adr_note": null,
+   "adrs": [],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli"
+   ],
+   "deps": [
+    "textweaver-mqtt"
+   ],
+   "description": "textweaver's own small MQTT 3.1.1 broker for live documents: std threads, rumqttc's packet codec, textweaver's rustls with a pinned key or a join code, named accounts with PBKDF2 hashes, readers that can never publish, caps and a failed-login limit, and a real stop",
+   "dev_deps": [],
+   "job": "textweaver's own small MQTT 3.1.1 broker, for live documents and net logs: tw broker runs it headless, and the app can run the same broker inside itself.",
+   "layer": "state",
+   "name": "textweaver-broker",
+   "path": "crates/textweaver-broker",
+   "short": "broker",
    "tool": false,
    "version": "0.1.0-beta.4"
   },
@@ -1887,6 +1913,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-store",
     "textweaver-sync",
     "textweaver-mqtt",
+    "textweaver-broker",
     "textweaver-keymap",
     "textweaver-a11y",
     "textweaver-editor"
