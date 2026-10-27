@@ -4,7 +4,7 @@ A live document is a document that grows while you read it. textweaver connects 
 
 MQTT is a small publish and subscribe protocol that sensors, home automation, and logging tools use. Any standard MQTT broker and any topic can be opened as a live document. A net log is the first use: a friend logs check-ins as JSON and publishes them, and textweaver shows the log as it grows. A weather station or a workshop sensor is another.
 
-textweaver only receives. It never publishes a message, so a live document cannot change what the broker holds.
+A live source only receives. It never publishes a message, so a live document cannot change what the broker holds. Sending is separate: **Send a check-in** publishes one entry, **Share this document live** publishes the document you have open, and **Start a broker** runs textweaver's own broker inside the app ([Sending: check-ins and sharing](#sending-check-ins-and-sharing)).
 
 This guide is for the person who reads the live document. If you also run the broker, [Running the broker for a live log](live-broker.md) covers textweaver's own broker (`tw broker`, `tw send` and `tw share`), Mosquitto, Tailscale, and 44Net.
 
@@ -12,7 +12,7 @@ This guide is for the person who reads the live document. If you also run the br
 
 1. Run **Set up a live source** (Tools, Live sources, or the command palette) and fill in its form: a name, the broker's host, encryption, port, topic, user name, and view. If the broker's owner sent you a live source file (`.twlive`), open it instead, check the form it fills, and press Enter.
 2. Run **Open live source**, choose the source, and press Enter. If it needs a password, textweaver asks once and keeps it in your system's credential store.
-3. Read the log. New entries arrive at the end and never move your place. Press `Alt+Shift+F6` to jump to the newest entry.
+3. Read the log. New entries arrive at the end and never move your place. Press `Alt+Shift+F6` to jump to the newest entry. A source that carries a shared document shows the document itself instead, and each new revision replaces it in place ([The document view](#the-document-view)).
 4. When you close the source, textweaver has already saved the entries as a JSON file.
 
 ## The log view
@@ -118,6 +118,17 @@ On the field's line, run **Show changes of this field** or **Speak changes of th
 
 A field's changes are announced at most once every `min_interval_seconds` (10 by default), and only its latest value is said. A busy sensor does not flood the display.
 
+## The document view
+
+A shared document is a whole document published as one message, by `tw share` or by **Share this document live** in another copy of textweaver ([The live document message](live-broker.md#the-live-document-message)). When such a message arrives, the source shows the document itself, as Markdown or as plain text, in place of a log. You read it as any document, with headings, lists, links and find.
+
+- **A new revision replaces it in place.** textweaver changes only the lines that differ, so your cursor, selection, bookmarks and the screen reader's place stay on the same text. In the textweaver app the lines that did not change keep their place in the accessibility tree, so the screen reader does not read them again.
+- **The revision is said once, briefly and politely:** "Agenda updated, revision 3." The text itself is never read out. The first revision says "Agenda, revision 1, shared live." The title line shows "Revision 3" where a log shows its unread count.
+- **Line breaks are kept.** Every other value in a message is one line of at most 2,000 characters; a shared document keeps its lines and may hold up to 250,000 characters. It is cleaned all the same: control characters, terminal escape sequences, and text-direction overrides are removed. A longer document ends with a line saying "(cut)".
+- **An older revision is left out,** and the same revision again changes nothing. Since the message is retained, a reader who opens the source late receives the current revision at once.
+- **Pause updates** holds new revisions; resuming shows the newest one.
+- **One document per source.** Log entries that arrive on a source showing a document are left out, and textweaver says so once. The view switch, Jump to newest and Save live log answer that a shared document has no entries, table or log.
+
 ## Setting up a source
 
 ### The form
@@ -126,12 +137,18 @@ A field's changes are announced at most once every `min_interval_seconds` (10 by
 
 1. **Name**, such as "Practice log".
 2. **Broker host**: the broker's host name or address, with no spaces.
-3. **Encryption**, a choice: **Off** (not encrypted, port 1883, fine over Tailscale), **Bundled roots** (TLS checked against the certificate authorities that come with textweaver, port 8883), or **CA file** (TLS checked against a certificate authority file you name, port 8883).
+3. **Encryption**, a choice: **Off** (not encrypted, port 1883, fine over Tailscale), **Bundled roots** (TLS checked against the certificate authorities that come with textweaver, port 8883), **CA file** (TLS checked against a certificate authority file you name, port 8883), **Pinned key** (TLS trusting only the broker key whose pin you type, port 8883), or **Join code** (TLS with the key a join code names, signing in with the code, port 8883).
 4. **CA file**: the certificate authority's PEM file. This field is there only when the encryption is CA file.
-5. **Port**. It follows the encryption, 1883 or 8883, until you change it; a port you typed stays when the encryption changes.
-6. **Topic**, such as `log/checkins`. Separate several topics with commas. MQTT's wildcards work: `+` for one level and `#` for the rest.
-7. **User name**. Leave it blank if the broker needs none.
-8. **View**, a choice: **Log** (one entry per message) or **Values** (one line per field, updated in place).
+5. **Pin**: the broker's certificate pin, as textweaver's broker prints it after "Certificate pin:", 52 letters and digits in groups of four. This field is there only with a pinned key.
+6. **Join code**: the 16 characters the broker's owner read out or showed you. This field is there only when joining by code.
+7. **Port**. It follows the encryption, 1883 or 8883, until you change it; a port you typed stays when the encryption changes.
+8. **Topic**, such as `log/checkins`. Separate several topics with commas. MQTT's wildcards work: `+` for one level and `#` for the rest.
+9. **User name**. Leave it blank if the broker needs none. A join code signs in by itself, so this field is not there when joining by code.
+10. **View**, a choice: **Log** (one entry per message) or **Values** (one line per field, updated in place).
+
+A pin and a join code are typed as they are read aloud: in any case, with or without spaces or dashes, and the letter O reads as zero and I or L as one. A pin or code with a wrong length or a character it cannot hold is said in words, and the form opens again on that field.
+
+**Joining by code** keeps nothing secret in the settings. textweaver saves the source as a pinned key, with the first 12 characters of the code as its pin and `join` as its user name, and keeps the password the whole code gives in your system's credential store, without asking for one. The code itself is kept nowhere. Editing such a source shows the join code field empty: leave it empty to keep the kept password, or type a new code. A join code reads only; textweaver's broker refuses anything it tries to publish.
 
 The keys:
 
@@ -172,7 +189,7 @@ A file comes from someone else, so textweaver reads it with care, and tells you 
 
 - A file larger than 64 KiB, or one that is not text or not valid TOML, is refused in words, with the line where reading stopped.
 - A key textweaver does not know is named and left out.
-- A `password` key is never read. textweaver says so: a password is only ever kept in your system's credential store, and textweaver asks for it after saving.
+- A `password` key is never read. textweaver says so: a password is only ever kept in your system's credential store, and textweaver asks for it after saving. A `join_code` key is refused the same way, since a code's last four characters are a secret. A broker's `pin` is kept: it is not a secret, and it lets the file name a broker by its key.
 - A value that does not fit its key is left out in words, as in `settings.toml`.
 - Control characters, terminal escape sequences, and characters that change the text's direction are removed from every value. Very long values and very long lists are cut short.
 - A relative `ca_file`, such as `ca_file = "club-ca.pem"`, is the file of that name in the same folder as the `.twlive` file. Send the two together.
@@ -194,8 +211,9 @@ Each source is a table, `[live.sources.<id>]`:
 - `name`: what textweaver shows and says. Empty means the id.
 - `host`: the broker's host name or address. Required.
 - `port`: 1883, or 8883 when `tls` is on. A port of 0, or one over 65535, is not valid.
-- `tls`: `off`, `system`, or `ca_file`. The value `system` trusts the certificate authorities bundled with textweaver (Mozilla's list), not your operating system's store. With `ca_file`, textweaver trusts only the authority in that file. There is no way to turn off certificate checking.
+- `tls`: `off`, `system`, `ca_file`, or `pinned`. The value `system` trusts the certificate authorities bundled with textweaver (Mozilla's list), not your operating system's store. With `ca_file`, textweaver trusts only the authority in that file. With `pinned`, it trusts exactly the key whose pin is `pin`, with no certificate authority; the names and dates in the certificate are not checked, the key is. There is no way to turn off certificate checking.
 - `ca_file`: the path of a PEM file, with `tls = "ca_file"`. Use a full path in `settings.toml`; in a live source file, a relative path is read from the file's own folder.
+- `pin`: with `tls = "pinned"`, the broker's certificate pin: 52 characters as textweaver's broker prints it, or the 12 of a join code, in groups of four. A source with a pin that does not read as one is not opened, and textweaver says so.
 - `username`: the user name to sign in with. Empty means none.
 - `topics`: a list of topics. MQTT's wildcards work: `+` for one level and `#` for the rest.
 - `view`: `log` (the default) or `values`.
@@ -214,7 +232,17 @@ In the values view, each `[[live.sources.<id>.fields]]` entry maps one field:
 
 A setting that does not fit is dropped with a warning in words ("live.sources.net.port 70000 is outside 1 to 65535; using the default"), and the rest of the source is kept. When you open a source that cannot work, such as one with no host or no topic, textweaver says what is wrong in words.
 
-Sources and the log folder belong to this computer, and never sync. The announcement choices in `[live]` do sync.
+The `[live.broker]` section holds the broker the app starts and where the app sends ([Sending: check-ins and sharing](#sending-check-ins-and-sharing)):
+
+- `listen`, default `["127.0.0.1"]`: the addresses the broker listens on, each with or without a port, such as `100.101.1.2` or `[::1]:8883`. The default is this computer only.
+- `port`, default `0`: the port for addresses given without one. Zero means 8883 with TLS and 1883 without.
+- `plain`, default `false`: no TLS. Only on this computer or over Tailscale.
+- `join_code`, default `true`: a join code each time the broker starts. The code comes with a key of its own, held in memory, so readers who pinned the broker's usual key need it off.
+- `join_topics`, default `["#"]`: the topic filters a join code may read.
+- `share_topic`, default `"textweaver/document"`: the topic Share this document live publishes on.
+- `checkin_topic`, default `"netlog/checkins"`: the topic Send a check-in publishes on when the live source has no plain topic.
+
+Sources, the log folder, and `[live.broker]` belong to this computer, and never sync. The announcement choices in `[live]` do sync.
 
 ### Worked example: a net log
 
@@ -279,6 +307,29 @@ A source's password is never written to `settings.toml`, a log, a message, or th
 - A version of textweaver built without the credential store cannot keep a password. It says so in words rather than keep one in a file.
 - The masked field edits like any text field: you can move inside it, type or delete in the middle, and use an asterisk in the password. In the textweaver app it is a password field, so a screen reader says "star" or "protected" rather than echo each character.
 
+## Sending: check-ins and sharing
+
+These commands are in Tools, Live sources and in the command palette. They publish; a live source never does.
+
+### Start a broker
+
+**Start a broker** runs textweaver's own broker inside the app, the same broker as `tw broker` ([textweaver's own broker](live-broker.md#textweavers-own-broker)), as `[live.broker]` says. With the defaults it listens on this computer only, with TLS on port 8883, and makes a join code. It says how it runs, meaning first: "Broker on: 127.0.0.1:8883, TLS, this computer only." Then it says the join code in its groups of four: "Join code: ABCD, EFGH, JKMN, PQRS." The accounts are those in `broker.toml`, which `tw broker account add` keeps.
+
+- **Show the join code** says the code again and shows it in a list: the whole code first, then one group to a line ("Group 1 of 4: ABCD"), so it can be read out one group at a time from a Braille display. With no join code, the list holds the certificate pin, which readers pin instead.
+- **The status bar** says "Broker on, 2 clients" while it runs, and "Sharing, revision 3" while a document is shared. A reader joining or leaving is said briefly ("Joined: join."), and a refused sign-in or a refused publish is said in words.
+- **Stop the broker** ends every connection and frees every port before it answers. Quitting textweaver stops it too.
+- A broker without TLS on a network other than this computer or Tailscale is warned about in words, since anyone on that network could read the messages and passwords.
+
+### Send a check-in
+
+**Send a check-in** opens a form with one field per line, like the live source form: `Tab` and `Shift+Tab` move between fields, `Enter` sends, `Escape` cancels. The fields are the open source's field mapping, in its order and with its labels; a source with none, or no source, gets callsign, name and notes. A net log is one example of a live document: the entry is a plain JSON object whose keys are the fields' paths, in the form's order, and empty fields are left out. An entry with every field empty is said, and the form opens again.
+
+The entry goes into the broker the app runs, when one is running. Otherwise it goes to the open live source's broker, signed in as that source, or through a source chosen from a list. The topic is the source's first plain topic (one without `+` or `#`), else `checkin_topic`. textweaver says "Sent: N0CALL, on netlog/checkins." once the broker acknowledges it. A reader's account, or a join code, cannot publish: the broker refuses, and textweaver says "Check-in not sent:" with the reason.
+
+### Share this document live
+
+**Share this document live** publishes the document you have open as a live document message, retained on `share_topic`, so readers following that topic see it at once, in the document view. Each time you save it in edit mode, the new text goes out as the next revision. A Markdown or text file is shared as its file reads; any other document as its text. **Stop sharing** stops; readers keep the last revision. The document goes into the broker the app runs, or, with none running, through a live source you choose, signed in as that source.
+
 ## Announcements: Braille and speech
 
 Each new or corrected entry is sent whole, meaning first, as one polite message through the same route as every other message from textweaver. A screen reader shows that message on a Braille display, and speaks it unless its speech is off. This is the way to read a log by Braille while you listen to something else, such as a radio net.
@@ -320,7 +371,7 @@ These keys work in the terminal reader and the textweaver app. On a Mac, use Opt
 - `Alt+Shift+F12`: switch between list and table.
 - `Alt+Shift+F1`: pause or resume updates.
 
-Every other command is in Tools, Live sources and in the command palette (F2): Open live source, Set up a live source, Edit a live source, Close live source, Speak new entries, Show changes of this field, Speak changes of this field, Save live log now, Save live source as file, and Forget live source password. In the live source form, `Tab` and `Shift+Tab` move between fields and `Up Arrow` and `Down Arrow` change a choice; in the Open live source list, `F2` edits the focused source. Close live source stops receiving; the log stays open, read only, and is saved. [The keyboard reference](keyboard.md) lists every key, and you can give any of these commands a key in `keymap.toml`.
+Every other command is in Tools, Live sources and in the command palette (F2): Open live source, Set up a live source, Edit a live source, Close live source, Speak new entries, Show changes of this field, Speak changes of this field, Save live log now, Save live source as file, Forget live source password, Start a broker, Stop the broker, Show the join code, Share this document live, Stop sharing, and Send a check-in. In the live source form, `Tab` and `Shift+Tab` move between fields and `Up Arrow` and `Down Arrow` change a choice; in the Open live source list, `F2` edits the focused source. Close live source stops receiving; the log stays open, read only, and is saved. [The keyboard reference](keyboard.md) lists every key, and you can give any of these commands a key in `keymap.toml`.
 
 In the textweaver app, a live document's buttons join the toolbar while it is open. [The textweaver app](gui.md#a-live-documents-buttons-and-status-bar) lists them and describes the status bar, which shows the unread count and the connection in words.
 
@@ -328,7 +379,7 @@ In the textweaver app, a live document's buttons join the toolbar while it is op
 
 - **A broker sees your connection.** It sees your computer's network address, the user name you sign in with, the topics you subscribe to, and when you connect. If the link is not encrypted, anyone on the path between you can also read the user name, the password, and every message. Over Tailscale the link is encrypted by Tailscale. Over the open internet, use TLS.
 - **The client id is neutral.** textweaver connects as `tw-` and 16 random hexadecimal digits, new at each start. It sends no name, computer name, or account name.
-- **textweaver sends nothing else.** It publishes no message. It subscribes, answers the broker's acknowledgements, and keeps the connection alive.
+- **A live source sends nothing else.** It publishes no message. It subscribes, answers the broker's acknowledgements, and keeps the connection alive. Only Send a check-in and Share this document live publish, and only what you send.
 - **Passwords stay in the credential store.** They are never written to settings, logs, or the status line.
 - **Messages are data.** Sizes, nesting, and field counts are capped, and control characters, terminal escape sequences, and text-direction overrides are removed from every topic, key, and value before display.
 - **Where the log goes.** The JSON log stays on your computer, in the folder above. It is never synced. A log can hold other people's names and callsigns, so treat the file with care.

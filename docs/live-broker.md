@@ -7,7 +7,7 @@ There are two ways to run the broker:
 - **textweaver's own broker**, `tw broker`, described first. It is one command with no configuration file to write by hand: accounts are added with `tw broker account add`, TLS is on by default with a key the broker makes itself, and senders check that key by its pin. `tw send` and `tw share` publish to it, or to any MQTT broker.
 - **Mosquitto**, the widely used broker, from [What you need](#what-you-need) on. Choose it if you already run one, or need MQTT 5, WebSockets, bridging, or retained messages that survive a restart.
 
-A live source in the textweaver app only subscribes; it never publishes. Sending is a separate, small client, used by `tw send` and `tw share`.
+A live source in the textweaver app only subscribes; it never publishes. Sending is a separate, small client, used by `tw send` and `tw share`, and in the app by Send a check-in and Share this document live. The app can also run textweaver's own broker itself, with Start a broker ([Running it from the textweaver app](#running-it-from-the-textweaver-app)).
 
 ## textweaver's own broker
 
@@ -50,6 +50,10 @@ The port is 8883 with TLS unless `--port` says otherwise, or an address carries 
 
 When the computer's firewall asks whether textweaver may accept connections, allow it for the networks your readers use. On Windows, canceling that question blocks the program on every network without saying so; the rule can be changed later in Windows Defender Firewall.
 
+### Running it from the textweaver app
+
+The same broker runs inside the textweaver app: Tools, Live sources, **Start a broker**. Its settings are the `[live.broker]` section ([Settings for a source](live-documents.md#settings-for-a-source)): the addresses to listen on (this computer only by default), the port, plain or TLS, whether to make a join code (on by default) and what it may read. The accounts are the same `broker.toml`. The app says how the broker runs and the join code, in groups of four; **Show the join code** says it again and shows it one group to a line; the status bar says "Broker on, 2 clients" while it runs; and **Stop the broker**, or quitting, stops it and frees its ports. **Send a check-in** and **Share this document live** publish into it directly, with no network and no login ([Sending: check-ins and sharing](live-documents.md#sending-check-ins-and-sharing)).
+
 ### Accounts
 
 Accounts are kept in `broker.toml` in textweaver's data folder (`tw settings path` shows the folder). Each has a name, a role, the topics it may read, and for a logger the topics it may publish to. Passwords are never kept, only a salted PBKDF2-HMAC-SHA256 hash with 600,000 rounds.
@@ -71,7 +75,7 @@ With TLS, the broker makes a key and a self-signed certificate on its first star
 
 The pin stays the same across restarts as long as the two files stay. If they are moved away, the broker makes a new pair, and everyone who checks the pin needs the new one.
 
-`tw send` and `tw share` take the pin with `--pin`. A pin setting for live sources in the textweaver app is planned. Until then, a reader on the broker's own computer can set `tls = "ca_file"` with `ca_file` naming `broker-cert.pem`, since the certificate names `localhost`, `127.0.0.1` and `::1`; a reader on another computer connects to a plain listener across Tailscale.
+`tw send` and `tw share` take the pin with `--pin`. A reader's live source takes it as the encryption **Pinned key** in the live source form, or `tls = "pinned"` with `pin = "..."` in `settings.toml` or a `.twlive` file you send; a pin is not a secret. Names and dates in the certificate are not checked, the key is, so the same pin works from any computer and through Tailscale.
 
 ### A join code for a quick session
 
@@ -83,7 +87,7 @@ tw broker --listen 0.0.0.0 --join-code --join-topic 'docs/#'
 
 It prints a code of 16 characters in four groups of four, such as `ABCD-EFGH-JKMN-PQRS`, to read aloud or show. The session gets a key of its own, held in memory only, so the code works only until the broker stops. The first 12 characters are the key's short pin and the last 4 are a secret. The login password is derived from the whole code, so someone who reaches the port and reads the certificate still cannot log in. Anyone with the code may read the `--join-topic` filters (every topic, by default) and may never publish. Accounts still work beside the code: a logger checks the session's key with the code's pin (`tw send --join-code CODE --user netcontrol`).
 
-Typing a code forgives case, spaces and dashes, and reads the letter O as zero and I or L as one. A wrong character is named with its group: "U in group 3 is not used in join codes." A join code needs TLS, so `--join-code` cannot be combined with `--plain`.
+A reader in the textweaver app joins with the encryption **Join code** in the live source form, typing the code; textweaver keeps the password the code gives in the credential store and the code nowhere ([The form](live-documents.md#the-form)). Typing a code forgives case, spaces and dashes, and reads the letter O as zero and I or L as one. A wrong character is named with its group: "U in group 3 is not used in join codes." A join code needs TLS, so `--join-code` cannot be combined with `--plain`.
 
 ### Plain connections and Tailscale
 
@@ -140,7 +144,7 @@ A shared document is one JSON object, retained on its topic and capped at 256 Ki
 - `format` is `markdown` (for `.md` and `.markdown` files) or `text`.
 - `text` is the whole document, every time.
 
-A net log is one kind of live document, and its entries stay plain JSON objects, as in [Example messages](#example-messages). A view that shows a shared document in place, keeping the reader's position, is planned for the textweaver app; until then a reader sees the message as a log entry.
+A net log is one kind of live document, and its entries stay plain JSON objects, as in [Example messages](#example-messages). A reader's textweaver shows a live document message in its document view: the document itself, replaced in place by each new revision, keeping the reader's position ([The document view](live-documents.md#the-document-view)). The `text` keeps its line breaks and may hold up to 250,000 characters, where any other value is one line of at most 2,000; it is still cleaned of control characters, terminal escape sequences and text-direction overrides.
 
 ### A net log, ready to copy
 

@@ -349,6 +349,12 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Close the live source: stop receiving; the log stays open, read only, and is saved | palette | palette | palette | `close_live_source` |
 | Save the live log as JSON now, and say where | palette | palette | palette | `save_live_log` |
 | Forget the live source's password kept in the system credential store; it is asked for again when needed | palette | palette | palette | `forget_live_source_password` |
+| Start textweaver's own broker inside the app, as the live broker settings say, and say its addresses and join code | palette | palette | palette | `start_broker` |
+| Stop the broker the app runs: every reader is disconnected and every port freed | palette | palette | palette | `stop_broker` |
+| Say the running broker's join code in groups of four and show it in a list, or its certificate pin when it has no code | palette | palette | palette | `show_join_code` |
+| Share the open document live: readers following its topic see it, and each save, in place | palette | palette | palette | `share_document_live` |
+| Stop sharing the document live; readers keep the last revision | palette | palette | palette | `stop_sharing` |
+| Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | palette | palette | palette | `send_check_in` |
 | Quit, saving the reading position | `Ctrl+Q` | `Ctrl+Q` | `Cmd+Q` | `quit` |
 
 ## Editing
@@ -666,6 +672,12 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Close the live source: stop receiving; the log stays open, read only, and is saved | `close_live_source` |
 | Save the live log as JSON now, and say where | `save_live_log` |
 | Forget the live source's password kept in the system credential store; it is asked for again when needed | `forget_live_source_password` |
+| Start textweaver's own broker inside the app, as the live broker settings say, and say its addresses and join code | `start_broker` |
+| Stop the broker the app runs: every reader is disconnected and every port freed | `stop_broker` |
+| Say the running broker's join code in groups of four and show it in a list, or its certificate pin when it has no code | `show_join_code` |
+| Share the open document live: readers following its topic see it, and each save, in place | `share_document_live` |
+| Stop sharing the document live; readers keep the last revision | `stop_sharing` |
+| Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | `send_check_in` |
 | Insert a wiki link to a note in the vault, or to a heading or block in it | `insert_wiki_link` |
 | Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | `cycle_task_status` |
 | Insert a callout of a type you choose; selected lines become its text | `insert_callout` |
