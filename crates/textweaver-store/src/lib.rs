@@ -53,6 +53,7 @@ pub mod graph;
 pub mod helpers;
 pub mod library;
 pub mod live_settings;
+pub mod live_source_file;
 pub mod migrate;
 pub mod notes;
 mod paths;
@@ -85,6 +86,10 @@ pub use library::{
 pub use live_settings::{
     LIVE_DECIMALS_MAX, LIVE_SECONDS_MAX, LiveField, LiveNotice, LiveSettings, LiveSourceSettings,
     LiveTls, LiveView, MQTT_PORT, MQTT_TLS_PORT, field_path_segments, live_source_id_ok,
+};
+pub use live_source_file::{
+    LIVE_SOURCE_FILE_EXTENSION, LIVE_SOURCE_FILE_MAX, LiveFileError, LiveFileNote, LiveSourceFile,
+    live_source_file_text, read_live_source_file,
 };
 pub use notes::{
     Annotation, Backlink, Backlinks, Highlight, Note, NotesExport, Relation, RelationType,

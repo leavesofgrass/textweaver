@@ -1,0 +1,9 @@
+name = "Unknown keys"
+host = "192.0.2.20"
+topics = ["a/b"]
+colour = "blue"
+[live.sources.other]
+host = "198.51.100.1"
+[[fields]]
+path = "a"
+shade = 3

@@ -1,0 +1,11 @@
+name = 42
+host = ["no"]
+port = 70000
+tls = "maybe"
+view = "grid"
+topics = [1, 2]
+stale_after_seconds = -5
+[[fields]]
+path = "a..b"
+decimals = 300
+show = "always"
