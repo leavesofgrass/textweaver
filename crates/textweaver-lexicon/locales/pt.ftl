@@ -4959,6 +4959,24 @@ live-password-forgotten = Senha de { $source } esquecida.
 live-password-none = Nenhuma senha guardada para { $source }.
 live-password-not-forgotten = Senha de { $source } não esquecida: { $reason }. Tente de novo, ou remova-a no armazenamento de credenciais do sistema.
 
+## A secret field's Show choice: the show key, or the Show box in
+## the textweaver app, shows a password, token or join code as typed.
+prompt-show-hint = { $label }. { $key } mostra.
+prompt-secret-hidden = { $count ->
+        [one] 1 caractere, oculto
+       *[other] { $count } caracteres, ocultos
+    }
+prompt-show-join-code = Mostrar o código de acesso
+prompt-showing-join-code = Código de acesso visível
+prompt-hiding-join-code = Código de acesso oculto
+prompt-show-password = Mostrar a senha
+prompt-showing-password = Senha visível
+prompt-hiding-password = Senha oculta
+prompt-show-token = Mostrar o token
+prompt-showing-token = Token visível
+prompt-hiding-token = Token oculto
+gui-prompt-show-hint = { $key } ou a caixa Mostrar exibe o que foi digitado.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.
