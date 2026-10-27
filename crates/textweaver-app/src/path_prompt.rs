@@ -41,6 +41,9 @@ pub const REFERENCE_EXTENSIONS: &[&str] = &["bib", "ris", "json"];
 /// Anki packages, which Import Anki cards reads.
 pub const ANKI_EXTENSIONS: &[&str] = &["apkg"];
 
+/// Live source files, which Save live source as file writes.
+pub const LIVE_SOURCE_EXTENSIONS: &[&str] = &["twlive"];
+
 /// Settings and profile files: TOML and JSON.
 pub const SETTINGS_EXTENSIONS: &[&str] = &["toml", "json"];
 
@@ -81,6 +84,7 @@ impl PromptPurpose {
             P::ImportSettings | P::ImportProfiles => PathKind::Read(SETTINGS_EXTENSIONS),
             P::SaveAs | P::ExportAs => PathKind::Write(&[]),
             P::ExportSettings | P::ExportProfiles => PathKind::Write(SETTINGS_EXTENSIONS),
+            P::SaveLiveSourceFile => PathKind::Write(LIVE_SOURCE_EXTENSIONS),
             _ => return None,
         })
     }
@@ -246,6 +250,12 @@ impl App {
                 Some(PROFILES_FILE_NAME.to_owned()),
                 None,
             ),
+            PromptPurpose::SaveLiveSourceFile => (
+                c.tr("prompt-save-live-source-file"),
+                c.tr("chooser-live-source-files"),
+                self.live_save_file_name(),
+                None,
+            ),
             _ => return None,
         };
         Some(PathPromptSpec {
@@ -371,6 +381,7 @@ mod tests {
             P::ExportSettings,
             P::ImportProfiles,
             P::ExportProfiles,
+            P::SaveLiveSourceFile,
         ] {
             assert!(p.is_path(), "{p:?}");
         }

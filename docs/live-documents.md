@@ -10,7 +10,7 @@ This guide is for the person who reads the live document. If you also run the br
 
 ## In brief
 
-1. Run **Set up a live source** (Tools, Live sources, or the command palette) and answer its questions: a name, the broker's host, encryption, port, topic, user name, and view.
+1. Run **Set up a live source** (Tools, Live sources, or the command palette) and fill in its form: a name, the broker's host, encryption, port, topic, user name, and view. If the broker's owner sent you a live source file (`.twlive`), open it instead, check the form it fills, and press Enter.
 2. Run **Open live source**, choose the source, and press Enter. If it needs a password, textweaver asks once and keeps it in your system's credential store.
 3. Read the log. New entries arrive at the end and never move your place. Press `Alt+Shift+F6` to jump to the newest entry.
 4. When you close the source, textweaver has already saved the entries as a JSON file.
@@ -120,20 +120,64 @@ A field's changes are announced at most once every `min_interval_seconds` (10 by
 
 ## Setting up a source
 
-### The guided way
+### The form
 
-**Set up a live source** (Tools, Live sources, or the command palette) asks one question at a time:
+**Set up a live source** (Tools, Live sources, or the command palette) opens one form. It works like the form for a document's details: each field is one labeled line, and moving to a field says its label, its place, and its value ("Broker host, 2 of 7", then "Broker host: blank"). The fields, in order:
 
-1. A name, such as "Practice log". Pressing Enter with nothing typed cancels.
-2. The broker's host name or address.
-3. Encryption: off, TLS checked against the bundled certificate authorities, or TLS checked against a certificate authority file.
-4. The certificate authority file, only if you chose that.
-5. The port. Enter keeps the default: 1883 with encryption off, 8883 with it on.
-6. The topic to read, such as `log/checkins`.
-7. A user name. Enter means none.
-8. The view: log or values.
+1. **Name**, such as "Practice log".
+2. **Broker host**: the broker's host name or address, with no spaces.
+3. **Encryption**, a choice: **Off** (not encrypted, port 1883, fine over Tailscale), **Bundled roots** (TLS checked against the certificate authorities that come with textweaver, port 8883), or **CA file** (TLS checked against a certificate authority file you name, port 8883).
+4. **CA file**: the certificate authority's PEM file. This field is there only when the encryption is CA file.
+5. **Port**. It follows the encryption, 1883 or 8883, until you change it; a port you typed stays when the encryption changes.
+6. **Topic**, such as `log/checkins`. Separate several topics with commas. MQTT's wildcards work: `+` for one level and `#` for the rest.
+7. **User name**. Leave it blank if the broker needs none.
+8. **View**, a choice: **Log** (one entry per message) or **Values** (one line per field, updated in place).
 
-textweaver then writes the source to `settings.toml` and offers to open it. The source's id comes from its name, in lowercase with hyphens between words ("Practice log" becomes `practice-log`), and a number is added if that id is taken. An id may hold only letters, digits, hyphens, and underscores.
+The keys:
+
+- `Tab` and `Shift+Tab` move to the next and previous field, keeping what you typed. They wrap from the last field to the first.
+- `Up Arrow` and `Down Arrow` change a choice in place, Encryption or View, and say the new choice with what it means. You can also type a choice's name. On the other fields, they bring back earlier answers, as in any prompt.
+- `Enter` checks every field and saves. If a field is wrong, such as a host with a space in it, a missing topic, a CA file that does not exist, or a port outside 1 to 65535, textweaver says what is wrong in words and opens the form again on that field. Every other value stays as you left it.
+- `Escape` cancels the form and says so. Nothing is saved.
+
+textweaver writes the source to `settings.toml`. If it has a user name, textweaver then asks for the password in a masked prompt ([The password](#the-password)). Last, it offers to open the source now or later. The source's id comes from its name, in lowercase with hyphens between words ("Practice log" becomes `practice-log`), and a number is added if that id is taken. An id may hold only letters, digits, hyphens, and underscores. If another source already has the same name, textweaver says the new one was saved beside it.
+
+**Edit a live source** (Tools, Live sources) opens the same form, filled in with the open source, or with one you choose from a list. In the Open live source list, `F2` edits the source on the focused row, as `F2` edits a document's details in the library; `Escape` then brings the list back on the same row. Editing keeps everything the form does not show, such as the field mapping and `id_field`, and keeps the source's id, so its kept password still applies unless you change the user name.
+
+### A live source file
+
+A live source file is a small TOML file, with the extension `.twlive`, that holds one source. The broker's owner can send you one, so you do not type the host and topic yourself ([Running the broker for a live log](live-broker.md#a-live-source-file-for-your-readers)). Open it as you open any document: File, Open, the command line (`tw practice.twlive`), or `tw open`. textweaver does not show it as a document. It opens the live source form, filled in from the file, for you to check. `Enter` saves it as a new source, with an id made from its name; it never replaces a source you already have. Then textweaver asks for the password, if the source has a user name.
+
+The file holds the keys of one source, the ones described under [Settings for a source](#settings-for-a-source), at the top level and with no id:
+
+```toml
+# A textweaver live source. Open this file in textweaver to add it.
+name = "Practice log"
+host = "logger.example.ts.net"
+username = "reader"
+topics = ["log/checkins"]
+view = "log"
+id_field = "serial"
+
+[[fields]]
+path = "call"
+label = "Callsign"
+
+[[fields]]
+path = "name"
+label = "Name"
+```
+
+A file comes from someone else, so textweaver reads it with care, and tells you what it left out before the form's first field:
+
+- A file larger than 64 KiB, or one that is not text or not valid TOML, is refused in words, with the line where reading stopped.
+- A key textweaver does not know is named and left out.
+- A `password` key is never read. textweaver says so: a password is only ever kept in your system's credential store, and textweaver asks for it after saving.
+- A value that does not fit its key is left out in words, as in `settings.toml`.
+- Control characters, terminal escape sequences, and characters that change the text's direction are removed from every value. Very long values and very long lists are cut short.
+- A relative `ca_file`, such as `ca_file = "club-ca.pem"`, is the file of that name in the same folder as the `.twlive` file. Send the two together.
+
+**Save live source as file** (Tools, Live sources) writes the open source, or one you choose, to a `.twlive` file, to share or keep. It is offered as `<id>.twlive`; with no extension typed, `.twlive` is added. The file never holds a password, and leaves out keys only this computer knows about. A CA file in the same folder is written by its name alone.
 
 ### Settings for a source
 
@@ -151,7 +195,7 @@ Each source is a table, `[live.sources.<id>]`:
 - `host`: the broker's host name or address. Required.
 - `port`: 1883, or 8883 when `tls` is on. A port of 0, or one over 65535, is not valid.
 - `tls`: `off`, `system`, or `ca_file`. The value `system` trusts the certificate authorities bundled with textweaver (Mozilla's list), not your operating system's store. With `ca_file`, textweaver trusts only the authority in that file. There is no way to turn off certificate checking.
-- `ca_file`: the path of a PEM file, with `tls = "ca_file"`. Use a full path.
+- `ca_file`: the path of a PEM file, with `tls = "ca_file"`. Use a full path in `settings.toml`; in a live source file, a relative path is read from the file's own folder.
 - `username`: the user name to sign in with. Empty means none.
 - `topics`: a list of topics. MQTT's wildcards work: `+` for one level and `#` for the rest.
 - `view`: `log` (the default) or `values`.
@@ -233,7 +277,7 @@ A source's password is never written to `settings.toml`, a log, a message, or th
 
 - **Forget live source password** (Tools, Live sources) removes it, so textweaver asks again the next time. Use it after the password changes.
 - A version of textweaver built without the credential store cannot keep a password. It says so in words rather than keep one in a file.
-- In the textweaver app, the masked field is best edited at the end: type, and press Backspace to delete the last characters. See [Known limits](known-limits.md#live-documents).
+- The masked field edits like any text field: you can move inside it, type or delete in the middle, and use an asterisk in the password. In the textweaver app it is a password field, so a screen reader says "star" or "protected" rather than echo each character.
 
 ## Announcements: Braille and speech
 
@@ -276,7 +320,7 @@ These keys work in the terminal reader and the textweaver app. On a Mac, use Opt
 - `Alt+Shift+F12`: switch between list and table.
 - `Alt+Shift+F1`: pause or resume updates.
 
-Every other command is in Tools, Live sources and in the command palette (F2): Open live source, Set up a live source, Close live source, Speak new entries, Show changes of this field, Speak changes of this field, Save live log now, and Forget live source password. Close live source stops receiving; the log stays open, read only, and is saved. [The keyboard reference](keyboard.md) lists every key, and you can give any of these commands a key in `keymap.toml`.
+Every other command is in Tools, Live sources and in the command palette (F2): Open live source, Set up a live source, Edit a live source, Close live source, Speak new entries, Show changes of this field, Speak changes of this field, Save live log now, Save live source as file, and Forget live source password. In the live source form, `Tab` and `Shift+Tab` move between fields and `Up Arrow` and `Down Arrow` change a choice; in the Open live source list, `F2` edits the focused source. Close live source stops receiving; the log stays open, read only, and is saved. [The keyboard reference](keyboard.md) lists every key, and you can give any of these commands a key in `keymap.toml`.
 
 In the textweaver app, a live document's buttons join the toolbar while it is open. [The textweaver app](gui.md#a-live-documents-buttons-and-status-bar) lists them and describes the status bar, which shows the unread count and the connection in words.
 

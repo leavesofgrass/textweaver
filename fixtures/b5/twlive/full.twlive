@@ -1,0 +1,17 @@
+# A live source for a practice log (placeholder values).
+name = "Practice log"
+host = "logger.example.ts.net"
+port = 1883
+tls = "off"
+username = "reader"
+topics = ["log/checkins"]
+view = "log"
+id_field = "serial"
+
+[[fields]]
+path = "call"
+label = "Callsign"
+
+[[fields]]
+path = "name"
+label = "Name"

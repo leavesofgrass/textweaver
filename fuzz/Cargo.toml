@@ -324,3 +324,12 @@ path = "fuzz_targets/mqtt.rs"
 test = false
 doc = false
 bench = false
+
+# Beta 5: live source files (`.twlive`), read from someone else.
+
+[[bin]]
+name = "twlive"
+path = "fuzz_targets/twlive.rs"
+test = false
+doc = false
+bench = false

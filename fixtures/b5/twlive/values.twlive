@@ -1,0 +1,19 @@
+name = "Weather station"
+host = "broker.example.org"
+tls = "system"
+topics = ["weather/#"]
+view = "values"
+stale_after_seconds = 600
+
+[[fields]]
+path = "/sensor/temp"
+label = "Temperature"
+unit = "C"
+decimals = 1
+speak = "on_change"
+
+[[fields]]
+path = "door"
+values = { "0" = "closed", "1" = "open" }
+show = "off"
+order = 2

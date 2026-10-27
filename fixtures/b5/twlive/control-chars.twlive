@@ -1,0 +1,4 @@
+name = "Practice\u001b[31m log\u202e"
+host = " logger.example "
+topics = ["log/\u0007a", "\u200f"]
+username = "r\u0000eader"

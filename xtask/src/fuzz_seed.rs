@@ -137,6 +137,8 @@ const TARGETS: &[(&str, &[Seeds])] = &[
         "mqtt",
         &[seeds("fixtures/b5/mqtt", &["json", "txt"], false)],
     ),
+    // Beta 5: live source files.
+    ("twlive", &[seeds("fixtures/b5/twlive", &["twlive"], false)]),
 ];
 
 /// The repository root.

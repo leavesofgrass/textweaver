@@ -60,6 +60,8 @@ pub const PENDING: &[ActionId] = &[
     // Live sources over MQTT (crate::live::wire), with the `mqtt` feature.
     ActionId::OpenLiveSource,
     ActionId::SetUpLiveSource,
+    ActionId::EditLiveSource,
+    ActionId::SaveLiveSourceFile,
     ActionId::CloseLiveSource,
     ActionId::ForgetLiveSourcePassword,
 ];
@@ -302,6 +304,7 @@ impl MenuId {
             MenuId::Live => &[
                 Do(A::OpenLiveSource),
                 Do(A::SetUpLiveSource),
+                Do(A::EditLiveSource),
                 Do(A::CloseLiveSource),
                 Sep,
                 Do(A::LiveSayUnread),
@@ -313,6 +316,7 @@ impl MenuId {
                 Do(A::LiveToggleFieldSpeak),
                 Sep,
                 Do(A::SaveLiveLog),
+                Do(A::SaveLiveSourceFile),
                 Do(A::ForgetLiveSourcePassword),
             ],
             MenuId::ExportAs => &[

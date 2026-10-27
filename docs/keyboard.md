@@ -343,7 +343,9 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | List notes replaced by another computer's newer edit; Enter puts one back | palette | palette | palette | `sync_replaced_notes` |
 | Stop syncing on this computer; the sync folder is left as it is | palette | palette | palette | `sync_stop` |
 | Open a live source: list the live sources set up, and Enter connects to one and shows its log as it grows | palette | palette | palette | `open_live_source` |
-| Set up a live source: its name, the broker's host, encryption, port, topic, user name, and view, asked one at a time | palette | palette | palette | `set_up_live_source` |
+| Set up a live source in one form: its name, the broker's host, encryption, port, topic, user name, and view; Tab moves between the fields, Enter saves | palette | palette | palette | `set_up_live_source` |
+| Edit a live source in the same form, filled in: the open one, or one chosen from a list | palette | palette | palette | `edit_live_source` |
+| Save a live source as a file (.twlive) to share, without its password: the open one, or one chosen from a list | palette | palette | palette | `save_live_source_file` |
 | Close the live source: stop receiving; the log stays open, read only, and is saved | palette | palette | palette | `close_live_source` |
 | Save the live log as JSON now, and say where | palette | palette | palette | `save_live_log` |
 | Forget the live source's password kept in the system credential store; it is asked for again when needed | palette | palette | palette | `forget_live_source_password` |
@@ -658,7 +660,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | List notes replaced by another computer's newer edit; Enter puts one back | `sync_replaced_notes` |
 | Stop syncing on this computer; the sync folder is left as it is | `sync_stop` |
 | Open a live source: list the live sources set up, and Enter connects to one and shows its log as it grows | `open_live_source` |
-| Set up a live source: its name, the broker's host, encryption, port, topic, user name, and view, asked one at a time | `set_up_live_source` |
+| Set up a live source in one form: its name, the broker's host, encryption, port, topic, user name, and view; Tab moves between the fields, Enter saves | `set_up_live_source` |
+| Edit a live source in the same form, filled in: the open one, or one chosen from a list | `edit_live_source` |
+| Save a live source as a file (.twlive) to share, without its password: the open one, or one chosen from a list | `save_live_source_file` |
 | Close the live source: stop receiving; the log stays open, read only, and is saved | `close_live_source` |
 | Save the live log as JSON now, and say where | `save_live_log` |
 | Forget the live source's password kept in the system credential store; it is asked for again when needed | `forget_live_source_password` |

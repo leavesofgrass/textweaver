@@ -663,7 +663,13 @@ actions! {
         "Open a live source: list the live sources set up, and Enter connects to one and shows its log as it grows",
         gui [], term [], shared [];
     SetUpLiveSource = "set_up_live_source", File,
-        "Set up a live source: its name, the broker's host, encryption, port, topic, user name, and view, asked one at a time",
+        "Set up a live source in one form: its name, the broker's host, encryption, port, topic, user name, and view; Tab moves between the fields, Enter saves",
+        gui [], term [], shared [];
+    EditLiveSource = "edit_live_source", File,
+        "Edit a live source in the same form, filled in: the open one, or one chosen from a list",
+        gui [], term [], shared [];
+    SaveLiveSourceFile = "save_live_source_file", File,
+        "Save a live source as a file (.twlive) to share, without its password: the open one, or one chosen from a list",
         gui [], term [], shared [];
     CloseLiveSource = "close_live_source", File,
         "Close the live source: stop receiving; the log stays open, read only, and is saved",

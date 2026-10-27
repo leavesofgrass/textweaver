@@ -414,7 +414,7 @@ fn describe(key: &str, value: &toml::Value) -> Option<String> {
 /// Deserializes `table` as a `T`, key by key when it does not fit whole:
 /// a key whose value does not fit is dropped and reported, in words for
 /// the keys [`describe`] knows.
-fn lenient<T>(name: &str, table: toml::Table, warnings: &mut Vec<String>) -> T
+pub(crate) fn lenient<T>(name: &str, table: toml::Table, warnings: &mut Vec<String>) -> T
 where
     T: serde::de::DeserializeOwned + Default,
 {

@@ -7,12 +7,14 @@
 //!   ([`LiveSourceSettings::problems`]); asks for the password when the
 //!   source has a user name and none is kept, and connects once it is
 //!   answered; then connects and shows the log.
-//! - **Set up a live source** asks one thing at a time: the name, the
-//!   broker's host, the encryption (a list), the certificate authority
-//!   file when one is chosen, the port (the default for the encryption
-//!   filled in), the topic, the user name, and the view (a list). It
-//!   writes `[live.sources.<id>]` through the settings update path, then
-//!   offers to open the source.
+//! - **Set up a live source** and **Edit a live source** open one form
+//!   (crate::live::form): the name, the broker's host, the encryption,
+//!   the certificate authority file when one is chosen, the port, the
+//!   topic, the user name, and the view. Enter writes
+//!   `[live.sources.<id>]` through the settings update path, asks for the
+//!   password when there is a user name, then offers to open the source.
+//!   A live source file (`.twlive`) opens the same form, filled from it;
+//!   **Save live source as file** writes one.
 //! - **Close live source** stops receiving; the log stays open, read
 //!   only, and is saved.
 //! - **Switch list and table**, **Jump to newest**, **Pause or resume
@@ -25,14 +27,14 @@
 //! - **Forget live source password** removes the open source's password
 //!   (or a chosen source's) from the system credential store.
 //!
-//! Without the `mqtt` feature, the commands that open, set up, or close a
-//! source, and Forget, are hidden from the menus and the palette
+//! Without the `mqtt` feature, the commands that open, set up, edit,
+//! save, or close a source, and Forget, are hidden from the menus and the palette
 //! ([`crate::menu::PENDING`]); run by a key, they say in words that live
 //! sources are not in this build.
 
 use textweaver_keymap::ActionId;
 use textweaver_lexicon::args;
-use textweaver_store::{LiveSourceSettings, LiveTls, LiveView, live_source_id_ok};
+use textweaver_store::{LiveSourceSettings, live_source_id_ok};
 
 use super::announce::EntryThrottle;
 use crate::app::{App, ListKind};
@@ -43,6 +45,8 @@ use crate::command::{Effect, PromptPurpose};
 pub const NEEDS_MQTT: &[ActionId] = &[
     ActionId::OpenLiveSource,
     ActionId::SetUpLiveSource,
+    ActionId::EditLiveSource,
+    ActionId::SaveLiveSourceFile,
     ActionId::CloseLiveSource,
     ActionId::ForgetLiveSourcePassword,
 ];
@@ -51,6 +55,8 @@ pub const NEEDS_MQTT: &[ActionId] = &[
 pub const COMMANDS: &[ActionId] = &[
     ActionId::OpenLiveSource,
     ActionId::SetUpLiveSource,
+    ActionId::EditLiveSource,
+    ActionId::SaveLiveSourceFile,
     ActionId::CloseLiveSource,
     ActionId::LiveSwitchView,
     ActionId::LiveJumpNewest,
@@ -83,8 +89,13 @@ pub(crate) struct LiveWire {
     /// The source the open password prompt was asked for by Open: once
     /// answered, it connects.
     open_after_password: Option<String>,
-    /// Set up a live source, while it runs.
-    setup: Option<Setup>,
+    /// The set-up and edit form, while it is open (crate::live::form).
+    pub(crate) form: Option<super::form::LiveForm>,
+    /// The source saved by the form whose password prompt is open: once
+    /// answered, the source is offered for opening.
+    pub(crate) offer_after_password: Option<String>,
+    /// The source Save live source as file is asking a file for.
+    pub(crate) save_file: Option<String>,
     /// Stands in for the MQTT client (tests).
     #[cfg(feature = "mqtt")]
     connector: Option<Connector>,
@@ -95,7 +106,9 @@ impl std::fmt::Debug for LiveWire {
         f.debug_struct("LiveWire")
             .field("throttle", &self.throttle)
             .field("open_after_password", &self.open_after_password)
-            .field("setup", &self.setup)
+            .field("form", &self.form)
+            .field("offer_after_password", &self.offer_after_password)
+            .field("save_file", &self.save_file)
             .finish_non_exhaustive()
     }
 }
@@ -107,36 +120,12 @@ pub(crate) enum LiveList {
     Open(Vec<String>),
     /// Forget a password: the source ids, by row.
     Forget(Vec<String>),
-    /// Set up: the encryption, in the order of [`TLS_CHOICES`].
-    SetupTls,
-    /// Set up: the view, in the order of [`VIEW_CHOICES`].
-    SetupView,
-    /// Set up is done: open source `id` now, or not.
+    /// Edit a live source: the source ids, by row.
+    Edit(Vec<String>),
+    /// Save live source as file: the source ids, by row.
+    SaveFile(Vec<String>),
+    /// The form saved a source: open source `id` now, or not.
     SetupOffer(String),
-}
-
-/// The encryption choices, in list order.
-const TLS_CHOICES: [LiveTls; 3] = [LiveTls::Off, LiveTls::System, LiveTls::CaFile];
-
-/// The view choices, in list order.
-const VIEW_CHOICES: [LiveView; 2] = [LiveView::Log, LiveView::Values];
-
-/// The step Set up a live source is on.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Step {
-    Name,
-    Host,
-    CaFile,
-    Port,
-    Topic,
-    Username,
-}
-
-/// Set up a live source's answers so far.
-#[derive(Clone, Debug)]
-struct Setup {
-    step: Step,
-    source: LiveSourceSettings,
 }
 
 impl App {
@@ -145,6 +134,8 @@ impl App {
         match a {
             ActionId::OpenLiveSource
             | ActionId::SetUpLiveSource
+            | ActionId::EditLiveSource
+            | ActionId::SaveLiveSourceFile
             | ActionId::CloseLiveSource
             | ActionId::ForgetLiveSourcePassword => self.run_registered(a),
             ActionId::LiveSwitchView => self.live_toggle_view(),
@@ -212,8 +203,14 @@ impl App {
                 Some(id) => self.forget_live_password(id),
                 None => vec![Effect::Redraw],
             },
-            LiveList::SetupTls => self.live_setup_tls(n),
-            LiveList::SetupView => self.live_setup_view(n),
+            LiveList::Edit(ids) => match ids.get(n) {
+                Some(id) => self.live_edit(id, None),
+                None => vec![Effect::Redraw],
+            },
+            LiveList::SaveFile(ids) => match ids.get(n) {
+                Some(id) => self.live_save_file_prompt(id),
+                None => vec![Effect::Redraw],
+            },
             LiveList::SetupOffer(id) => {
                 if n == 0 {
                     self.open_configured_live_source(&id)
@@ -260,16 +257,25 @@ impl App {
         vec![Effect::ShowList { title, items }]
     }
 
+    /// F2 on row `n` of the Open live source list: the form, filled in
+    /// with that source; Escape shows the list again.
+    pub(crate) fn live_edit_row(&mut self, n: usize) -> Vec<Effect> {
+        let Some(ListKind::Live(LiveList::Open(ids))) = self.list.take() else {
+            return vec![Effect::Redraw];
+        };
+        match ids.get(n) {
+            Some(id) => self.live_edit(id, Some(n)),
+            None => {
+                self.list = Some(ListKind::Live(LiveList::Open(ids)));
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
     /// Forget live source password: the open source's, or, with none
     /// open, a chosen source's (from those with a user name).
     pub fn live_forget_command(&mut self) -> Vec<Effect> {
-        let open = self
-            .session
-            .as_ref()
-            .and_then(|s| s.live.as_ref())
-            .map(|t| t.source.clone())
-            .filter(|id| self.settings.live.sources.contains_key(id));
-        if let Some(id) = open {
+        if let Some(id) = self.open_configured_id() {
             return self.forget_live_password(&id);
         }
         let ids: Vec<String> = self
@@ -345,7 +351,18 @@ impl App {
     /// connects now, or, cancelled, is not opened.
     pub(crate) fn answer_live_password_then_open(&mut self, text: &str) -> Vec<Effect> {
         let pending = self.live_wire.open_after_password.take();
+        let offer = self.live_wire.offer_after_password.take();
         let mut effects = self.answer_live_password(text);
+        if let Some(id) = offer {
+            if self.prompt_is(PromptPurpose::LivePassword) {
+                // Asked again (not a password): still pending.
+                self.live_wire.offer_after_password = Some(id);
+                return effects;
+            }
+            // Saved with no password kept, it is asked for on opening.
+            effects.extend(self.live_offer_open(&id));
+            return effects;
+        }
         let Some(id) = pending else {
             return effects;
         };
@@ -365,11 +382,11 @@ impl App {
     }
 
     /// True while the prompt for `purpose` is open.
-    fn prompt_is(&self, purpose: PromptPurpose) -> bool {
+    pub(super) fn prompt_is(&self, purpose: PromptPurpose) -> bool {
         self.mode.is_prompt() && self.prompt_purpose == purpose
     }
 
-    fn live_display_name(&self, id: &str) -> String {
+    pub(super) fn live_display_name(&self, id: &str) -> String {
         self.settings
             .live
             .sources
@@ -420,207 +437,10 @@ impl App {
         self.live_wire.connector = Some(connect);
     }
 
-    // ----- Set up a live source -------------------------------------------
-
-    /// Set up a live source: asks for its name first.
-    pub fn live_setup(&mut self) -> Vec<Effect> {
-        self.live_wire.setup = Some(Setup {
-            step: Step::Name,
-            source: LiveSourceSettings::default(),
-        });
-        self.live_setup_ask(Step::Name)
-    }
-
-    /// The label of the Set up prompt now open.
-    pub(crate) fn live_setup_label(&self, purpose: PromptPurpose) -> Option<String> {
-        if purpose != PromptPurpose::LiveSetup {
-            return None;
-        }
-        let setup = self.live_wire.setup.as_ref()?;
-        Some(match setup.step {
-            Step::Name => self.msg("live-setup-name"),
-            Step::Host => self.msg("live-setup-host"),
-            Step::CaFile => self.msg("live-setup-ca-file"),
-            Step::Port => self.msg("live-setup-port"),
-            Step::Topic => self.msg("live-setup-topic"),
-            Step::Username => self.msg("live-setup-username"),
-        })
-    }
-
-    fn live_setup_ask(&mut self, step: Step) -> Vec<Effect> {
-        let Some(setup) = self.live_wire.setup.as_mut() else {
-            return vec![Effect::Redraw];
-        };
-        setup.step = step;
-        if step == Step::Port {
-            self.pending_prompt_text = Some(setup.source.port_or_default().to_string());
-        }
-        self.prompt(PromptPurpose::LiveSetup)
-    }
-
-    /// An answer in Set up a live source.
-    pub(crate) fn answer_live_setup(&mut self, text: &str) -> Vec<Effect> {
-        let Some(step) = self.live_wire.setup.as_ref().map(|s| s.step) else {
-            return vec![Effect::Redraw];
-        };
-        let text = text.trim();
-        match step {
-            Step::Name => {
-                if text.is_empty() {
-                    self.live_wire.setup = None;
-                    let m = self.msg("common-cancelled");
-                    self.note(&m);
-                    return vec![Effect::Redraw];
-                }
-                self.live_setup_source().name = text.to_owned();
-                self.live_setup_ask(Step::Host)
-            }
-            Step::Host => {
-                if text.is_empty() || text.chars().any(char::is_whitespace) {
-                    return self.live_setup_again("live-setup-host-needed", step);
-                }
-                self.live_setup_source().host = text.to_owned();
-                self.live_setup_tls_list()
-            }
-            Step::CaFile => {
-                if text.is_empty() {
-                    return self.live_setup_again("live-setup-ca-file-needed", step);
-                }
-                if !std::path::Path::new(text).is_file() {
-                    let m = self.msg_args("live-setup-ca-file-missing", &args!["path" => text]);
-                    self.error(&m);
-                    return self.live_setup_ask(step);
-                }
-                self.live_setup_source().ca_file = text.to_owned();
-                self.live_setup_ask(Step::Port)
-            }
-            Step::Port => {
-                let tls = self
-                    .live_wire
-                    .setup
-                    .as_ref()
-                    .map_or(LiveTls::Off, |s| s.source.tls);
-                let default = LiveSourceSettings {
-                    tls,
-                    ..LiveSourceSettings::default()
-                }
-                .port_or_default();
-                let port = if text.is_empty() {
-                    Some(default)
-                } else {
-                    text.parse::<u16>().ok().filter(|p| *p > 0)
-                };
-                let Some(port) = port else {
-                    return self.live_setup_again("live-setup-port-bad", step);
-                };
-                self.live_setup_source().port = (port != default).then_some(port);
-                self.live_setup_ask(Step::Topic)
-            }
-            Step::Topic => {
-                if text.is_empty() {
-                    return self.live_setup_again("live-setup-topic-needed", step);
-                }
-                self.live_setup_source().topics = vec![text.to_owned()];
-                self.live_setup_ask(Step::Username)
-            }
-            Step::Username => {
-                self.live_setup_source().username = text.to_owned();
-                self.live_setup_view_list()
-            }
-        }
-    }
-
-    fn live_setup_source(&mut self) -> &mut LiveSourceSettings {
-        &mut self
-            .live_wire
-            .setup
-            .get_or_insert_with(|| Setup {
-                step: Step::Name,
-                source: LiveSourceSettings::default(),
-            })
-            .source
-    }
-
-    /// Says `key` as an error and asks `step` again.
-    fn live_setup_again(&mut self, key: &str, step: Step) -> Vec<Effect> {
-        let m = self.msg(key);
-        self.error(&m);
-        self.live_setup_ask(step)
-    }
-
-    fn live_setup_tls_list(&mut self) -> Vec<Effect> {
-        let items = TLS_CHOICES
-            .iter()
-            .map(|t| self.msg(&format!("live-setup-tls-{}", t.as_str().replace('_', "-"))))
-            .collect();
-        let title = self.msg("live-setup-tls-title");
-        self.list = Some(ListKind::Live(LiveList::SetupTls));
-        vec![Effect::ShowList { title, items }]
-    }
-
-    fn live_setup_tls(&mut self, n: usize) -> Vec<Effect> {
-        let Some(&tls) = TLS_CHOICES.get(n) else {
-            return vec![Effect::Redraw];
-        };
-        if self.live_wire.setup.is_none() {
-            return vec![Effect::Redraw];
-        }
-        self.live_setup_source().tls = tls;
-        if tls == LiveTls::CaFile {
-            self.live_setup_ask(Step::CaFile)
-        } else {
-            self.live_setup_ask(Step::Port)
-        }
-    }
-
-    fn live_setup_view_list(&mut self) -> Vec<Effect> {
-        let items = VIEW_CHOICES
-            .iter()
-            .map(|v| self.msg(&format!("live-setup-view-{}", v.as_str())))
-            .collect();
-        let title = self.msg("live-setup-view-title");
-        self.list = Some(ListKind::Live(LiveList::SetupView));
-        vec![Effect::ShowList { title, items }]
-    }
-
-    /// The view is the last answer: the source is written to the settings
-    /// and offered for opening.
-    fn live_setup_view(&mut self, n: usize) -> Vec<Effect> {
-        let Some(&view) = VIEW_CHOICES.get(n) else {
-            return vec![Effect::Redraw];
-        };
-        let Some(mut setup) = self.live_wire.setup.take() else {
-            return vec![Effect::Redraw];
-        };
-        setup.source.view = view;
-        let id = self.live_new_source_id(&setup.source.name);
-        let name = setup.source.display_name(&id).to_owned();
-        let source = setup.source;
-        if let Err(e) = self.update_settings(|s| {
-            s.live.sources.insert(id.clone(), source);
-        }) {
-            let m = self.msg_args(
-                "live-setup-not-saved",
-                &args!["name" => name.as_str(), "error" => e.to_string()],
-            );
-            self.error(&m);
-            return vec![Effect::Redraw];
-        }
-        let m = self.msg_args("live-setup-saved", &args!["name" => name.as_str()]);
-        self.tell(&m);
-        let items = vec![
-            self.msg("live-setup-open-now"),
-            self.msg("live-setup-later"),
-        ];
-        let title = self.msg_args("live-setup-offer-title", &args!["name" => name.as_str()]);
-        self.list = Some(ListKind::Live(LiveList::SetupOffer(id)));
-        vec![Effect::ShowList { title, items }]
-    }
-
     /// A new source's id from its name: lowercase letters and digits, with
     /// hyphens between words, at most 48 characters; `source` when the
     /// name has none; a number added when the id is taken.
-    fn live_new_source_id(&self, name: &str) -> String {
+    pub(super) fn live_new_source_id(&self, name: &str) -> String {
         let mut base = String::new();
         for c in name.chars().flat_map(char::to_lowercase) {
             if c.is_ascii_alphanumeric() {
@@ -652,6 +472,10 @@ pub(crate) fn register(app: &mut App) {
     {
         app.register_handler(ActionId::OpenLiveSource, |app| app.live_open_list());
         app.register_handler(ActionId::SetUpLiveSource, |app| app.live_setup());
+        app.register_handler(ActionId::EditLiveSource, |app| app.live_edit_command());
+        app.register_handler(ActionId::SaveLiveSourceFile, |app| {
+            app.live_save_file_command()
+        });
         app.register_handler(ActionId::CloseLiveSource, |app| app.live_close_command());
         app.register_handler(ActionId::ForgetLiveSourcePassword, |app| {
             app.live_forget_command()
@@ -669,7 +493,7 @@ mod tests {
 
     use textweaver_a11y::{AccessMode, LogAnnouncer, Priority, Shared};
     use textweaver_mqtt::{MqttConfig, MqttEvent, Payload, Secret};
-    use textweaver_store::{InterfaceAnnouncements, LiveSourceSettings, Paths};
+    use textweaver_store::{InterfaceAnnouncements, LiveSourceSettings, LiveTls, LiveView, Paths};
 
     use super::*;
     use crate::AppConfig;
@@ -1092,81 +916,423 @@ mod tests {
         }
     }
 
-    #[test]
-    fn set_up_asks_one_thing_at_a_time_writes_the_source_and_offers_to_open_it() {
-        let mut r = rig(&[]);
-        r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
-        assert_eq!(
-            r.label(),
-            "Live source name, for example Practice log; Enter cancels"
-        );
-        r.type_answer("Practice log");
-        assert_eq!(r.label(), "Broker host name or address");
-        r.type_answer("bad host");
-        assert!(r.any("A host name or address is needed, with no spaces."));
-        r.type_answer("logger.example.ts.net");
-        // Encryption: a list; Off is the first item.
-        r.app.dispatch(Command::Choose(0));
-        assert_eq!(r.label(), "Port, Enter keeps the default");
-        assert_eq!(r.app.prompt_model().unwrap().shown_text(), "1883");
-        r.app.dispatch(Command::PromptKey(PromptKey::Enter));
-        assert_eq!(r.label(), "Topic to read, for example log/checkins");
-        r.type_answer("log/checkins");
-        assert_eq!(r.label(), "User name, Enter for none");
-        r.type_answer("");
-        // View: a list; Log is first.
-        r.app.dispatch(Command::Choose(0));
-        assert!(r.any("Live source Practice log saved."), "{:?}", r.texts());
-        let s = r.app.settings().live.sources.get("practice-log").cloned();
-        let s = s.expect("written as practice-log");
-        assert_eq!(s.name, "Practice log");
-        assert_eq!(s.host, "logger.example.ts.net");
-        assert_eq!(s.port, None, "the default port is not written");
-        assert_eq!(s.topics, ["log/checkins"]);
-        assert_eq!(s.username, "");
-        assert_eq!(s.tls, LiveTls::Off);
-        assert_eq!(s.view, LiveView::Log);
-        // Offered: Open it now.
-        r.app.dispatch(Command::Choose(0));
-        assert_eq!(r.wire.connects(), 1);
-        assert!(r.app.live_receiving());
+    // ----- The live source form (crate::live::form) -----------------------
+
+    impl Rig {
+        /// Types `text` into the open field, key by key, as the terminal
+        /// reader does.
+        fn type_in(&mut self, text: &str) {
+            for c in text.chars() {
+                self.app.dispatch(Command::PromptKey(PromptKey::Char(c)));
+            }
+        }
+
+        fn key(&mut self, k: PromptKey) {
+            self.app.dispatch(Command::PromptKey(k));
+        }
+
+        /// The open field: its label and text.
+        fn field(&self) -> (String, String) {
+            let p = self.app.prompt_model().expect("the form is open");
+            assert_eq!(p.purpose, PromptPurpose::LiveSetup);
+            (p.label.clone(), p.text())
+        }
+
+        fn last(&self) -> String {
+            self.texts().last().cloned().unwrap_or_default()
+        }
     }
 
+    /// The form's fields in order, each a labeled line said with its
+    /// value; Tab and Shift+Tab keep what was typed; the choices change in
+    /// place with Up and Down, said with what they mean; the CA file is a
+    /// field only with that encryption; the port follows the encryption.
     #[test]
-    fn set_up_with_a_ca_file_a_port_and_the_values_view_and_a_taken_id() {
+    fn the_form_has_its_fields_in_order_and_tab_keeps_every_value() {
+        let mut r = rig(&[]);
+        r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
+        assert!(
+            r.any("Set up a live source. Tab moves between fields, Enter saves, Escape cancels."),
+            "{:?}",
+            r.texts()
+        );
+        assert_eq!(r.field(), ("Name, 1 of 7".into(), String::new()));
+        assert!(r.any("Name: blank"), "{:?}", r.texts());
+        r.type_in("Practice log");
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field(), ("Broker host, 2 of 7".into(), String::new()));
+        r.type_in("logger.example.ts.net");
+        r.key(PromptKey::Tab);
+        assert_eq!(
+            r.field(),
+            (
+                "Encryption, 3 of 7, Up or Down Arrow changes".into(),
+                "Off".into()
+            )
+        );
+        assert_eq!(r.last(), "Encryption: Off. Up or Down Arrow changes it.");
+        r.key(PromptKey::Down);
+        assert_eq!(r.field().1, "Bundled roots");
+        assert!(r.last().starts_with("Bundled roots: TLS"), "{}", r.last());
+        r.key(PromptKey::Down);
+        assert_eq!(r.field().1, "CA file");
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field(), ("CA file, 4 of 8".into(), String::new()));
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field(), ("Port, 5 of 8".into(), "8883".into()));
+        // Back to the encryption: it kept CA file; Off brings 1883 back.
+        r.key(PromptKey::BackTab);
+        r.key(PromptKey::BackTab);
+        assert_eq!(r.field().1, "CA file");
+        r.key(PromptKey::Down);
+        assert_eq!(r.field().1, "Off", "Down wraps");
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field(), ("Port, 4 of 7".into(), "1883".into()));
+        // A port changed by hand stays when the encryption changes.
+        r.key(PromptKey::SetText("1884".into()));
+        r.key(PromptKey::BackTab);
+        r.key(PromptKey::Up);
+        assert_eq!(r.field().1, "CA file", "Up wraps");
+        r.key(PromptKey::Up);
+        assert_eq!(r.field().1, "Bundled roots");
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field().1, "1884");
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field().0, "Topic, 5 of 7");
+        r.type_in("log/checkins, log/#");
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field().0, "User name, 6 of 7");
+        r.key(PromptKey::Tab);
+        assert_eq!(
+            r.field(),
+            (
+                "View, 7 of 7, Up or Down Arrow changes".into(),
+                "Log".into()
+            )
+        );
+        r.key(PromptKey::Down);
+        assert_eq!(r.last(), "Values: one line per field, updated in place.");
+        // Tab from the last field wraps to the first, its value kept.
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field(), ("Name, 1 of 7".into(), "Practice log".into()));
+        assert_eq!(r.last(), "Name: Practice log");
+        r.key(PromptKey::Enter);
+        assert!(r.any("Live source Practice log saved."), "{:?}", r.texts());
+        let s = r.app.settings().live.sources["practice-log"].clone();
+        assert_eq!(s.host, "logger.example.ts.net");
+        assert_eq!(s.tls, LiveTls::System);
+        assert_eq!(s.port, Some(1884));
+        assert_eq!(s.topics, ["log/checkins", "log/#"]);
+        assert_eq!(s.username, "");
+        assert_eq!(s.view, LiveView::Values);
+        // No user name, so no password: offered for opening at once.
+        let list = r.app.list_model().expect("the offer").clone();
+        assert_eq!(list.title, "Open Practice log now?");
+        r.app.dispatch(Command::Choose(0));
+        assert_eq!(r.wire.connects(), 1);
+    }
+
+    /// Enter checks every field: the first wrong one is said in words and
+    /// the form opens on it, every other value kept; a fixed field saves.
+    #[test]
+    fn a_bad_field_is_said_and_the_form_opens_again_on_it() {
         let mut r = rig(&[("practice-log", practice(""))]);
         let ca = r._tmp.path().join("ca.pem");
         std::fs::write(&ca, "not checked here").unwrap();
         r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
-        r.type_answer("Practice log");
-        r.type_answer("logger.example.org");
-        r.app.dispatch(Command::Choose(2));
-        assert_eq!(r.label(), "Certificate authority file, PEM");
-        r.type_answer(&r._tmp.path().join("missing.pem").display().to_string());
+        r.type_in("Practice log");
+        r.key(PromptKey::Tab);
+        r.type_in("bad host");
+        r.key(PromptKey::Tab);
+        r.key(PromptKey::Up);
+        assert_eq!(r.field().1, "CA file");
+        r.key(PromptKey::Tab);
+        r.type_in(&r._tmp.path().join("missing.pem").display().to_string());
+        r.key(PromptKey::Enter);
+        assert!(
+            r.any("A host name or address is needed, with no spaces."),
+            "{:?}",
+            r.texts()
+        );
+        assert_eq!(r.field(), ("Broker host, 2 of 8".into(), "bad host".into()));
+        r.key(PromptKey::SetText("logger.example.org".into()));
+        r.key(PromptKey::Enter);
         assert!(r.any("No file at"), "{:?}", r.texts());
-        r.type_answer(&ca.display().to_string());
-        assert_eq!(r.app.prompt_model().unwrap().shown_text(), "8883");
-        for _ in 0..4 {
-            r.app.dispatch(Command::PromptKey(PromptKey::Backspace));
-        }
-        r.type_answer("70000");
+        assert_eq!(r.field().0, "CA file, 4 of 8");
+        r.key(PromptKey::SetText(ca.display().to_string()));
+        r.key(PromptKey::Tab);
+        r.key(PromptKey::SetText("70000".into()));
+        r.key(PromptKey::Enter);
         assert!(r.any("The port is a number from 1 to 65535."));
-        for _ in 0..4 {
-            r.app.dispatch(Command::PromptKey(PromptKey::Backspace));
-        }
-        r.type_answer("9001");
-        r.type_answer("sensors/#");
-        r.type_answer("reader");
-        r.app.dispatch(Command::Choose(1));
-        r.app.dispatch(Command::Choose(1));
-        assert!(r.any("Not opened."), "{:?}", r.texts());
+        assert_eq!(r.field(), ("Port, 5 of 8".into(), "70000".into()));
+        r.key(PromptKey::SetText(String::new()));
+        r.key(PromptKey::Enter);
+        assert!(r.any("A topic is needed."), "{:?}", r.texts());
+        assert_eq!(r.field().0, "Topic, 6 of 8");
+        r.type_in("sensors/#");
+        r.key(PromptKey::BackTab);
+        r.key(PromptKey::BackTab);
+        r.key(PromptKey::BackTab);
+        // A choice typed as something else is said with the choices.
+        r.key(PromptKey::SetText("maybe".into()));
+        r.key(PromptKey::Enter);
+        assert!(
+            r.any("Encryption is one of Off, Bundled roots, CA file."),
+            "{:?}",
+            r.texts()
+        );
+        r.key(PromptKey::SetText("ca file".into()));
+        r.key(PromptKey::Enter);
+        // The name is taken by another source: saved beside it.
+        assert!(
+            r.any("Live source Practice log saved, beside another source of the same name."),
+            "{:?}",
+            r.texts()
+        );
         let s = r.app.settings().live.sources["practice-log-2"].clone();
         assert_eq!(s.tls, LiveTls::CaFile);
         assert_eq!(s.ca_file, ca.display().to_string());
-        assert_eq!(s.port, Some(9001));
-        assert_eq!(s.username, "reader");
+        assert_eq!(s.port, None, "the default port is not written");
+        assert_eq!(s.topics, ["sensors/#"]);
+        assert_eq!(
+            r.app.settings().live.sources["practice-log"],
+            practice(""),
+            "the other source is untouched"
+        );
+    }
+
+    /// Escape cancels the whole form and says so; nothing is saved.
+    #[test]
+    fn escape_cancels_the_form_and_says_so() {
+        let mut r = rig(&[]);
+        r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
+        r.type_in("Practice log");
+        r.key(PromptKey::Tab);
+        r.type_in("logger.example");
+        r.key(PromptKey::Escape);
+        assert!(r.app.prompt_model().is_none());
+        assert_eq!(r.last(), "Canceled. No live source saved.");
+        assert!(r.app.settings().live.sources.is_empty());
+        r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
+        assert_eq!(r.field().1, "", "a new form starts empty");
+    }
+
+    /// With a user name, the password is asked after saving, masked, and
+    /// kept in the credential store only; then the source is offered.
+    #[test]
+    fn a_user_name_asks_for_the_password_after_saving_and_it_is_never_written() {
+        let mut r = rig(&[]);
+        r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
+        r.type_in("Reader log");
+        r.key(PromptKey::Tab);
+        r.type_in("logger.example");
+        for _ in 0..3 {
+            r.key(PromptKey::Tab);
+        }
+        r.type_in("log/checkins");
+        r.key(PromptKey::Tab);
+        r.type_in("reader");
+        r.key(PromptKey::Enter);
+        assert!(r.any("Live source Reader log saved."), "{:?}", r.texts());
+        let p = r.app.prompt_model().expect("the password prompt");
+        assert_eq!(p.purpose, PromptPurpose::LivePassword);
+        assert_eq!(p.label, "Password for Reader log, Enter cancels");
+        r.type_answer(PASSWORD);
+        assert!(r.any("Password kept for Reader log"), "{:?}", r.texts());
+        assert_eq!(
+            r.app.list_model().map(|l| l.title.clone()).as_deref(),
+            Some("Open Reader log now?")
+        );
+        r.app.dispatch(Command::Choose(0));
+        assert_eq!(r.wire.connects(), 1, "the kept password connects");
+        let _ = r.app.wait_for_writes();
+        let settings =
+            std::fs::read_to_string(Paths::under(r._tmp.path()).settings_file()).unwrap();
+        assert!(settings.contains("Reader log"), "{settings}");
+        assert!(!settings.contains("not a real password"), "{settings}");
+        assert!(!r.texts().join(" ").contains("not a real password"));
+    }
+
+    /// Edit a live source and F2 in the Open list open the form filled
+    /// in; Escape from F2 shows the list again on its row; a saved edit
+    /// keeps the keys the form does not show.
+    #[test]
+    fn edit_fills_the_form_and_keeps_what_the_form_does_not_show() {
+        let mut mapped = practice("reader");
+        mapped.id_field = "serial".into();
+        mapped.fields = vec![textweaver_store::LiveField {
+            path: "call".into(),
+            label: "Callsign".into(),
+            ..Default::default()
+        }];
+        let mut r = rig(&[("alpha", practice("")), ("beta", mapped.clone())]);
+        r.app.dispatch(Command::Action(ActionId::OpenLiveSource));
+        r.app
+            .dispatch(Command::ListKey(crate::list_model::ListKey::Down));
+        r.app
+            .dispatch(Command::ListKey(crate::list_model::ListKey::Rename));
+        assert!(r.any("Edit Practice log."), "{:?}", r.texts());
+        assert_eq!(r.field(), ("Name, 1 of 7".into(), "Practice log".into()));
+        r.key(PromptKey::Escape);
+        assert!(r.any("Canceled. Practice log not changed."));
+        let list = r.app.list_model().expect("the list again").clone();
+        assert_eq!(list.selected, 1, "on the row it came from");
+        // Edit from the command: a list, then the form.
+        escape(&mut r.app);
+        r.app.dispatch(Command::Action(ActionId::EditLiveSource));
+        assert_eq!(
+            r.app.list_model().map(|l| l.title.clone()).as_deref(),
+            Some("Edit which live source?")
+        );
+        r.app.dispatch(Command::Choose(1));
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field().1, "logger.example.ts.net");
+        r.key(PromptKey::SetText("logger2.example.ts.net".into()));
+        r.key(PromptKey::Enter);
+        assert!(r.any("Live source Practice log saved."), "{:?}", r.texts());
+        let s = r.app.settings().live.sources["beta"].clone();
+        assert_eq!(s.host, "logger2.example.ts.net");
+        assert_eq!(s.id_field, "serial", "kept");
+        assert_eq!(s.fields, mapped.fields, "kept");
+        assert_eq!(r.app.settings().live.sources.len(), 2, "no new source");
+        // It signs in and has no password kept: asked; cancelled, the
+        // source is still offered.
+        assert_eq!(
+            r.app.prompt_model().map(|p| p.purpose),
+            Some(PromptPurpose::LivePassword)
+        );
+        r.type_answer("");
+        assert!(r.app.list_model().is_some(), "the offer");
+        escape(&mut r.app);
+        // Unchanged: said so, nothing written.
+        r.app.dispatch(Command::Action(ActionId::EditLiveSource));
+        r.app.dispatch(Command::Choose(0));
+        r.key(PromptKey::Enter);
+        assert!(r.any("Practice log not changed."), "{:?}", r.texts());
+    }
+
+    fn write(dir: &std::path::Path, name: &str, text: &str) -> std::path::PathBuf {
+        let p = dir.join(name);
+        std::fs::write(&p, text).unwrap();
+        p
+    }
+
+    /// Opening a `.twlive` file opens the form filled from it, says what
+    /// was left out (a password first), and Enter saves it as a new
+    /// source beside one of the same name, never replacing it.
+    #[test]
+    fn a_live_source_file_opens_the_form_and_saves_a_new_source() {
+        let mut r = rig(&[("practice-log", practice(""))]);
+        let dir = r._tmp.path().join("shared");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("ca.pem"), "not checked here").unwrap();
+        let file = write(
+            &dir,
+            "practice.twlive",
+            "name = \"Practice log\"\nhost = \"logger.example.ts.net\"\ntls = \"ca_file\"\n\
+             ca_file = \"ca.pem\"\ntopics = [\"log/checkins\"]\nview = \"values\"\n\
+             password = \"example only, not a real password\"\ncolour = \"blue\"\n\
+             [[fields]]\npath = \"call\"\nlabel = \"Callsign\"\n",
+        );
+        r.app.dispatch(Command::Open(file.clone()));
+        assert!(
+            r.any("Live source from practice.twlive. Check each field"),
+            "{:?}",
+            r.texts()
+        );
+        assert!(
+            r.any("Left out of the file: a password, which textweaver never reads from a file; it is asked for after saving; the unknown key colour."),
+            "{:?}",
+            r.texts()
+        );
+        assert_eq!(r.field(), ("Name, 1 of 8".into(), "Practice log".into()));
+        for _ in 0..3 {
+            r.key(PromptKey::Tab);
+        }
+        assert_eq!(
+            r.field(),
+            (
+                "CA file, 4 of 8".into(),
+                dir.join("ca.pem").display().to_string()
+            )
+        );
+        r.key(PromptKey::Enter);
+        assert!(
+            r.any("saved, beside another source of the same name"),
+            "{:?}",
+            r.texts()
+        );
+        let s = r.app.settings().live.sources["practice-log-2"].clone();
         assert_eq!(s.view, LiveView::Values);
-        assert_eq!(r.wire.connects(), 0);
+        assert_eq!(s.fields.len(), 1);
+        assert!(s.extra.is_empty());
+        assert_eq!(r.app.settings().live.sources["practice-log"], practice(""));
+        assert!(!format!("{:?}", r.app.settings().live).contains("not a real password"));
+        assert!(!r.texts().join(" ").contains("not a real password"));
+        // Escape on a file's form saves nothing.
+        r.app
+            .dispatch(Command::ListKey(crate::list_model::ListKey::Escape));
+        r.app.dispatch(Command::Open(file));
+        r.key(PromptKey::Escape);
+        assert_eq!(r.app.settings().live.sources.len(), 2);
+    }
+
+    /// A hostile or broken file is refused in words and opens nothing.
+    #[test]
+    fn a_broken_live_source_file_is_refused_in_words() {
+        let mut r = rig(&[]);
+        let dir = r._tmp.path().to_path_buf();
+        let cases = [
+            (
+                write(&dir, "broken.twlive", "host = = 3\n"),
+                "it is not valid TOML at line 1.",
+            ),
+            (
+                write(&dir, "huge.twlive", &"#".repeat(70_000)),
+                "it is larger than 65536 bytes.",
+            ),
+        ];
+        for (path, why) in cases {
+            r.clear();
+            r.app.dispatch(Command::Open(path));
+            assert!(r.any(why), "{why}: {:?}", r.texts());
+            assert!(r.app.prompt_model().is_none());
+            assert!(r.app.session().is_none());
+        }
+        // An unusual extension case still opens the form.
+        let p = write(&dir, "upper.TWLIVE", "host = \"192.0.2.1\"\n");
+        r.app.dispatch(Command::Open(p));
+        assert_eq!(r.field().0, "Name, 1 of 7");
+    }
+
+    /// Save live source as file writes the source with no password, and
+    /// the file opens the form again.
+    #[test]
+    fn save_as_file_writes_the_source_without_a_password() {
+        let mut r = rig(&[("practice", practice("reader"))]);
+        r.app
+            .dispatch(Command::Action(ActionId::SaveLiveSourceFile));
+        assert_eq!(
+            r.app.list_model().map(|l| l.title.clone()).as_deref(),
+            Some("Save which live source as a file?")
+        );
+        r.app.dispatch(Command::Choose(0));
+        let spec = r
+            .app
+            .path_prompt_spec(PromptPurpose::SaveLiveSourceFile)
+            .expect("a save chooser");
+        assert_eq!(spec.file_name.as_deref(), Some("practice.twlive"));
+        assert_eq!(spec.extensions, ["twlive"]);
+        let target = r._tmp.path().join("shared-practice");
+        r.type_answer(&target.display().to_string());
+        let written = target.with_extension("twlive");
+        let text = std::fs::read_to_string(&written).unwrap();
+        assert!(r.any("Practice log saved as"), "{:?}", r.texts());
+        assert!(r.any("without a password"), "{:?}", r.texts());
+        assert!(text.contains("username = \"reader\""), "{text}");
+        assert!(!text.contains("password ="), "{text}");
+        r.app.dispatch(Command::Open(written));
+        assert_eq!(r.field().1, "Practice log");
     }
 
     #[test]

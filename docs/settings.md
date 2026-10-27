@@ -502,7 +502,7 @@ Reading an MQTT broker's messages as a document that grows. See [Live documents]
 - `live.min_interval_seconds`, default `10`, 0 to 3600: in the values view, the fewest seconds between two announcements of one field.
 - `live.quiet_hint_seconds`, default `60`, 0 to 3600: seconds without a message on a topic before a hint in words. 0 never hints. It is also the default time after which a value in the values view reads "no recent value".
 - `live.log_folder`, default `""`: where live logs are saved as JSON. Empty uses the `logs` folder in the data folder; a relative folder is inside the data folder. It stays on this computer.
-- `live.sources`: the sources, each a table `[live.sources.<id>]` with a host, topics, and more, written in `settings.toml` or by Set up a live source. They stay on this computer. A source's password is never in the file: it is kept in the system credential store.
+- `live.sources`: the sources, each a table `[live.sources.<id>]` with a host, topics, and more, written in `settings.toml`, by the live source form (Set up a live source, Edit a live source), or from a live source file (`.twlive`). They stay on this computer. A source's password is never in the file: it is kept in the system credential store.
 
 ### Sync
 

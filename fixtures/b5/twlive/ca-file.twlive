@@ -1,0 +1,5 @@
+name = "Club broker"
+host = "mqtt.example.net"
+tls = "ca_file"
+ca_file = "certs/club-ca.pem"
+topics = ["club/log"]
