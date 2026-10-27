@@ -158,3 +158,37 @@ fn escape_cancels_the_form() {
         h.tui.app().status_text()
     );
 }
+
+/// The join code field is drawn as stars, and the code typed is never
+/// on the line until F3 shows it; F3 again hides it. Each change is said
+/// in words, and the field's hint names the key.
+#[test]
+fn the_join_code_is_stars_until_f3_shows_it() {
+    let mut h = launch();
+    h.tui.dispatch(Command::Action(ActionId::SetUpLiveSource));
+    h.draw();
+    h.typed("Club");
+    h.key(KeyCode::Tab);
+    h.typed("logger.example");
+    h.key(KeyCode::Tab);
+    for _ in 0..4 {
+        h.key(KeyCode::Down);
+    }
+    h.key(KeyCode::Tab);
+    h.shows("Join code, 4 of 7", "");
+    let status = h.tui.app().status_text();
+    assert!(status.contains("F3 shows it."), "{status}");
+    h.typed("ABCD");
+    h.shows("Join code, 4 of 7", "****");
+    assert!(!h.prompt_line().contains("ABCD"), "{}", h.prompt_line());
+    h.key(KeyCode::F(3));
+    h.shows("Join code, 4 of 7", "ABCD");
+    let status = h.tui.app().status_text();
+    assert!(status.contains("Showing the join code"), "{status}");
+    h.key(KeyCode::F(3));
+    h.shows("Join code, 4 of 7", "****");
+    assert!(!h.prompt_line().contains("ABCD"), "{}", h.prompt_line());
+    let status = h.tui.app().status_text();
+    assert!(status.contains("Hiding the join code"), "{status}");
+    assert_eq!(h.field_text(), "ABCD");
+}
