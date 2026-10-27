@@ -812,6 +812,9 @@ impl App {
                 if mb.purpose == PromptPurpose::LiveSetup {
                     return self.live_form_move(text, step);
                 }
+                if mb.purpose == PromptPurpose::LiveCheckIn {
+                    return self.checkin_move(text, step);
+                }
                 return self.details_move(text, step);
             }
             // A choice of the live source form changes in place.

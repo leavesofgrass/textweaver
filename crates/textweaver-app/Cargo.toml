@@ -70,7 +70,7 @@ carta = ["textweaver-formats/carta", "textweaver-convert?/carta"]
 # releases. Off, the commands that open, set up, or close a live source
 # are hidden and say in words that live sources are not in this build;
 # a saved live log still opens.
-mqtt = ["dep:textweaver-mqtt", "textweaver-components/credentials"]
+mqtt = ["dep:textweaver-mqtt", "dep:textweaver-broker", "textweaver-components/credentials"]
 # Speech engines, passed through to textweaver-engines.
 espeak = ["textweaver-engines/espeak"]
 omnivox = ["textweaver-engines/omnivox"]
@@ -128,6 +128,8 @@ textweaver-dictation = { workspace = true, optional = true, features = ["rten", 
 textweaver-export = { workspace = true, optional = true }
 # Beta 5: live sources over MQTT (crate::live::mqtt).
 textweaver-mqtt = { workspace = true, optional = true }
+# Beta 5, phase 5b: the broker the app starts (crate::live::broker).
+textweaver-broker = { workspace = true, optional = true }
 pulldown-cmark.workspace = true
 # Anki packages (B1-f3): the SQLite collection, the zip, and the newest
 # format's zstd collection; sha1 for the checksum Anki keeps per note.

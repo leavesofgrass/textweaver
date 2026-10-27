@@ -382,6 +382,8 @@ impl App {
                     return Vec::new();
                 };
                 self.after_save(&path, adopted);
+                // A document shared live is shared again as saved.
+                self.live_share_saved(&path);
                 if let Some(s) = self.session.as_mut() {
                     s.disk = stamp;
                 }

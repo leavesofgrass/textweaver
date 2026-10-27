@@ -354,6 +354,9 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("live.min_interval_seconds", Portable),
     ("live.quiet_hint_seconds", Portable),
     ("live.sources", Machine),
+    // [live.broker]: the addresses and topics of this computer's
+    // network.
+    ("live.broker", Machine),
 ];
 
 /// Portable settings that travel in a group of their own, not with the

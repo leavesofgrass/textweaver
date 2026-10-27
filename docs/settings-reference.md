@@ -315,6 +315,13 @@ Only the speech engine's own settings are listed here: the voice, rate and pitch
 - `live.min_interval_seconds`: default 10 seconds. Live value interval. In the values view, the fewest seconds between announcements of one field. From 0 to 3600 seconds, in steps of 5. Syncs between computers.
 - `live.quiet_hint_seconds`: default 60 seconds. Quiet source hint. Seconds without messages before a hint in words. 0 never hints. From 0 to 3600 seconds, in steps of 10. Syncs between computers.
 - `live.log_folder`: default empty (`""`). Live log folder. Where closed live logs are saved as JSON. Empty uses logs in the data folder. Text; empty means not set. Stays on this computer.
+- `live.broker.listen`: default 127.0.0.1 (`["127.0.0.1"]`). Broker addresses. Addresses the app's broker listens on, with or without a port. Empty is 127.0.0.1, this computer only. A list of texts, such as `["a", "b"]`. Stays on this computer.
+- `live.broker.port`: default 0. Broker port. The broker's port for addresses without one. 0 uses 8883 with TLS, 1883 plain. From 0 to 65535, in steps of 1. Stays on this computer.
+- `live.broker.plain`: default off (`false`). Plain broker. The broker without TLS. Only on this computer or over Tailscale. On or off: `true` or `false`. Stays on this computer.
+- `live.broker.join_code`: default on (`true`). Broker join code. A join code each time the broker starts, for readers with no account. On or off: `true` or `false`. Stays on this computer.
+- `live.broker.join_topics`: default # (`["#"]`). Join code topics. Topic filters a join code may read. # reads everything. A list of texts, such as `["a", "b"]`. Stays on this computer.
+- `live.broker.share_topic`: default `"textweaver/document"`. Share topic. The topic Share this document live publishes on. Text. Stays on this computer.
+- `live.broker.checkin_topic`: default `"netlog/checkins"`. Check-in topic. The topic for check-ins when the live source has no plain topic. Text. Stays on this computer.
 
 ## Sync
 

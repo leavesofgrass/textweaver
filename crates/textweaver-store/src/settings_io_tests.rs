@@ -277,6 +277,16 @@ fn everything_changed() -> Settings {
     s.live.speak_new_entries = true;
     s.live.min_interval_seconds = 30;
     s.live.quiet_hint_seconds = 0;
+    s.live.broker = crate::LiveBrokerSettings {
+        listen: vec!["100.101.1.2".into()],
+        port: 8884,
+        plain: true,
+        join_code: false,
+        join_topics: vec!["netlog/#".into()],
+        share_topic: "club/agenda".into(),
+        checkin_topic: "club/checkins".into(),
+        extra: toml::Table::new(),
+    };
     s.live.sources.insert(
         "practice".into(),
         crate::LiveSourceSettings {

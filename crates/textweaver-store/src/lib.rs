@@ -84,8 +84,9 @@ pub use library::{
     Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, QueueEntry, ScannedDoc,
 };
 pub use live_settings::{
-    LIVE_DECIMALS_MAX, LIVE_SECONDS_MAX, LiveField, LiveNotice, LiveSettings, LiveSourceSettings,
-    LiveTls, LiveView, MQTT_PORT, MQTT_TLS_PORT, field_path_segments, live_source_id_ok,
+    DEFAULT_CHECKIN_TOPIC, DEFAULT_SHARE_TOPIC, LIVE_DECIMALS_MAX, LIVE_SECONDS_MAX,
+    LiveBrokerSettings, LiveField, LiveNotice, LiveSettings, LiveSourceSettings, LiveTls, LiveView,
+    MQTT_PORT, MQTT_TLS_PORT, field_path_segments, live_source_id_ok,
 };
 pub use live_source_file::{
     LIVE_SOURCE_FILE_EXTENSION, LIVE_SOURCE_FILE_MAX, LiveFileError, LiveFileNote, LiveSourceFile,

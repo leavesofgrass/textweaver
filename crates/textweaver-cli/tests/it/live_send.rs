@@ -281,10 +281,8 @@ fn send_and_share_reach_a_reader() {
     assert_eq!(d["rev"], 1);
     assert_eq!(d["title"], "agenda");
     assert_eq!(d["format"], "markdown");
-    // The receiver cleans every string, turning line breaks into spaces,
-    // so the text arrives on one line; the document view (phase 5b) is to
-    // keep a document's line breaks.
-    assert_eq!(d["text"], "# Agenda 1. Check-ins");
+    // A document's text keeps its line breaks, still cleaned.
+    assert_eq!(d["text"], "# Agenda\n\n1. Check-ins\n");
 
     // From standard input, and refusals in one line.
     let mut args = vec!["send", "--topic", "netlog/checkins"];

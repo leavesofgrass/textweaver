@@ -33,6 +33,11 @@
 //!   it, and the rest ([`App::open_configured_live_source`]).
 //! - `form`: the one form that sets up or edits a source, and the live
 //!   source files (`.twlive`) that fill it ([`App::live_setup`]).
+//! - [`document`]: the document view, for live document messages: the
+//!   shared document replaced in place, keeping the reader's place.
+//! - `checkin`: the Send a check-in form.
+//! - `broker` (with the `mqtt` feature): textweaver's own broker inside
+//!   the app, sharing a document live, and publishing check-ins.
 //! - `mqtt` (with the `mqtt` feature): the MQTT client adapted to
 //!   [`LiveSource`].
 //!
@@ -42,6 +47,10 @@
 //! JSON log.
 
 pub mod announce;
+#[cfg(feature = "mqtt")]
+pub mod broker;
+mod checkin;
+pub mod document;
 pub mod hub;
 pub mod json_log;
 pub mod log;
@@ -52,9 +61,10 @@ pub mod source;
 pub mod values;
 pub mod wire;
 
-mod form;
+pub(crate) mod form;
 
 pub use announce::{BURST, EntryThrottle, Release};
+pub use document::{DOCUMENT_TYPE, SharedDoc};
 pub(crate) use hub::LiveHub;
 pub use hub::{LOG_WRITE_INTERVAL, LiveConnection, LiveOptions, PAUSE_QUEUE_CAP};
 pub use log::{

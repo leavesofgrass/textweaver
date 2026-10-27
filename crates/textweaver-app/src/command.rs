@@ -378,6 +378,10 @@ pub enum PromptPurpose {
     /// Answer is the file to save a live source to (`.twlive`), without
     /// its password.
     SaveLiveSourceFile,
+    /// Answer is one field of the Send a check-in form (crate::live::
+    /// checkin): the source's mapped fields, or callsign, name and notes.
+    /// Tab and Shift+Tab move between the fields; Enter sends the entry.
+    LiveCheckIn,
     /// Answer is an Anki package (`.apkg`) whose cards to import into the
     /// open document's cards.
     ImportCards,
@@ -431,6 +435,8 @@ impl PromptPurpose {
             // The app labels each field from the message catalog.
             PromptPurpose::LiveSetup => "Live source",
             PromptPurpose::SaveLiveSourceFile => "Save live source as file",
+            // The app labels each field from the message catalog.
+            PromptPurpose::LiveCheckIn => "Check-in",
             PromptPurpose::ImportCards => "Import study cards from Anki package",
             // The app labels each group from the message catalog.
             PromptPurpose::CwCopy => "Type what you heard",
@@ -449,12 +455,12 @@ impl PromptPurpose {
     }
 
     /// True for a field of a form (the edit details form, the live source
-    /// form): Tab and Shift+Tab move between its fields, each a prompt of
+    /// form, the check-in form): Tab and Shift+Tab move between its fields, each a prompt of
     /// its own, instead of completing, and Escape cancels the whole form.
     pub fn is_form(self) -> bool {
         matches!(
             self,
-            PromptPurpose::DocumentDetails | PromptPurpose::LiveSetup
+            PromptPurpose::DocumentDetails | PromptPurpose::LiveSetup | PromptPurpose::LiveCheckIn
         )
     }
 }

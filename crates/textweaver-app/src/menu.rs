@@ -64,6 +64,12 @@ pub const PENDING: &[ActionId] = &[
     ActionId::SaveLiveSourceFile,
     ActionId::CloseLiveSource,
     ActionId::ForgetLiveSourcePassword,
+    ActionId::StartBroker,
+    ActionId::StopBroker,
+    ActionId::ShowJoinCode,
+    ActionId::ShareDocumentLive,
+    ActionId::StopSharing,
+    ActionId::SendCheckIn,
 ];
 
 /// Commands that are deliberately in no menu: the keys that open the
@@ -318,6 +324,13 @@ impl MenuId {
                 Do(A::SaveLiveLog),
                 Do(A::SaveLiveSourceFile),
                 Do(A::ForgetLiveSourcePassword),
+                Sep,
+                Do(A::StartBroker),
+                Do(A::StopBroker),
+                Do(A::ShowJoinCode),
+                Do(A::ShareDocumentLive),
+                Do(A::StopSharing),
+                Do(A::SendCheckIn),
             ],
             MenuId::ExportAs => &[
                 Do(A::ExportPdf),

@@ -71,6 +71,9 @@ pub struct LiveSettings {
     /// The sources, by id (`[live.sources.<id>]`). The id is plain:
     /// letters, digits, `-` and `_` ([`live_source_id_ok`]).
     pub sources: BTreeMap<String, LiveSourceSettings>,
+    /// `[live.broker]`: the broker the app starts (Tools, Live sources,
+    /// Start a broker), and the topics it shares and sends on.
+    pub broker: LiveBrokerSettings,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -85,7 +88,90 @@ impl Default for LiveSettings {
             min_interval_seconds: 10,
             quiet_hint_seconds: 60,
             sources: BTreeMap::new(),
+            broker: LiveBrokerSettings::default(),
             extra: toml::Table::new(),
+        }
+    }
+}
+
+/// The topic a shared document is published on, unless set.
+pub const DEFAULT_SHARE_TOPIC: &str = "textweaver/document";
+
+/// The topic a check-in is sent on when the open source names none.
+pub const DEFAULT_CHECKIN_TOPIC: &str = "netlog/checkins";
+
+/// `[live.broker]`: textweaver's own broker as the app runs it, and where
+/// the app's senders publish. The accounts are in `broker.toml` in the
+/// data folder, as `tw broker account` keeps them.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct LiveBrokerSettings {
+    /// Addresses to listen on, each with or without a port (`127.0.0.1`,
+    /// `100.101.1.2`, `[::1]:8883`). Empty: `127.0.0.1`, this computer
+    /// only.
+    pub listen: Vec<String>,
+    /// The port for addresses given without one. 0: 8883 with TLS, 1883
+    /// plain.
+    pub port: u16,
+    /// Plain TCP without TLS: only on this computer or over Tailscale.
+    /// Off by default.
+    pub plain: bool,
+    /// Make a join code each time the broker starts: anyone with the code
+    /// may read `join_topics`, and nothing else. On by default. The code
+    /// comes with a key of its own, so readers who pinned the broker's
+    /// usual key need it off.
+    pub join_code: bool,
+    /// What a join code may read (`#`: everything but `$` topics).
+    pub join_topics: Vec<String>,
+    /// The topic "Share this document live" publishes on.
+    pub share_topic: String,
+    /// The topic "Send a check-in" publishes on when the open live source
+    /// subscribes to no plain topic (one without `+` or `#`).
+    pub checkin_topic: String,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for LiveBrokerSettings {
+    fn default() -> Self {
+        LiveBrokerSettings {
+            listen: vec!["127.0.0.1".into()],
+            port: 0,
+            plain: false,
+            join_code: true,
+            join_topics: vec!["#".into()],
+            share_topic: DEFAULT_SHARE_TOPIC.into(),
+            checkin_topic: DEFAULT_CHECKIN_TOPIC.into(),
+            extra: toml::Table::new(),
+        }
+    }
+}
+
+impl LiveBrokerSettings {
+    /// The port for addresses given without one: `port`, or 8883 with TLS
+    /// and 1883 plain.
+    pub fn port_or_default(&self) -> u16 {
+        match (self.port, self.plain) {
+            (0, false) => MQTT_TLS_PORT,
+            (0, true) => MQTT_PORT,
+            (p, _) => p,
+        }
+    }
+
+    /// The share topic, or [`DEFAULT_SHARE_TOPIC`] when it is blank.
+    pub fn share_topic(&self) -> &str {
+        match self.share_topic.trim() {
+            "" => DEFAULT_SHARE_TOPIC,
+            t => t,
+        }
+    }
+
+    /// The check-in topic, or [`DEFAULT_CHECKIN_TOPIC`] when it is blank.
+    pub fn checkin_topic(&self) -> &str {
+        match self.checkin_topic.trim() {
+            "" => DEFAULT_CHECKIN_TOPIC,
+            t => t,
         }
     }
 }
@@ -131,6 +217,10 @@ pub enum LiveTls {
     System,
     /// TLS, trusting the certificate authority in `ca_file` (port 8883).
     CaFile,
+    /// TLS, trusting exactly the public key whose pin is `pin`, with no
+    /// certificate authority (port 8883): textweaver's own broker prints
+    /// its pin, and a join code carries a short one.
+    Pinned,
 }
 
 impl LiveTls {
@@ -140,6 +230,7 @@ impl LiveTls {
             LiveTls::Off => "off",
             LiveTls::System => "system",
             LiveTls::CaFile => "ca_file",
+            LiveTls::Pinned => "pinned",
         }
     }
 }
@@ -199,10 +290,15 @@ pub struct LiveSourceSettings {
     /// ([`LiveSourceSettings::port_or_default`]).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
-    /// Encryption: `off`, `system`, or `ca_file`.
+    /// Encryption: `off`, `system`, `ca_file`, or `pinned`.
     pub tls: LiveTls,
     /// The certificate authority file, with `tls = "ca_file"`.
     pub ca_file: String,
+    /// The broker's certificate pin, with `tls = "pinned"`: 52 characters
+    /// as textweaver's broker prints it, or the 12 a join code carries,
+    /// in groups of four. Not a secret.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub pin: String,
     /// The user name to sign in with. Empty: none. The password is asked
     /// once and kept in the system credential store.
     pub username: String,
@@ -243,7 +339,7 @@ impl LiveSourceSettings {
     pub fn port_or_default(&self) -> u16 {
         self.port.unwrap_or(match self.tls {
             LiveTls::Off => MQTT_PORT,
-            LiveTls::System | LiveTls::CaFile => MQTT_TLS_PORT,
+            LiveTls::System | LiveTls::CaFile | LiveTls::Pinned => MQTT_TLS_PORT,
         })
     }
 
@@ -274,6 +370,11 @@ impl LiveSourceSettings {
         }
         if self.tls == LiveTls::CaFile && self.ca_file.trim().is_empty() {
             out.push(format!("Live source {name} uses a CA file but names none."));
+        }
+        if self.tls == LiveTls::Pinned && self.pin.trim().is_empty() {
+            out.push(format!(
+                "Live source {name} uses a pinned key but names no pin."
+            ));
         }
         for f in &self.fields {
             if field_path_segments(&f.path).is_none() {
@@ -398,7 +499,7 @@ fn describe(key: &str, value: &toml::Value) -> Option<String> {
             toml::Value::Integer(_) => format!("{shown} is outside 1 to 65535; using the default"),
             _ => format!("{shown} is not a port number; using the default"),
         },
-        "tls" => format!("{shown} is not off, system or ca_file; using off"),
+        "tls" => format!("{shown} is not off, system, ca_file or pinned; using off"),
         "view" => format!("{shown} is not a view, log or values; using log"),
         "show" => format!("{shown} is not off or on_change; using on_change"),
         "speak" => format!("{shown} is not off or on_change; using off"),
@@ -532,6 +633,19 @@ order = 2
         assert_eq!(l.min_interval_seconds, 10);
         assert_eq!(l.quiet_hint_seconds, 60);
         assert!(l.sources.is_empty());
+        let b = &l.broker;
+        assert_eq!(b.listen, ["127.0.0.1"], "this computer only");
+        assert!(!b.plain && b.join_code);
+        assert_eq!(b.port_or_default(), 8883);
+        assert_eq!(
+            (b.share_topic(), b.checkin_topic()),
+            ("textweaver/document", "netlog/checkins")
+        );
+        let pinned = LiveSourceSettings {
+            tls: LiveTls::Pinned,
+            ..LiveSourceSettings::default()
+        };
+        assert_eq!(pinned.port_or_default(), 8883);
         let f = LiveField::default();
         assert_eq!((f.show, f.speak), (LiveNotice::OnChange, LiveNotice::Off));
         let s = LiveSourceSettings::default();
@@ -643,7 +757,7 @@ path = "name"
         for expected in [
             "live.sources.net.port 70000 is outside 1 to 65535; using the default",
             r#"live.sources.net.view "grid" is not a view, log or values; using log"#,
-            r#"live.sources.net.tls "maybe" is not off, system or ca_file; using off"#,
+            r#"live.sources.net.tls "maybe" is not off, system, ca_file or pinned; using off"#,
             r#"live.sources.net.fields entry 1.show "always" is not off or on_change; using on_change"#,
             "live.min_interval_seconds 99999 is outside 0 to 3600 seconds; using 3600",
         ] {
@@ -688,6 +802,14 @@ path = "name"
             ..LiveSourceSettings::default()
         };
         assert!(ok.problems("ok").is_empty());
+        let pinned = LiveSourceSettings {
+            tls: LiveTls::Pinned,
+            ..ok.clone()
+        };
+        assert_eq!(
+            pinned.problems("ok"),
+            ["Live source ok uses a pinned key but names no pin."]
+        );
         assert_eq!(
             ok.problems("has space"),
             [
@@ -720,6 +842,7 @@ path = "name"
     #[test]
     fn sources_and_the_log_folder_never_sync() {
         assert_eq!(setting_scope("live.sources"), Some(SettingScope::Machine));
+        assert_eq!(setting_scope("live.broker"), Some(SettingScope::Machine));
         assert_eq!(
             setting_scope("live.log_folder"),
             Some(SettingScope::Machine)

@@ -321,7 +321,7 @@ The notes commands return `status` and `effects` but no `pending`.
 
 #### Prompt purposes
 
-A prompt's `purpose` is one of these 35 purposes. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
+A prompt's `purpose` is one of these 36 purposes. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
 
 - `find`: the text to find.
 - `go_to`: a line, a percentage, `start`, or `end`.
@@ -356,8 +356,9 @@ A prompt's `purpose` is one of these 35 purposes. The names are fixed: within pr
 - `cw_copy`: what the learner copied of the Morse code practice group just sent; empty sends the group again.
 - `github_token`: a GitHub token for a private components source; empty skips. It is secret: `text` in the prompt state is one star per character, and a client should mask what it shows and never log it.
 - `live_password`: the password of a live source, kept in the system credential store; empty cancels. The `label` names the source. It is secret, like `github_token`. Answered while Open live source waits for it, the source connects at once.
-- `live_setup`: one field of the live source form (Set up or Edit a live source, or a `.twlive` file opened): its name, broker host, encryption, certificate authority file (only with that encryption), port, topic, user name, or view. The `label` names the field and its place ("Broker host, 2 of 7"). `prompt_key` with `tab` and `shift_tab` moves between the fields, keeping each value; `up` and `down` change the encryption or the view in place; `answer` checks and saves them all, and a wrong field opens the prompt again on it.
+- `live_setup`: one field of the live source form (Set up or Edit a live source, or a `.twlive` file opened): its name, broker host, encryption, certificate authority file (only with that encryption), pin (only with a pinned key), join code (only when joining by code), port, topic, user name (not when joining by code), or view. The `label` names the field and its place ("Broker host, 2 of 7"). `prompt_key` with `tab` and `shift_tab` moves between the fields, keeping each value; `up` and `down` change the encryption or the view in place; `answer` checks and saves them all, and a wrong field opens the prompt again on it.
 - `save_live_source_file`: the file to save a live source to, as a `.twlive` file without its password; `.twlive` is added when the name has no extension.
+- `live_check_in`: one field of the Send a check-in form: the live source's mapped fields, or callsign, name and notes. The `label` names the field and its place ("Callsign, 1 of 3"). `prompt_key` with `tab` and `shift_tab` moves between the fields, keeping each value; `answer` publishes the entry, and an entry with every field empty opens the prompt again.
 
 The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before responding, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
 

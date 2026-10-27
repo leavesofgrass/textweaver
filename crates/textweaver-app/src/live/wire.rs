@@ -26,6 +26,10 @@
 //!   source.
 //! - **Forget live source password** removes the open source's password
 //!   (or a chosen source's) from the system credential store.
+//! - **Start a broker**, **Stop the broker**, **Show the join code**,
+//!   **Share this document live**, **Stop sharing** and **Send a
+//!   check-in**: the sending side, with textweaver's own broker inside the
+//!   app (crate::live::broker, crate::live::checkin).
 //!
 //! Without the `mqtt` feature, the commands that open, set up, edit,
 //! save, or close a source, and Forget, are hidden from the menus and the palette
@@ -49,6 +53,12 @@ pub const NEEDS_MQTT: &[ActionId] = &[
     ActionId::SaveLiveSourceFile,
     ActionId::CloseLiveSource,
     ActionId::ForgetLiveSourcePassword,
+    ActionId::StartBroker,
+    ActionId::StopBroker,
+    ActionId::ShowJoinCode,
+    ActionId::ShareDocumentLive,
+    ActionId::StopSharing,
+    ActionId::SendCheckIn,
 ];
 
 /// Every live source command.
@@ -67,7 +77,31 @@ pub const COMMANDS: &[ActionId] = &[
     ActionId::LiveSayUnread,
     ActionId::SaveLiveLog,
     ActionId::ForgetLiveSourcePassword,
+    ActionId::StartBroker,
+    ActionId::StopBroker,
+    ActionId::ShowJoinCode,
+    ActionId::ShareDocumentLive,
+    ActionId::StopSharing,
+    ActionId::SendCheckIn,
 ];
+
+/// What a publish was, for saying how it went.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(not(feature = "mqtt"), allow(dead_code))]
+pub(crate) enum Sent {
+    /// A check-in whose first value is `first`.
+    CheckIn {
+        /// The entry's first value, said meaning first.
+        first: String,
+    },
+    /// Revision `rev` of the shared document `title`.
+    Share {
+        /// The document's title.
+        title: String,
+        /// Its revision.
+        rev: u64,
+    },
+}
 
 /// Connects a live source in place of the MQTT client: tests give one so
 /// nothing reaches a network.
@@ -96,6 +130,17 @@ pub(crate) struct LiveWire {
     pub(crate) offer_after_password: Option<String>,
     /// The source Save live source as file is asking a file for.
     pub(crate) save_file: Option<String>,
+    /// The check-in form, while it is open (crate::live::checkin).
+    pub(crate) checkin: Option<super::checkin::CheckInForm>,
+    /// The broker the app runs (crate::live::broker).
+    #[cfg(feature = "mqtt")]
+    pub(crate) broker: Option<super::broker::AppBroker>,
+    /// The document being shared live.
+    #[cfg(feature = "mqtt")]
+    pub(crate) share: Option<super::broker::Share>,
+    /// Publishes waiting on helper threads.
+    #[cfg(feature = "mqtt")]
+    pub(crate) jobs: Vec<super::broker::SendJob>,
     /// Stands in for the MQTT client (tests).
     #[cfg(feature = "mqtt")]
     connector: Option<Connector>,
@@ -109,6 +154,7 @@ impl std::fmt::Debug for LiveWire {
             .field("form", &self.form)
             .field("offer_after_password", &self.offer_after_password)
             .field("save_file", &self.save_file)
+            .field("checkin", &self.checkin)
             .finish_non_exhaustive()
     }
 }
@@ -126,6 +172,15 @@ pub(crate) enum LiveList {
     SaveFile(Vec<String>),
     /// The form saved a source: open source `id` now, or not.
     SetupOffer(String),
+    /// Show the join code: the code, then its groups; Enter closes.
+    #[cfg(feature = "mqtt")]
+    Code,
+    /// Share this document live through which source: the ids, by row.
+    #[cfg(feature = "mqtt")]
+    ShareThrough(Vec<String>),
+    /// Send a check-in through which source: the ids, by row.
+    #[cfg(feature = "mqtt")]
+    CheckInThrough(Vec<String>),
 }
 
 impl App {
@@ -137,7 +192,13 @@ impl App {
             | ActionId::EditLiveSource
             | ActionId::SaveLiveSourceFile
             | ActionId::CloseLiveSource
-            | ActionId::ForgetLiveSourcePassword => self.run_registered(a),
+            | ActionId::ForgetLiveSourcePassword
+            | ActionId::StartBroker
+            | ActionId::StopBroker
+            | ActionId::ShowJoinCode
+            | ActionId::ShareDocumentLive
+            | ActionId::StopSharing
+            | ActionId::SendCheckIn => self.run_registered(a),
             ActionId::LiveSwitchView => self.live_toggle_view(),
             ActionId::LiveJumpNewest => self.live_jump_newest(),
             ActionId::LiveTogglePause => self.live_toggle_pause(),
@@ -220,6 +281,21 @@ impl App {
                     vec![Effect::Redraw]
                 }
             }
+            #[cfg(feature = "mqtt")]
+            LiveList::Code => vec![Effect::Redraw],
+            #[cfg(feature = "mqtt")]
+            LiveList::ShareThrough(ids) => match ids.get(n) {
+                Some(id) => self.live_share_start(super::checkin::SendTarget::Source(id.clone())),
+                None => vec![Effect::Redraw],
+            },
+            #[cfg(feature = "mqtt")]
+            LiveList::CheckInThrough(ids) => match ids.get(n) {
+                Some(id) => self.open_checkin_form(
+                    super::checkin::SendTarget::Source(id.clone()),
+                    Some(id.clone()),
+                ),
+                None => vec![Effect::Redraw],
+            },
         }
     }
 
@@ -326,6 +402,13 @@ impl App {
         let problems = source.problems(id);
         if !problems.is_empty() {
             let m = self.msg_args("live-cannot-open", &args!["problems" => problems.join(" ")]);
+            self.error(&m);
+            return vec![Effect::Redraw];
+        }
+        #[cfg(feature = "mqtt")]
+        if super::mqtt::pin_problem(&source) {
+            let name = source.display_name(id).to_owned();
+            let m = self.msg_args("live-pin-not-read", &args!["name" => name]);
             self.error(&m);
             return vec![Effect::Redraw];
         }
@@ -480,9 +563,43 @@ pub(crate) fn register(app: &mut App) {
         app.register_handler(ActionId::ForgetLiveSourcePassword, |app| {
             app.live_forget_command()
         });
+        app.register_handler(ActionId::StartBroker, |app| app.live_start_broker());
+        app.register_handler(ActionId::StopBroker, |app| app.live_stop_broker());
+        app.register_handler(ActionId::ShowJoinCode, |app| app.live_show_join_code());
+        app.register_handler(ActionId::ShareDocumentLive, |app| app.live_share_command());
+        app.register_handler(ActionId::StopSharing, |app| app.live_stop_sharing());
+        app.register_handler(ActionId::SendCheckIn, |app| app.live_checkin_command());
     }
     #[cfg(not(feature = "mqtt"))]
     let _ = app;
+}
+
+/// Without the `mqtt` feature there is no broker and nothing is sent.
+#[cfg(not(feature = "mqtt"))]
+impl App {
+    /// The broker and the sharing in words: never, in this build.
+    pub fn live_broker_words(&self) -> Option<String> {
+        None
+    }
+
+    pub(crate) fn live_broker_tick(&mut self) -> Vec<Effect> {
+        Vec::new()
+    }
+
+    pub(crate) fn live_broker_shutdown(&mut self) {}
+
+    pub(crate) fn live_share_saved(&mut self, _path: &std::path::Path) {}
+
+    pub(crate) fn live_send(
+        &mut self,
+        _target: super::checkin::SendTarget,
+        _topic: &str,
+        _payload: Vec<u8>,
+        _retain: bool,
+        _sent: Sent,
+    ) -> Vec<Effect> {
+        self.live_not_in_build()
+    }
 }
 
 #[cfg(all(test, feature = "mqtt"))]
@@ -605,6 +722,8 @@ mod tests {
             for (id, src) in list {
                 s.live.sources.insert(id, src);
             }
+            // Start a broker: loopback, a port the system picks.
+            s.live.broker.listen = vec!["127.0.0.1:0".into()];
         });
         let wire = Wire::default();
         app.set_live_connector(wire.connector());
@@ -985,6 +1104,11 @@ mod tests {
         r.key(PromptKey::BackTab);
         assert_eq!(r.field().1, "CA file");
         r.key(PromptKey::Down);
+        assert_eq!(r.field().1, "Pinned key");
+        assert!(r.last().starts_with("Pinned key: TLS"), "{}", r.last());
+        r.key(PromptKey::Down);
+        assert_eq!(r.field().1, "Join code");
+        r.key(PromptKey::Down);
         assert_eq!(r.field().1, "Off", "Down wraps");
         r.key(PromptKey::Tab);
         assert_eq!(r.field(), ("Port, 4 of 7".into(), "1883".into()));
@@ -992,7 +1116,10 @@ mod tests {
         r.key(PromptKey::SetText("1884".into()));
         r.key(PromptKey::BackTab);
         r.key(PromptKey::Up);
-        assert_eq!(r.field().1, "CA file", "Up wraps");
+        assert_eq!(r.field().1, "Join code", "Up wraps");
+        r.key(PromptKey::Up);
+        r.key(PromptKey::Up);
+        assert_eq!(r.field().1, "CA file");
         r.key(PromptKey::Up);
         assert_eq!(r.field().1, "Bundled roots");
         r.key(PromptKey::Tab);
@@ -1045,6 +1172,9 @@ mod tests {
         r.type_in("bad host");
         r.key(PromptKey::Tab);
         r.key(PromptKey::Up);
+        assert_eq!(r.field().1, "Join code", "Up wraps to the last choice");
+        r.key(PromptKey::Up);
+        r.key(PromptKey::Up);
         assert_eq!(r.field().1, "CA file");
         r.key(PromptKey::Tab);
         r.type_in(&r._tmp.path().join("missing.pem").display().to_string());
@@ -1077,7 +1207,7 @@ mod tests {
         r.key(PromptKey::SetText("maybe".into()));
         r.key(PromptKey::Enter);
         assert!(
-            r.any("Encryption is one of Off, Bundled roots, CA file."),
+            r.any("Encryption is one of Off, Bundled roots, CA file, Pinned key, Join code."),
             "{:?}",
             r.texts()
         );
@@ -1115,6 +1245,50 @@ mod tests {
         assert!(r.app.settings().live.sources.is_empty());
         r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
         assert_eq!(r.field().1, "", "a new form starts empty");
+    }
+
+    /// A pinned key: the pin field appears, a pin that is not one is said
+    /// and the form opens on it, and a good one is kept in groups of four
+    /// and written to a live source file; never a password.
+    #[test]
+    fn a_pinned_key_is_checked_kept_grouped_and_shared_in_the_file() {
+        let mut r = rig(&[]);
+        r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
+        r.type_in("Club log");
+        r.key(PromptKey::Tab);
+        r.type_in("100.101.1.2");
+        r.key(PromptKey::Tab);
+        for _ in 0..3 {
+            r.key(PromptKey::Down);
+        }
+        assert_eq!(r.field().1, "Pinned key");
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field(), ("Pin, 4 of 8".into(), String::new()));
+        r.type_in("ABCD-EFGH-JKUN");
+        r.key(PromptKey::Tab);
+        assert_eq!(r.field().1, "8883", "a pinned key is TLS");
+        r.key(PromptKey::Tab);
+        r.type_in("netlog/#");
+        r.key(PromptKey::Enter);
+        assert!(r.any("Not a pin: it has 52 characters"), "{:?}", r.texts());
+        assert_eq!(r.field().0, "Pin, 4 of 8", "the form opens on the pin");
+        let pin = textweaver_mqtt::Pin::of_spki(b"example key").grouped();
+        r.key(PromptKey::SetText(pin.to_lowercase().replace('-', " ")));
+        r.key(PromptKey::Enter);
+        let s = r.app.settings().live.sources["club-log"].clone();
+        assert_eq!((s.tls, s.pin.as_str()), (LiveTls::Pinned, pin.as_str()));
+        assert_eq!(s.port, None);
+        let file = textweaver_store::live_source_file_text(&s, None);
+        assert!(file.contains(&format!("pin = \"{pin}\"")), "{file}");
+        assert!(file.contains("tls = \"pinned\""), "{file}");
+        assert!(!file.to_lowercase().contains("password ="), "{file}");
+        // A pin that does not read is refused before connecting.
+        let mut bad = s.clone();
+        bad.pin = "ABCD".into();
+        r.app.settings.live.sources.insert("bad".into(), bad);
+        r.app.open_configured_live_source("bad");
+        assert!(r.any("its pin is not one"), "{:?}", r.texts());
+        assert_eq!(r.wire.connects(), 0);
     }
 
     /// With a user name, the password is asked after saving, masked, and

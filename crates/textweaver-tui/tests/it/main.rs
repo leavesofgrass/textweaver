@@ -17,6 +17,7 @@ mod edit;
 mod ending;
 mod event_loop;
 mod gaps;
+mod live_broker;
 mod live_document;
 mod live_form;
 mod live_terminal;
