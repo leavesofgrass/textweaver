@@ -25,6 +25,10 @@ pub struct Limits {
     /// Longest string kept, in characters (2000); longer ones are cut and
     /// end with "(cut)".
     pub max_string: usize,
+    /// Longest text a live document message
+    /// ([`crate::SharedDocument`]) keeps, in characters (250,000), with its
+    /// line breaks: the one string allowed past `max_string`.
+    pub max_document: usize,
 }
 
 impl Default for Limits {
@@ -34,6 +38,7 @@ impl Default for Limits {
             max_depth: 8,
             max_fields: 5000,
             max_string: 2000,
+            max_document: 250_000,
         }
     }
 }
@@ -55,9 +60,19 @@ pub fn decode_payload(payload: &[u8], limits: &Limits) -> Payload {
     }
     match serde_json::from_str::<Value>(text) {
         Ok(value) => {
+            // A live document's text keeps its lines and its length.
+            let document = crate::document::is_document(&value)
+                .then(|| value.get("text").and_then(Value::as_str).map(str::to_owned))
+                .flatten();
             let mut count = 0usize;
             match clean_value(value, limits, &mut count) {
-                Some(v) => Payload::Json(v),
+                Some(mut v) => {
+                    if let (Some(text), Some(obj)) = (document, v.as_object_mut()) {
+                        let kept = clean_document_text(&text, limits.max_document);
+                        obj.insert("text".into(), Value::String(kept));
+                    }
+                    Payload::Json(v)
+                }
                 None => Payload::TooLarge { len },
             }
         }
@@ -257,6 +272,22 @@ fn clean_value(value: Value, limits: &Limits, count: &mut usize) -> Option<Value
 /// stays on one line. Cuts the result to `max_chars` characters and ends
 /// it with " (cut)" when it does.
 pub fn clean_text(input: &str, max_chars: usize) -> String {
+    clean(input, max_chars, false)
+}
+
+/// Cleans a shared document's text ([`crate::SharedDocument`]) as
+/// [`clean_text`] cleans any string, but keeps its lines: `\r\n`, `\r`,
+/// the next line character and the line and paragraph separators become
+/// `\n`, and tabs and trailing spaces are kept. Cuts the text to
+/// `max_chars` characters and ends it with a line saying "(cut)" when it
+/// does.
+pub fn clean_document_text(input: &str, max_chars: usize) -> String {
+    clean(input, max_chars, true)
+}
+
+/// The cleaner behind [`clean_text`] (`lines` false) and
+/// [`clean_document_text`] (`lines` true).
+fn clean(input: &str, max_chars: usize, lines: bool) -> String {
     let mut out = String::with_capacity(input.len().min(max_chars.saturating_mul(4)));
     let mut chars = input.chars().peekable();
     let mut kept = 0usize;
@@ -295,6 +326,16 @@ pub fn clean_text(input: &str, max_chars: usize) -> String {
                 skip_string(&mut chars);
                 continue;
             }
+            '\t' if lines => push(&mut out, '\t', &mut kept, max_chars, &mut cut),
+            '\r' if lines => {
+                if chars.peek() == Some(&'\n') {
+                    chars.next();
+                }
+                push(&mut out, '\n', &mut kept, max_chars, &mut cut);
+            }
+            '\n' | '\u{85}' | '\u{2028}' | '\u{2029}' if lines => {
+                push(&mut out, '\n', &mut kept, max_chars, &mut cut);
+            }
             '\t' | '\n' | '\r' | '\u{0b}' | '\u{0c}' | '\u{85}' | '\u{2028}' | '\u{2029}' => {
                 if !out.ends_with(' ') && !out.is_empty() {
                     push(&mut out, ' ', &mut kept, max_chars, &mut cut);
@@ -312,6 +353,15 @@ pub fn clean_text(input: &str, max_chars: usize) -> String {
         if cut {
             break;
         }
+    }
+    if lines {
+        if cut {
+            if !out.ends_with('\n') {
+                out.push('\n');
+            }
+            out.push_str("(cut)\n");
+        }
+        return out;
     }
     let mut out = out.trim_end().to_string();
     if cut {
@@ -437,6 +487,7 @@ mod tests {
             max_depth: 3,
             max_fields: 5,
             max_string: 50,
+            max_document: 100,
         };
         assert_eq!(
             decode_payload(&[b' '; 101], &l),
@@ -466,6 +517,39 @@ mod tests {
             decode_payload(deep.as_bytes(), &big),
             Payload::TooLarge { len: 100_000 }
         );
+    }
+
+    #[test]
+    fn a_document_message_keeps_its_lines_and_a_larger_cap() {
+        let l = Limits {
+            max_string: 10,
+            max_document: 40,
+            ..Limits::default()
+        };
+        let msg = crate::document_message(
+            2,
+            "Agenda for the net",
+            "markdown",
+            "# Net\r\n\r\n- one\u{1b}[2J\n- two\u{202e}",
+        );
+        let Payload::Json(v) = decode_payload(msg.as_bytes(), &l) else {
+            panic!("not JSON")
+        };
+        assert_eq!(v["text"], "# Net\n\n- one\n- two");
+        // Every other string keeps the usual cap.
+        assert_eq!(v["title"], "Agenda for (cut)");
+        let long = crate::document_message(1, "t", "text", &"line\n".repeat(20));
+        let Payload::Json(v) = decode_payload(long.as_bytes(), &l) else {
+            panic!("not JSON")
+        };
+        let text = v["text"].as_str().unwrap();
+        assert!(text.ends_with("\n(cut)\n"), "{text:?}");
+        assert_eq!(text.lines().count(), 9, "{text:?}");
+        // Not a document: line breaks become spaces.
+        let Payload::Json(v) = decode_payload(br#"{"text":"a\nb"}"#, &l) else {
+            panic!("not JSON")
+        };
+        assert_eq!(v["text"], "a b");
     }
 
     #[test]

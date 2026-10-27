@@ -19,7 +19,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use anyhow::{Context as _, Result, bail};
-use textweaver_mqtt::{MqttConfig, Publisher, publish_once};
+use textweaver_mqtt::{MqttConfig, Publisher, document_message, format_for_name, publish_once};
 
 use crate::cmd::live_conn::{Conn, on_ctrl_c};
 use crate::cmd::{Plain, outln};
@@ -146,27 +146,14 @@ fn entry_from_stdin() -> Result<String> {
     Ok(text.trim().to_string())
 }
 
-/// The live document message for revision `rev`.
-pub(crate) fn document_message(rev: u64, title: &str, format: &str, text: &str) -> Result<String> {
-    Ok(format!(
-        "{{\"type\":\"textweaver.document\",\"rev\":{rev},\"title\":{},\"format\":{},\"text\":{}}}",
-        serde_json::to_string(title)?,
-        serde_json::to_string(format)?,
-        serde_json::to_string(text)?
-    ))
-}
-
 /// "markdown" for .md and .markdown files, "text" for the rest.
 fn format_of(path: &Path) -> &'static str {
-    match path
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(str::to_ascii_lowercase)
-        .as_deref()
-    {
-        Some("md" | "markdown") => "markdown",
-        _ => "text",
-    }
+    format_for_name(
+        &path
+            .file_name()
+            .map(|n| n.to_string_lossy())
+            .unwrap_or_default(),
+    )
 }
 
 /// The file's size and time, to notice a save.
@@ -185,7 +172,7 @@ fn message(path: &Path, rev: u64, title: &str) -> Result<String> {
             path.display()
         ))
     })?;
-    let msg = document_message(rev, title, format_of(path), &text)?;
+    let msg = document_message(rev, title, format_of(path), &text);
     if msg.len() > MAX_MESSAGE {
         bail!(Plain(format!(
             "{} is too large to share: the message would be {} bytes; the limit is {MAX_MESSAGE}.",
@@ -292,7 +279,7 @@ mod tests {
 
     #[test]
     fn the_document_message_is_typed_and_escaped() {
-        let m = document_message(3, "Agenda", "markdown", "# Net\n\"hi\"").unwrap();
+        let m = document_message(3, "Agenda", "markdown", "# Net\n\"hi\"");
         assert_eq!(
             m,
             r##"{"type":"textweaver.document","rev":3,"title":"Agenda","format":"markdown","text":"# Net\n\"hi\""}"##

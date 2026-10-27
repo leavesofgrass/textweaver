@@ -43,6 +43,10 @@
 //!   textweaver's own broker (`textweaver-broker`) expects; a
 //!   [`JoinCode`] carries a short pin and the secret its password is
 //!   derived from.
+//! - **Live documents.** A message whose `type` is
+//!   `textweaver.document` ([`SharedDocument`]) carries a whole document:
+//!   its text keeps its line breaks and has a larger cap
+//!   ([`Limits::max_document`]), and is still cleaned.
 //! - **Sending** is a separate, small client, [`Publisher`]: connect, publish
 //!   at QoS 1 and wait for the acknowledgment, disconnect. The receiver
 //!   never publishes.
@@ -51,6 +55,7 @@
 //! entries or values is the app's job.
 
 mod client;
+mod document;
 mod error;
 mod net;
 mod pin;
@@ -64,12 +69,15 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub use client::MqttSource;
+pub use document::{DOCUMENT_TYPE, SharedDocument, document_message, format_for_name, is_document};
 pub use pin::{
     FULL_PIN_CHARS, JOIN_CODE_CHARS, JOIN_SECRET_CHARS, JOIN_USER, JoinCode, Pin, SHORT_PIN_CHARS,
     ct_eq,
 };
 pub use publish::{PublishError, Publisher, publish_once};
-pub use sanitize::{KeyOrder, Limits, clean_text, decode_payload, decode_payload_ordered};
+pub use sanitize::{
+    KeyOrder, Limits, clean_document_text, clean_text, decode_payload, decode_payload_ordered,
+};
 pub use tls::{is_tailscale_addr, is_tailscale_host};
 
 /// Everything a live source needs to connect. The password is held only in
@@ -338,6 +346,7 @@ pub fn fuzz_decode(data: &[u8]) {
         max_depth: 4,
         max_fields: 64,
         max_string: 64,
+        max_document: 256,
     };
     let _ = decode_payload(data, &limits);
     // A certificate's public key, and a typed join code or pin.
