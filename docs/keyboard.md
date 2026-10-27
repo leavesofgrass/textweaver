@@ -71,6 +71,8 @@ Every binding belongs to a layer. What a key does depends on the mode you are in
 Browse keys are single keys, like a screen reader's browse mode, and work the same in both frontends.
 Global chords work in every mode. Speech Cursor keys take over browse keys with the same name while Speech Cursor is on (for example `j` reads the next line instead of scrolling).
 
+In a prompt for a secret (a live source password, the GitHub token, or the join code field of the live source form), `F3` shows what you typed, or hides it again, in both frontends, and says which; in the textweaver app the Show check box right after the field does the same. It is off each time the prompt opens. In a prompt for a path, `F4` browses for it. Elsewhere in a prompt these keys do nothing.
+
 In the tables below a key without a note is global; the others name their layer.
 The GUI column shows Windows and Linux. The GUI on macOS column shows the Mac's own keys: Command for commands, Option with the arrows for words and paragraphs, Command with the arrows for the ends, and Command+Option for the chords that use Alt with a letter elsewhere, because Option with a letter types a character on a Mac.
 

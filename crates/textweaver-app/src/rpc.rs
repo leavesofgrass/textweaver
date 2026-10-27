@@ -925,6 +925,9 @@ impl Server {
                 // A secret prompt (a token) shows one star per character.
                 "text": p.shown_text(),
                 "caret": p.caret(),
+                // A secret field, and whether it is shown as typed.
+                "secret": p.is_secret(),
+                "shown": p.is_shown(),
             }),
             None => Value::Null,
         }
@@ -1013,6 +1016,7 @@ fn prompt_key(name: &str) -> Result<crate::list_model::PromptKey, RpcError> {
         "kill_to_start" => K::KillToStart,
         "kill_to_end" => K::KillToEnd,
         "delete_word_back" => K::DeleteWordBack,
+        "toggle_shown" => K::ToggleShown,
         other => return Err(RpcError::params(format!("No prompt key {other}"))),
     })
 }

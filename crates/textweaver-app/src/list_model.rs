@@ -36,7 +36,7 @@
 use std::borrow::Cow;
 
 use textweaver_a11y::Priority;
-use textweaver_keymap::ActionId;
+use textweaver_keymap::{ActionId, Key, KeyChord, Modifiers};
 use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 
@@ -304,6 +304,10 @@ pub enum PromptKey {
     /// for a path: the file browser chooses it, and the path fills the
     /// prompt; elsewhere nothing (W8a-f).
     Browse,
+    /// The show key ([`show_key`], F3) or a Show check box: in a secret
+    /// field ([`PromptModel::is_secret`]), shows the typed text, or hides
+    /// it again, and says which; elsewhere nothing.
+    ToggleShown,
     /// Enter: answers the prompt with its text.
     Enter,
     /// Escape: cancels the prompt.
@@ -333,6 +337,19 @@ pub struct PromptModel {
     candidate_from_empty: bool,
     /// Its text was chosen in the file browser (the browse key).
     pub(crate) browsed: bool,
+    /// Its answer is secret: a token, a password, or the live source
+    /// form's join code.
+    secret: bool,
+    /// A secret shown as typed (the show key or the Show box), until the
+    /// prompt closes; never saved.
+    shown: bool,
+}
+
+/// The key that shows or hides a secret field's text
+/// ([`PromptKey::ToggleShown`]): F3, in the terminal reader and the
+/// textweaver app alike.
+pub fn show_key() -> KeyChord {
+    KeyChord::new(Key::F(3), Modifiers::empty())
 }
 
 impl PromptModel {
@@ -348,7 +365,24 @@ impl PromptModel {
             candidate: None,
             candidate_from_empty: false,
             browsed: false,
+            secret: purpose.is_secret(),
+            shown: false,
         }
+    }
+
+    /// True when the answer is secret: a secret prompt
+    /// ([`PromptPurpose::is_secret`]) or the live source form's join code
+    /// field. Nothing typed is said or kept in the history, and a
+    /// frontend logs none of it, shown or not.
+    pub fn is_secret(&self) -> bool {
+        self.secret
+    }
+
+    /// True when a secret is drawn masked: secret and not shown with the
+    /// show key ([`PromptKey::ToggleShown`]). A frontend draws
+    /// [`PromptModel::shown_text`] and makes the field a password field.
+    pub fn is_masked(&self) -> bool {
+        self.secret && !self.shown
     }
 
     /// True when the file browser filled this prompt (its browse key,
@@ -363,14 +397,42 @@ impl PromptModel {
         self.text.iter().collect()
     }
 
-    /// The text to draw: the text typed, or one star per character in a
-    /// secret prompt ([`PromptPurpose::is_secret`]), so a token is never
-    /// on the screen or the Braille display.
+    /// The text to draw: the text typed, or one star per character while
+    /// a secret is masked ([`PromptModel::is_masked`]), so a token is
+    /// never on the screen or the Braille display unless shown.
     pub fn shown_text(&self) -> String {
-        if self.purpose.is_secret() {
+        if self.is_masked() {
             "*".repeat(self.text.len())
         } else {
             self.text()
+        }
+    }
+
+    /// True while a secret is shown as typed ([`PromptKey::ToggleShown`]).
+    pub fn is_shown(&self) -> bool {
+        self.secret && self.shown
+    }
+
+    /// The message ids for a secret field's Show choice: the check box's
+    /// name ("Show the join code"), and what is said as it is shown and
+    /// as it is hidden again.
+    pub fn show_message_ids(&self) -> (&'static str, &'static str, &'static str) {
+        match self.purpose {
+            PromptPurpose::LiveSetup => (
+                "prompt-show-join-code",
+                "prompt-showing-join-code",
+                "prompt-hiding-join-code",
+            ),
+            PromptPurpose::GitHubToken => (
+                "prompt-show-token",
+                "prompt-showing-token",
+                "prompt-hiding-token",
+            ),
+            _ => (
+                "prompt-show-password",
+                "prompt-showing-password",
+                "prompt-hiding-password",
+            ),
         }
     }
 
@@ -528,6 +590,7 @@ impl App {
                     if let Some(text) = self.pending_prompt_text.take() {
                         model.set_text(&text);
                     }
+                    model.secret |= std::mem::take(&mut self.pending_prompt_secret);
                     model.browsed = std::mem::take(&mut self.browse.prompt_filled);
                     self.prompt_model = Some(model);
                 }
@@ -758,7 +821,8 @@ impl App {
             return vec![Effect::Redraw];
         };
         let mut echo: Option<String> = None;
-        let secret = mb.purpose.is_secret();
+        let secret = mb.is_secret();
+        let masked = mb.is_masked();
         match key {
             PromptKey::Enter => {
                 let answer = mb.text();
@@ -806,6 +870,9 @@ impl App {
             }
             PromptKey::Home => mb.home(),
             PromptKey::End => mb.end(),
+            PromptKey::ToggleShown => return self.toggle_shown(),
+            // A secret has no history to recall.
+            PromptKey::Up | PromptKey::Down if secret => return vec![Effect::Redraw],
             PromptKey::Tab | PromptKey::BackTab if mb.purpose.is_form() => {
                 let text = mb.text();
                 let step = if key == PromptKey::Tab { 1 } else { -1 };
@@ -841,7 +908,6 @@ impl App {
                 }
                 return vec![Effect::Redraw];
             }
-            PromptKey::Up | PromptKey::Down if secret => return vec![Effect::Redraw],
             PromptKey::Up => {
                 self.recall(-1);
                 return vec![Effect::Redraw];
@@ -851,13 +917,29 @@ impl App {
                 return vec![Effect::Redraw];
             }
         }
-        if secret {
-            // Nothing typed into a secret prompt is said.
+        if masked {
+            // Nothing typed into a masked secret is said; once shown, it
+            // reads as any other field.
             echo = None;
         }
         if let Some(e) = echo.filter(|e| !e.is_empty()) {
             self.echo(&e);
         }
+        vec![Effect::Redraw]
+    }
+
+    /// The show key ([`PromptKey::ToggleShown`]): a secret field's text
+    /// shown as typed, or hidden again, and said in words. The text and
+    /// the caret stay; anything but a secret field does nothing.
+    fn toggle_shown(&mut self) -> Vec<Effect> {
+        let Some(mb) = self.prompt_model.as_mut().filter(|m| m.secret) else {
+            return vec![Effect::Redraw];
+        };
+        mb.shown = !mb.shown;
+        let ids = mb.show_message_ids();
+        let id = if mb.shown { ids.1 } else { ids.2 };
+        let m = self.msg(id);
+        self.announce(&m, Priority::Assertive);
         vec![Effect::Redraw]
     }
 

@@ -26,7 +26,9 @@
 //! the password derived from the whole code goes straight to the system
 //! credential store: the code itself is kept nowhere. Editing such a
 //! source shows the join code field empty; left empty, the kept password
-//! stays.
+//! stays. The field is secret ([`crate::PromptModel::is_secret`]):
+//! masked, never echoed or recalled, its value said as a count of
+//! characters, until the show key shows it.
 //!
 //! **Set up a live source** opens the form empty; **Edit a live source**
 //! (or F2 in the Open live source list) opens it filled in, and keeps the
@@ -420,8 +422,16 @@ impl App {
             label_id,
             &args!["label" => label_text.as_str(), "n" => n, "total" => total],
         );
+        // The join code is a secret field: masked like a password, its
+        // value never said.
+        let secret = field == FormField::JoinCode;
         let shown = if value.trim().is_empty() {
             self.msg("nav-blank")
+        } else if secret {
+            self.msg_args(
+                "prompt-secret-hidden",
+                &args!["count" => value.chars().count()],
+            )
         } else {
             value.clone()
         };
@@ -430,7 +440,10 @@ impl App {
         } else {
             "details-field"
         };
-        let said = self.msg_args(said_id, &args!["label" => label_text, "value" => shown]);
+        let mut said = self.msg_args(said_id, &args!["label" => label_text, "value" => shown]);
+        if secret {
+            said = self.secret_prompt_said(&said);
+        }
         if interrupt {
             self.announce(&said, Priority::Assertive);
         } else {
@@ -442,6 +455,7 @@ impl App {
         self.mode = crate::app::Mode::Prompt;
         self.prompt_purpose = PromptPurpose::LiveSetup;
         self.pending_prompt_text = Some(value);
+        self.pending_prompt_secret = secret;
         vec![Effect::Prompt {
             label,
             purpose: PromptPurpose::LiveSetup,

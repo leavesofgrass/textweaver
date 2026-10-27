@@ -445,8 +445,10 @@ impl PromptPurpose {
 
     /// True for a prompt whose answer is secret (a token or a password): a frontend
     /// shows [`PromptModel::shown_text`](crate::PromptModel::shown_text),
-    /// one star per character, and never logs the keys or the answer; the
-    /// app echoes nothing typed and keeps no history of it.
+    /// one star per character until the show key shows it, and never logs
+    /// the keys or the answer; the app echoes nothing typed while masked
+    /// and keeps no history of it. The live source form's join code field
+    /// is secret too ([`PromptModel::is_secret`](crate::PromptModel::is_secret)).
     pub fn is_secret(self) -> bool {
         matches!(
             self,

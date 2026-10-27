@@ -1247,6 +1247,105 @@ mod tests {
         assert_eq!(r.field().1, "", "a new form starts empty");
     }
 
+    /// The join code field is masked like a password: stars, nothing
+    /// typed said or kept, its value never said. The show key shows the
+    /// code as typed and says so, keeping the text and the caret; it is
+    /// hidden again on a second press, and each time the field opens.
+    #[test]
+    fn the_join_code_is_masked_and_the_show_key_shows_it() {
+        let mut r = rig(&[]);
+        r.app
+            .set_prompt_show_key(Some(crate::list_model::show_key()));
+        r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
+        // The show key does nothing in a field that is not secret.
+        r.clear();
+        r.key(PromptKey::ToggleShown);
+        assert!(r.texts().is_empty(), "{:?}", r.texts());
+        assert!(!r.app.prompt_model().unwrap().is_secret());
+        r.type_in("Club");
+        r.key(PromptKey::Tab);
+        r.type_in("logger.example");
+        r.key(PromptKey::Tab);
+        for _ in 0..4 {
+            r.key(PromptKey::Down);
+        }
+        assert_eq!(r.field().1, "Join code");
+        r.key(PromptKey::Tab);
+        assert!(r.field().0.starts_with("Join code, 4 of 7"));
+        assert_eq!(r.last(), "Join code: blank. F3 shows it.");
+        let p = r.app.prompt_model().unwrap();
+        assert!(p.is_secret() && p.is_masked() && !p.is_shown());
+        r.clear();
+        r.type_in("abcd efgh");
+        assert!(
+            r.texts().is_empty(),
+            "nothing typed is said: {:?}",
+            r.texts()
+        );
+        let p = r.app.prompt_model().unwrap();
+        assert_eq!(p.shown_text(), "*********");
+        assert_eq!(p.text(), "abcd efgh");
+        // Shown: the text as typed, said in words, text and caret kept.
+        r.key(PromptKey::Left);
+        r.key(PromptKey::ToggleShown);
+        assert_eq!(r.last(), "Showing the join code");
+        let p = r.app.prompt_model().unwrap();
+        assert!(p.is_shown() && !p.is_masked());
+        assert_eq!((p.shown_text().as_str(), p.caret()), ("abcd efgh", 8));
+        r.key(PromptKey::Left);
+        r.key(PromptKey::ToggleShown);
+        assert_eq!(r.last(), "Hiding the join code");
+        let p = r.app.prompt_model().unwrap();
+        assert!(p.is_masked());
+        assert_eq!((p.shown_text().as_str(), p.caret()), ("*********", 7));
+        // No history to recall.
+        r.key(PromptKey::Up);
+        assert_eq!(r.field().1, "abcd efgh");
+        // Away and back: hidden again, its value never said.
+        r.key(PromptKey::ToggleShown);
+        r.key(PromptKey::Tab);
+        r.key(PromptKey::BackTab);
+        assert_eq!(r.last(), "Join code: 9 characters, hidden. F3 shows it.");
+        assert!(r.app.prompt_model().unwrap().is_masked());
+        r.key(PromptKey::Escape);
+        assert!(r.app.prompt_history(PromptPurpose::LiveSetup).is_empty());
+        assert!(!r.texts().join(" ").contains("abcd"), "{:?}", r.texts());
+    }
+
+    /// A secret prompt (the password asked for after saving) is masked
+    /// and names the show key; the key shows and hides the password.
+    #[test]
+    fn the_show_key_shows_a_password_and_hides_it_again() {
+        let mut r = rig(&[]);
+        r.app
+            .set_prompt_show_key(Some(crate::list_model::show_key()));
+        r.app.dispatch(Command::Action(ActionId::SetUpLiveSource));
+        r.type_in("Reader log");
+        r.key(PromptKey::Tab);
+        r.type_in("logger.example");
+        for _ in 0..3 {
+            r.key(PromptKey::Tab);
+        }
+        r.type_in("log/checkins");
+        r.key(PromptKey::Tab);
+        r.type_in("reader");
+        r.key(PromptKey::Enter);
+        assert_eq!(
+            r.last(),
+            "Password for Reader log, Enter cancels. F3 shows it."
+        );
+        r.type_in("pw");
+        let p = r.app.prompt_model().unwrap();
+        assert_eq!(p.purpose, PromptPurpose::LivePassword);
+        assert_eq!(p.shown_text(), "**");
+        r.key(PromptKey::ToggleShown);
+        assert_eq!(r.last(), "Showing the password");
+        assert_eq!(r.app.prompt_model().unwrap().shown_text(), "pw");
+        r.key(PromptKey::ToggleShown);
+        assert_eq!(r.last(), "Hiding the password");
+        assert_eq!(r.app.prompt_model().unwrap().shown_text(), "**");
+    }
+
     /// A pinned key: the pin field appears, a pin that is not one is said
     /// and the form opens on it, and a good one is kept in groups of four
     /// and written to a live source file; never a password.

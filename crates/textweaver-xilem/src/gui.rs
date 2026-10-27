@@ -28,7 +28,7 @@ use masonry::layout::Length;
 use masonry::parley::style::{FontFamily, FontWeight};
 use masonry::properties::types::CrossAxisAlignment;
 use masonry::properties::{Background, LineBreaking, Padding};
-use masonry::widgets::{Flex, Label, SizedBox, TextArea, TextInput};
+use masonry::widgets::{Checkbox, Flex, Label, SizedBox, TextArea, TextInput};
 use masonry_winit::app::{
     AppDriver, DriverCtx, EventLoop, EventLoopProxy, MasonryState, MasonryUserEvent, NewWindow,
     WindowId,
@@ -101,6 +101,9 @@ pub const TOOLBAR_BUTTONS: WidgetTag<Flow> = WidgetTag::named("tw-toolbar-button
 pub const MAIN: WidgetTag<Region> = WidgetTag::named("tw-main");
 /// The field of an open prompt.
 pub const PROMPT_FIELD: WidgetTag<TextArea<true>> = WidgetTag::named("tw-prompt-field");
+/// A secret prompt's Show box, right after its field: shows the text as
+/// typed, or masks it again.
+pub const PROMPT_SHOW: WidgetTag<Checkbox> = WidgetTag::named("tw-prompt-show");
 /// The list of an open list dialog.
 pub const LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-list");
 /// The drawn title of a list dialog, which follows a list that filters as
@@ -1129,6 +1132,58 @@ pub fn prompt_dialog(
     tab_completes: bool,
     tab_fields: bool,
 ) -> (NewWidget<dyn Widget>, WidgetId) {
+    prompt_card(
+        p,
+        c,
+        label_text,
+        hint,
+        initial,
+        tab_completes,
+        tab_fields,
+        None,
+    )
+}
+
+/// A secret prompt (a password, a token, the live source form's join
+/// code), labelled `label_text`: as [`prompt_dialog`], with its field a
+/// password field holding `initial` (stars), and right after it a Show
+/// box named `show_name` ("Show the join code"), unchecked, which shows
+/// the text as typed ([`show_secret_in`]). Returns the dialog and the
+/// field's id.
+pub fn secret_prompt_dialog(
+    p: &Palette,
+    c: &Catalog,
+    label_text: &str,
+    hint: &str,
+    initial: &str,
+    tab_fields: bool,
+    show_name: &str,
+) -> (NewWidget<dyn Widget>, WidgetId) {
+    prompt_card(
+        p,
+        c,
+        label_text,
+        hint,
+        initial,
+        false,
+        tab_fields,
+        Some(show_name),
+    )
+}
+
+/// A prompt's card: the title, the field, a Show box after it when
+/// `show_name` is given, and the footer.
+#[allow(clippy::too_many_arguments)]
+fn prompt_card(
+    p: &Palette,
+    c: &Catalog,
+    label_text: &str,
+    hint: &str,
+    initial: &str,
+    tab_completes: bool,
+    tab_fields: bool,
+    show_name: Option<&str>,
+) -> (NewWidget<dyn Widget>, WidgetId) {
     let field = NewWidget::new(
         TextArea::new_editable(initial)
             .with_accessible_label(label_text.to_owned())
@@ -1143,20 +1198,66 @@ pub fn prompt_dialog(
     let input = NewWidget::new(FocusFrame::new(NewWidget::new(TextInput::from_text_area(
         field,
     ))));
-    let card = Flex::column()
+    let mut card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .with_fixed(dialog_title(label_text))
-        .with_fixed(input)
+        .with_fixed(input);
+    let mut show_id = None;
+    if let Some(name) = show_name {
+        // Off each time the prompt opens; its name is its label.
+        let show = NewWidget::new(Checkbox::from_label(
+            false,
+            NewWidget::new(label(name, theme::UI_TEXT, false)),
+        ))
+        .with_tag(PROMPT_SHOW);
+        show_id = Some(show.id());
+        let row = Flex::row()
+            .cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_fixed(show);
+        card = card
+            .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+            .with_fixed(NewWidget::new(row));
+    }
+    let card = card
         .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
         .with_fixed(dialog_footer(hint, vec![close_button(c, None)]));
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
     let modal = NewWidget::new(
         Modal::new(card, label_text, p.clone())
             .with_tab_completion(tab_completes)
-            .with_tab_fields(tab_fields),
+            .with_tab_fields(tab_fields)
+            .with_show_box(show_id),
     )
     .erased();
     (modal, field_id)
+}
+
+/// Draws a secret prompt's field as `model` says after the show key or
+/// the Show box: its text as typed while shown, one star per character
+/// while masked, and a password field to the screen reader only while
+/// masked. The caret stays on the same character, and the Show box
+/// follows. Nothing happens without a prompt field.
+pub fn show_secret_in(host: &mut impl Host, model: &textweaver_app::PromptModel) {
+    if host.id_of(PROMPT_FIELD).is_none() {
+        return;
+    }
+    let shown = model.shown_text();
+    let masked = model.is_masked();
+    host.edit(PROMPT_FIELD, |mut f| {
+        let old = f.widget.text().to_string();
+        let end = f.widget.selection_byte_range().end.min(old.len());
+        let caret = old.char_indices().take_while(|(i, _)| *i < end).count();
+        let byte = shown
+            .char_indices()
+            .nth(caret)
+            .map_or(shown.len(), |(i, _)| i);
+        TextArea::reset_text(&mut f, &shown);
+        TextArea::select_byte_range(&mut f, byte, byte);
+        TextArea::set_password(&mut f, masked);
+    });
+    if host.id_of(PROMPT_SHOW).is_some() {
+        host.edit(PROMPT_SHOW, |mut b| Checkbox::set_checked(&mut b, !masked));
+    }
 }
 
 /// The secret after an edit in a secret prompt's field, which shows one
@@ -2198,11 +2299,12 @@ impl Gui {
     }
 
     fn refresh(&mut self, ctx: &mut DriverCtx<'_>) {
-        // The log stays paused while a secret prompt is open (B1-c2).
+        // The log stays paused while a secret prompt or field is open,
+        // shown or not (B1-c2).
         let secret = self
             .app
             .prompt_model()
-            .is_some_and(|p| p.purpose.is_secret());
+            .is_some_and(textweaver_app::PromptModel::is_secret);
         crate::log::set_paused(secret, self.log);
         if self.app.font_downloads() != self.font_downloads {
             // A font finished downloading (Lexend): register it, and lay the
@@ -3086,27 +3188,62 @@ impl Gui {
         } else {
             c.tr("gui-prompt-hint")
         };
-        // A secret prompt (a token) shows one star per character.
-        let initial = self
-            .app
-            .prompt_model()
+        // A secret prompt (a token, a password) or field (the join code)
+        // shows one star per character, until its Show box shows it.
+        let model = self.app.prompt_model();
+        let initial = model
             .map(textweaver_app::PromptModel::shown_text)
             .unwrap_or_default();
+        let secret = model.is_some_and(textweaver_app::PromptModel::is_secret);
+        let show_name = model.map(|m| c.tr(m.show_message_ids().0));
         // The edit details form (W7m) and the live source form: Tab and
         // Shift+Tab move between their fields, each the app's prompt.
         let fields = purpose.is_form();
-        self.show_prompt(ctx, label_text, &hint, &initial, paths, fields);
+        match show_name.filter(|_| secret) {
+            Some(name) => {
+                let key = textweaver_app::list_model::show_key().to_string();
+                let hint = format!(
+                    "{hint} {}",
+                    c.fmt("gui-prompt-show-hint", &args!["key" => key])
+                );
+                let (modal, field_id) = secret_prompt_dialog(
+                    &self.palette,
+                    &c,
+                    label_text,
+                    &hint,
+                    &initial,
+                    fields,
+                    &name,
+                );
+                self.show_dialog(ctx, modal, field_id);
+            }
+            None => self.show_prompt(ctx, label_text, &hint, &initial, paths, fields),
+        }
         self.dialog = Some(OpenDialog::Prompt);
         if self.log {
             crate::log::line(&format!("dialog: prompt {label_text:?}"));
         }
         // Nothing typed in a secret prompt reaches the log (B1-c2), and
         // its field is a password field to the screen reader.
-        crate::log::set_paused(purpose.is_secret(), self.log);
-        if purpose.is_secret() {
+        crate::log::set_paused(secret, self.log);
+        if secret {
             ctx.render_root(self.window_id)
                 .edit_widget_with_tag(PROMPT_FIELD, |mut f| TextArea::set_password(&mut f, true));
         }
+    }
+
+    /// The show key (F3) or the Show box in a secret prompt: the app shows
+    /// the text as typed, or masks it again, and says so; the field
+    /// follows, keeping its caret ([`show_secret_in`]).
+    fn toggle_shown(&mut self, ctx: &mut DriverCtx<'_>) {
+        let effects = self
+            .app
+            .dispatch(Command::PromptKey(PromptKey::ToggleShown));
+        if let Some(model) = self.app.prompt_model().cloned() {
+            show_secret_in(ctx.render_root(self.window_id), &model);
+        }
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
     }
 
     /// The system's file chooser, on its own thread and modal to the
@@ -3314,7 +3451,8 @@ impl Gui {
     /// a secret prompt the field shows stars, so the secret is worked out
     /// from the edit ([`secret_edit`]) and the field drawn again as stars.
     fn prompt_changed(&mut self, ctx: &mut DriverCtx<'_>, field: String) {
-        let Some(model) = self.app.prompt_model().filter(|p| p.purpose.is_secret()) else {
+        // Shown as typed, the field holds the secret itself.
+        let Some(model) = self.app.prompt_model().filter(|p| p.is_masked()) else {
             let _ = self
                 .app
                 .dispatch(Command::PromptKey(PromptKey::SetText(field)));
@@ -4697,9 +4835,9 @@ impl Gui {
         let secret = self
             .app
             .prompt_model()
-            .is_some_and(|p| p.purpose.is_secret());
+            .is_some_and(textweaver_app::PromptModel::is_masked);
         let key = match text {
-            // A secret prompt's field holds stars; the model already has
+            // A masked secret's field holds stars; the model already has
             // the secret (`prompt_changed`).
             Some(_) if secret => PromptKey::Enter,
             Some(t) => {
@@ -5178,7 +5316,16 @@ impl AppDriver for Gui {
             action.downcast_ref::<masonry::widgets::CheckboxToggled>()
         {
             let on = *on;
-            self.find_option(ctx, widget_id, on);
+            let show = ctx
+                .render_root(self.window_id)
+                .get_widget_with_tag(PROMPT_SHOW)
+                .map(|w| w.id());
+            if show == Some(widget_id) {
+                // A secret prompt's Show box.
+                self.toggle_shown(ctx);
+            } else {
+                self.find_option(ctx, widget_id, on);
+            }
         } else if let Some(a) = action.downcast_ref::<FormAction>() {
             let a = a.clone();
             self.settings_form_action(ctx, a);
@@ -5292,6 +5439,12 @@ impl AppDriver for Gui {
                     }
                     return;
                 }
+                DialogAction::ToggleShown => {
+                    if matches!(self.dialog, Some(OpenDialog::Prompt)) {
+                        self.toggle_shown(ctx);
+                    }
+                    return;
+                }
                 DialogAction::Field(next) => {
                     if matches!(self.dialog, Some(OpenDialog::Prompt)) {
                         let key = if *next {
@@ -5348,6 +5501,7 @@ impl AppDriver for Gui {
                     | DialogAction::Recall(_)
                     | DialogAction::Complete
                     | DialogAction::Browse
+                    | DialogAction::ToggleShown
                     | DialogAction::Field(_)
                     | DialogAction::Chord(_)
                     | DialogAction::Answer(_)

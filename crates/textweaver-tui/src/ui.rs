@@ -312,6 +312,9 @@ impl Tui {
     pub fn with_color_support(mut app: App, support: ColorSupport) -> Self {
         // F4 in a prompt for a path browses for it, and the prompt says so.
         app.set_prompt_browse_key(Some(textweaver_app::path_prompt::browse_key()));
+        // The show key (F3) shows a secret field's text, and is named as
+        // one opens.
+        app.set_prompt_show_key(Some(textweaver_app::list_model::show_key()));
         let theme = Theme::from_theme(&app.reading_theme(), support);
         let theme_key = app.reading_theme_key();
         Tui {
@@ -754,6 +757,11 @@ impl Tui {
         // The browse key (F4): the file browser chooses the path.
         if chord(&k) == Some(textweaver_app::path_prompt::browse_key()) {
             self.dispatch(Command::PromptKey(PromptKey::Browse));
+            return;
+        }
+        // The show key (F3): a secret field's text shown, or hidden again.
+        if chord(&k) == Some(textweaver_app::list_model::show_key()) {
+            self.dispatch(Command::PromptKey(PromptKey::ToggleShown));
             return;
         }
         let key = match k.code {
@@ -1690,7 +1698,8 @@ impl Tui {
             // the prompt opens; the line drawn here keeps it short so what
             // is typed starts within 40 cells.
             let label = format!("{}: ", prompt_line_label(&mb.label));
-            // A secret prompt (a token) is drawn as stars.
+            // A masked secret (a token, a password, a join code) is drawn
+            // as stars until the show key shows it.
             let text = mb.shown_text();
             let before: String = text.chars().take(mb.caret()).collect();
             let col = Span::raw(&label).width() + Span::raw(&before).width();

@@ -560,6 +560,12 @@ pub struct App {
     pub(crate) settings_screen: Option<crate::settings_schema::SettingsScreen>,
     /// Text the next prompt starts with (a setting's current value).
     pub(crate) pending_prompt_text: Option<String>,
+    /// The next prompt is a secret field (the live source form's join
+    /// code), masked like a secret prompt.
+    pub(crate) pending_prompt_secret: bool,
+    /// The key a frontend sends [`PromptKey::ToggleShown`](crate::PromptKey::ToggleShown)
+    /// for, named when a secret field opens; none names nothing.
+    pub(crate) prompt_show_key: Option<textweaver_keymap::KeyChord>,
     /// The item the next list shown is focused on (the setting a value
     /// prompt was for).
     pub(crate) pending_list_focus: Option<usize>,
@@ -739,6 +745,8 @@ impl App {
             opening: None,
             settings_screen: None,
             pending_prompt_text: None,
+            pending_prompt_secret: false,
+            prompt_show_key: None,
             pending_list_focus: None,
             announce_list_focus: true,
             list_reshow_quiet: false,
@@ -1911,6 +1919,9 @@ impl App {
             crate::study::prompt_label(&self.study.catalog, purpose)
         };
         let mut said = self.path_prompt_said(purpose, &label);
+        if purpose.is_secret() {
+            said = self.secret_prompt_said(&said);
+        }
         if matches!(purpose, PromptPurpose::Find | PromptPurpose::ReplaceFind)
             && let Some(options) = self.search_options_said()
         {
@@ -1931,6 +1942,30 @@ impl App {
             self.tell(&said);
         }
         vec![Effect::Prompt { label, purpose }]
+    }
+
+    /// Tells the app the key that shows or hides a secret field's text,
+    /// or none: a frontend that sends
+    /// [`PromptKey::ToggleShown`](crate::PromptKey::ToggleShown) for it
+    /// ([`crate::list_model::show_key`], F3) sets it, and the key is then
+    /// named as a secret field opens ("F3 shows it."). Off by default.
+    pub fn set_prompt_show_key(&mut self, key: Option<textweaver_keymap::KeyChord>) {
+        self.prompt_show_key = key;
+    }
+
+    /// What is said as a secret field opens: `said`, then the show key
+    /// when the frontend has one.
+    pub(crate) fn secret_prompt_said(&self, said: &str) -> String {
+        match &self.prompt_show_key {
+            Some(key) => self.msg_args(
+                "prompt-show-hint",
+                &args![
+                    "label" => said.trim_end_matches('.'),
+                    "key" => crate::help::mark_chord(self.cat(), key)
+                ],
+            ),
+            None => said.to_owned(),
+        }
     }
 
     pub(crate) fn leave_prompt(&mut self) {
