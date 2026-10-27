@@ -13,6 +13,7 @@ use textweaver_keymap::ActionId;
 use textweaver_lexicon::args;
 use textweaver_store::{DocKey, LiveNotice, LiveView};
 
+use super::document::SharedDoc;
 use super::json_log::{self, SavedLog};
 use super::log::{LiveLog, LogLabels, LogOptions, LogView, MAX_ENTRIES, Message};
 use super::order::KeyOrder;
@@ -92,7 +93,7 @@ pub(crate) struct LiveHub {
     pub(crate) values: Option<LiveValues>,
     /// Fields changed while paused, by topic and path (values view).
     paused_fields: HashSet<(String, String)>,
-    paused: bool,
+    pub(crate) paused: bool,
     queue: VecDeque<Message>,
     queue_dropped: usize,
     /// The furthest entry the reader has been on.
@@ -108,6 +109,14 @@ pub(crate) struct LiveHub {
     /// The connection as the source last reported it; `None` before its
     /// first report, or for a source that has no connection.
     connection: Option<LiveConnection>,
+    /// The revision of the shared document shown, once a live document
+    /// message arrived (crate::live::document).
+    pub(crate) document: Option<u64>,
+    /// The newest shared document that arrived while paused.
+    pub(crate) pending_document: Option<SharedDoc>,
+    /// Log entries on a document's source were left out, and that was
+    /// said.
+    pub(crate) document_entries_said: bool,
 }
 
 impl std::fmt::Debug for LiveHub {
@@ -199,6 +208,9 @@ impl App {
             full_said: false,
             entry_seq: None,
             connection: None,
+            document: None,
+            pending_document: None,
+            document_entries_said: false,
         });
         effects
     }
@@ -257,6 +269,9 @@ impl App {
             full_said: false,
             entry_seq: None,
             connection: None,
+            document: None,
+            pending_document: None,
+            document_entries_said: false,
         });
         effects
     }
@@ -454,6 +469,9 @@ impl App {
             full_said: false,
             entry_seq: None,
             connection: None,
+            document: None,
+            pending_document: None,
+            document_entries_said: false,
         });
         effects
     }
@@ -565,6 +583,13 @@ impl App {
         if receiving {
             out.push(ActionId::LiveTogglePause);
         }
+        // A shared document has no entries, views or log to save.
+        if h.document.is_some() {
+            if receiving {
+                out.push(ActionId::CloseLiveSource);
+            }
+            return out;
+        }
         out.push(ActionId::LiveJumpNewest);
         if h.values.is_some() {
             out.extend([
@@ -644,6 +669,13 @@ impl App {
             }
             return Some(parts);
         }
+        if let Some(rev) = h.document {
+            let mut parts = vec![self.msg_args("live-document-revision", &args!["rev" => rev])];
+            if h.paused {
+                parts.push(self.msg("live-paused-status"));
+            }
+            return Some(parts);
+        }
         if h.source.is_none() {
             let n = h.log.len();
             return Some(vec![self.msg_args("live-entries", &args!["count" => n])]);
@@ -694,6 +726,33 @@ impl App {
         let values = self.live_shows_values();
         let mut changed_values = false;
         for event in events {
+            // A live document message: the shared document, shown in
+            // place (crate::live::document).
+            if let LiveEvent::Message {
+                payload: LivePayload::Json(v) | LivePayload::OrderedJson(v, _),
+                ..
+            } = &event
+                && let Some(doc) = SharedDoc::of(v)
+            {
+                if self.live_document_arrived(doc) {
+                    effects.push(Effect::Redraw);
+                }
+                continue;
+            }
+            if self.live_shows_document()
+                && matches!(
+                    event,
+                    LiveEvent::Message {
+                        payload: LivePayload::Json(_)
+                            | LivePayload::OrderedJson(..)
+                            | LivePayload::Text(_),
+                        ..
+                    }
+                )
+            {
+                self.live_document_entries_left_out();
+                continue;
+            }
             match event {
                 LiveEvent::Message { topic, payload, .. } => match payload {
                     LivePayload::Json(v) if values => {
@@ -996,6 +1055,9 @@ impl App {
         let Some(h) = self.live_hub.as_mut() else {
             return self.live_not_open();
         };
+        if h.document.is_some() {
+            return self.live_document_one_view();
+        }
         if h.values.is_some() {
             let m = self.msg("live-values-no-table");
             self.tell(&m);
@@ -1035,6 +1097,9 @@ impl App {
         let Some(h) = self.live_hub.as_mut() else {
             return self.live_not_open();
         };
+        if h.document.is_some() {
+            return self.live_document_one_view();
+        }
         if let Some(v) = &h.values {
             let Some((n, line)) = v.newest(&value_labels) else {
                 let m = self.msg("live-values-empty");
@@ -1094,6 +1159,18 @@ impl App {
             self.tell(&m);
             return vec![Effect::Redraw];
         }
+        if let Some(doc) = h.pending_document.take() {
+            // The newest revision that waited, as one update.
+            self.live_document_show(doc, true);
+            let m = self.msg_args("live-resumed", &args!["count" => 1]);
+            self.tell(&m);
+            return vec![Effect::Redraw];
+        }
+        if h.document.is_some() {
+            let m = self.msg_args("live-resumed", &args!["count" => 0]);
+            self.tell(&m);
+            return vec![Effect::Redraw];
+        }
         let queued: Vec<Message> = h.queue.drain(..).collect();
         let dropped = std::mem::take(&mut h.queue_dropped);
         let n = queued.len();
@@ -1139,7 +1216,9 @@ impl App {
         source.stop();
         if h.paused {
             h.paused = false;
-            if h.values.is_some() {
+            if let Some(doc) = h.pending_document.take() {
+                self.live_document_show(doc, true);
+            } else if h.values.is_some() {
                 h.paused_fields.clear();
                 self.live_values_show();
             } else {
@@ -1192,6 +1271,9 @@ impl App {
         let Some(h) = self.live_hub.as_ref() else {
             return self.live_not_open();
         };
+        if h.document.is_some() {
+            return self.live_document_one_view();
+        }
         if h.values.is_some() {
             let m = self.msg("live-values-no-log");
             self.tell(&m);

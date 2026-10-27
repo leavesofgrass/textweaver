@@ -124,6 +124,9 @@ impl App {
                 parts.push(self.msg("status-modified"));
             }
         }
+        // The broker the app runs, and a document shared live: in words,
+        // right after the reading state ("Broker on, 2 clients").
+        parts.extend(self.live_broker_words());
         match self.access_mode {
             AccessMode::SelfVoicing if spoken => parts.push(self.msg("status-self-voicing")),
             AccessMode::SelfVoicing => {}

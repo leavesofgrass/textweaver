@@ -10,12 +10,23 @@
 //! form opens again on it with every other value kept.
 //!
 //! The fields, in order: name, host, encryption, CA file (only when the
-//! encryption is a CA file), port, topic, user name, and view. Encryption
-//! and view are choices: Up and Down Arrow change them in place, and each
-//! choice is said with what it means. The port follows the encryption
-//! (1883 off, 8883 with TLS) unless it was changed. The password is not
-//! in the form: once the source is saved with a user name, it is asked
-//! for in a masked prompt and kept in the system credential store.
+//! encryption is a CA file), pin (only with a pinned key), join code (only
+//! when joining by code), port, topic, user name (not when joining by
+//! code), and view. Encryption and view are choices: Up and Down Arrow
+//! change them in place, and each choice is said with what it means. The
+//! port follows the encryption (1883 off, 8883 with TLS) unless it was
+//! changed. The password is not in the form: once the source is saved
+//! with a user name, it is asked for in a masked prompt and kept in the
+//! system credential store.
+//!
+//! **Joining by code** (textweaver's own broker, `tw broker --join-code`
+//! or Start a broker): the code's 16 characters are typed in the form, in
+//! any case, with or without separators. The source is saved as a pinned
+//! key (the code's first 12 characters) with the user name `join`, and
+//! the password derived from the whole code goes straight to the system
+//! credential store: the code itself is kept nowhere. Editing such a
+//! source shows the join code field empty; left empty, the kept password
+//! stays.
 //!
 //! **Set up a live source** opens the form empty; **Edit a live source**
 //! (or F2 in the Open live source list) opens it filled in, and keeps the
@@ -47,6 +58,8 @@ pub(crate) enum FormField {
     Host,
     Tls,
     CaFile,
+    Pin,
+    JoinCode,
     Port,
     Topic,
     Username,
@@ -55,11 +68,13 @@ pub(crate) enum FormField {
 
 impl FormField {
     /// Every field, in the form's order.
-    const ALL: [FormField; 8] = [
+    const ALL: [FormField; 10] = [
         FormField::Name,
         FormField::Host,
         FormField::Tls,
         FormField::CaFile,
+        FormField::Pin,
+        FormField::JoinCode,
         FormField::Port,
         FormField::Topic,
         FormField::Username,
@@ -77,6 +92,8 @@ impl FormField {
             FormField::Host => "live-form-host",
             FormField::Tls => "live-form-tls",
             FormField::CaFile => "live-form-ca-file",
+            FormField::Pin => "live-form-pin",
+            FormField::JoinCode => "live-form-join-code",
             FormField::Port => "live-form-port",
             FormField::Topic => "live-form-topic",
             FormField::Username => "live-form-username",
@@ -90,18 +107,83 @@ impl FormField {
     }
 }
 
+/// The user name a join code signs in with (`textweaver_mqtt::JOIN_USER`).
+pub(crate) const JOIN_USER: &str = "join";
+
+/// The encryption field's choices: the settings' encryptions, and joining
+/// by code, which is saved as a pinned key.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum Protect {
+    #[default]
+    Off,
+    System,
+    CaFile,
+    Pinned,
+    Join,
+}
+
+impl Protect {
+    /// The encryption it is saved as.
+    fn tls(self) -> LiveTls {
+        match self {
+            Protect::Off => LiveTls::Off,
+            Protect::System => LiveTls::System,
+            Protect::CaFile => LiveTls::CaFile,
+            Protect::Pinned | Protect::Join => LiveTls::Pinned,
+        }
+    }
+
+    /// Its value in a settings file or a typed answer.
+    fn as_str(self) -> &'static str {
+        match self {
+            Protect::Join => "join_code",
+            other => other.tls().as_str(),
+        }
+    }
+
+    /// The choice that shows `source`: a pinned key with the user name
+    /// `join` and a 12-character pin is a source joined by code.
+    fn of(source: &LiveSourceSettings) -> Protect {
+        match source.tls {
+            LiveTls::Off => Protect::Off,
+            LiveTls::System => Protect::System,
+            LiveTls::CaFile => Protect::CaFile,
+            LiveTls::Pinned => {
+                let pin_chars = source
+                    .pin
+                    .chars()
+                    .filter(char::is_ascii_alphanumeric)
+                    .count();
+                if source.username.trim() == JOIN_USER && pin_chars == 12 {
+                    Protect::Join
+                } else {
+                    Protect::Pinned
+                }
+            }
+        }
+    }
+}
+
 /// The encryption choices, in the order Down Arrow goes through them.
-const TLS_CHOICES: [LiveTls; 3] = [LiveTls::Off, LiveTls::System, LiveTls::CaFile];
+const TLS_CHOICES: [Protect; 5] = [
+    Protect::Off,
+    Protect::System,
+    Protect::CaFile,
+    Protect::Pinned,
+    Protect::Join,
+];
 
 /// The view choices, in order.
 const VIEW_CHOICES: [LiveView; 2] = [LiveView::Log, LiveView::Values];
 
 /// The message id of an encryption choice's word, and of what it means.
-fn tls_ids(tls: LiveTls) -> (&'static str, &'static str) {
+fn tls_ids(tls: Protect) -> (&'static str, &'static str) {
     match tls {
-        LiveTls::Off => ("live-form-tls-off", "live-form-tls-off-about"),
-        LiveTls::System => ("live-form-tls-system", "live-form-tls-system-about"),
-        LiveTls::CaFile => ("live-form-tls-ca-file", "live-form-tls-ca-file-about"),
+        Protect::Off => ("live-form-tls-off", "live-form-tls-off-about"),
+        Protect::System => ("live-form-tls-system", "live-form-tls-system-about"),
+        Protect::CaFile => ("live-form-tls-ca-file", "live-form-tls-ca-file-about"),
+        Protect::Pinned => ("live-form-tls-pinned", "live-form-tls-pinned-about"),
+        Protect::Join => ("live-form-tls-join", "live-form-tls-join-about"),
     }
 }
 
@@ -111,6 +193,11 @@ fn view_ids(view: LiveView) -> (&'static str, &'static str) {
         LiveView::Log => ("live-form-view-log", "live-form-view-log-about"),
         LiveView::Values => ("live-form-view-values", "live-form-view-values-about"),
     }
+}
+
+/// The port for the choice `p` when none is set.
+fn choice_port(p: Protect) -> u16 {
+    default_port(p.tls())
 }
 
 /// The port for `tls` when none is set.
@@ -141,7 +228,7 @@ pub(crate) struct LiveForm {
     /// mapping, `id_field`, the rest) are kept from it.
     base: LiveSourceSettings,
     /// What each field holds now, in [`FormField::ALL`]'s order.
-    values: [String; 8],
+    values: [String; 10],
     /// The field being edited.
     focus: FormField,
     origin: FormOrigin,
@@ -159,13 +246,17 @@ impl LiveForm {
 
 /// What a field's text means, once checked.
 enum Checked {
-    Ok(LiveSourceSettings),
+    /// The source, and the password a join code gives, to keep.
+    Ok(
+        LiveSourceSettings,
+        Option<textweaver_components::credentials::Password>,
+    ),
     Bad(FormField, String),
 }
 
 impl App {
     /// The words of the encryption choice `tls`.
-    fn tls_word(&self, tls: LiveTls) -> String {
+    fn tls_word(&self, tls: Protect) -> String {
         self.msg(tls_ids(tls).0)
     }
 
@@ -175,7 +266,7 @@ impl App {
 
     /// The encryption a field's text names: one of the choices' words, or
     /// its value in `settings.toml`, in any case.
-    fn parse_tls(&self, text: &str) -> Option<LiveTls> {
+    fn parse_tls(&self, text: &str) -> Option<Protect> {
         let t = text.trim().to_lowercase();
         TLS_CHOICES.into_iter().find(|c| {
             self.tls_word(*c).to_lowercase() == t
@@ -191,12 +282,19 @@ impl App {
             .find(|c| self.view_word(*c).to_lowercase() == t || c.as_str() == t)
     }
 
-    /// The fields shown, in order: the CA file only with that encryption.
+    /// The fields shown, in order: the CA file, the pin and the join code
+    /// only with their encryption, and no user name when joining by code.
     fn live_form_fields(&self, form: &LiveForm) -> Vec<FormField> {
-        let ca = self.parse_tls(form.value(FormField::Tls)) == Some(LiveTls::CaFile);
+        let p = self.parse_tls(form.value(FormField::Tls));
         FormField::ALL
             .into_iter()
-            .filter(|f| *f != FormField::CaFile || ca)
+            .filter(|f| match f {
+                FormField::CaFile => p == Some(Protect::CaFile),
+                FormField::Pin => p == Some(Protect::Pinned),
+                FormField::JoinCode => p == Some(Protect::Join),
+                FormField::Username => p != Some(Protect::Join),
+                _ => true,
+            })
             .collect()
     }
 
@@ -213,8 +311,11 @@ impl App {
         let values = [
             source.name.clone(),
             source.host.clone(),
-            self.tls_word(source.tls),
+            self.tls_word(Protect::of(&source)),
             source.ca_file.clone(),
+            source.pin.clone(),
+            // A join code is never kept: empty keeps the password.
+            String::new(),
             port,
             source.topics.join(", "),
             source.username.clone(),
@@ -384,8 +485,8 @@ impl App {
             return;
         };
         let port = form.value(FormField::Port).trim().to_owned();
-        if port.is_empty() || port == default_port(old).to_string() {
-            form.set(FormField::Port, default_port(new).to_string());
+        if port.is_empty() || port == choice_port(old).to_string() {
+            form.set(FormField::Port, choice_port(new).to_string());
         }
     }
 
@@ -414,6 +515,10 @@ impl App {
             let i = at.map_or(0, |i| (i as isize + step).rem_euclid(n) as usize);
             let tls = TLS_CHOICES[i];
             let word = self.tls_word(tls);
+            // Joining by code fills the user name in; leaving it clears it.
+            if tls == Protect::Join || form.value(FormField::Username).trim() == JOIN_USER {
+                form.set(FormField::Username, String::new());
+            }
             self.live_form_set_tls(&mut form, &text, word.clone());
             (word, self.msg(tls_ids(tls).1))
         } else {
@@ -457,7 +562,7 @@ impl App {
             return Checked::Bad(FormField::Host, self.msg("live-setup-host-needed"));
         }
         s.host = host;
-        let Some(tls) = self.parse_tls(form.value(FormField::Tls)) else {
+        let Some(protect) = self.parse_tls(form.value(FormField::Tls)) else {
             let choices = TLS_CHOICES.map(|t| self.tls_word(t)).join(", ");
             let label = self.msg(FormField::Tls.label_id());
             let m = self.msg_args(
@@ -466,7 +571,26 @@ impl App {
             );
             return Checked::Bad(FormField::Tls, m);
         };
+        let tls = protect.tls();
         s.tls = tls;
+        let mut join_password = None;
+        match protect {
+            Protect::Pinned => match self.live_form_pin(&text(FormField::Pin)) {
+                Ok(pin) => s.pin = pin,
+                Err(why) => return Checked::Bad(FormField::Pin, why),
+            },
+            Protect::Join => {
+                match self.live_form_join(form, &text(FormField::JoinCode)) {
+                    Ok((pin, password)) => {
+                        s.pin = pin;
+                        join_password = password;
+                    }
+                    Err(why) => return Checked::Bad(FormField::JoinCode, why),
+                }
+                s.username = JOIN_USER.to_owned();
+            }
+            _ => s.pin.clear(),
+        }
         if tls == LiveTls::CaFile {
             let ca = text(FormField::CaFile);
             if ca.is_empty() {
@@ -478,7 +602,7 @@ impl App {
             }
             s.ca_file = ca;
         }
-        let default = default_port(tls);
+        let default = choice_port(protect);
         let port = text(FormField::Port);
         let port = if port.is_empty() {
             Some(default)
@@ -500,7 +624,9 @@ impl App {
             return Checked::Bad(FormField::Topic, self.msg("live-setup-topic-needed"));
         }
         s.topics = topics;
-        s.username = text(FormField::Username);
+        if protect != Protect::Join {
+            s.username = text(FormField::Username);
+        }
         let Some(view) = self.parse_view(form.value(FormField::View)) else {
             let choices = VIEW_CHOICES.map(|v| self.view_word(v)).join(", ");
             let label = self.msg(FormField::View.label_id());
@@ -511,7 +637,53 @@ impl App {
             return Checked::Bad(FormField::View, m);
         };
         s.view = view;
-        Checked::Ok(s)
+        Checked::Ok(s, join_password)
+    }
+
+    /// A pinned key's pin as typed: checked, and kept in groups of four.
+    fn live_form_pin(&self, typed: &str) -> Result<String, String> {
+        if typed.is_empty() {
+            return Err(self.msg("live-form-pin-needed"));
+        }
+        #[cfg(feature = "mqtt")]
+        {
+            textweaver_mqtt::Pin::parse(typed)
+                .map(|p| p.grouped())
+                .map_err(|_| self.msg("live-form-pin-bad"))
+        }
+        #[cfg(not(feature = "mqtt"))]
+        {
+            Ok(typed.to_owned())
+        }
+    }
+
+    /// A join code as typed: the pin it carries, and the password it
+    /// gives. Empty keeps an edited source's kept password (no new one).
+    fn live_form_join(
+        &self,
+        form: &LiveForm,
+        typed: &str,
+    ) -> Result<(String, Option<textweaver_components::credentials::Password>), String> {
+        if typed.is_empty() {
+            let kept = matches!(form.origin, FormOrigin::Edit { .. })
+                && Protect::of(&form.base) == Protect::Join;
+            if kept {
+                return Ok((form.base.pin.clone(), None));
+            }
+            return Err(self.msg("live-form-join-needed"));
+        }
+        #[cfg(feature = "mqtt")]
+        {
+            let code = textweaver_mqtt::JoinCode::parse(typed)
+                .map_err(|_| self.msg("live-form-join-bad"))?;
+            let password =
+                textweaver_components::credentials::Password::new(code.password().expose());
+            Ok((code.pin().grouped(), password))
+        }
+        #[cfg(not(feature = "mqtt"))]
+        {
+            Err(self.msg("live-not-in-build"))
+        }
     }
 
     /// Enter in the form: checks every field, then saves the source, asks
@@ -522,8 +694,8 @@ impl App {
             return vec![Effect::Redraw];
         };
         self.live_form_keep(&mut form, text.to_owned());
-        let source = match self.live_form_check(&form) {
-            Checked::Ok(s) => s,
+        let (source, join_password) = match self.live_form_check(&form) {
+            Checked::Ok(s, p) => (s, p),
             Checked::Bad(field, why) => {
                 self.error(&why);
                 form.focus = field;
@@ -585,6 +757,11 @@ impl App {
         };
         let m = self.msg_args(saved_id, &args!["name" => name.as_str()]);
         self.tell(&m);
+        if let Some(password) = join_password {
+            // Joined by code: the derived password, never the code.
+            self.keep_live_password(&id, password);
+            return self.live_offer_open(&id);
+        }
         if signs_in && (user_changed || self.live_password(&id).is_none()) {
             let effects = self.ask_live_password(&id);
             if self.prompt_is(PromptPurpose::LivePassword) {
@@ -721,6 +898,7 @@ impl App {
         for n in notes {
             match n {
                 LiveFileNote::Password => {}
+                LiveFileNote::JoinCode => parts.push(self.msg("live-file-note-join-code")),
                 LiveFileNote::UnknownKey(key) => {
                     parts.push(
                         self.msg_args("live-file-note-unknown", &args!["key" => key.as_str()]),

@@ -24,8 +24,10 @@
 //! control, escape and direction characters removed and is cut to
 //! [`LIVE_SOURCE_TEXT_MAX`] characters; lists are cut to a few hundred
 //! items. A `password` key is refused and never read: a password is only
-//! ever kept in the system credential store. A relative `ca_file` is
-//! resolved against the file's folder.
+//! ever kept in the system credential store; so is a `join_code` key,
+//! whose secret part is a password. A broker's certificate `pin` is kept:
+//! it is not a secret. A relative `ca_file` is resolved against the
+//! file's folder.
 //!
 //! [`live_source_file_text`] writes a source back as such a file, never
 //! with a password and without the keys only this computer knows about.
@@ -60,6 +62,7 @@ const SOURCE_KEYS: &[&str] = &[
     "port",
     "tls",
     "ca_file",
+    "pin",
     "username",
     "topics",
     "view",
@@ -82,6 +85,9 @@ pub enum LiveFileNote {
     UnknownKey(String),
     /// A `password` key: refused, never read or kept.
     Password,
+    /// A `join_code` key: refused, never read or kept, since the code's
+    /// secret part is the password.
+    JoinCode,
     /// A value that does not fit its key, left out, in English words as
     /// `settings.toml`'s warnings are ("port \"x\" is not a port number;
     /// using the default").
@@ -214,10 +220,26 @@ fn keep_known(
             if !notes.contains(&LiveFileNote::Password) {
                 notes.push(LiveFileNote::Password);
             }
+        } else if is_join_code_key(&key) {
+            if !notes.contains(&LiveFileNote::JoinCode) {
+                notes.push(LiveFileNote::JoinCode);
+            }
         } else {
             notes.push(LiveFileNote::UnknownKey(format!("{prefix}{key}")));
         }
     }
+}
+
+/// True for a key that would carry a join code (`join_code`, `join`,
+/// `code`, in any case and with `-` or `_`): its secret part is the
+/// password, so it is refused as a password is.
+fn is_join_code_key(key: &str) -> bool {
+    let k: String = key
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .flat_map(|c| c.to_lowercase())
+        .collect();
+    matches!(k.as_str(), "joincode" | "join" | "code")
 }
 
 /// The line of byte `offset` in `text`, from 1.
@@ -331,6 +353,10 @@ pub fn live_source_file_text(source: &LiveSourceSettings, folder: Option<&Path>)
         t.insert("tls".into(), source.tls.as_str().into());
     }
     let ca = source.ca_file.trim();
+    let pin = source.pin.trim();
+    if source.tls == LiveTls::Pinned && !pin.is_empty() {
+        t.insert("pin".into(), pin.into());
+    }
     if !ca.is_empty() {
         let path = Path::new(ca);
         let relative = folder
@@ -596,6 +622,23 @@ speak = "on_change"
             assert_eq!(again.source, file.source, "{path:?}");
         }
         assert!(read_ok >= 8, "{read_ok}");
+    }
+
+    #[test]
+    fn a_pin_is_kept_and_a_join_code_refused() {
+        let f = read(
+            "name = \"Club net\"\nhost = \"192.0.2.1\"\ntopics = [\"a\"]\ntls = \"pinned\"\n\
+             pin = \"ABCD-EFGH-JKMN\"\njoin_code = \"ABCD-EFGH-JKMN-PQRS\"\nJoin-Code = \"x\"\n",
+        );
+        assert_eq!(f.notes, [LiveFileNote::JoinCode]);
+        assert_eq!(f.source.tls, LiveTls::Pinned);
+        assert_eq!(f.source.pin, "ABCD-EFGH-JKMN");
+        assert!(!format!("{:?}", f.source).contains("PQRS"));
+        let written = live_source_file_text(&f.source, None);
+        assert!(written.contains("pin = \"ABCD-EFGH-JKMN\""), "{written}");
+        assert!(written.contains("tls = \"pinned\""), "{written}");
+        assert!(!written.contains("PQRS"), "{written}");
+        assert_eq!(read(&written).source, f.source);
     }
 
     #[test]

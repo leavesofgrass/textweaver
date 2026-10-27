@@ -220,6 +220,7 @@ pub(crate) fn prompt_label(c: &Catalog, purpose: PromptPurpose) -> String {
         P::LivePassword => "prompt-live-password-any",
         P::LiveSetup => "prompt-live-setup",
         P::SaveLiveSourceFile => "prompt-save-live-source-file",
+        P::LiveCheckIn => "prompt-live-check-in",
         P::ImportCards => "prompt-import-cards",
         P::CwCopy => "prompt-cw-copy",
     })

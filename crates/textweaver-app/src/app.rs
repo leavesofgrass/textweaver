@@ -1581,6 +1581,7 @@ impl App {
     /// than a moment). Safe to call more than once.
     pub fn shutdown(&mut self) {
         self.live_leave();
+        self.live_broker_shutdown();
         self.dictation_shutdown();
         if let Err(e) = self.save_position() {
             log::warn!("cannot save position: {e}");
@@ -1772,6 +1773,9 @@ impl App {
                 if self.prompt_is_live_form() {
                     return self.cancel_live_form();
                 }
+                if self.prompt_is_checkin() {
+                    return self.cancel_live_checkin();
+                }
                 if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::CwCopy {
                     self.leave_prompt();
                     return self.cw_practice_stop();
@@ -1850,6 +1854,7 @@ impl App {
         effects.extend(self.updates_tick());
         effects.extend(self.cw_practice_tick(now));
         effects.extend(self.live_tick(now));
+        effects.extend(self.live_broker_tick());
         effects.extend(self.live_announce_tick(now));
         self.reading_timer_tick(now);
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now) | self.cw_tick();
@@ -2004,6 +2009,7 @@ impl App {
             PromptPurpose::GitHubToken => return self.answer_github_token(text),
             PromptPurpose::LivePassword => return self.answer_live_password_then_open(text),
             PromptPurpose::LiveSetup => return self.answer_live_form(text),
+            PromptPurpose::LiveCheckIn => return self.answer_live_checkin(text),
             PromptPurpose::SaveLiveSourceFile => return self.answer_live_save_file(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
@@ -2565,7 +2571,13 @@ impl App {
             | A::LiveToggleFieldSpeak
             | A::LiveSayUnread
             | A::SaveLiveLog
-            | A::ForgetLiveSourcePassword => return self.live_action(a),
+            | A::ForgetLiveSourcePassword
+            | A::StartBroker
+            | A::StopBroker
+            | A::ShowJoinCode
+            | A::ShareDocumentLive
+            | A::StopSharing
+            | A::SendCheckIn => return self.live_action(a),
             A::ColorSettings => return self.open_color_settings(),
             A::CustomizeButtons => return self.customize_buttons(),
             A::ReadingForm => return self.open_reading_form(),

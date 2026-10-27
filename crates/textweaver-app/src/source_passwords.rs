@@ -105,8 +105,16 @@ impl App {
             self.error(&msg);
             return self.ask_live_password_inner(&id);
         };
-        let name = self.live_source_name(&id);
-        match credentials::store_password(&id, &password) {
+        self.keep_live_password(&id, password);
+        vec![Effect::Redraw]
+    }
+
+    /// Keeps `password` for live source `id`: in the system credential
+    /// store, and this session even when the store refuses it, saying
+    /// which. Nothing said holds the password.
+    pub(crate) fn keep_live_password(&mut self, id: &str, password: Password) {
+        let name = self.live_source_name(id);
+        match credentials::store_password(id, &password) {
             Ok(()) => {
                 let msg = self.msg_args("live-password-kept", &args!["source" => name.as_str()]);
                 self.note(&msg);
@@ -119,8 +127,9 @@ impl App {
                 self.error(&msg);
             }
         }
-        self.live_passwords.known.insert(id, Some(password));
-        vec![Effect::Redraw]
+        self.live_passwords
+            .known
+            .insert(id.to_owned(), Some(password));
     }
 
     /// Forgets live source `id`'s password: removes it from the system

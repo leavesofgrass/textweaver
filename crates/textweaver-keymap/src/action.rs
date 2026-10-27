@@ -680,6 +680,24 @@ actions! {
     ForgetLiveSourcePassword = "forget_live_source_password", File,
         "Forget the live source's password kept in the system credential store; it is asked for again when needed",
         gui [], term [], shared [];
+    StartBroker = "start_broker", File,
+        "Start textweaver's own broker inside the app, as the live broker settings say, and say its addresses and join code",
+        gui [], term [], shared [];
+    StopBroker = "stop_broker", File,
+        "Stop the broker the app runs: every reader is disconnected and every port freed",
+        gui [], term [], shared [];
+    ShowJoinCode = "show_join_code", File,
+        "Say the running broker's join code in groups of four and show it in a list, or its certificate pin when it has no code",
+        gui [], term [], shared [];
+    ShareDocumentLive = "share_document_live", File,
+        "Share the open document live: readers following its topic see it, and each save, in place",
+        gui [], term [], shared [];
+    StopSharing = "stop_sharing", File,
+        "Stop sharing the document live; readers keep the last revision",
+        gui [], term [], shared [];
+    SendCheckIn = "send_check_in", File,
+        "Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry",
+        gui [], term [], shared [];
     Quit = "quit", File, "Quit, saving the reading position",
         gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared [];
 

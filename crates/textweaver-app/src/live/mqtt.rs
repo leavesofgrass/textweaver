@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use textweaver_components::credentials::Password;
-use textweaver_mqtt::{MqttConfig, MqttEvent, MqttSource, Payload, Secret, Tls};
+use textweaver_mqtt::{MqttConfig, MqttEvent, MqttSource, Payload, Pin, Secret, Tls};
 use textweaver_store::{LiveSettings, LiveSourceSettings, LiveTls};
 
 use super::KeyOrder;
@@ -129,6 +129,11 @@ pub fn mqtt_config(
         LiveTls::Off => Tls::Off,
         LiveTls::System => Tls::System,
         LiveTls::CaFile => Tls::CaFile(PathBuf::from(source.ca_file.trim())),
+        // A pin that does not read is refused before connecting
+        // ([`pin_problem`]); should one get here, it trusts no key.
+        LiveTls::Pinned => Tls::Pinned(
+            Pin::parse(&source.pin).unwrap_or_else(|_| Pin::of_spki(b"no key has this pin")),
+        ),
     };
     let mut config = MqttConfig::new(source.host.trim(), source.port_or_default(), tls);
     let user = source.username.trim();
@@ -145,6 +150,12 @@ pub fn mqtt_config(
         .collect();
     config.quiet_after = Duration::from_secs(u64::from(live.quiet_hint_seconds));
     config
+}
+
+/// True when `source` uses a pinned key whose pin does not read as one
+/// (52 characters, or the 12 of a join code).
+pub fn pin_problem(source: &LiveSourceSettings) -> bool {
+    source.tls == LiveTls::Pinned && Pin::parse(&source.pin).is_err()
 }
 
 /// A scripted client for tests: the test queues events, the source

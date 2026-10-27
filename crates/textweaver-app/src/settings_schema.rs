@@ -1847,6 +1847,45 @@ pub const INFO: &[Info] = &[
         "Live sources",
         "MQTT connections opened as live documents. Edit in settings.toml; passwords stay in the credential store.",
     ),
+    // [live.broker] (beta 5, phase 5b): the broker the app starts, and
+    // the topics its senders publish on.
+    list(
+        "live.broker.listen",
+        "Broker addresses",
+        "Addresses the app's broker listens on, with or without a port. Empty is 127.0.0.1, this computer only.",
+    ),
+    number(
+        "live.broker.port",
+        "Broker port",
+        "The broker's port for addresses without one. 0 uses 8883 with TLS, 1883 plain.",
+        (0.0, 65535.0, 1.0),
+        "",
+    ),
+    toggle(
+        "live.broker.plain",
+        "Plain broker",
+        "The broker without TLS. Only on this computer or over Tailscale.",
+    ),
+    toggle(
+        "live.broker.join_code",
+        "Broker join code",
+        "A join code each time the broker starts, for readers with no account.",
+    ),
+    list(
+        "live.broker.join_topics",
+        "Join code topics",
+        "Topic filters a join code may read. # reads everything.",
+    ),
+    text(
+        "live.broker.share_topic",
+        "Share topic",
+        "The topic Share this document live publishes on.",
+    ),
+    text(
+        "live.broker.checkin_topic",
+        "Check-in topic",
+        "The topic for check-ins when the live source has no plain topic.",
+    ),
 ];
 
 /// The leaf paths of a settings JSON tree, with their values, in order.

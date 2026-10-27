@@ -241,6 +241,7 @@ fn purpose_name(p: PromptPurpose) -> &'static str {
         PromptPurpose::LivePassword => "live_password",
         PromptPurpose::LiveSetup => "live_setup",
         PromptPurpose::SaveLiveSourceFile => "save_live_source_file",
+        PromptPurpose::LiveCheckIn => "live_check_in",
         PromptPurpose::ImportCards => "import_cards",
         PromptPurpose::CwCopy => "cw_copy",
     }
@@ -1191,7 +1192,7 @@ mod tests {
 
     /// Every prompt purpose and its protocol name: a change here is a
     /// protocol change, so clients are told (see the protocol version rule).
-    const PURPOSES: [(PromptPurpose, &str); 35] = [
+    const PURPOSES: [(PromptPurpose, &str); 36] = [
         (PromptPurpose::Find, "find"),
         (PromptPurpose::GoTo, "go_to"),
         (PromptPurpose::Open, "open"),
@@ -1225,6 +1226,7 @@ mod tests {
         (PromptPurpose::LivePassword, "live_password"),
         (PromptPurpose::LiveSetup, "live_setup"),
         (PromptPurpose::SaveLiveSourceFile, "save_live_source_file"),
+        (PromptPurpose::LiveCheckIn, "live_check_in"),
         (PromptPurpose::ImportCards, "import_cards"),
         (PromptPurpose::CwCopy, "cw_copy"),
     ];
@@ -1270,6 +1272,7 @@ mod tests {
                 | PromptPurpose::LivePassword
                 | PromptPurpose::LiveSetup
                 | PromptPurpose::SaveLiveSourceFile
+                | PromptPurpose::LiveCheckIn
                 | PromptPurpose::ImportCards
                 | PromptPurpose::CwCopy => name,
             };

@@ -405,6 +405,13 @@ pub const SECTIONS: &[Section] = &[
             "live.min_interval_seconds",
             "live.quiet_hint_seconds",
             "live.log_folder",
+            "live.broker.listen",
+            "live.broker.port",
+            "live.broker.plain",
+            "live.broker.join_code",
+            "live.broker.join_topics",
+            "live.broker.share_topic",
+            "live.broker.checkin_topic",
         ],
     },
     Section {
