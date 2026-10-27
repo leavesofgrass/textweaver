@@ -604,7 +604,7 @@ fn set_up_and_open_go_through_the_prompt_and_the_list() {
     let _ = r.app.ask_live_password("practice");
     let model = r.app.prompt_model().expect("the password prompt");
     assert!(model.purpose.is_secret());
-    let (secret, _) = gui::secret_edit("", "s3cret!");
+    let (secret, _) = gui::secret_edit("", "s3cret!", 0..0, 7);
     let _ = r
         .app
         .dispatch(Command::PromptKey(textweaver_app::PromptKey::SetText(

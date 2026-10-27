@@ -50,6 +50,8 @@ textweaver's own fixes, each small, each a candidate for its own pull request:
 
 21. `masonry_winit`: only the plain paste chord (Ctrl+V, or Cmd+V on macOS) is turned into a `ClipboardPaste` event (beta 3). Upstream took Ctrl (or Cmd) with V and any other modifier, so Ctrl+Shift+V and Ctrl+Alt+V never reached the app as keys. With Shift or Alt the key now arrives as a keyboard event, so textweaver can bind Ctrl+Shift+V to Paste as plain text and Ctrl+Alt+V to Choose a voice. The appended part of `textweaver.patch` holds it.
 
+22. `masonry`: a `TextArea` can be a password field, and tells its owner where an edit was (beta 5). `set_password` makes an editable area a `PasswordInput` to accessibility APIs (UIA's `IsPassword` on Windows), so a screen reader does not echo what is typed into a masked field. `selection_byte_range` gives the selection, and `selection_before_edit` the selection just before the latest text event (a key, a paste, an input method's text). textweaver's masked prompt shows one star per character, and with these two it works out what each edit replaced, so typing or deleting in the middle of a password changes the middle and a typed `*` is an asterisk. The appended part of `textweaver.patch` holds it. Worth sending upstream as its own pull request: "A password mode for TextArea".
+
 ## Updating
 
 1. Pick a new upstream revision and copy the crates listed above over this folder, leaving out the same things.

@@ -1161,28 +1161,33 @@ pub fn prompt_dialog(
 
 /// The secret after an edit in a secret prompt's field, which shows one
 /// star per character (`PromptModel::shown_text`, B1-c2): `real` is the
-/// secret before the edit, `field` the field's text after it. Stars kept
-/// at the start and the end stand for the secret's characters there;
-/// what lies between was typed or pasted. Returns the new secret and the
-/// caret after the edit, in characters.
+/// secret before the edit, `field` the field's text after it, `before`
+/// the field's selection just before the edit and `caret` its caret just
+/// after, in characters (a star is one byte, so the field's byte offsets
+/// are characters). Returns the new secret and the caret.
 ///
-/// shortcut: a star typed into the secret reads as a kept character, and
-/// deleting inside a run of stars removes from the run's end; GitHub
-/// tokens hold only letters, digits and `_`, so both are moot until a
-/// secret that may hold a star needs a masked field of its own.
-pub fn secret_edit(real: &str, field: &str) -> (String, usize) {
+/// The edit replaced the stars from the selection's start (or the caret,
+/// when Backspace went before it) up to those still after the caret, with
+/// what lies between there and the caret, so a typed star is a star, and
+/// an edit in the middle changes the middle.
+pub fn secret_edit(
+    real: &str,
+    field: &str,
+    before: std::ops::Range<usize>,
+    caret: usize,
+) -> (String, usize) {
     let real: Vec<char> = real.chars().collect();
     let field: Vec<char> = field.chars().collect();
-    let stars = |it: &mut dyn Iterator<Item = &char>| it.take_while(|c| **c == '*').count();
-    let head = stars(&mut field.iter()).min(real.len());
-    let tail = stars(&mut field[head..].iter().rev()).min(real.len() - head);
-    let typed = &field[head..field.len() - tail];
-    let secret: String = real[..head]
+    let caret = caret.min(field.len());
+    let start = before.start.min(caret).min(real.len());
+    // The characters after the caret are the old ones from the end.
+    let tail = (field.len() - caret).min(real.len() - start);
+    let secret: String = real[..start]
         .iter()
-        .chain(typed)
+        .chain(&field[start..caret])
         .chain(&real[real.len() - tail..])
         .collect();
-    (secret, head + typed.len())
+    (secret, caret)
 }
 
 /// The command palette as a dialog: a filter field over the list of
@@ -3095,8 +3100,13 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("dialog: prompt {label_text:?}"));
         }
-        // Nothing typed in a secret prompt reaches the log (B1-c2).
+        // Nothing typed in a secret prompt reaches the log (B1-c2), and
+        // its field is a password field to the screen reader.
         crate::log::set_paused(purpose.is_secret(), self.log);
+        if purpose.is_secret() {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(PROMPT_FIELD, |mut f| TextArea::set_password(&mut f, true));
+        }
     }
 
     /// The system's file chooser, on its own thread and modal to the
@@ -3306,7 +3316,22 @@ impl Gui {
                 .dispatch(Command::PromptKey(PromptKey::SetText(field)));
             return;
         };
-        let (secret, caret) = secret_edit(&model.text(), &field);
+        // Where the edit was: the field's selection before it (all stars,
+        // so bytes are characters) and its caret after it (a byte offset
+        // into the new text, which may hold any character typed).
+        let old_len = model.text().chars().count();
+        let (before, after_byte) = ctx
+            .render_root(self.window_id)
+            .get_widget_with_tag(PROMPT_FIELD)
+            .map_or((old_len..old_len, field.len()), |f| {
+                let w = f.inner();
+                (w.selection_before_edit(), w.selection_byte_range().end)
+            });
+        let after = field
+            .char_indices()
+            .take_while(|(i, _)| *i < after_byte)
+            .count();
+        let (secret, caret) = secret_edit(&model.text(), &field, before, after);
         let _ = self
             .app
             .dispatch(Command::PromptKey(PromptKey::SetText(secret)));
@@ -5985,16 +6010,32 @@ Ada Example's notes.
     }
 
     /// A secret prompt's field shows stars, and the secret follows each
-    /// edit: typing at the end, a paste, Backspace, and typing between.
+    /// edit: typing at the end, a paste, Backspace and Delete, typing and
+    /// deleting in the middle, a typed star, and a selection replaced.
     #[test]
     fn the_secret_field_follows_its_edits() {
-        assert_eq!(secret_edit("", "Q"), ("Q".to_owned(), 1));
-        assert_eq!(secret_edit("QZ", "**X"), ("QZX".to_owned(), 3));
-        assert_eq!(secret_edit("QZ", "**pasted"), ("QZpasted".to_owned(), 8));
-        assert_eq!(secret_edit("QZX", "**"), ("QZ".to_owned(), 2));
-        assert_eq!(secret_edit("QZX", "*a**"), ("QaZX".to_owned(), 2));
-        assert_eq!(secret_edit("QZX", "***"), ("QZX".to_owned(), 3));
-        assert_eq!(secret_edit("QZX", ""), (String::new(), 0));
+        let s = |real: &str, field: &str, before: std::ops::Range<usize>, caret| {
+            secret_edit(real, field, before, caret)
+        };
+        assert_eq!(s("", "Q", 0..0, 1), ("Q".to_owned(), 1));
+        assert_eq!(s("QZ", "**X", 2..2, 3), ("QZX".to_owned(), 3));
+        assert_eq!(s("QZ", "**pasted", 2..2, 8), ("QZpasted".to_owned(), 8));
+        // Backspace at the end, and in the middle.
+        assert_eq!(s("QZX", "**", 3..3, 2), ("QZ".to_owned(), 2));
+        assert_eq!(s("QZX", "**", 2..2, 1), ("QX".to_owned(), 1));
+        // Delete in the middle removes the character after the caret.
+        assert_eq!(s("QZX", "**", 1..1, 1), ("QX".to_owned(), 1));
+        // Typing in the middle.
+        assert_eq!(s("QZX", "*a**", 1..1, 2), ("QaZX".to_owned(), 2));
+        // A typed star is a star, at the end and in the middle.
+        assert_eq!(s("QZX", "****", 3..3, 4), ("QZX*".to_owned(), 4));
+        assert_eq!(s("QZX", "****", 1..1, 2), ("Q*ZX".to_owned(), 2));
+        assert_eq!(s("a*b", "****", 1..1, 2), ("a**b".to_owned(), 2));
+        // A selection replaced, and everything removed.
+        assert_eq!(s("QZXW", "*y*", 1..3, 2), ("QyW".to_owned(), 2));
+        assert_eq!(s("QZX", "", 0..3, 0), (String::new(), 0));
+        // Nothing changed.
+        assert_eq!(s("QZX", "***", 3..3, 3), ("QZX".to_owned(), 3));
     }
 
     /// With the log on, typing a token into the secret prompt writes no
@@ -6012,7 +6053,8 @@ Ada Example's notes.
         for c in TOKEN.chars() {
             field.push(c);
             crate::log::line(&format!("key {c} -> None"));
-            (secret, _) = secret_edit(&secret, &field);
+            let n = secret.chars().count();
+            (secret, _) = secret_edit(&secret, &field, n..n, field.chars().count());
             let cmd = Command::PromptKey(PromptKey::SetText(secret.clone()));
             crate::log::line(&format!("command {cmd:?}"));
             field = "*".repeat(secret.chars().count());

@@ -109,6 +109,14 @@ pub struct TextArea<const USER_EDITABLE: bool> {
 
     /// Time elapsed (ms) to calculate the timeout of the cursor's blink animation.
     anim_elapsed: u64,
+
+    /// textweaver patch: the area holds a password, shown masked by its
+    /// owner, so it is a password field to accessibility APIs.
+    password: bool,
+    /// textweaver patch: the selection, as a byte range, just before the
+    /// latest text event, so an owner that masks the text can tell what an
+    /// edit replaced ([`selection_before_edit`](Self::selection_before_edit)).
+    selection_before_event: std::ops::Range<usize>,
 }
 
 // --- MARK: BUILDERS
@@ -155,6 +163,8 @@ impl<const EDITABLE: bool> TextArea<EDITABLE> {
             anim_cursor_visible: true,
             anim_prev_interval: 0,
             anim_elapsed: 0,
+            password: false,
+            selection_before_event: 0..0,
         }
     }
 
@@ -277,6 +287,21 @@ impl<const EDITABLE: bool> TextArea<EDITABLE> {
         self.editor.text()
     }
 
+    /// The selection, as a byte range of the text (the caret when it is
+    /// empty).
+    pub fn selection_byte_range(&self) -> std::ops::Range<usize> {
+        self.editor.raw_selection().text_range()
+    }
+
+    /// The selection, as a byte range, just before the latest text event
+    /// (a key, a paste, an input method's text): with
+    /// [`selection_byte_range`](Self::selection_byte_range) after it, what
+    /// an edit replaced, for an owner that masks the text (textweaver
+    /// patch).
+    pub fn selection_before_edit(&self) -> std::ops::Range<usize> {
+        self.selection_before_event.clone()
+    }
+
     /// Check if this text area holds nothing, including IME preedit content.
     pub fn is_empty(&self) -> bool {
         self.editor.raw_text().is_empty()
@@ -360,6 +385,15 @@ impl<const EDITABLE: bool> TextArea<EDITABLE> {
     /// Changes the accessible name.
     pub fn set_accessible_label(this: &mut WidgetMut<'_, Self>, label: impl Into<ArcStr>) {
         this.widget.accessible_label = label.into();
+        this.ctx.request_accessibility_update();
+    }
+
+    /// Marks the area as holding a password (textweaver patch): an
+    /// editable area is then a password field to accessibility APIs, so
+    /// a screen reader does not echo what is typed. Its owner masks the
+    /// text it shows.
+    pub fn set_password(this: &mut WidgetMut<'_, Self>, password: bool) {
+        this.widget.password = password;
         this.ctx.request_accessibility_update();
     }
 
@@ -598,6 +632,7 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
         self.anim_prev_interval = 0;
         self.anim_elapsed = 0;
         ctx.request_anim_frame();
+        self.selection_before_event = self.editor.raw_selection().text_range();
 
         match event {
             TextEvent::Keyboard(key_event) => {
@@ -1105,6 +1140,9 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
     }
 
     fn accessibility_role(&self) -> Role {
+        if EDITABLE && self.password {
+            return Role::PasswordInput;
+        }
         if EDITABLE {
             match self.insert_newline {
                 InsertNewline::OnShiftEnter | InsertNewline::OnEnter => Role::MultilineTextInput,
