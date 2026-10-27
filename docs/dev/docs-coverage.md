@@ -109,6 +109,12 @@ Every guide was read again against the beta 4 entries of the changelog. The feat
 - Morse code practice (Koch lessons and drills), `cw_copy` in JSON-RPC: cw.md, json-rpc.md. Pass.
 - The `textweaver-cw` crate, the vault resolver and index, canvases in formats, and the tree dump retries: dev/architecture.md, dev/testing.md, site/architecture.html. Pass, after fix.
 
+## Beta 5, written on Monday, October 26, 2026
+
+- Live documents: the log view, the values view, announcements, the JSON log, the settings, passwords, privacy, and connection messages: live-documents.md, gui.md, settings.md, privacy.md, accessibility.md, known-limits.md, roadmap.md, whats-new.md. Pass.
+- The broker's side, with Mosquitto, Tailscale, 44Net, TLS, and example messages: live-broker.md. Pass, with the Tailscale access rule and the broker's behavior after a reboot marked as not yet tested.
+- The live keys and settings reference: keyboard.md and settings-reference.md, generated. Pass.
+
 ## Still open
 
 - The 293 keyboard actions were checked key by key against the guides by the owner, Sunday, October 4, 2026. The generated keyboard page is the key list. Pass.

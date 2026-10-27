@@ -58,11 +58,14 @@ These were planned for earlier betas and arrive in beta 3:
 - **Selecting with the mouse** in the textweaver app, in reading and edit mode ([Selecting with the mouse](gui.md#selecting-with-the-mouse)).
 - **Settings organized by task.** Twenty-four short sections that follow the speech engine, with All settings and a search, the same in the terminal reader and the app ([The settings screen](settings.md#the-settings-screen)).
 
+## What beta 5 adds
+
+- **Live documents.** Any MQTT broker and topic opens as a document that grows while you read it: a log with one entry per message, as a list or a table, or the current values of a sensor, one line per field. New entries reach a screen reader and a Braille display without moving your place, and textweaver saves the log as JSON. textweaver only receives ([Live documents](live-documents.md), [Running the broker for a live log](live-broker.md)).
+
 ## Shelved
 
-Two pieces of planned beta 4 work are set aside for later. They are not in beta 4 and have no date. The research and a spike are kept for when the work is taken up again.
+One piece of planned beta 4 work is set aside for later. It has no date. The research and a spike are kept for when the work is taken up again. (Live data from MQTT was shelved too, and is in beta 5; only receiving is built.)
 
-- **Live data from MQTT:** subscribing to a stream of JSON data and showing each field's current value, in words, on the screen and on a Braille display.
 - **Live captions (CART):** receiving and sending streamed captions for deafblind readers, with a built-in broker, discovery, and pairing.
 
 ## Being built next
