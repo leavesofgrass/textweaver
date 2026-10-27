@@ -1,16 +1,20 @@
 //! TLS for the client: textweaver's own rustls with the ring provider,
-//! trusting the bundled Mozilla roots (`webpki-roots`) or a CA file the
-//! user names. There is no way to turn certificate checking off.
+//! trusting the bundled Mozilla roots (`webpki-roots`), a CA file the user
+//! names, or exactly one public key by its pin. There is no way to turn
+//! certificate checking off.
 
 use std::net::IpAddr;
 use std::sync::Arc;
 
+use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
+use rustls::crypto::WebPkiSupportedAlgorithms;
 use rustls::pki_types::pem::PemObject;
-use rustls::pki_types::{CertificateDer, ServerName};
-use rustls::{ClientConfig, RootCertStore};
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+use rustls::{ClientConfig, DigitallySignedStruct, RootCertStore, SignatureScheme};
 
 use crate::Tls;
 use crate::error::{Failure, Kind};
+use crate::pin::{Pin, spki_of_certificate};
 
 /// Builds the rustls client configuration. Uses the ring provider
 /// directly, so it never depends on a process-wide default provider.
@@ -24,6 +28,7 @@ pub(crate) fn client_config(tls: &Tls) -> Result<Arc<ClientConfig>, Failure> {
             ));
         }
         Tls::System => roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned()),
+        Tls::Pinned(pin) => return pinned_config(pin),
         Tls::CaFile(path) => {
             let shown = path.display();
             let iter = CertificateDer::pem_file_iter(path).map_err(|e| {
@@ -65,6 +70,76 @@ pub(crate) fn client_config(tls: &Tls) -> Result<Arc<ClientConfig>, Failure> {
     Ok(Arc::new(config))
 }
 
+/// A configuration that trusts exactly the key with this pin, whatever
+/// names or dates its certificate carries: the broker proves it holds the
+/// key by signing the handshake, which rustls checks with that key.
+fn pinned_config(pin: &Pin) -> Result<Arc<ClientConfig>, Failure> {
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let verifier = Arc::new(PinVerifier {
+        pin: pin.clone(),
+        algs: provider.signature_verification_algorithms,
+    });
+    let config = ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .map_err(|e| Failure::new(Kind::Tls, format!("TLS failure: {e}.")))?
+        .dangerous()
+        .with_custom_certificate_verifier(verifier)
+        .with_no_client_auth();
+    Ok(Arc::new(config))
+}
+
+/// Accepts the one certificate whose public key has the pin, and checks
+/// the handshake signature with that key, so the broker holds the key.
+#[derive(Debug)]
+struct PinVerifier {
+    pin: Pin,
+    algs: WebPkiSupportedAlgorithms,
+}
+
+impl ServerCertVerifier for PinVerifier {
+    fn verify_server_cert(
+        &self,
+        end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp: &[u8],
+        _now: UnixTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        let spki = spki_of_certificate(end_entity).ok_or(rustls::Error::InvalidCertificate(
+            rustls::CertificateError::BadEncoding,
+        ))?;
+        if self.pin.matches_spki(spki) {
+            Ok(ServerCertVerified::assertion())
+        } else {
+            Err(rustls::Error::InvalidCertificate(
+                rustls::CertificateError::ApplicationVerificationFailure,
+            ))
+        }
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(message, cert, dss, &self.algs)
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(message, cert, dss, &self.algs)
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        self.algs.supported_schemes()
+    }
+}
+
 /// The name the certificate must carry: a DNS name, or an IP address
 /// (rustls checks IP address entries in the certificate too).
 pub(crate) fn server_name(host: &str) -> Result<ServerName<'static>, Failure> {
@@ -86,6 +161,8 @@ pub(crate) fn describe(err: &rustls::Error) -> String {
             CertificateError::Expired | CertificateError::ExpiredContext { .. } => "TLS failure: the broker's certificate has expired.".into(),
             CertificateError::NotValidYet | CertificateError::NotValidYetContext { .. } => "TLS failure: the broker's certificate is not valid yet. Check this computer's clock.".into(),
             CertificateError::Revoked => "TLS failure: the broker's certificate was revoked.".into(),
+            // Only the pinned verifier gives this.
+            CertificateError::ApplicationVerificationFailure => "TLS failure: the broker's key does not match the pin. Check the pin or join code; this may not be the broker you meant.".into(),
             other => format!("TLS failure: the broker's certificate was refused ({other:?})."),
         },
         Error::AlertReceived(alert) => format!("TLS failure: the broker ended the handshake ({alert:?})."),

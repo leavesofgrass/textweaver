@@ -1,0 +1,22 @@
+# textweaver's broker accounts for the Example Net, with placeholder
+# names. Copy it to broker.toml in textweaver's data folder (tw settings
+# path shows the folder), or better, make your own accounts with
+# tw broker account add, which asks for each password.
+#
+# These example hashes are for the passwords "example-logger-password"
+# and "example-reader-password". Replace both before a real net:
+#   tw broker account add netcontrol --role logger --read 'netlog/#' --publish 'netlog/#' --replace
+#   tw broker account add ada --role reader --read 'netlog/#' --replace
+
+[[account]]
+name = "netcontrol"
+role = "logger"
+read = ["netlog/#"]
+publish = ["netlog/#"]
+password = "pbkdf2-sha256$600000$885d7dac934b232584e63938c6237771$bdce2d7425282370950867ecc265fd32de04d5defbafb47ebca865b41e0b46cc"
+
+[[account]]
+name = "ada"
+role = "reader"
+read = ["netlog/#"]
+password = "pbkdf2-sha256$600000$98b90e5b686b3369294ce08e8782875c$d63bbfa6960fa85d006084bc6d1677b601158d3d4f6abb4711166b2d98a747cb"

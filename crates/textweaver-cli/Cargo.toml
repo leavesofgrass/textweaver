@@ -25,8 +25,15 @@ default = ["opus", "carta", "cw-midi", "mqtt"]
 # through its WinRT backend, which also sees Bluetooth LE MIDI devices.
 # On in releases.
 cw-midi = ["textweaver-app/cw-midi"]
-# Live sources over MQTT in the terminal reader (beta 5); on in releases.
-mqtt = ["textweaver-app/mqtt", "textweaver-tui/mqtt"]
+# Live sources over MQTT in the terminal reader, and `tw broker`, `tw send`
+# and `tw share` (beta 5); on in releases.
+mqtt = [
+    "textweaver-app/mqtt",
+    "textweaver-tui/mqtt",
+    "dep:textweaver-mqtt",
+    "dep:textweaver-broker",
+    "dep:ctrlc",
+]
 # carta (B1-k2): `tw convert`, `tw text`, and the reader read Org,
 # reStructuredText, MediaWiki, DokuWiki (`--from dokuwiki`), and Jira
 # (`--from jira`) in process, ahead of Pandoc, and `tw convert --to` writes
@@ -75,9 +82,17 @@ anyhow.workspace = true
 ratatui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+# Beta 5, phase 5a: `tw broker`, `tw send` and `tw share` (the `mqtt`
+# feature). ctrlc stops the broker and the share loop cleanly.
+textweaver-mqtt = { workspace = true, optional = true }
+textweaver-broker = { workspace = true, optional = true }
+ctrlc = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
+# `tw send` and `tw share` against a broker inside the test program.
+textweaver-broker.workspace = true
+textweaver-mqtt.workspace = true
 textweaver-enginehost.workspace = true
 textweaver-espeak.workspace = true
 

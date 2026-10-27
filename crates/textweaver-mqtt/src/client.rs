@@ -106,7 +106,7 @@ impl Drop for MqttSource {
     }
 }
 
-trait Stream: Read + Write + Send {}
+pub(crate) trait Stream: Read + Write + Send {}
 impl<T: Read + Write + Send> Stream for T {}
 
 /// What was last reported, so a status is reported once per change.
@@ -294,123 +294,16 @@ impl Worker {
     fn session(&mut self, watches: &mut [Watch]) -> End {
         let cfg = self.config.clone();
         let target = cfg.target();
-
-        // TCP, every address at once.
-        let (tcp, peer) =
-            match crate::net::connect(&cfg.host, cfg.port, cfg.connect_timeout, &self.stop) {
-                Ok(Some(x)) => x,
-                Ok(None) => return End::Stopped,
-                Err(f) => return End::Failed(f, false),
-            };
-        let _ = tcp.set_nodelay(true);
-        if let Err(e) = tcp
-            .set_read_timeout(Some(TICK))
-            .and_then(|_| tcp.set_write_timeout(Some(cfg.connect_timeout)))
-        {
-            return End::Failed(Failure::from_io(&e, Stage::Connect, &target), false);
-        }
-        let tailscale = tls::is_tailscale_host(&cfg.host) || tls::is_tailscale_addr(peer.ip());
-
-        // TLS, with the handshake finished here so its errors are named.
-        let mut stream: Box<dyn Stream> = if cfg.tls.is_on() {
-            let (config, name) = match tls::client_config(&cfg.tls)
-                .and_then(|c| tls::server_name(&cfg.host).map(|n| (c, n)))
-            {
-                Ok(x) => x,
-                Err(f) => return End::Failed(f, false),
-            };
-            let conn = match rustls::ClientConnection::new(config, name) {
-                Ok(c) => c,
-                Err(e) => return End::Failed(Failure::new(Kind::Tls, tls::describe(&e)), false),
-            };
-            let mut s = rustls::StreamOwned::new(conn, tcp);
-            let deadline = Instant::now() + cfg.connect_timeout;
-            while s.conn.is_handshaking() {
-                if self.stopped() {
-                    return End::Stopped;
-                }
-                match s.conn.complete_io(&mut s.sock) {
-                    Ok(_) => {}
-                    Err(e) if is_tick(&e) && Instant::now() < deadline => {}
-                    Err(e) => {
-                        return End::Failed(Failure::from_io(&e, Stage::Handshake, &target), false);
-                    }
-                }
-            }
-            Box::new(s)
-        } else {
-            Box::new(tcp)
+        let Link {
+            mut stream,
+            mut buf,
+            tailscale,
+        } = match open_link(&cfg, &self.stop, self.ever_connected) {
+            Ok(Some(link)) => link,
+            Ok(None) => return End::Stopped,
+            Err(f) => return End::Failed(f, false),
         };
-
-        // CONNECT, then wait for CONNACK.
-        let mut connect = Connect::new(cfg.client_id.clone());
-        connect.keep_alive = cfg.keep_alive.as_secs().min(u64::from(u16::MAX)) as u16;
-        connect.clean_session = true;
-        if let Some(user) = &cfg.username {
-            let password = cfg
-                .password
-                .as_ref()
-                .map(|p| p.expose().to_string())
-                .unwrap_or_default();
-            connect.set_login(user.clone(), password);
-        }
-        if let Err(e) = send(&mut stream, Packet::Connect(connect)) {
-            return End::Failed(Failure::from_io(&e, Stage::Login, &target), false);
-        }
         let max_packet = cfg.limits.max_payload.saturating_add(PACKET_OVERHEAD);
-        let mut buf = BytesMut::with_capacity(4096);
-        let deadline = Instant::now() + cfg.connect_timeout;
-        let connack = loop {
-            if self.stopped() {
-                return End::Stopped;
-            }
-            match read_packet(&mut stream, &mut buf, max_packet) {
-                Ok(Some(Frame::Packet(Packet::ConnAck(a)))) => break a,
-                Ok(Some(_)) => {
-                    return End::Failed(
-                        Failure::new(
-                            Kind::Protocol,
-                            "Protocol error: the broker did not answer the login with CONNACK.",
-                        ),
-                        false,
-                    );
-                }
-                Ok(None) if Instant::now() < deadline => {}
-                Ok(None) => {
-                    return End::Failed(
-                        Failure::new(
-                            Kind::Unreachable,
-                            format!(
-                                "Unreachable: {target} accepted the connection but did not answer the login in time."
-                            ),
-                        ),
-                        false,
-                    );
-                }
-                Err(e) => {
-                    let mut f = Failure::from_io(&e, Stage::Login, &target);
-                    // Mosquitto closes a TLS port on a plain CONNECT
-                    // without a TLS alert (a reset on Windows), so a hint
-                    // is all we can give.
-                    if !cfg.tls.is_on()
-                        && !self.ever_connected
-                        && matches!(
-                            e.kind(),
-                            io::ErrorKind::UnexpectedEof
-                                | io::ErrorKind::ConnectionReset
-                                | io::ErrorKind::ConnectionAborted
-                        )
-                    {
-                        f.text
-                            .push_str(" If this port expects TLS, turn TLS on for this source.");
-                    }
-                    return End::Failed(f, false);
-                }
-            }
-        };
-        if connack.code != ConnectReturnCode::Success {
-            return End::Failed(Failure::from_connack(connack.code), false);
-        }
         self.status = Status::Connected;
         self.ever_connected = true;
         self.emit(MqttEvent::Connected {
@@ -591,6 +484,137 @@ impl Worker {
     }
 }
 
+/// An open, logged-in link: the stream, what has been read past the
+/// CONNACK, and whether the broker is on a Tailscale network.
+pub(crate) struct Link {
+    pub(crate) stream: Box<dyn Stream>,
+    pub(crate) buf: BytesMut,
+    pub(crate) tailscale: bool,
+}
+
+/// TCP to every address at once, the TLS handshake (finished here so its
+/// errors are named), CONNECT and its CONNACK. `Ok(None)` means `stop`
+/// was set. `ever_connected` leaves out the TLS hint after a working
+/// session, when a dropped link is a restart, not a wrong port.
+pub(crate) fn open_link(
+    cfg: &MqttConfig,
+    stop: &AtomicBool,
+    ever_connected: bool,
+) -> Result<Option<Link>, Failure> {
+    let stopped = || stop.load(Ordering::SeqCst);
+    let target = cfg.target();
+
+    // TCP, every address at once.
+    let Some((tcp, peer)) = crate::net::connect(&cfg.host, cfg.port, cfg.connect_timeout, stop)?
+    else {
+        return Ok(None);
+    };
+    let _ = tcp.set_nodelay(true);
+    if let Err(e) = tcp
+        .set_read_timeout(Some(TICK))
+        .and_then(|_| tcp.set_write_timeout(Some(cfg.connect_timeout)))
+    {
+        return Err(Failure::from_io(&e, Stage::Connect, &target));
+    }
+    let tailscale = tls::is_tailscale_host(&cfg.host) || tls::is_tailscale_addr(peer.ip());
+
+    // TLS, with the handshake finished here so its errors are named.
+    let mut stream: Box<dyn Stream> = if cfg.tls.is_on() {
+        let (config, name) = tls::client_config(&cfg.tls)
+            .and_then(|c| tls::server_name(&cfg.host).map(|n| (c, n)))?;
+        let conn = match rustls::ClientConnection::new(config, name) {
+            Ok(c) => c,
+            Err(e) => return Err(Failure::new(Kind::Tls, tls::describe(&e))),
+        };
+        let mut s = rustls::StreamOwned::new(conn, tcp);
+        let deadline = Instant::now() + cfg.connect_timeout;
+        while s.conn.is_handshaking() {
+            if stopped() {
+                return Ok(None);
+            }
+            match s.conn.complete_io(&mut s.sock) {
+                Ok(_) => {}
+                Err(e) if is_tick(&e) && Instant::now() < deadline => {}
+                Err(e) => {
+                    return Err(Failure::from_io(&e, Stage::Handshake, &target));
+                }
+            }
+        }
+        Box::new(s)
+    } else {
+        Box::new(tcp)
+    };
+
+    // CONNECT, then wait for CONNACK.
+    let mut connect = Connect::new(cfg.client_id.clone());
+    connect.keep_alive = cfg.keep_alive.as_secs().min(u64::from(u16::MAX)) as u16;
+    connect.clean_session = true;
+    if let Some(user) = &cfg.username {
+        let password = cfg
+            .password
+            .as_ref()
+            .map(|p| p.expose().to_string())
+            .unwrap_or_default();
+        connect.set_login(user.clone(), password);
+    }
+    if let Err(e) = send(&mut stream, Packet::Connect(connect)) {
+        return Err(Failure::from_io(&e, Stage::Login, &target));
+    }
+    let max_packet = cfg.limits.max_payload.saturating_add(PACKET_OVERHEAD);
+    let mut buf = BytesMut::with_capacity(4096);
+    let deadline = Instant::now() + cfg.connect_timeout;
+    let connack = loop {
+        if stopped() {
+            return Ok(None);
+        }
+        match read_packet(&mut stream, &mut buf, max_packet) {
+            Ok(Some(Frame::Packet(Packet::ConnAck(a)))) => break a,
+            Ok(Some(_)) => {
+                return Err(Failure::new(
+                    Kind::Protocol,
+                    "Protocol error: the broker did not answer the login with CONNACK.",
+                ));
+            }
+            Ok(None) if Instant::now() < deadline => {}
+            Ok(None) => {
+                return Err(Failure::new(
+                    Kind::Unreachable,
+                    format!(
+                        "Unreachable: {target} accepted the connection but did not answer the login in time."
+                    ),
+                ));
+            }
+            Err(e) => {
+                let mut f = Failure::from_io(&e, Stage::Login, &target);
+                // Mosquitto closes a TLS port on a plain CONNECT
+                // without a TLS alert (a reset on Windows), so a hint
+                // is all we can give.
+                if !cfg.tls.is_on()
+                    && !ever_connected
+                    && matches!(
+                        e.kind(),
+                        io::ErrorKind::UnexpectedEof
+                            | io::ErrorKind::ConnectionReset
+                            | io::ErrorKind::ConnectionAborted
+                    )
+                {
+                    f.text
+                        .push_str(" If this port expects TLS, turn TLS on for this source.");
+                }
+                return Err(f);
+            }
+        }
+    };
+    if connack.code != ConnectReturnCode::Success {
+        return Err(Failure::from_connack(connack.code));
+    }
+    Ok(Some(Link {
+        stream,
+        buf,
+        tailscale,
+    }))
+}
+
 /// A message arrived on `topic`: every filter it matches is heard.
 fn heard(watches: &mut [Watch], topic: &str) {
     let now = Instant::now();
@@ -624,7 +648,7 @@ fn is_tick(e: &io::Error) -> bool {
     )
 }
 
-fn send(stream: &mut Box<dyn Stream>, p: Packet) -> io::Result<()> {
+pub(crate) fn send(stream: &mut Box<dyn Stream>, p: Packet) -> io::Result<()> {
     let mut b = BytesMut::new();
     p.write(&mut b, usize::MAX)
         .map_err(|e| io::Error::other(e.to_string()))?;
@@ -634,7 +658,7 @@ fn send(stream: &mut Box<dyn Stream>, p: Packet) -> io::Result<()> {
 
 /// A PUBLISH over the size limit, skipped without keeping its payload.
 #[derive(Debug)]
-struct Oversize {
+pub(crate) struct Oversize {
     topic: String,
     len: usize,
     qos: QoS,
@@ -643,7 +667,7 @@ struct Oversize {
 }
 
 #[derive(Debug)]
-enum Frame {
+pub(crate) enum Frame {
     Packet(Packet),
     Oversize(Oversize),
 }
@@ -652,7 +676,7 @@ enum Frame {
 /// within one tick. A PUBLISH over `max` keeps only its topic and packet
 /// id; the payload is discarded as it streams in, so it is never held in
 /// memory, and the connection stays up.
-fn read_packet(
+pub(crate) fn read_packet(
     stream: &mut Box<dyn Stream>,
     buf: &mut BytesMut,
     max: usize,
@@ -787,7 +811,7 @@ fn codec_err(e: CodecError) -> io::Error {
     )
 }
 
-fn kind(p: &Packet) -> &'static str {
+pub(crate) fn kind(p: &Packet) -> &'static str {
     match p {
         Packet::Connect(_) => "CONNECT",
         Packet::ConnAck(_) => "CONNACK",

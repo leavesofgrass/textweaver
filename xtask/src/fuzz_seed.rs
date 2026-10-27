@@ -139,6 +139,8 @@ const TARGETS: &[(&str, &[Seeds])] = &[
     ),
     // Beta 5: live source files.
     ("twlive", &[seeds("fixtures/b5/twlive", &["twlive"], false)]),
+    // Beta 5, phase 5a: what clients send to textweaver's own broker.
+    ("broker", &[seeds("fixtures/b5/broker", &["bin"], false)]),
 ];
 
 /// The repository root.

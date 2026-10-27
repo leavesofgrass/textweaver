@@ -1,8 +1,163 @@
 # Running the broker for a live log
 
-This page is for the person who runs the MQTT broker that a textweaver reader connects to: for example, a friend who logs check-ins during a net and publishes them for others to follow. It is technical, and it assumes you are comfortable at a Linux command line. The reader's side is in [Live documents](live-documents.md).
+This page is for the person who runs the MQTT broker that a textweaver reader connects to: for example, a friend who logs check-ins during a net and publishes them for others to follow. It is technical, and it assumes you are comfortable at a command line. The reader's side is in [Live documents](live-documents.md).
 
-textweaver is a receiver. It subscribes and never publishes, so the broker needs a publisher of its own (your logging tool, or `mosquitto_pub` for testing) and a read-only account for each reader.
+There are two ways to run the broker:
+
+- **textweaver's own broker**, `tw broker`, described first. It is one command with no configuration file to write by hand: accounts are added with `tw broker account add`, TLS is on by default with a key the broker makes itself, and senders check that key by its pin. `tw send` and `tw share` publish to it, or to any MQTT broker.
+- **Mosquitto**, the widely used broker, from [What you need](#what-you-need) on. Choose it if you already run one, or need MQTT 5, WebSockets, bridging, or retained messages that survive a restart.
+
+A live source in the textweaver app only subscribes; it never publishes. Sending is a separate, small client, used by `tw send` and `tw share`.
+
+## textweaver's own broker
+
+`tw broker` runs a small MQTT 3.1.1 broker in the foreground until you press Ctrl+C. It works on Windows, macOS and Linux, as `tw broker` or `textweaver --tw broker`. It is built for a net log or a shared document: a few loggers who publish, and readers who follow along.
+
+What it does, and what it leaves out:
+
+- QoS 0 and 1, retained messages, keepalive, clean sessions, and `+` and `#` in subscriptions. A QoS 2 message is accepted and passed on at QoS 1.
+- Named accounts, each a reader or a logger. **A reader can never publish:** if it tries, the message is refused, nobody receives it, and the reader is disconnected. A logger may publish only to its own publish topics, with the same result otherwise. A subscription outside an account's read topics is refused, and the reader is told which topic.
+- MQTT 5 clients are refused with the code for an unacceptable protocol version. There is no WebSocket listener and no bridge to other brokers. Retained messages are kept in memory only and are lost when the broker stops. Last will messages are not sent.
+- Limits: 200 connections, 256 KiB per message, 1024 bytes per topic, 64 subscriptions per client, 1000 retained topics, and 1024 messages waiting for one reader (a reader that falls further behind is disconnected, and its client reconnects). Five failed logins within a minute from one address lock that address out for five minutes.
+
+### Starting it
+
+First add at least one account (the next section). Then start the broker:
+
+```bash
+tw broker
+```
+
+It prints what it does, one line each, meaning first:
+
+```text
+Starting: textweaver's broker, 2 accounts.
+Listening: 127.0.0.1:8883, TLS, loopback only. Other computers cannot connect.
+New key: a key and certificate were made in /home/example/.local/share/textweaver.
+Certificate pin: ABCD-EFGH-...
+Running: press Ctrl+C to stop.
+Connected: netcontrol from 127.0.0.1.
+```
+
+By default it listens on this computer only. To let others in, name addresses with `--listen`, repeated for more than one: the computer's Tailscale address, a LAN address, or `0.0.0.0` for every network:
+
+```bash
+tw broker --listen 100.64.0.10
+tw broker --listen 0.0.0.0 --port 8883
+```
+
+The port is 8883 with TLS unless `--port` says otherwise, or an address carries its own (`--listen [::1]:9883`). `--home DIR` uses another data folder.
+
+When the computer's firewall asks whether textweaver may accept connections, allow it for the networks your readers use. On Windows, canceling that question blocks the program on every network without saying so; the rule can be changed later in Windows Defender Firewall.
+
+### Accounts
+
+Accounts are kept in `broker.toml` in textweaver's data folder (`tw settings path` shows the folder). Each has a name, a role, the topics it may read, and for a logger the topics it may publish to. Passwords are never kept, only a salted PBKDF2-HMAC-SHA256 hash with 600,000 rounds.
+
+```bash
+tw broker account add netcontrol --role logger --read 'netlog/#' --publish 'netlog/#'
+tw broker account add ada --role reader --read 'netlog/#'
+tw broker account list
+tw broker account remove ada
+```
+
+`add` asks for the password twice, without showing or speaking what you type. When standard input is piped, it reads the password as one line instead, so a script can set it; a password is never given on the command line. `--replace` changes an existing account, for example to set a new password. Without `--read`, an account reads every topic (`#`). A logger needs at least one `--publish` topic. `list --json` prints the accounts as JSON, without the hashes.
+
+The broker reads `broker.toml` when it starts, so restart it after changing accounts. An example file with placeholder accounts is [`docs/examples/live/broker.toml`](examples/live/broker.toml).
+
+### The certificate pin
+
+With TLS, the broker makes a key and a self-signed certificate on its first start, and keeps them in the data folder: `broker-key.pem` (readable by its owner only, on Linux and macOS) and `broker-cert.pem`. A sender does not need a certificate authority. It checks the broker's key by its **pin**: the SHA-256 hash of the key in 52 letters and digits, shown in groups of four, which the broker prints after "Certificate pin:". `tw broker pin` prints it without starting the broker.
+
+The pin stays the same across restarts as long as the two files stay. If they are moved away, the broker makes a new pair, and everyone who checks the pin needs the new one.
+
+`tw send` and `tw share` take the pin with `--pin`. A pin setting for live sources in the textweaver app is planned. Until then, a reader on the broker's own computer can set `tls = "ca_file"` with `ca_file` naming `broker-cert.pem`, since the certificate names `localhost`, `127.0.0.1` and `::1`; a reader on another computer connects to a plain listener across Tailscale.
+
+### A join code for a quick session
+
+For a one-off session, such as a class or a meeting, start the broker with a join code:
+
+```bash
+tw broker --listen 0.0.0.0 --join-code --join-topic 'docs/#'
+```
+
+It prints a code of 16 characters in four groups of four, such as `ABCD-EFGH-JKMN-PQRS`, to read aloud or show. The session gets a key of its own, held in memory only, so the code works only until the broker stops. The first 12 characters are the key's short pin and the last 4 are a secret. The login password is derived from the whole code, so someone who reaches the port and reads the certificate still cannot log in. Anyone with the code may read the `--join-topic` filters (every topic, by default) and may never publish. Accounts still work beside the code: a logger checks the session's key with the code's pin (`tw send --join-code CODE --user netcontrol`).
+
+Typing a code forgives case, spaces and dashes, and reads the letter O as zero and I or L as one. A wrong character is named with its group: "U in group 3 is not used in join codes." A join code needs TLS, so `--join-code` cannot be combined with `--plain`.
+
+### Plain connections and Tailscale
+
+`--plain` turns TLS off, and the port becomes 1883. For each address the broker says what that means:
+
+- Loopback: "Listening: 127.0.0.1:1883, plain, loopback only. Other computers cannot connect."
+- Tailscale (100.64.0.0/10): "Listening: 100.64.0.10:1883, plain, on Tailscale, which encrypts the link."
+- Anything else: "Warning: 192.168.1.20:1883 is plain and not on Tailscale. Anyone on that network can read the messages and the passwords."
+
+Inside a tailnet, plain MQTT is protected by Tailscale's WireGuard tunnel, as [Reaching the broker over Tailscale](#reaching-the-broker-over-tailscale) explains.
+
+### Sending a check-in: tw send
+
+`tw send` publishes one entry, a JSON object, to a topic, and waits for the broker to acknowledge it (QoS 1). The fields are sent in the order given:
+
+```bash
+tw send --host 100.64.0.10 --pin ABCD-EFGH-... --user netcontrol --topic netlog/checkins --field callsign=N0CALL --field 'name=Ada Example' --field 'notes=Mobile, portable antenna'
+```
+
+With no `--field`, it reads one JSON object from standard input:
+
+```bash
+echo '{"callsign": "N0CALL", "name": "Ada Example"}' | tw send --plain --user netcontrol --topic netlog/checkins
+```
+
+How to reach the broker, for `tw send` and `tw share` alike:
+
+- `--host` and `--port`: the broker. By default 127.0.0.1, on the port that goes with the encryption.
+- `--pin PIN`: TLS, trusting exactly the key with this pin. `--join-code CODE`: the same with a join code's short pin, and without `--user`, the code's own login. `--ca-file FILE`: TLS checked against a private certificate authority or the broker's own certificate. `--plain`: no TLS. With none of these, TLS is checked against the bundled Mozilla root certificates, as for a public broker.
+- `--user NAME`: the password is asked without echo, or read from the environment variable `TEXTWEAVER_MQTT_PASSWORD` when it is set, for scripts. It is never given on the command line.
+
+The entry is not retained unless `--retain` is given. `tw send` prints "Sent: one entry to netlog/checkins on 100.64.0.10:8883." When the broker refuses, it says why, for example: "Not sent: Refused: the broker closed the connection instead of taking the message. This account may not publish to netlog/checkins."
+
+### Sharing a document: tw share
+
+`tw share` publishes a Markdown or text file as a live document, then again each time the file is saved, until Ctrl+C:
+
+```bash
+tw share agenda.md --topic docs/agenda --plain --user netcontrol
+```
+
+Each revision is one retained message on the topic, so a reader who joins late receives the current text at once. `--title` sets the title readers see (the file's name, by default), `--once` publishes once and stops, and `--every` sets the seconds between looks at the file (1). Each revision prints one line, such as "Shared: revision 2, 4096 bytes." A save that cannot be published is said in words, and the next save tries again. When sharing stops, readers keep the last revision.
+
+### The live document message
+
+A shared document is one JSON object, retained on its topic and capped at 256 KiB like any message:
+
+```json
+{"type": "textweaver.document", "rev": 3, "title": "Agenda", "format": "markdown", "text": "# Agenda\n\n1. Check-ins\n2. Traffic"}
+```
+
+- `type` is always `textweaver.document`, which tells it apart from a log entry.
+- `rev` counts revisions from 1. A reader can ignore a revision older than the one it shows.
+- `format` is `markdown` (for `.md` and `.markdown` files) or `text`.
+- `text` is the whole document, every time.
+
+A net log is one kind of live document, and its entries stay plain JSON objects, as in [Example messages](#example-messages). A view that shows a shared document in place, keeping the reader's position, is planned for the textweaver app; until then a reader sees the message as a log entry.
+
+### A net log, ready to copy
+
+The folder [`docs/examples/live/`](examples/live/) holds a complete example with placeholder names: `broker.toml` with a logger and a reader account, `netlog.twlive`, a live source file for readers, and `send-checkin.sh`, a sample `tw send` line. The example accounts' passwords are written in the file's comments, so make your own accounts before a real net.
+
+### Testing it with Mosquitto's clients
+
+`mosquitto_sub` and `mosquitto_pub` work with textweaver's broker. On the broker's own computer, with TLS, give the broker's certificate as the CA file:
+
+```bash
+mosquitto_sub -h localhost -p 8883 --cafile broker-cert.pem -u ada -P READERPASSWORD -t 'netlog/#' -v
+mosquitto_pub -h localhost -p 8883 --cafile broker-cert.pem -u netcontrol -P LOGGERPASSWORD -t netlog/checkins -q 1 -m '{"callsign": "N0CALL"}'
+```
+
+From another computer the certificate's names do not match, so test against a plain listener across Tailscale. The [checks before the net](#checks-before-the-net) apply to textweaver's broker too. A reader that publishes is disconnected, and the broker prints a line starting "Publish refused:".
+
+The rest of this page is about Mosquitto.
 
 ## What you need
 

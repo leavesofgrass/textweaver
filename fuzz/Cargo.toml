@@ -46,6 +46,8 @@ textweaver-vault = { path = "../crates/textweaver-vault" }
 textweaver-sync = { path = "../crates/textweaver-sync" }
 # Beta 5: the live sources' MQTT packet reader and payload decoder.
 textweaver-mqtt = { path = "../crates/textweaver-mqtt" }
+# Beta 5, phase 5a: textweaver's own broker, one connection at a time.
+textweaver-broker = { path = "../crates/textweaver-broker" }
 # The JSON-RPC server, without the conversion and citation stack. It links
 # the audio output, which needs the ALSA headers (libasound2-dev) on Linux,
 # so it is behind the `rpc` feature and the other targets build without it.
@@ -330,6 +332,12 @@ bench = false
 [[bin]]
 name = "twlive"
 path = "fuzz_targets/twlive.rs"
+
+# Beta 5, phase 5a: what a client sends to textweaver's own broker.
+
+[[bin]]
+name = "broker"
+path = "fuzz_targets/broker.rs"
 test = false
 doc = false
 bench = false

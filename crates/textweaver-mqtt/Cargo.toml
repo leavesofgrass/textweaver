@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-mqtt"
-description = "Receive-only MQTT 3.1.1 client for textweaver's live documents: one std thread, rumqttc's packet codec, textweaver's own rustls with ring, reconnect with backoff, caps and sanitizing of every payload"
+description = "MQTT 3.1.1 client for textweaver's live documents: a receive-only source on one std thread and a small blocking publisher, on rumqttc's packet codec and textweaver's own rustls with ring (bundled roots, a CA file, or a pinned key and join codes), with reconnect and backoff, and caps and sanitizing of every payload"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

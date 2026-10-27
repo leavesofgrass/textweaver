@@ -9853,6 +9853,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-broker"
+version = "0.1.0-beta.4"
+dependencies = [
+ "bytes",
+ "rcgen",
+ "ring",
+ "rumqttc",
+ "rustls",
+ "rustls-pki-types",
+ "serde",
+ "tempfile",
+ "textweaver-mqtt",
+ "toml 1.1.6+spec-1.1.0",
+]
+
+[[package]]
 name = "textweaver-cite"
 version = "0.1.0-beta.4"
 dependencies = [
@@ -9875,11 +9891,13 @@ version = "0.1.0-beta.4"
 dependencies = [
  "anyhow",
  "clap",
+ "ctrlc",
  "ratatui",
  "serde",
  "serde_json",
  "tempfile",
  "textweaver-app",
+ "textweaver-broker",
  "textweaver-cite",
  "textweaver-convert",
  "textweaver-dictation",
@@ -9889,6 +9907,7 @@ dependencies = [
  "textweaver-export",
  "textweaver-formats",
  "textweaver-host",
+ "textweaver-mqtt",
  "textweaver-ocr",
  "textweaver-render",
  "textweaver-tui",
