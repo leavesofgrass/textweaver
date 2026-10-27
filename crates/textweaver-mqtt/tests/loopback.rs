@@ -653,3 +653,82 @@ fn plain_client_against_a_tls_port_is_named() {
     assert!(!retrying);
     h.stop();
 }
+
+/// The full pin of the test broker's own certificate.
+fn pin_of(p: &support::TestPki) -> textweaver_mqtt::Pin {
+    use rustls::pki_types::CertificateDer;
+    use rustls::pki_types::pem::PemObject;
+    let der = CertificateDer::from_pem_slice(p.server_cert_pem.as_bytes()).unwrap();
+    textweaver_mqtt::Pin::of_certificate(&der).unwrap()
+}
+
+#[test]
+fn pinned_tls_accepts_the_right_key_and_refuses_another() {
+    // The name in the certificate is not the host: a pin checks the key.
+    let p = pki(&["somewhere-else.example"]);
+    let broker = TestBroker::start(Opts {
+        tls: Some(p.server.clone()),
+        ..Opts::default()
+    });
+    broker.publish("net/log", b"pinned", true);
+    let pin = pin_of(&p);
+    for pinned in [pin.clone(), pin.short()] {
+        let mut cfg = plain(broker.port, &["net/log"]);
+        cfg.tls = Tls::Pinned(pinned);
+        let mut h = Harness::start(cfg);
+        let seen = h.wait_for(5, |e| text(e, "pinned"));
+        assert!(seen.contains(&MqttEvent::Connected {
+            encrypted: true,
+            tailscale: false
+        }));
+        h.stop();
+    }
+
+    let other = pin_of(&pki(&["localhost"]));
+    let mut cfg = plain(broker.port, &["net/log"]);
+    cfg.tls = Tls::Pinned(other);
+    let mut h = Harness::start(cfg);
+    let seen = h.wait_for(5, |e| matches!(e, MqttEvent::Disconnected { .. }));
+    let (why, retrying) = reason(&seen);
+    assert!(
+        why.starts_with("TLS failure: the broker's key does not match the pin."),
+        "{why}"
+    );
+    assert!(!retrying);
+    assert_eq!(count(&seen, |e| text(e, "pinned")), 0);
+    h.stop();
+}
+
+#[test]
+fn publisher_says_in_words_when_the_broker_drops_its_message() {
+    // The test broker closes any client that publishes.
+    let broker = TestBroker::start(Opts::default());
+    let cfg = plain(broker.port, &[]);
+    let mut p = textweaver_mqtt::Publisher::connect(&cfg).unwrap();
+    let err = p.publish("net/log", b"{}", false).unwrap_err();
+    assert!(
+        err.text()
+            .starts_with("Refused: the broker closed the connection"),
+        "{err}"
+    );
+    assert_eq!(broker.stats().get(&broker.stats().client_publishes), 1);
+
+    let mut p = textweaver_mqtt::Publisher::connect(&cfg).unwrap();
+    let err = p.publish("net/+", b"{}", false).unwrap_err();
+    assert_eq!(
+        err.text(),
+        "Settings error: a topic to publish to may not hold + or #."
+    );
+    let big = vec![b'x'; cfg.limits.max_payload + 1];
+    let err = p.publish("net/log", &big, false).unwrap_err();
+    assert!(err.text().starts_with("Too large: the message is"), "{err}");
+    p.disconnect();
+
+    let dead = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = dead.local_addr().unwrap().port();
+    drop(dead);
+    let err = textweaver_mqtt::publish_once(&plain(port, &[]), "net/log", b"{}", false)
+        .err()
+        .unwrap();
+    assert!(err.text().starts_with("Unreachable:"), "{err}");
+}

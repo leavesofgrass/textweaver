@@ -38,21 +38,37 @@
 //! - **The client id** is `tw-` and 16 random hex digits
 //!   ([`new_client_id`]), new for each start: never a personal identifier.
 //!
+//! - **Pinned TLS and join codes.** [`Tls::Pinned`] trusts exactly one
+//!   public key by its [`Pin`], with no certificate authority, as
+//!   textweaver's own broker (`textweaver-broker`) expects; a
+//!   [`JoinCode`] carries a short pin and the secret its password is
+//!   derived from.
+//! - **Sending** is a separate, small client, [`Publisher`]: connect, publish
+//!   at QoS 1 and wait for the acknowledgment, disconnect. The receiver
+//!   never publishes.
+//!
 //! The crate depends on no other textweaver crate. Turning JSON into log
 //! entries or values is the app's job.
 
 mod client;
 mod error;
 mod net;
+mod pin;
+mod publish;
 mod sanitize;
 mod tls;
-mod topic;
+pub mod topic;
 
 use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
 
 pub use client::MqttSource;
+pub use pin::{
+    FULL_PIN_CHARS, JOIN_CODE_CHARS, JOIN_SECRET_CHARS, JOIN_USER, JoinCode, Pin, SHORT_PIN_CHARS,
+    ct_eq,
+};
+pub use publish::{PublishError, Publisher, publish_once};
 pub use sanitize::{KeyOrder, Limits, clean_text, decode_payload, decode_payload_ordered};
 pub use tls::{is_tailscale_addr, is_tailscale_host};
 
@@ -135,7 +151,7 @@ impl MqttConfig {
 pub fn default_port(tls: &Tls) -> u16 {
     match tls {
         Tls::Off => 1883,
-        Tls::System | Tls::CaFile(_) => 8883,
+        Tls::System | Tls::CaFile(_) | Tls::Pinned(_) => 8883,
     }
 }
 
@@ -151,6 +167,11 @@ pub enum Tls {
     /// TLS, checked against the certificates in this PEM file only: a
     /// private CA, or a broker's self-signed certificate.
     CaFile(PathBuf),
+    /// TLS, trusting exactly the public key with this pin and nothing
+    /// else, with no certificate authority: textweaver's own broker prints
+    /// its pin, and a join code carries a short one. Names and dates in
+    /// the certificate are not checked; the key is.
+    Pinned(Pin),
 }
 
 impl Tls {
@@ -307,7 +328,8 @@ pub fn new_client_id() -> String {
 }
 
 /// Runs the packet reader and the payload decoder over arbitrary bytes, as
-/// if a broker had sent them, for the fuzz target. Not part of the API.
+/// if a broker had sent them, then the certificate key reader and the join
+/// code and pin parsers, for the fuzz target. Not part of the API.
 #[doc(hidden)]
 pub fn fuzz_decode(data: &[u8]) {
     client::fuzz_read(data);
@@ -318,6 +340,11 @@ pub fn fuzz_decode(data: &[u8]) {
         max_string: 64,
     };
     let _ = decode_payload(data, &limits);
+    // A certificate's public key, and a typed join code or pin.
+    let _ = pin::spki_of_certificate(data);
+    let text = String::from_utf8_lossy(data);
+    let _ = JoinCode::parse(&text);
+    let _ = Pin::parse(&text);
 }
 
 #[cfg(test)]
