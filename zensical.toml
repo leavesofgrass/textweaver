@@ -55,6 +55,8 @@ nav = [
       { "Reading aids" = "reading-aids.md" },
       { "Themes" = "themes.md" },
       { "Math" = "math.md" },
+      { "Live documents" = "live-documents.md" },
+      { "Running the broker for a live log" = "live-broker.md" },
     ] },
     { "Writing" = [
       { "Writing and editing" = "editing.md" },

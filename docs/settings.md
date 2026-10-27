@@ -34,8 +34,9 @@ Settings are grouped by task, in short sections, in the same order in the termin
 20. Keyboard and language.
 21. Toolbars and panels (the graphical version's bars).
 22. Export.
-23. Sync.
-24. Updates and components.
+23. Live documents.
+24. Sync.
+25. Updates and components.
 
 A section lists only the settings that apply now. Voice and speech follows the speech engine: with a speaking voice it lists the voice, rate, and pitch, and the options of that engine only (Eloquence's dictionaries and library only while Eloquence is the engine, for example); with CW, it lists the Morse code speeds, tone, and prosigns instead of a voice. Settings for another system are not listed: OneCore voices appear only on Windows, and the Apple speech engine only on macOS. Nothing is lost: All settings, the last item, lists every setting, and a search finds every setting. A setting that does not apply now says why after its value, such as "Eloquence library: not set. Applies when Eloquence is the speech engine." It can still be changed, and the change says the same.
 
@@ -491,6 +492,17 @@ Audio export and subtitles. See [Audio export](audio-export.md).
 - `export.subtitle_chapters`, default `false`: also write a WebVTT chapters file beside the subtitles or the audio.
 - `export.subtitle_word_level`, default `false`: one subtitle cue per word instead of caption lines.
 - `export.subtitles_with_audio`, default `false`: always write subtitles beside the exported audio.
+
+### Live documents
+
+Reading an MQTT broker's messages as a document that grows. See [Live documents](live-documents.md) for the sources, the views, and the messages, and [Running the broker for a live log](live-broker.md) for the broker's side.
+
+- `live.announce_new_entries`, default `true`: send each new entry, whole, to the screen reader and so to the Braille display. Turning it off leaves the log unchanged but silent.
+- `live.speak_new_entries`, default `false`: have textweaver's own voice say each new entry. It never speaks when a screen reader is in charge.
+- `live.min_interval_seconds`, default `10`, 0 to 3600: in the values view, the fewest seconds between two announcements of one field.
+- `live.quiet_hint_seconds`, default `60`, 0 to 3600: seconds without a message on a topic before a hint in words. 0 never hints. It is also the default time after which a value in the values view reads "no recent value".
+- `live.log_folder`, default `""`: where live logs are saved as JSON. Empty uses the `logs` folder in the data folder; a relative folder is inside the data folder. It stays on this computer.
+- `live.sources`: the sources, each a table `[live.sources.<id>]` with a host, topics, and more, written in `settings.toml` or by Set up a live source. They stay on this computer. A source's password is never in the file: it is kept in the system credential store.
 
 ### Sync
 

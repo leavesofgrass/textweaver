@@ -33,6 +33,18 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 - **Contracted braille needs liblouis.** Without it, the Braille view and BRF files from the reader show uncontracted braille and say so ([The Braille view](reading-aids.md#the-braille-view)).
 - **The print line under contracted braille is approximate.** liblouis does not say which print each cell came from, so textweaver pairs them word by word; a contraction that takes shape only at the end of a word is shown over the whole word.
 
+## Live documents
+
+- **Receive only.** textweaver subscribes to a broker and never publishes. A live document cannot change what the broker holds, and a message cannot delete an entry; the sender publishes the whole log again without it ([Running the broker for a live log](live-broker.md#example-messages)).
+- **MQTT 3.1.1 only.** A broker that accepts only MQTT 5 is refused in words. Mosquitto and most brokers also speak 3.1.1. The connection is plain TCP, with or without TLS; WebSockets and client certificates are not supported.
+- **"System" TLS means the bundled authorities,** Mozilla's list that textweaver carries, not your operating system's certificate store. A broker with a certificate from a company or school authority needs `tls = "ca_file"` with that authority's file. Certificate checking cannot be turned off.
+- **The masked password field edits only at the end** in the textweaver app. It shows one star per character, so type the password in one go, delete from the end, and avoid an asterisk in a live source's password, which the field cannot tell from a hidden character. The terminal reader has no such limit.
+- **One live source is open at a time,** and a log always opens as a list; switch to the table with `Alt+Shift+F12`.
+- **Sources are written by hand for anything beyond the basics.** Set up a live source asks for the name, host, encryption, port, topic, user name, and view. Field mapping (labels, units, decimals, value words, order, and which changes are announced), `id_field`, and `stale_after_seconds` are edited in `settings.toml`, apart from the per-field show and speak choices, which have commands.
+- **A log holds 20,000 entries** and the values view 2,000 fields; more are left out, and textweaver says so. Messages over 256 KiB, and binary messages, are left out.
+- **Not yet checked by ear.** Live announcements on a Braille display, and NVDA's and JAWS's message times with a live log, have been tested by computer but not on a Mantis Q40 at a real net ([Using textweaver with a screen reader](screen-readers.md)).
+- **A quiet topic and a forbidden topic look the same** to textweaver, since Mosquitto accepts a subscription its access list denies. After `quiet_hint_seconds` it says so once, in words.
+
 ## Obsidian notes and vaults
 
 - **Obsidian Bases are not supported, and plugins are not run.** A Bases file is not opened as a database, and a plugin's query block is read as the text it is. Dataview `key::` fields are read by the `tw vault` commands (import and `properties`), not by the reader.

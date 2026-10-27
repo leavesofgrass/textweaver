@@ -42,6 +42,8 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, reading level, and the Braille view.
 - [Themes](themes.md): the 24 built-in color themes, following your system, and writing your own.
 - [Math](math.md): hearing math read aloud, and writing it in Markdown.
+- [Live documents](live-documents.md): reading an MQTT broker's messages as a document that grows, as a log or as current values, with new entries on a Braille display; setting up a source, the JSON log, privacy, and connection messages.
+- [Running the broker for a live log](live-broker.md): for the person who runs the broker: Mosquitto on Debian 13, accounts and read-only access, Tailscale, 44Net, TLS with a private certificate authority, testing, and example messages.
 
 ### Writing
 

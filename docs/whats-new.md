@@ -2,6 +2,24 @@
 
 This page summarizes what each release brought, for readers who want the changes without the full record. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-beta.5
+
+Not yet released.
+
+Summary: live documents. textweaver can follow any MQTT broker and topic as a document that grows while you read it, as a log or as current values, with each new entry carried to a screen reader and a Braille display.
+
+- **Live documents.** Open a live source and its messages become a document you read like any other, with headings, tables, find, and bookmarks. New entries are added at the end and never move your place: the cursor, selection, bookmarks, find matches, the spoken range, and the Braille display stay on the same text. textweaver only receives; it never publishes. See [Live documents](live-documents.md).
+- **The log view.** One entry per message, as a list with the meaning first ("N0CALL, Ada Example. Mobile, portable antenna.") or as a table with real headers, switched with `Alt+Shift+F12` while you stay on the same entry. A message can be one check-in, the whole log as a list, or an object wrapping the list, whose plain values become a heading line. A later message with the same id, or the same callsign when there is no id, corrects an entry in place. Common field names are recognized with no setup, and other fields are kept and shown after them.
+- **Unread, newest, and pause.** The title line and status bar show the unread count in place of a position that would change with every entry. `Alt+Shift+F5` says the unread entries, `Alt+Shift+F6` jumps to the newest, and `Alt+Shift+F1` pauses updates and resumes them as one change.
+- **The values view.** For sensors: one line per field, meaning first ("Temperature: 21.4 C"), each updated in place. Labels, units, decimals, value words, and order are set per field in `settings.toml`; a value that has gone quiet reads "no recent value"; and each field has its own Show changes and Speak changes choices, saved with the source. See [The values view](live-documents.md#the-values-view).
+- **New entries on the Braille display.** Each new or corrected entry is sent whole, as one polite message, so the screen reader shows it on the display. textweaver's own voice is off by default; turn the screen reader's speech off to read by Braille alone. Entries are never silenced by the announcement level, never interrupt reading, and arrive as one message when they come in a burst. In the terminal reader, the status line carries the newest entry in 40 cells. See [Announcements](live-documents.md#announcements-braille-and-speech).
+- **Setting up a source.** Tools, Live sources, Set up a live source asks for a name, host, encryption, port, topic, user name, and view, one at a time. The `[live]` and `[live.sources.<id>]` settings cover the rest. Passwords are asked once in a masked prompt and kept only in the system credential store. See [Settings for a source](live-documents.md#settings-for-a-source).
+- **Connection messages in words.** Connecting, connected and encrypted, connected over Tailscale, connected and not encrypted, reconnecting, and the reasons for a failure, such as a wrong password or an untrusted certificate, each start with their meaning. A failure only you can fix stops the retries. See [Connection messages](live-documents.md#connection-messages).
+- **The JSON log.** The entries as received, with their arrival times, are saved to a dated file in the `logs` folder of textweaver's data folder while the log runs and when it closes, and a saved log reopens in the same view. See [The JSON log](live-documents.md#the-json-log).
+- **In the textweaver app,** a live document adds buttons to the toolbar (Pause updates, Jump to newest, Table view or List view, Save log, Close source, and in the values view Show changes and Speak changes), and the status bar and window title show the unread count and the connection in words. See [A live document's buttons and status bar](gui.md#a-live-documents-buttons-and-status-bar).
+- **A guide for the broker's side.** [Running the broker for a live log](live-broker.md) covers Mosquitto on Debian 13, accounts and read-only access, Tailscale, 44Net, TLS with a private certificate authority, testing with `mosquitto_sub` and `mosquitto_pub`, and example messages.
+- **For contributors:** a new crate, `textweaver-mqtt`, holds the receive-only MQTT 3.1.1 client, behind the `mqtt` feature that release builds turn on.
+
 ## 0.1.0-beta.4
 
 Released on Saturday, October 24, 2026.

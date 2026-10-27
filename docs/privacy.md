@@ -8,6 +8,7 @@ textweaver sends nothing over the network unless you ask it to. It has no accoun
 - Notes, highlights, bookmarks, reading places, and reading statistics.
 - Settings, profiles, and word lists.
 - The log file, which is for you and for a bug report you choose to send.
+- A live document's JSON log, which can hold other people's names and callsigns. It is never synced.
 - Speech, OCR, dictation, and the dictionary. They run on your computer. Looking up a word's definition never goes to the internet.
 
 ## When textweaver uses the network
@@ -19,6 +20,7 @@ Only when you ask. Each item below happens after an action of yours.
 - **Adding a reference by DOI or ISBN.** The DOI is sent to doi.org, or the ISBN to Open Library. Nothing else is sent. See [Citations](citations.md#what-is-sent-over-the-network).
 - **Opening a web page** by its address, with `tw open` or `tw text`. textweaver fetches the page you named.
 - **Opening a link** in a document. textweaver asks first, and then your browser opens it.
+- **Live sources.** When you open a live source, textweaver connects to the MQTT broker you named in your settings. The broker sees your computer's network address, your user name, the topics you subscribe to, and when you connect, and with no encryption anyone on the path can read the password and the messages. The connection uses a neutral client id, `tw-` and random digits, new at each start, and sends no name, computer name, or account name. textweaver only receives; it publishes nothing. See [Live documents](live-documents.md#privacy).
 - **Install and update scripts.** They download a release from GitHub and check it. Each says what it will do first.
 
 Requests from the components downloader carry one neutral name, `textweaver-research`, with the project's address. They carry nothing about you or your computer.
@@ -34,7 +36,7 @@ If you set a components mirror, textweaver reads that mirror's list of component
 ## What textweaver does not do
 
 - It does not collect telemetry.
-- It does not store a password. The one token it can keep, a GitHub token for a components source of your own, goes only into your system's credential store, and only if you type it in.
+- It does not store a password in a file. The two secrets it can keep, a GitHub token for a components source of your own and the password of a live source, go only into your system's credential store, and only if you type them in.
 - It does not send your documents anywhere.
 - It does not install anything outside its own data folder and its own program folder. An update replaces only the textweaver package you installed, and a downloaded installer starts only after you say yes.
 

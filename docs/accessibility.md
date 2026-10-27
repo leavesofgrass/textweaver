@@ -2,7 +2,7 @@
 
 textweaver is built first for people who use a screen reader or a Braille display, and for students with print disabilities. This page says what has been tested, how, and what has not.
 
-textweaver is in beta. This statement describes release 0.1.0-beta.4.
+textweaver is in beta. This statement describes release 0.1.0-beta.4, with the live documents of beta 5 noted where they differ.
 
 ## What textweaver aims for
 
@@ -18,6 +18,7 @@ textweaver is in beta. This statement describes release 0.1.0-beta.4.
 - **The Braille view** (beta 4, the textweaver app) is for sighted learners, teachers, and transcribers. It is one image named "Braille view" with a description saying it is visual only. Its braille is never in the accessibility tree and is never announced, because a screen reader already sends braille to the display. Its dots differ by shape (a disc or a ring), never by color alone. See [The Braille view](reading-aids.md#the-braille-view).
 - **CW** (beta 4) sends text as Morse code. A Braille display user reads the characters sent, or keyed, on the status line, which holds 40 cells with the newest character last; nothing extra is announced. With CW as the engine, textweaver's own messages are also sent in Morse code, so a screen reader is the way to hear them as speech. See [CW](cw.md).
 - **Links between documents** (beta 4) say where you arrived and how to go back, in words, in both forms.
+- **Live documents** (beta 5) bring an MQTT broker's messages into a document that grows while you read it. Each new entry goes to the screen reader as one polite message with the meaning first, so it reaches a Braille display, and textweaver's own voice is off by default, so a reader can turn the screen reader's speech off and read by Braille alone. A new entry never moves the cursor, the Braille position, or the spoken range. Connection states are written in words, never by color. In the app, the live buttons name their state ("Show changes: on"). The terminal reader's status line carries the newest entry in 40 cells. Tests cover the app's accessibility tree, in which a new entry adds a node and leaves the others alone, and 40-cell lines. They have not yet been tried at a real net with NVDA, JAWS, and a Mantis Q40. See [Live documents](live-documents.md).
 - The keying adapters were checked from their manuals and not yet with the hardware; see [Known limits](known-limits.md).
 
 ## What has been tested
