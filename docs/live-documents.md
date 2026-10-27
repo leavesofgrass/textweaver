@@ -140,7 +140,7 @@ A shared document is a whole document published as one message, by `tw share` or
 3. **Encryption**, a choice: **Off** (not encrypted, port 1883, fine over Tailscale), **Bundled roots** (TLS checked against the certificate authorities that come with textweaver, port 8883), **CA file** (TLS checked against a certificate authority file you name, port 8883), **Pinned key** (TLS trusting only the broker key whose pin you type, port 8883), or **Join code** (TLS with the key a join code names, signing in with the code, port 8883).
 4. **CA file**: the certificate authority's PEM file. This field is there only when the encryption is CA file.
 5. **Pin**: the broker's certificate pin, as textweaver's broker prints it after "Certificate pin:", 52 letters and digits in groups of four. This field is there only with a pinned key.
-6. **Join code**: the 16 characters the broker's owner read out or showed you. This field is there only when joining by code.
+6. **Join code**: the 16 characters the broker's owner read out or showed you. This field is there only when joining by code. It is masked like a password: one star per character, nothing you type is spoken back, and moving to it says how many characters it holds rather than the code. `F3` shows the code as typed, to check it, and `F3` again hides it ([The password](#the-password)).
 7. **Port**. It follows the encryption, 1883 or 8883, until you change it; a port you typed stays when the encryption changes.
 8. **Topic**, such as `log/checkins`. Separate several topics with commas. MQTT's wildcards work: `+` for one level and `#` for the rest.
 9. **User name**. Leave it blank if the broker needs none. A join code signs in by itself, so this field is not there when joining by code.
@@ -155,6 +155,7 @@ The keys:
 - `Tab` and `Shift+Tab` move to the next and previous field, keeping what you typed. They wrap from the last field to the first.
 - `Up Arrow` and `Down Arrow` change a choice in place, Encryption or View, and say the new choice with what it means. You can also type a choice's name. On the other fields, they bring back earlier answers, as in any prompt.
 - `Enter` checks every field and saves. If a field is wrong, such as a host with a space in it, a missing topic, a CA file that does not exist, or a port outside 1 to 65535, textweaver says what is wrong in words and opens the form again on that field. Every other value stays as you left it.
+- `F3`, in the join code field, shows the code as typed or hides it again, and says which.
 - `Escape` cancels the form and says so. Nothing is saved.
 
 textweaver writes the source to `settings.toml`. If it has a user name, textweaver then asks for the password in a masked prompt ([The password](#the-password)). Last, it offers to open the source now or later. The source's id comes from its name, in lowercase with hyphens between words ("Practice log" becomes `practice-log`), and a number is added if that id is taken. An id may hold only letters, digits, hyphens, and underscores. If another source already has the same name, textweaver says the new one was saved beside it.
@@ -306,6 +307,7 @@ A source's password is never written to `settings.toml`, a log, a message, or th
 - **Forget live source password** (Tools, Live sources) removes it, so textweaver asks again the next time. Use it after the password changes.
 - A version of textweaver built without the credential store cannot keep a password. It says so in words rather than keep one in a file.
 - The masked field edits like any text field: you can move inside it, type or delete in the middle, and use an asterisk in the password. In the textweaver app it is a password field, so a screen reader says "star" or "protected" rather than echo each character.
+- **Show** reveals what you typed, to check it with speech or on a Braille display. In the terminal reader press `F3`, which the prompt names as it opens ("F3 shows it."); press it again to hide the text. In the textweaver app the **Show the password** check box follows the field (`Tab` from the field reaches it), and `F3` works there too. textweaver says "Showing the password" or "Hiding the password", and the text and the caret stay where they were. While shown, the field is an ordinary text field: the screen reader reads it and typed characters are spoken. Show is off each time the prompt opens and is never saved, and nothing typed is kept in the prompt's history or written to the app's log, shown or not. The same choice is in the join code field of the live source form and in the GitHub token prompt.
 
 ## Sending: check-ins and sharing
 

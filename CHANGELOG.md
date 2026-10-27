@@ -4,6 +4,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Masked secrets with a Show choice
+
+- **The join code field is masked.** In the live source form, the join code is a secret field like the password prompt: one star per character in both frontends, a password field to the screen reader in the textweaver app, nothing typed said or kept in the prompt's history, the app's log paused while it is open, and moving to it says how many characters it holds ("Join code: 16 characters, hidden.") rather than the code. Before, the code was drawn and said as typed.
+- **Show, off by default,** in the join code field and every secret prompt (a live source password, the GitHub token). `F3` shows the text as typed or hides it again, in the terminal reader and the textweaver app; the app also has a check box right after the field, named "Show the password", "Show the token" or "Show the join code", which `Tab` reaches from the field (in the form, before the next field). textweaver says "Showing the join code" or "Hiding the join code"; the text and the caret stay. While shown, the field is an ordinary text field, so a screen reader and a Braille display can check it. Show resets each time the prompt or field opens and is never saved. The terminal reader names the key as a secret opens ("F3 shows it.").
+- JSON-RPC: the prompt key `toggle_shown`, and `secret` and `shown` in `prompt_state`.
+
 ### textweaver's own broker and the sending side
 
 - **New: `tw broker`,** textweaver's own small MQTT 3.1.1 broker for live documents and net logs, in a new crate, `textweaver-broker`, on the beta 4 spike's design: rumqttc's packet codec behind textweaver's rustls with ring, one listener thread per address and one thread per client, no async runtime. QoS 0 and 1 (QoS 2 accepted and passed on at QoS 1), retained messages, keepalive, clean sessions, and wildcards; MQTT 5 clients are refused with the code for an unacceptable protocol version. Stopping ends every thread and frees every port before it returns. It listens on 127.0.0.1 unless `--listen` names addresses, with TLS by default; `--plain` turns TLS off, and each listening line says in words whether the address is loopback, Tailscale or something else, with a warning for the last. Status lines are words, meaning first, one per event, with no spinner.
