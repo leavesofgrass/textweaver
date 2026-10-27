@@ -64,7 +64,7 @@ use crate::sidebar::{self, SIDEBAR, SIDEBAR_LIST, Sidebar, SidebarAction, Sideba
 use crate::theme::{self, Palette};
 use crate::widgets::{
     ActionButton, AnnounceMode, Announcer, FocusFrame, KeyAction, Message, MessageQueue, Pressed,
-    Region, Root,
+    Region, Root, Unavailable,
 };
 use crate::window::{self, WINDOW_UNITS};
 
@@ -377,7 +377,14 @@ pub struct Buttons {
     pub header: Vec<WidgetId>,
     /// The toolbar's buttons, in order (F6 lands on Play).
     pub toolbar: Vec<WidgetId>,
+    /// The live document's buttons' labels and states as drawn
+    /// ([`Buttons::relabel_live`]).
+    live: HashMap<WidgetId, LiveLabel>,
 }
+
+/// A live document's button as drawn: its label, and why it is
+/// unavailable, when it is ([`live_button_label`]).
+pub type LiveLabel = (String, Option<Unavailable>);
 
 impl Buttons {
     /// The commands of `ids`, in order.
@@ -394,6 +401,89 @@ impl Buttons {
         self.actions(&self.header) != app.shown_bar_buttons(Bar::Header)
             || self.actions(&self.toolbar) != app.shown_bar_buttons(Bar::Toolbar)
     }
+
+    /// The live document's buttons follow the app's state in place
+    /// (beta 5, N9): Pause updates becomes Resume updates, the view switch
+    /// names the other view, and Show changes and Speak changes say on or
+    /// off for the field on the cursor's line, or are unavailable on a
+    /// line with no field. Only a label or state that changed is set, so
+    /// the nodes stay and a focused button keeps the focus. Returns true
+    /// when one changed.
+    pub fn relabel_live(&mut self, host: &mut impl Host, app: &App) -> bool {
+        let mut changed = false;
+        for (id, action) in &self.by_id {
+            let Some(now) = live_button_label(app, *action) else {
+                continue;
+            };
+            if self.live.get(id) == Some(&now) {
+                continue;
+            }
+            let (text, why) = now.clone();
+            host.edit_id(*id, |mut w| {
+                let mut b = w.downcast::<ActionButton>();
+                ActionButton::set_label(&mut b, text);
+                ActionButton::set_unavailable(&mut b, why);
+            });
+            self.live.insert(*id, now);
+            changed = true;
+        }
+        changed
+    }
+
+    /// Forgets the live buttons' drawn labels, so the next
+    /// [`Buttons::relabel_live`] sets them all (the interface language
+    /// changed).
+    pub fn forget_live_labels(&mut self) {
+        self.live.clear();
+    }
+}
+
+/// The label and state of a live document's button (beta 5, N9), in the
+/// app's language; `None` for any other button. Every label is a name
+/// with no key in it, and says its state in words: "Pause updates" or
+/// "Resume updates"; "Table view" or "List view", naming the view a
+/// press switches to; "Show changes: on" and "Speak changes: off" for
+/// the values view's field on the cursor's line, or "Show changes",
+/// unavailable, with the reason, on a line with no field.
+pub fn live_button_label(app: &App, action: ActionId) -> Option<LiveLabel> {
+    use textweaver_app::live::LogView;
+    use textweaver_app::store::LiveNotice;
+    let c = app.catalog();
+    let id = match action {
+        ActionId::LiveTogglePause if app.live_paused() => "gui-button-live-resume",
+        ActionId::LiveTogglePause => "gui-button-live-pause",
+        ActionId::LiveJumpNewest => "gui-button-live-newest",
+        ActionId::LiveSwitchView => match app.live_view() {
+            Some(LogView::Table) => "gui-button-live-list",
+            _ => "gui-button-live-table",
+        },
+        ActionId::SaveLiveLog => "gui-button-live-save",
+        ActionId::CloseLiveSource => "gui-button-live-close",
+        ActionId::LiveToggleFieldShow | ActionId::LiveToggleFieldSpeak => {
+            let show = action == ActionId::LiveToggleFieldShow;
+            let Some(f) = app.live_field_at_cursor() else {
+                let why = Unavailable {
+                    word: c.tr("gui-button-unavailable"),
+                    reason: c.tr("live-field-none"),
+                };
+                let name = if show {
+                    "gui-button-live-show"
+                } else {
+                    "gui-button-live-speak"
+                };
+                return Some((c.tr(name), Some(why)));
+            };
+            let on = if show { f.show } else { f.speak } == LiveNotice::OnChange;
+            match (show, on) {
+                (true, true) => "gui-button-live-show-on",
+                (true, false) => "gui-button-live-show-off",
+                (false, true) => "gui-button-live-speak-on",
+                (false, false) => "gui-button-live-speak-off",
+            }
+        }
+        _ => return None,
+    };
+    Some((c.tr(id), None))
 }
 
 /// Where Commands is among a bar's `actions`: the button a short window
@@ -453,11 +543,15 @@ pub fn rebuild_bars(host: &mut impl Host, app: &App, reading: bool, editing: boo
         let doc = host.id_of(DOC);
         host.move_focus(doc);
     }
-    Buttons {
+    let mut buttons = Buttons {
         by_id: ids,
         header,
         toolbar,
-    }
+        live: HashMap::new(),
+    };
+    // A live document's buttons say their state from the start.
+    buttons.relabel_live(host, app);
+    buttons
 }
 
 /// After the Edit or Done editing button switched modes: the focus goes
@@ -749,6 +843,11 @@ pub fn button_description(c: &Catalog, action: ActionId) -> String {
         ActionId::Settings => "gui-hint-settings",
         ActionId::CommandPalette => "gui-hint-commands",
         ActionId::PlayPause => "gui-hint-play",
+        ActionId::LiveTogglePause => "gui-hint-live-pause",
+        ActionId::LiveSwitchView => "gui-hint-live-view",
+        ActionId::SaveLiveLog => "gui-hint-live-save",
+        ActionId::CloseLiveSource => "gui-hint-live-close",
+        ActionId::LiveToggleFieldShow | ActionId::LiveToggleFieldSpeak => "gui-hint-live-field",
         _ => return String::new(),
     };
     c.tr(id)
@@ -982,6 +1081,7 @@ pub fn build_tree(
             by_id: ids,
             header: header_ids,
             toolbar: toolbar_ids,
+            live: HashMap::new(),
         },
     }
 }
@@ -1453,6 +1553,8 @@ pub trait Host {
         &self,
         tag: WidgetTag<W>,
     ) -> Option<WidgetId>;
+    /// Edits the widget `id`.
+    fn edit_id<R>(&mut self, id: WidgetId, f: impl FnOnce(WidgetMut<'_, dyn Widget>) -> R) -> R;
 }
 
 impl Host for RenderRoot {
@@ -1477,6 +1579,9 @@ impl Host for RenderRoot {
         tag: WidgetTag<W>,
     ) -> Option<WidgetId> {
         self.get_widget_with_tag(tag).map(|w| w.id())
+    }
+    fn edit_id<R>(&mut self, id: WidgetId, f: impl FnOnce(WidgetMut<'_, dyn Widget>) -> R) -> R {
+        self.edit_widget(id, f)
     }
 }
 
@@ -1503,6 +1608,9 @@ impl<RW: Widget> Host for masonry_testing::TestHarness<RW> {
         tag: WidgetTag<W>,
     ) -> Option<WidgetId> {
         Some(self.get_widget(tag).id())
+    }
+    fn edit_id<R>(&mut self, id: WidgetId, f: impl FnOnce(WidgetMut<'_, dyn Widget>) -> R) -> R {
+        self.edit_widget_with_id(id, f)
     }
 }
 
@@ -1583,6 +1691,11 @@ pub fn tick_signature(app: &App) -> u64 {
     app.minutes_left().hash(&mut h);
     app.font_downloads().hash(&mut h);
     app.dictation_status().hash(&mut h);
+    // A live document: the unread count, pause, and the connection, which
+    // the status bar shows.
+    app.live_unread().hash(&mut h);
+    app.live_paused().hash(&mut h);
+    app.live_connection().hash(&mut h);
     if let Some(s) = app.session() {
         s.revision.hash(&mut h);
         s.cursor.0.hash(&mut h);
@@ -1976,7 +2089,14 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     }
     // The terminal's title line, from the app: the mode, the reading
     // state, "line 3 of 40, 7%", the access mode, the rate, the engine.
-    let mut position = app.title_parts(app.title_position().as_deref()).join(", ");
+    let mut place = app.title_position();
+    // A live source's connection in words ("Connected, encrypted"), right
+    // after the unread count, so it sits in the first cells of a Braille
+    // line; never a color alone.
+    if let (Some(parts), Some(words)) = (place.as_mut(), app.live_connection_words()) {
+        parts.push(words);
+    }
+    let mut position = app.title_parts(place.as_deref()).join(", ");
     // Time left goes last, so a 40-cell Braille line still starts with the
     // position; it changes once a minute, never per word.
     match app.minutes_left() {
@@ -2045,7 +2165,12 @@ pub fn document_label(app: &App) -> String {
 pub fn window_title(app: &App) -> String {
     app.session().map_or_else(
         || "textweaver".to_owned(),
-        |s| format!("{} - textweaver", s.title),
+        |s| match app.live_position().and_then(|p| p.into_iter().next()) {
+            // A live document: its unread count (or its entries), which
+            // stands for the position ("Practice log, 3 unread - textweaver").
+            Some(place) if s.live.is_some() => format!("{}, {place} - textweaver", s.title),
+            _ => format!("{} - textweaver", s.title),
+        },
     )
 }
 
@@ -2151,6 +2276,12 @@ impl Gui {
                 crate::log::line("bars: buttons rebuilt");
             }
         }
+        // A live document's buttons follow its state (paused, the view,
+        // the field on the cursor's line), in place.
+        if self.app.live_view().is_some() {
+            let root = ctx.render_root(self.window_id);
+            self.buttons.relabel_live(root, &self.app);
+        }
         // Single-key shortcuts turned on or off: each button names its key.
         let char_keys = self.app.keymap().character_keys();
         if self.char_keys != Some(char_keys) {
@@ -2183,6 +2314,8 @@ impl Gui {
                         ActionButton::set_description(&mut b, help);
                     });
                 }
+                self.buttons.forget_live_labels();
+                self.buttons.relabel_live(root, &self.app);
                 root.edit_widget_with_tag(TOOLBAR, |mut r| {
                     Region::set_label(&mut r, c.tr("gui-toolbar-reading"));
                 });

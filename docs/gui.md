@@ -70,6 +70,20 @@ The rules that keep the bars usable hold for any choice. Each button keeps its r
 
 The choice is kept in the settings `gui.header_buttons` and `gui.toolbar_buttons`, as lists of command ids, and like the other window layout settings it stays on this computer rather than syncing. A command id that this version does not recognize, perhaps one written by a newer version, is kept in the setting but not shown, so moving between versions loses nothing.
 
+### A live document's buttons and status bar
+
+While a live document is open (a live source's log or values, opened with File, Open live source), its buttons join the toolbar after Edit and before Slower and Faster, or the header when the toolbar is hidden. They are not saved with your button choice, and they go when the live document closes. In the log view, in this order:
+
+- **Pause updates** (Alt+Shift+F1), named **Resume updates** while updates are paused; new entries wait while paused.
+- **Jump to newest** (Alt+Shift+F6).
+- **Table view** or **List view** (Alt+Shift+F12): the name says the view a press switches to, and the reader stays on the same entry.
+- **Save log**, which writes the JSON log now.
+- **Close source**, which stops receiving; the log stays open, read only.
+
+In the values view, Show changes and Speak changes take the place of the view switch and Save log. Each names its state for the field on the cursor's line, in words: "Show changes: on", "Speak changes: off". On a line with no field (a heading) each reads "unavailable" and says why, and stays in the Tab order. Pause updates and Close source are there only while the source is receiving; a log that has stopped, or one opened from a saved file, keeps Jump to newest, the view switch and Save log. A button that changes its name keeps the focus, and a button that goes (Close source after a press) leaves the focus on the document. A version of textweaver built without live sources shows none of these buttons.
+
+The status bar shows the unread count where the line and percentage would be ("3 unread"), so the position does not change with every entry; then the connection in words: "Connecting", "Connected, encrypted", "Connected over Tailscale", "Connected, not encrypted", "Reconnecting", or "Connection lost". The connection is never shown by color. A log that has stopped shows its number of entries instead, and the values view its number of fields. The window's title carries the unread count too: "Practice log, 3 unread - textweaver".
+
 ### Focus mode and full screen
 
 Focus mode gives the text the whole window. With it on, the header, the toolbar, the status bar and the Contents or Notes panel fade from view once the mouse has rested for three seconds, and the document widens and lengthens to fill the space they leave. Moving the mouse brings them back at once, and they fade again after the next rest. Turn it on or off with View, Focus mode, with "Focus mode" in the command palette (F2), or in Settings under Toolbars and panels (`focus_mode = true` in `[gui]`). It is off by default and stays on this computer, and the delay is fixed rather than configurable.

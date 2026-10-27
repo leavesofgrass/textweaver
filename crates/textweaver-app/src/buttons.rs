@@ -235,7 +235,8 @@ impl App {
     /// dictation end, are not saved, and are never shown twice. In edit
     /// mode the edit toggle ("Done editing") is always on a shown bar: when
     /// no shown bar has it, it goes first among these, so there is always a
-    /// button that leaves edit mode.
+    /// button that leaves edit mode. While a live document is open, its
+    /// buttons ([`App::live_buttons`]) go in the same place, after these.
     pub fn shown_bar_buttons(&self, bar: Bar) -> Vec<ActionId> {
         let mut actions = self.bar_buttons(bar);
         let gui = &self.settings.gui;
@@ -257,6 +258,7 @@ impl App {
             // Not in a build without dictation, where the command is hidden.
             shown.push(ActionId::Dictate);
         }
+        shown.extend(self.live_buttons());
         if bar != home || shown.is_empty() {
             return actions;
         }
@@ -714,6 +716,70 @@ mod tests {
         app.dispatch(Command::Action(toggle));
         assert!(!app.is_editing());
         assert_eq!(count(&app, Bar::Header), 0);
+    }
+
+    /// A live document's buttons go on the toolbar before Slower and
+    /// Faster while it is open, never on the header too; Pause and Close
+    /// only while the source receives. A build without live sources shows
+    /// none. The connection is said in words while receiving.
+    #[test]
+    fn a_live_document_adds_its_buttons_while_open() {
+        use crate::AppConfig;
+        use crate::live::{LiveEvent, LiveOptions, ScriptedSource};
+        let mut app = App::new(AppConfig::for_tests());
+        assert!(app.live_buttons().is_empty());
+        let (source, feed) = ScriptedSource::new();
+        let _ = app.open_live_source(Box::new(source), LiveOptions::default());
+        let shown = app.shown_bar_buttons(Bar::Toolbar);
+        if !cfg!(feature = "mqtt") {
+            assert!(app.live_buttons().is_empty());
+            assert_eq!(shown, app.bar_buttons(Bar::Toolbar));
+            return;
+        }
+        let live = app.live_buttons();
+        assert_eq!(
+            live,
+            [
+                ActionId::LiveTogglePause,
+                ActionId::LiveJumpNewest,
+                ActionId::LiveSwitchView,
+                ActionId::SaveLiveLog,
+                ActionId::CloseLiveSource,
+            ]
+        );
+        let at = shown.iter().position(|a| *a == ActionId::RateDown).unwrap();
+        assert_eq!(&shown[at - live.len()..at], live.as_slice(), "{shown:?}");
+        let header = app.shown_bar_buttons(Bar::Header);
+        assert!(!live.iter().any(|a| header.contains(a)), "{header:?}");
+
+        assert_eq!(app.live_connection_words(), None);
+        feed.push(LiveEvent::Connected {
+            encrypted: true,
+            tailscale: false,
+        });
+        let _ = app.tick(std::time::Instant::now());
+        assert_eq!(
+            app.live_connection_words().as_deref(),
+            Some("Connected, encrypted")
+        );
+        feed.push(LiveEvent::Disconnected {
+            reason: "Connection lost.".into(),
+        });
+        let _ = app.tick(std::time::Instant::now());
+        assert_eq!(
+            app.live_connection_words().as_deref(),
+            Some("Connection lost")
+        );
+        let _ = app.live_close();
+        assert_eq!(app.live_connection_words(), None);
+        assert_eq!(
+            app.live_buttons(),
+            [
+                ActionId::LiveJumpNewest,
+                ActionId::LiveSwitchView,
+                ActionId::SaveLiveLog,
+            ]
+        );
     }
 
     #[test]

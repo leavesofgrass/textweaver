@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::Value;
 use textweaver_core::CharPos;
+use textweaver_keymap::ActionId;
 use textweaver_lexicon::args;
 use textweaver_store::{DocKey, LiveNotice, LiveView};
 
@@ -43,6 +44,25 @@ pub struct LiveOptions {
     pub id_field: Option<String>,
     /// The view it opens in.
     pub view: LogView,
+}
+
+/// The state of a live source's connection, as the last connection event
+/// left it ([`App::live_connection`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum LiveConnection {
+    /// Connecting for the first time.
+    Connecting,
+    /// Connecting again after the connection was lost.
+    Reconnecting,
+    /// Connected.
+    Connected {
+        /// The connection is encrypted (TLS).
+        encrypted: bool,
+        /// The host is reached over Tailscale, which encrypts the link.
+        tailscale: bool,
+    },
+    /// The connection was lost, or could not be made.
+    Lost,
 }
 
 /// The JSON log file of a running log.
@@ -85,6 +105,9 @@ pub(crate) struct LiveHub {
     /// The status line's sequence number when it last took an entry
     /// ([`App::live_status_is_entry`]).
     pub(crate) entry_seq: Option<u64>,
+    /// The connection as the source last reported it; `None` before its
+    /// first report, or for a source that has no connection.
+    connection: Option<LiveConnection>,
 }
 
 impl std::fmt::Debug for LiveHub {
@@ -175,6 +198,7 @@ impl App {
             saved_from: None,
             full_said: false,
             entry_seq: None,
+            connection: None,
         });
         effects
     }
@@ -232,6 +256,7 @@ impl App {
             saved_from: None,
             full_said: false,
             entry_seq: None,
+            connection: None,
         });
         effects
     }
@@ -428,6 +453,7 @@ impl App {
             saved_from: Some(path.to_owned()),
             full_said: false,
             entry_seq: None,
+            connection: None,
         });
         effects
     }
@@ -486,6 +512,72 @@ impl App {
     pub fn live_status_is_entry(&self) -> bool {
         self.session.as_ref().is_some_and(|s| s.live.is_some())
             && self.live_hub.as_ref().and_then(|h| h.entry_seq) == Some(self.status.seq)
+    }
+
+    /// The open live source's connection, while it is receiving: `None`
+    /// with no live document, once the source is closed (a log no longer
+    /// receiving), and before the source's first report.
+    pub fn live_connection(&self) -> Option<LiveConnection> {
+        let h = self.live_hub.as_ref()?;
+        h.source.as_ref()?;
+        h.connection
+    }
+
+    /// The connection in words, for a status bar ("Connected, encrypted",
+    /// "Reconnecting", "Connection lost"); `None` as for
+    /// [`App::live_connection`]. Kept apart from [`App::live_position`],
+    /// so a frontend chooses where it goes.
+    pub fn live_connection_words(&self) -> Option<String> {
+        let key = match self.live_connection()? {
+            LiveConnection::Connecting => "live-state-connecting",
+            LiveConnection::Reconnecting => "live-state-reconnecting",
+            LiveConnection::Connected {
+                encrypted: true, ..
+            } => "live-state-encrypted",
+            LiveConnection::Connected {
+                tailscale: true, ..
+            } => "live-state-tailscale",
+            LiveConnection::Connected { .. } => "live-state-plain",
+            LiveConnection::Lost => "live-state-lost",
+        };
+        Some(self.msg(key))
+    }
+
+    /// The buttons a frontend shows for the open live document, in order
+    /// (beta 5, N9): Pause or Resume updates and Close source while the
+    /// source is receiving; Jump to newest; in the log view, the view
+    /// switch and Save log; in the values view, Show changes and Speak
+    /// changes for the field on the cursor's line. None with no live
+    /// document open, and none in a build without live sources (the
+    /// `mqtt` feature), where a saved log still opens.
+    pub fn live_buttons(&self) -> Vec<ActionId> {
+        if !cfg!(feature = "mqtt") {
+            return Vec::new();
+        }
+        let Some(h) = self.live_hub.as_ref() else {
+            return Vec::new();
+        };
+        if self.session.as_ref().is_none_or(|s| s.live.is_none()) {
+            return Vec::new();
+        }
+        let receiving = h.source.is_some();
+        let mut out = Vec::new();
+        if receiving {
+            out.push(ActionId::LiveTogglePause);
+        }
+        out.push(ActionId::LiveJumpNewest);
+        if h.values.is_some() {
+            out.extend([
+                ActionId::LiveToggleFieldShow,
+                ActionId::LiveToggleFieldSpeak,
+            ]);
+        } else {
+            out.extend([ActionId::LiveSwitchView, ActionId::SaveLiveLog]);
+        }
+        if receiving {
+            out.push(ActionId::CloseLiveSource);
+        }
+        out
     }
 
     /// True while updates are paused.
@@ -729,6 +821,24 @@ impl App {
             .map(|s| s.title.clone())
             .unwrap_or_default();
         let name = name.as_str();
+        let state = match &event {
+            LiveEvent::Connecting { attempt } if *attempt <= 1 => Some(LiveConnection::Connecting),
+            LiveEvent::Connecting { .. } => Some(LiveConnection::Reconnecting),
+            LiveEvent::Connected {
+                encrypted,
+                tailscale,
+            } => Some(LiveConnection::Connected {
+                encrypted: *encrypted,
+                tailscale: *tailscale,
+            }),
+            LiveEvent::Disconnected { .. } | LiveEvent::Failed { .. } => Some(LiveConnection::Lost),
+            _ => None,
+        };
+        if let Some(state) = state
+            && let Some(h) = self.live_hub.as_mut()
+        {
+            h.connection = Some(state);
+        }
         match event {
             LiveEvent::Connecting { attempt } if attempt <= 1 => {
                 let m = self.msg_args("live-connecting", &args!["name" => name]);
