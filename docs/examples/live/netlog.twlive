@@ -1,0 +1,17 @@
+# A live source for the Example Net log, for readers. Open this file in
+# textweaver (File, Open, or tw open netlog.twlive), check the form, and
+# save it; textweaver then asks for the reader account's password, which
+# is never kept in this file.
+#
+# This example reaches textweaver's own broker across Tailscale with a
+# plain listener (tw broker --plain --listen 100.64.0.10). The host name
+# and the account are placeholders.
+
+name = "Example Net log"
+host = "broker.example.ts.net"
+port = 1883
+tls = "off"
+username = "ada"
+topics = ["netlog/#"]
+view = "log"
+id_field = "id"

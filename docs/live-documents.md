@@ -6,7 +6,7 @@ MQTT is a small publish and subscribe protocol that sensors, home automation, an
 
 textweaver only receives. It never publishes a message, so a live document cannot change what the broker holds.
 
-This guide is for the person who reads the live document. If you also run the broker, [Running the broker for a live log](live-broker.md) covers Mosquitto, Tailscale, and 44Net.
+This guide is for the person who reads the live document. If you also run the broker, [Running the broker for a live log](live-broker.md) covers textweaver's own broker (`tw broker`, `tw send` and `tw share`), Mosquitto, Tailscale, and 44Net.
 
 ## In brief
 

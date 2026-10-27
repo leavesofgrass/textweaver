@@ -72,11 +72,11 @@ tw cite export --to ris -o references.ris
 
 ## JSON
 
-Every command that prints facts takes `--json`, either on the command or on the subcommand that prints them: `tw info --json`, `tw text --json` (the same as `--to json`), `tw cite list --json` (and `check`, `styles`, `add`, `import`, `remove`, and `export` with `--out`), `tw settings path --json`, `tw components list --json`, `tw ocr status --json`. The keys are English in every language.
+Every command that prints facts takes `--json`, either on the command or on the subcommand that prints them: `tw info --json`, `tw text --json` (the same as `--to json`), `tw cite list --json` (and `check`, `styles`, `add`, `import`, `remove`, and `export` with `--out`), `tw settings path --json`, `tw components list --json`, `tw ocr status --json`, `tw broker account list --json`, `tw broker pin --json`. The keys are English in every language.
 
 ## The data folder
 
-textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw` and `tw open` (the reader), `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `notes`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `summarize`, `changes`, `sync`, `serve` and `components`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.
+textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw` and `tw open` (the reader), `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `notes`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `summarize`, `changes`, `sync`, `serve`, `components` and `broker`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.
 
 ## Questions
 
@@ -121,5 +121,6 @@ Results are written so that `tw search essay.md word | head` ends quietly once `
 - [Updates](updates.md), for `tw update`; [Notes](notes.md), for `tw notes links`, `tw study due`, and `tw study export` and `tw study import` (Anki packages); [Optional components](components.md), for `tw components`
 - [Converting documents](converting.md), [Citations](citations.md) and [Dictation](dictation.md), for those commands' own options
 - [CW: reading in Morse code](cw.md#record-what-a-key-adapter-sends-tw-cw-monitor), for `tw cw monitor`, which prints what a Morse key adapter sends, and `tw cw ports`, which lists the MIDI inputs
+- [Running the broker for a live log](live-broker.md#textweavers-own-broker), for `tw broker` (and its `account` and `pin` actions), `tw send`, which publishes one entry to a broker, and `tw share`, which publishes a document again on each save
 - [Obsidian vaults](vault.md), for `tw vault` (import, export, and the read-only `backlinks`, `unresolved`, `tags`, and `properties`)
 - [Troubleshooting](troubleshooting.md)
