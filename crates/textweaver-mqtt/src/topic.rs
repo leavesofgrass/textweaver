@@ -60,7 +60,7 @@ pub fn name_problem(name: &str) -> Option<&'static str> {
 /// Whether every topic `inner` matches is also matched by `outer`, so a
 /// subscription to `inner` asks for nothing `outer` does not allow. Both
 /// must be valid filters. A wildcard at the first level of `outer` never
-/// covers topics starting with `$`, as in [`matches`].
+/// covers topics starting with `$`, as in [`matches()`].
 pub fn filter_within(inner: &str, outer: &str) -> bool {
     if (outer.starts_with('+') || outer.starts_with('#')) && inner.starts_with('$') {
         return false;
