@@ -116,6 +116,7 @@ const PRINTS_FACTS: &[&str] = &[
     "sync",
     "ocr",
     "components",
+    "broker",
 ];
 
 /// Commands that read or write the data folder. `tw ocr` takes `--home`
@@ -144,6 +145,7 @@ const TOUCHES_DATA: &[&str] = &[
     "sync",
     "serve",
     "components",
+    "broker",
 ];
 
 #[test]
@@ -174,7 +176,17 @@ fn option_rules(exe: &str, home: &std::path::Path) {
                 "--clear",
                 "--list",
             ] {
-                if line.contains(old) {
+                // `--list` as a whole option only: `tw broker --listen`
+                // names an address, not a verb.
+                let shown = if old == "--list" {
+                    line.match_indices(old).any(|(i, _)| {
+                        !line[i + old.len()..]
+                            .starts_with(|c: char| c.is_ascii_alphanumeric() || c == '-')
+                    })
+                } else {
+                    line.contains(old)
+                };
+                if shown {
                     problems.push(format!("{name}: shows {old}: {line}"));
                 }
             }

@@ -593,3 +593,30 @@ fn the_fuzz_seeds_do_not_panic() {
     textweaver_broker::fuzz_connection(&[]);
     textweaver_broker::fuzz_connection(&[0x10, 0xff, 0xff, 0xff, 0x7f]);
 }
+
+#[test]
+fn the_broker_certificate_works_as_a_ca_file_on_this_computer() {
+    let (broker, _) = start("ca-file", true, false);
+    let cert = data_dir("ca-file").join(textweaver_broker::CERT_FILE);
+    for host in ["localhost", "127.0.0.1"] {
+        let mut cfg = config(port(&broker), Tls::CaFile(cert.clone()), "ada", READER_PW);
+        cfg.host = host.into();
+        let p = Publisher::connect(&cfg).unwrap_or_else(|e| panic!("{host}: {e}"));
+        p.disconnect();
+    }
+    broker.stop();
+}
+
+#[test]
+fn the_example_accounts_file_reads() {
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/examples/live/broker.toml");
+    let a = Accounts::load(&path).unwrap();
+    let logger = a.get("netcontrol").unwrap();
+    assert_eq!(logger.role, Role::Logger);
+    assert!(logger.verify("example-logger-password"));
+    let reader = a.get("ada").unwrap();
+    assert_eq!(reader.role, Role::Reader);
+    assert!(reader.verify("example-reader-password"));
+    assert!(!reader.verify("example-logger-password"));
+}

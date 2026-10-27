@@ -16,7 +16,7 @@
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
 //! `library`, `vault`, `dictate`, `marks`, `notes`, `lint`, `migrate-star`, `cite`,
-//! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, `components`, and `update`. Each module's docs name the ADR and crate it
+//! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, `components`, `update`, and, with the `mqtt` feature, `broker` and `send` (`tw send` and `tw share`, with `live_conn` for their connection options). Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
 use std::ffi::{OsStr, OsString};
@@ -124,6 +124,15 @@ enum Cmd {
     Update(cmd::update::Args),
     /// CW (Morse code) tools: monitor what a key adapter sends (MIDI and keys), in words.
     Cw(cmd::cw::Args),
+    /// Run textweaver's own MQTT broker for live documents and net logs, or manage its accounts.
+    #[cfg(feature = "mqtt")]
+    Broker(cmd::broker::Args),
+    /// Send one entry, a JSON object, to a topic on a broker.
+    #[cfg(feature = "mqtt")]
+    Send(cmd::send::SendArgs),
+    /// Share a document live: publish it to a broker, then again on each save.
+    #[cfg(feature = "mqtt")]
+    Share(cmd::send::ShareArgs),
 }
 
 /// Runs `tw` and turns the result into its exit status: 0 done, 1 failed
@@ -201,6 +210,12 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Ocr(a) => cmd::ocr::run(a),
         Cmd::Components(a) => cmd::components::run(a),
         Cmd::Cw(a) => cmd::cw::run(a),
+        #[cfg(feature = "mqtt")]
+        Cmd::Broker(a) => cmd::broker::run(a),
+        #[cfg(feature = "mqtt")]
+        Cmd::Send(a) => cmd::send::send(a),
+        #[cfg(feature = "mqtt")]
+        Cmd::Share(a) => cmd::send::share(a),
         Cmd::Update(a) => cmd::update::run(a),
     }
 }

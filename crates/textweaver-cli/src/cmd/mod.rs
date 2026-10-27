@@ -1,6 +1,8 @@
 //! Subcommands. Each file is owned by one agent (the agent briefs).
 
 pub mod backends;
+#[cfg(feature = "mqtt")]
+pub mod broker;
 pub mod changes;
 pub mod cite;
 pub mod components;
@@ -14,6 +16,8 @@ pub mod export_audio;
 pub mod info;
 pub mod library;
 pub mod lint;
+#[cfg(feature = "mqtt")]
+pub(crate) mod live_conn;
 pub mod marks;
 pub mod migrate;
 pub mod notes;
@@ -21,6 +25,8 @@ pub mod ocr;
 pub mod open;
 pub mod profiles;
 pub mod search;
+#[cfg(feature = "mqtt")]
+pub mod send;
 pub mod serve;
 pub mod settings;
 pub mod speak;

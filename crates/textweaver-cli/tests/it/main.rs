@@ -8,4 +8,6 @@
 mod closed_pipe;
 mod command_line;
 mod host_mode;
+#[cfg(feature = "mqtt")]
+mod live_send;
 mod vault_index;

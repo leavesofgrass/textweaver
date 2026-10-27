@@ -321,7 +321,7 @@ impl Session<'_> {
                 ))
             }
             Packet::PingReq => io(send(&mut self.stream, Packet::PingResp)),
-            Packet::Disconnect => Next::End("left".into()),
+            Packet::Disconnect => Next::End(String::new()),
             Packet::Connect(_) => Next::End("dropped for a second CONNECT".into()),
             Packet::ConnAck(_) | Packet::SubAck(_) | Packet::UnsubAck(_) | Packet::PingResp => {
                 Next::End("dropped for a packet only a broker sends".into())

@@ -200,7 +200,8 @@ pub enum BrokerEvent {
         user: String,
         /// Where from.
         addr: SocketAddr,
-        /// Why, in words, without a final period.
+        /// Why, in words, without a final period; empty when the client
+        /// said goodbye.
         reason: String,
     },
     /// A login was refused.
@@ -270,6 +271,9 @@ impl fmt::Display for BrokerEvent {
             }
             BrokerEvent::Connected { user, addr } => {
                 write!(f, "Connected: {user} from {}.", addr.ip())
+            }
+            BrokerEvent::Left { user, addr, reason } if reason.is_empty() => {
+                write!(f, "Left: {user} from {}.", addr.ip())
             }
             BrokerEvent::Left { user, addr, reason } => {
                 write!(f, "Left: {user} from {}, {reason}.", addr.ip())
