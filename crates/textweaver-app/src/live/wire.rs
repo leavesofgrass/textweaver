@@ -1633,11 +1633,10 @@ mod tests {
     #[test]
     fn every_live_command_is_reachable_and_answers_in_words() {
         let mut r = rig(&[("plain", practice(""))]);
-        let menu: Vec<ActionId> = r
-            .app
-            .menu_view(crate::menu::MenuId::Live)
-            .items
+        // Live sources, and its Join code submenu.
+        let menu: Vec<ActionId> = [crate::menu::MenuId::Live, crate::menu::MenuId::JoinCode]
             .into_iter()
+            .flat_map(|m| r.app.menu_view(m).items)
             .filter_map(|i| match i.kind {
                 crate::menu::MenuItemKind::Action(a) => Some(a),
                 _ => None,
