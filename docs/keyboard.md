@@ -71,7 +71,7 @@ Every binding belongs to a layer. What a key does depends on the mode you are in
 Browse keys are single keys, like a screen reader's browse mode, and work the same in both frontends.
 Global chords work in every mode. Speech Cursor keys take over browse keys with the same name while Speech Cursor is on (for example `j` reads the next line instead of scrolling).
 
-In a prompt for a secret (a live source password, the GitHub token, or the join code field of the live source form), `F3` shows what you typed, or hides it again, in both frontends, and says which; in the textweaver app the Show check box right after the field does the same. It is off each time the prompt opens. In a prompt for a path, `F4` browses for it. Elsewhere in a prompt these keys do nothing.
+In a prompt for a secret (a live source password, the GitHub token, or the join code field of the live source form), `F3` shows what you typed, or hides it again, in both frontends, and says which; in the textweaver app the Show check box right after the field does the same. It is off each time the prompt opens. In the live source form, pasting a join link into any field fills the form from it, and pasting into the join code field keeps only the code. In a prompt for a path, `F4` browses for it. Elsewhere in a prompt these keys do nothing.
 
 In the tables below a key without a note is global; the others name their layer.
 The GUI column shows Windows and Linux. The GUI on macOS column shows the Mac's own keys: Command for commands, Option with the arrows for words and paragraphs, Command with the arrows for the ends, and Command+Option for the chords that use Alt with a letter elsewhere, because Option with a letter types a character on a Mac.
@@ -354,6 +354,9 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Start textweaver's own broker inside the app, as the live broker settings say, and say its addresses and join code | palette | palette | palette | `start_broker` |
 | Stop the broker the app runs: every reader is disconnected and every port freed | palette | palette | palette | `stop_broker` |
 | Say the running broker's join code in groups of four and show it in a list, or its certificate pin when it has no code | palette | palette | palette | `show_join_code` |
+| Copy the running broker's join code to the clipboard, in four groups of four | palette | palette | palette | `copy_join_code` |
+| Copy the running broker's join link to the clipboard: one line with its address, port, join code and shared topic | palette | palette | palette | `copy_join_link` |
+| Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it | palette | palette | palette | `open_join_link` |
 | Share the open document live: readers following its topic see it, and each save, in place | palette | palette | palette | `share_document_live` |
 | Stop sharing the document live; readers keep the last revision | palette | palette | palette | `stop_sharing` |
 | Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | palette | palette | palette | `send_check_in` |
@@ -677,6 +680,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Start textweaver's own broker inside the app, as the live broker settings say, and say its addresses and join code | `start_broker` |
 | Stop the broker the app runs: every reader is disconnected and every port freed | `stop_broker` |
 | Say the running broker's join code in groups of four and show it in a list, or its certificate pin when it has no code | `show_join_code` |
+| Copy the running broker's join code to the clipboard, in four groups of four | `copy_join_code` |
+| Copy the running broker's join link to the clipboard: one line with its address, port, join code and shared topic | `copy_join_link` |
+| Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it | `open_join_link` |
 | Share the open document live: readers following its topic see it, and each save, in place | `share_document_live` |
 | Stop sharing the document live; readers keep the last revision | `stop_sharing` |
 | Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | `send_check_in` |

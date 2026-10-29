@@ -4,6 +4,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Copying and pasting the join code
+
+- **New: join links.** One line carries everything a reader needs to join textweaver's broker by code: `twjoin://HOST:PORT/CODE?topic=TOPIC`, the broker's address and port, the join code in groups of four, and, for a shared document, its topic, percent encoded. `textweaver_mqtt::JoinLink` writes and reads it, and refuses anything else in words ("Join link error: the port is not a number from 1 to 65535."). It holds the secret: it is never said, logged, saved, kept in a prompt's history, or shown in the status bar.
+- **New: Copy the join code and Copy the join link,** in Tools, Live sources, the command palette, the context menu while the broker has a join code, and as the last two rows of the Show the join code list, where `Enter` copies. Each says so in words ("Join link copied."). They reach the clipboard as Copy does (OSC 52 or the system clipboard in the terminal reader).
+- **Pasting fills the form.** A join link pasted into any field of the live source form fills the host, port, encryption, join code, topic, and the name when empty, and says what it filled; a form filled from a link joins on `Enter`, without the Open it now question. The join code field takes the code out of a paste with line breaks, a "Join code:" label, quotes, the copied Show the join code list, or a link. Before, pasting the list failed, since line breaks between the groups were refused.
+- **New: Open a join link,** which opens the form filled from the join link on the clipboard, or empty for one to be pasted.
+- `tw broker --join-code` prints "Join link: ..." on its own line after the code, and `tw share` prints it after the first revision when given `--join-code` or the new `--join-link`, which `tw send` and `tw share` take in place of `--host`, `--port` and `--join-code`.
+- Join codes and pins now forgive commas and line breaks between groups, as read aloud or copied.
+
 ### Masked secrets with a Show choice
 
 - **The join code field is masked.** In the live source form, the join code is a secret field like the password prompt: one star per character in both frontends, a password field to the screen reader in the textweaver app, nothing typed said or kept in the prompt's history, the app's log paused while it is open, and moving to it says how many characters it holds ("Join code: 16 characters, hidden.") rather than the code. Before, the code was drawn and said as typed.
