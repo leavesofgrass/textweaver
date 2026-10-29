@@ -44,6 +44,15 @@ pub const ANKI_EXTENSIONS: &[&str] = &["apkg"];
 /// Live source files, which Save live source as file writes.
 pub const LIVE_SOURCE_EXTENSIONS: &[&str] = &["twlive"];
 
+/// The join QR code's image files, which Save the QR code writes.
+pub const QR_SAVE_EXTENSIONS: &[&str] = &["png", "svg"];
+
+/// Images Join from a QR image reads.
+pub const QR_READ_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg"];
+
+/// The name the join QR code is offered under.
+pub const QR_FILE_NAME: &str = "join-qr.png";
+
 /// Settings and profile files: TOML and JSON.
 pub const SETTINGS_EXTENSIONS: &[&str] = &["toml", "json"];
 
@@ -85,6 +94,8 @@ impl PromptPurpose {
             P::SaveAs | P::ExportAs => PathKind::Write(&[]),
             P::ExportSettings | P::ExportProfiles => PathKind::Write(SETTINGS_EXTENSIONS),
             P::SaveLiveSourceFile => PathKind::Write(LIVE_SOURCE_EXTENSIONS),
+            P::SaveJoinQr => PathKind::Write(QR_SAVE_EXTENSIONS),
+            P::JoinQrImage => PathKind::Read(QR_READ_EXTENSIONS),
             _ => return None,
         })
     }
@@ -256,6 +267,18 @@ impl App {
                 self.live_save_file_name(),
                 None,
             ),
+            PromptPurpose::SaveJoinQr => (
+                c.tr("prompt-save-join-qr"),
+                c.tr("chooser-qr-files"),
+                Some(QR_FILE_NAME.to_owned()),
+                None,
+            ),
+            PromptPurpose::JoinQrImage => (
+                c.tr("prompt-join-qr-image"),
+                c.tr("chooser-images"),
+                None,
+                None,
+            ),
             _ => return None,
         };
         Some(PathPromptSpec {
@@ -382,6 +405,8 @@ mod tests {
             P::ImportProfiles,
             P::ExportProfiles,
             P::SaveLiveSourceFile,
+            P::SaveJoinQr,
+            P::JoinQrImage,
         ] {
             assert!(p.is_path(), "{p:?}");
         }

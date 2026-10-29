@@ -46,6 +46,7 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 - **In the textweaver app, the live source form's field count can lag** when a choice adds or removes the CA file field: the label read with the field ("Encryption, 3 of 7") keeps the old count until you move to another field. What is said when the choice changes is current.
 - **A log holds 20,000 entries** and the values view 2,000 fields; more are left out, and textweaver says so. Messages over 256 KiB, and binary messages, are left out.
 - **Not yet checked by ear.** Live announcements on a Braille display, and NVDA's and JAWS's message times with a live log, have been tested by computer but not on a Mantis Q40 at a real net ([Using textweaver with a screen reader](screen-readers.md)).
+- **Join from a QR image reads the clipboard's image on Windows only.** On macOS and Linux, save the screenshot or photo to a file and choose it; reading an image there needs a part of the clipboard library that brings new dependencies, which are not yet approved. There is no webcam scanning; scan the code with a phone, or save a photo of it.
 - **A quiet topic and a forbidden topic look the same** to textweaver, since Mosquitto accepts a subscription its access list denies. After `quiet_hint_seconds` it says so once, in words.
 
 ## Obsidian notes and vaults

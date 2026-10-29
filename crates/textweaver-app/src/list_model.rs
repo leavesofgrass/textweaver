@@ -308,6 +308,10 @@ pub enum PromptKey {
     /// field ([`PromptModel::is_secret`]), shows the typed text, or hides
     /// it again, and says which; elsewhere nothing.
     ToggleShown,
+    /// The context menu key (the Applications key, Shift+F10) in a field:
+    /// on the live source form's join code field, its context menu (Copy,
+    /// Paste, and Show or Hide the join code); elsewhere nothing.
+    ContextMenu,
     /// Enter: answers the prompt with its text.
     Enter,
     /// Escape: cancels the prompt.
@@ -591,6 +595,7 @@ impl App {
                         model.set_text(&text);
                     }
                     model.secret |= std::mem::take(&mut self.pending_prompt_secret);
+                    model.shown = std::mem::take(&mut self.pending_prompt_shown) && model.secret;
                     model.browsed = std::mem::take(&mut self.browse.prompt_filled);
                     self.prompt_model = Some(model);
                 }
@@ -890,6 +895,13 @@ impl App {
             PromptKey::Home => mb.home(),
             PromptKey::End => mb.end(),
             PromptKey::ToggleShown => return self.toggle_shown(),
+            PromptKey::ContextMenu => {
+                if mb.purpose == PromptPurpose::LiveSetup {
+                    let (text, shown) = (mb.text(), mb.is_shown());
+                    return self.live_field_menu(text, shown);
+                }
+                return vec![Effect::Redraw];
+            }
             // A secret has no history to recall.
             PromptKey::Up | PromptKey::Down if secret => return vec![Effect::Redraw],
             PromptKey::Tab | PromptKey::BackTab if mb.purpose.is_form() => {

@@ -101,6 +101,11 @@ pub const TOOLBAR_BUTTONS: WidgetTag<Flow> = WidgetTag::named("tw-toolbar-button
 pub const MAIN: WidgetTag<Region> = WidgetTag::named("tw-main");
 /// The field of an open prompt.
 pub const PROMPT_FIELD: WidgetTag<TextArea<true>> = WidgetTag::named("tw-prompt-field");
+/// The join link in the Show the join QR code dialog: a field to read,
+/// select and copy, whose edits are undone.
+pub const QR_LINK: WidgetTag<TextArea<true>> = WidgetTag::named("tw-qr-link");
+/// The join QR code's image in that dialog.
+pub const QR_IMAGE: WidgetTag<crate::qr_view::QrImage> = WidgetTag::named("tw-qr-image");
 /// A secret prompt's Show box, right after its field: shows the text as
 /// typed, or masks it again.
 pub const PROMPT_SHOW: WidgetTag<Checkbox> = WidgetTag::named("tw-prompt-show");
@@ -338,6 +343,16 @@ enum OpenDialog {
     },
     /// The find and replace panel ([`crate::find_panel`]).
     Find(FindOpen),
+    /// Show the join QR code: each button's id and the app's list row it
+    /// chooses, and the link its field shows.
+    Qr {
+        /// The buttons and their rows.
+        buttons: Vec<(WidgetId, usize)>,
+        /// The row of Copy the join link (Enter in the link's field).
+        copy: Option<usize>,
+        /// The link, which the field shows again after any edit.
+        link: String,
+    },
 }
 
 /// The find and replace panel while it is open: its controls, and what
@@ -1118,6 +1133,94 @@ pub fn list_dialog(
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
     let modal = NewWidget::new(Modal::new(card, title, p.clone())).erased();
     (modal, list_id)
+}
+
+/// The Show the join QR code dialog, built ([`join_qr_dialog`]).
+pub struct JoinQrDialog {
+    /// The dialog.
+    pub modal: NewWidget<dyn Widget>,
+    /// Where the focus starts: Copy the join link.
+    pub focus: WidgetId,
+    /// Each button's id and the app's list row it chooses.
+    pub buttons: Vec<(WidgetId, usize)>,
+    /// The row of Copy the join link.
+    pub copy: Option<usize>,
+    /// The link its field shows.
+    pub link: String,
+}
+
+/// The Show the join QR code dialog (beta 5, phase 7c) for the app's list
+/// `items` and `view`, in the list's order: the warning in words (also
+/// the dialog's description, heard as it opens), the image named "QR code
+/// for joining HOST", the link in a field to read, select and copy, and
+/// the buttons Copy the join link, Save the QR code and Close. `None`
+/// without a Copy row.
+pub fn join_qr_dialog(
+    p: &Palette,
+    c: &Catalog,
+    title: &str,
+    items: &[String],
+    view: &textweaver_app::live::qr::JoinQrView,
+) -> Option<JoinQrDialog> {
+    use textweaver_app::live::qr::QrRow;
+    let row_of = |row: QrRow| view.rows.iter().position(|r| *r == row);
+    let text_of = |row: QrRow| {
+        row_of(row)
+            .and_then(|i| items.get(i))
+            .cloned()
+            .unwrap_or_default()
+    };
+    let warning = text_of(QrRow::Warning);
+    let link = text_of(QrRow::Link);
+    let image = NewWidget::new(crate::qr_view::QrImage::new(
+        view.modules.clone(),
+        view.image_name.clone(),
+    ))
+    .with_tag(QR_IMAGE);
+    let field = NewWidget::new(
+        TextArea::new_editable(&link)
+            .with_accessible_label(c.tr("gui-qr-link"))
+            .with_word_wrap(true)
+            .with_style(StyleProperty::FontSize(theme::ui_size(theme::UI_TEXT))),
+    )
+    .with_tag(QR_LINK);
+    let field = NewWidget::new(FocusFrame::new(NewWidget::new(TextInput::from_text_area(
+        field,
+    ))));
+    let mut buttons = Vec::new();
+    let mut footer = Vec::new();
+    for row in [QrRow::Copy, QrRow::Save] {
+        let Some(i) = row_of(row) else { continue };
+        let b = NewWidget::new(ActionButton::new(items.get(i).cloned().unwrap_or_default()));
+        buttons.push((b.id(), i));
+        footer.push(b);
+    }
+    let copy = row_of(QrRow::Copy)?;
+    let focus = buttons.iter().find(|(_, r)| *r == copy)?.0;
+    footer.push(close_button(c, None));
+    let card = Flex::column()
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .with_fixed(dialog_title(title))
+        .with_fixed(
+            NewWidget::new(label(&warning, theme::UI_TEXT + 2.0, true))
+                .with_props(LineBreaking::WordWrap),
+        )
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(image)
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(field)
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(dialog_footer("", footer));
+    let card = NewWidget::new(card).with_props(dialog::card_props(p));
+    let modal =
+        NewWidget::new(Modal::new(card, title, p.clone()).with_description(warning)).erased();
+    Some(JoinQrDialog {
+        modal,
+        focus,
+        buttons,
+        copy: Some(copy),
+        link,
+    })
 }
 
 /// A one-field prompt labelled `label_text`, starting with `initial`: the
@@ -3105,7 +3208,12 @@ impl Gui {
             }
             Some(OpenDialog::Prompt) => self.prompt_answer(ctx, None),
             Some(OpenDialog::Find(_)) => self.close_find(ctx),
-            Some(OpenDialog::List(_) | OpenDialog::Palette(_) | OpenDialog::Voices { .. }) => {
+            Some(
+                OpenDialog::List(_)
+                | OpenDialog::Palette(_)
+                | OpenDialog::Voices { .. }
+                | OpenDialog::Qr { .. },
+            ) => {
                 self.answer(ctx, Command::Cancel);
             }
         }
@@ -3148,6 +3256,15 @@ impl Gui {
                 }
                 Effect::ShowList { .. }
                     if matches!(self.dialog, Some(OpenDialog::FolderChooser)) => {}
+                // The join QR code shown again (after Copy): the dialog
+                // stays as it is, its focus where it was.
+                Effect::ShowList { .. }
+                    if matches!(self.dialog, Some(OpenDialog::Qr { .. }))
+                        && self.app.live_join_qr_open() => {}
+                // Show the join QR code: its own dialog, with the image.
+                Effect::ShowList { title, items } if self.app.live_join_qr_open() => {
+                    self.open_join_qr(ctx, &title, items);
+                }
                 // The replace loop's list of choices: the find and replace
                 // panel's buttons stand in for it.
                 Effect::ShowList { .. }
@@ -3229,6 +3346,11 @@ impl Gui {
         if secret {
             ctx.render_root(self.window_id)
                 .edit_widget_with_tag(PROMPT_FIELD, |mut f| TextArea::set_password(&mut f, true));
+            // Opened shown (Show the join code from the field's context
+            // menu): the field and its Show box follow.
+            if let Some(m) = self.app.prompt_model().filter(|m| m.is_shown()).cloned() {
+                show_secret_in(ctx.render_root(self.window_id), &m);
+            }
         }
     }
 
@@ -4259,6 +4381,43 @@ impl Gui {
         self.reopen_settings(ctx, open.form, section, row);
         if let (Some(text), Some(setting)) = (answer, setting) {
             self.change_setting(ctx, &setting, row, FormChange::Text(text));
+        }
+    }
+
+    /// Show the join QR code (beta 5, phase 7c): the app's list as a
+    /// dialog, in its order: the warning in words, the image, the link in
+    /// a field to read and copy, and the buttons Copy the join link, Save
+    /// the QR code and Close. The dialog's description is the warning, so
+    /// it is heard as the dialog opens; the focus starts on Copy.
+    fn open_join_qr(&mut self, ctx: &mut DriverCtx<'_>, title: &str, items: Vec<String>) {
+        let c = self.app.catalog();
+        let built = self
+            .app
+            .live_join_qr()
+            .and_then(|view| join_qr_dialog(&self.palette, &c, title, &items, view));
+        let Some(d) = built else {
+            return self.open_list(ctx, title, items);
+        };
+        self.show_dialog(ctx, d.modal, d.focus);
+        self.dialog = Some(OpenDialog::Qr {
+            buttons: d.buttons,
+            copy: d.copy,
+            link: d.link,
+        });
+        if self.log {
+            // The title only: never the link.
+            crate::log::line(&format!("dialog: join QR code {title:?}"));
+        }
+    }
+
+    /// A button of the join QR code dialog: Copy keeps the dialog open;
+    /// Save closes it for the file chooser.
+    fn join_qr_button(&mut self, ctx: &mut DriverCtx<'_>, row: usize) {
+        let copy = matches!(&self.dialog, Some(OpenDialog::Qr { copy, .. }) if *copy == Some(row));
+        if copy {
+            self.dispatch(ctx, Command::Choose(row));
+        } else {
+            self.answer(ctx, Command::Choose(row));
         }
     }
 
@@ -5319,6 +5478,13 @@ impl AppDriver for Gui {
                 && let Some(b) = crate::voices::button_for(buttons, widget_id)
             {
                 self.voice_button(ctx, b);
+            } else if let Some(OpenDialog::Qr { buttons, .. }) = &self.dialog
+                && let Some(row) = buttons
+                    .iter()
+                    .find(|(id, _)| *id == widget_id)
+                    .map(|(_, r)| *r)
+            {
+                self.join_qr_button(ctx, row);
             } else if let Some(OpenDialog::Find(f)) = &self.dialog
                 && let Some(b) = f
                     .buttons
@@ -5471,6 +5637,14 @@ impl AppDriver for Gui {
                     }
                     return;
                 }
+                DialogAction::FieldMenu => {
+                    // The context menu key in a form's field: the join
+                    // code field's menu (Copy, Paste, Show or Hide).
+                    if matches!(self.dialog, Some(OpenDialog::Prompt)) {
+                        self.prompt_key(ctx, PromptKey::ContextMenu);
+                    }
+                    return;
+                }
                 DialogAction::Field(next) => {
                     if matches!(self.dialog, Some(OpenDialog::Prompt)) {
                         let key = if *next {
@@ -5528,6 +5702,7 @@ impl AppDriver for Gui {
                     | DialogAction::Complete
                     | DialogAction::Browse
                     | DialogAction::ToggleShown
+                    | DialogAction::FieldMenu
                     | DialogAction::Field(_)
                     | DialogAction::Chord(_)
                     | DialogAction::Answer(_)
@@ -5546,6 +5721,27 @@ impl AppDriver for Gui {
                     }
                     TextAction::Entered(_) => self.find_entered(ctx, widget_id),
                     TextAction::Cancelled => self.close_find(ctx),
+                }
+                return;
+            }
+            if let Some(OpenDialog::Qr { copy, link, .. }) = &self.dialog {
+                match t {
+                    // Enter in the link's field copies it, as the button.
+                    TextAction::Entered(_) => {
+                        if let Some(row) = *copy {
+                            self.join_qr_button(ctx, row);
+                        }
+                    }
+                    // The link is for reading: an edit is undone.
+                    TextAction::Changed(text) if text != link => {
+                        let link = link.clone();
+                        ctx.render_root(self.window_id)
+                            .edit_widget_with_tag(QR_LINK, |mut f| {
+                                TextArea::reset_text(&mut f, &link);
+                            });
+                    }
+                    TextAction::Changed(_) => {}
+                    TextAction::Cancelled => self.answer(ctx, Command::Cancel),
                 }
                 return;
             }

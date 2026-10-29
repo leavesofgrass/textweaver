@@ -265,3 +265,41 @@ fn copy_the_join_link_reaches_the_terminal_clipboard() {
     assert!(!status.contains("twjoin"), "{status}");
     tui.dispatch(Command::Action(ActionId::StopBroker));
 }
+
+/// Shift+F10 (or the Applications key) on the join code field opens its
+/// context menu: Copy, Paste, and Show the join code. Show opens the field
+/// shown as typed, Escape goes back to it, and its text is kept.
+#[test]
+fn the_join_code_field_has_a_context_menu() {
+    let mut h = launch();
+    h.tui.dispatch(Command::Action(ActionId::SetUpLiveSource));
+    h.draw();
+    h.typed("Club");
+    h.key(KeyCode::Tab);
+    h.typed("logger.example");
+    h.key(KeyCode::Tab);
+    for _ in 0..4 {
+        h.key(KeyCode::Down);
+    }
+    h.key(KeyCode::Tab);
+    h.typed("ABCD");
+    h.press(KeyCode::F(10), KeyModifiers::SHIFT);
+    let list = h.tui.app().list_model().expect("the field's menu");
+    assert_eq!(list.title, "Join code field");
+    assert_eq!(list.items, ["Copy", "Paste", "Show the join code"]);
+    h.key(KeyCode::Down);
+    h.key(KeyCode::Down);
+    h.key(KeyCode::Enter);
+    h.shows("Join code, 4 of 7", "ABCD");
+    assert!(h.tui.app().prompt_model().unwrap().is_shown());
+    h.key(KeyCode::Menu);
+    let list = h.tui.app().list_model().expect("the field's menu");
+    assert_eq!(list.items[2], "Hide the join code");
+    h.key(KeyCode::Esc);
+    h.shows("Join code, 4 of 7", "****");
+    assert_eq!(h.field_text(), "ABCD");
+    // On another field the key does nothing.
+    h.key(KeyCode::Tab);
+    h.press(KeyCode::F(10), KeyModifiers::SHIFT);
+    assert!(h.tui.app().list_model().is_none());
+}

@@ -25,6 +25,12 @@ impl Clipboard for System {
     fn read(&mut self) -> ClipboardContents {
         imp::read()
     }
+
+    /// The clipboard's image, for Join from a QR image: on Windows its PNG
+    /// or bitmap; elsewhere none yet (`textweaver_app::clipboard_image`).
+    fn read_image(&mut self) -> Option<textweaver_app::ClipboardImage> {
+        textweaver_app::clipboard_image::read_system_image()
+    }
 }
 
 /// What the paste key pastes: the clipboard as [`System`] read it, with

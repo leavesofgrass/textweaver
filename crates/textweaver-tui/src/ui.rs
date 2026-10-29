@@ -280,6 +280,13 @@ impl Tui {
             tui.app
                 .set_clipboard(Box::new(crate::clipboard::SystemReader));
         }
+        // Join from a QR image reads an image on this computer's clipboard
+        // wherever it is the listener's (not over SSH or in tmux), even in
+        // a terminal that pastes text itself.
+        if crate::clipboard::clipboard_is_local(|name| std::env::var(name).ok()) {
+            tui.app
+                .set_image_clipboard(Box::new(crate::clipboard::SystemImages));
+        }
         tui.terminal = info;
         tui
     }
@@ -601,9 +608,12 @@ impl Tui {
             return;
         }
         // The Applications key, where the terminal reports it (with the
-        // kitty keyboard protocol): the context menu, as in the window.
-        if k.code == KeyCode::Menu && self.app.prompt_model().is_none() {
-            if self.app.list_model().is_none() {
+        // kitty keyboard protocol): the context menu, as in the window;
+        // in a prompt, the field's menu (the join code field's).
+        if k.code == KeyCode::Menu {
+            if self.app.prompt_model().is_some() {
+                self.dispatch(Command::PromptKey(PromptKey::ContextMenu));
+            } else if self.app.list_model().is_none() {
                 self.dispatch(Command::Action(ActionId::ContextMenu));
             }
             return;
@@ -762,6 +772,12 @@ impl Tui {
         // The show key (F3): a secret field's text shown, or hidden again.
         if chord(&k) == Some(textweaver_app::list_model::show_key()) {
             self.dispatch(Command::PromptKey(PromptKey::ToggleShown));
+            return;
+        }
+        // Shift+F10, the context menu key: the field's menu (the live
+        // source form's join code field: Copy, Paste, Show or Hide).
+        if k.code == KeyCode::F(10) && k.modifiers == KeyModifiers::SHIFT {
+            self.dispatch(Command::PromptKey(PromptKey::ContextMenu));
             return;
         }
         let key = match k.code {

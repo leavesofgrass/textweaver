@@ -14,6 +14,8 @@ pub mod dictate;
 pub mod eloquence;
 pub mod export_audio;
 pub mod info;
+#[cfg(feature = "mqtt")]
+pub mod join_qr;
 pub mod library;
 pub mod lint;
 #[cfg(feature = "mqtt")]

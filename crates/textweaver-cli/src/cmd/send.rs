@@ -7,7 +7,8 @@
 //!   unless `--retain`.
 //! - `tw share FILE --topic T` publishes the document as one retained live
 //!   document message (and, given `--join-code` or `--join-link`, prints
-//!   the join link readers follow it with), then again each time the file
+//!   the join link readers follow it with, and with `--qr FILE` saves its
+//!   QR code), then again each time the file
 //!   is saved, until
 //!   Ctrl+C (or once, with `--once`). The message is
 //!   `{"type": "textweaver.document", "rev": N, "title": "...", "format":
@@ -66,6 +67,11 @@ pub struct ShareArgs {
     /// How often to look for a save, in seconds.
     #[arg(long, value_name = "SECONDS", default_value_t = 1)]
     pub every: u64,
+    /// Save the join link's QR code to this file: a PNG, or an SVG when
+    /// the name ends in .svg. Needs --join-code or --join-link. Anyone who
+    /// sees the code can join.
+    #[arg(long, value_name = "FILE")]
+    pub qr: Option<PathBuf>,
     /// How to reach the broker.
     #[command(flatten)]
     pub conn: Conn,
@@ -207,6 +213,14 @@ pub fn share(args: ShareArgs) -> Result<()> {
         .unwrap_or_default();
     let config = args.conn.config()?;
     let link = args.conn.reader_link(&args.topic)?;
+    if let Some(path) = &args.qr {
+        if link.is_none() {
+            bail!(Plain(
+                "No QR code: --qr needs --join-code or --join-link.".into()
+            ));
+        }
+        crate::cmd::join_qr::check_qr_path(path)?;
+    }
     let mut rev = 1;
     let msg = message(&path, rev, &title)?;
     publish(&config, &args.topic, &msg).map_err(|e| Plain(format!("Not shared: {e}")))?;
@@ -218,6 +232,9 @@ pub fn share(args: ShareArgs) -> Result<()> {
     if let Some(link) = link {
         // On a line of its own, to copy to readers.
         outln!("Join link: {link}");
+        if let Some(path) = &args.qr {
+            crate::cmd::join_qr::write_qr(path, &link)?;
+        }
     }
     if args.once {
         return Ok(());

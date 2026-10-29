@@ -502,6 +502,10 @@ pub struct App {
     pub(crate) clipboard: Option<String>,
     /// The system clipboard Paste reads ([`App::set_clipboard`]).
     pub(crate) system_clipboard: Option<Box<dyn crate::clipboard::Clipboard>>,
+    /// Where images are read from when the system clipboard is not
+    /// ([`App::set_image_clipboard`]): the terminal reader's, which pastes
+    /// text through the terminal.
+    pub(crate) image_clipboard: Option<Box<dyn crate::clipboard::Clipboard>>,
     /// A formatted paste being converted on a worker thread.
     pub(crate) paste_job: Option<crate::clipboard::PasteJob>,
     /// The background writer: saves, snapshots, positions, and the disk
@@ -563,6 +567,9 @@ pub struct App {
     /// The next prompt is a secret field (the live source form's join
     /// code), masked like a secret prompt.
     pub(crate) pending_prompt_secret: bool,
+    /// The next prompt, a secret field, opens shown as typed (Show the
+    /// join code chosen from the field's context menu).
+    pub(crate) pending_prompt_shown: bool,
     /// The key a frontend sends [`PromptKey::ToggleShown`](crate::PromptKey::ToggleShown)
     /// for, named when a secret field opens; none names nothing.
     pub(crate) prompt_show_key: Option<textweaver_keymap::KeyChord>,
@@ -718,6 +725,7 @@ impl App {
             voices: crate::voice::VoicesState::default(),
             clipboard: None,
             system_clipboard: None,
+            image_clipboard: None,
             paste_job: None,
             writer: crate::writer::Writer::spawn(wake.clone()),
             pending_saves: Vec::new(),
@@ -746,6 +754,7 @@ impl App {
             settings_screen: None,
             pending_prompt_text: None,
             pending_prompt_secret: false,
+            pending_prompt_shown: false,
             prompt_show_key: None,
             pending_list_focus: None,
             announce_list_focus: true,
@@ -1781,6 +1790,14 @@ impl App {
                 if self.prompt_is_live_form() {
                     return self.cancel_live_form();
                 }
+                // The join code field's context menu: back to the field.
+                if matches!(
+                    self.list,
+                    Some(ListKind::Live(crate::live::wire::LiveList::FieldMenu(_)))
+                ) {
+                    self.list = None;
+                    return self.live_form_reopen();
+                }
                 if self.prompt_is_checkin() {
                     return self.cancel_live_checkin();
                 }
@@ -2046,6 +2063,8 @@ impl App {
             PromptPurpose::LiveSetup => return self.answer_live_form(text),
             PromptPurpose::LiveCheckIn => return self.answer_live_checkin(text),
             PromptPurpose::SaveLiveSourceFile => return self.answer_live_save_file(text),
+            PromptPurpose::SaveJoinQr => return self.answer_save_join_qr(text),
+            PromptPurpose::JoinQrImage => return self.answer_join_qr_image(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -2613,6 +2632,8 @@ impl App {
             | A::CopyJoinCode
             | A::CopyJoinLink
             | A::OpenJoinLink
+            | A::ShowJoinQr
+            | A::JoinFromQrImage
             | A::ShareDocumentLive
             | A::StopSharing
             | A::SendCheckIn => return self.live_action(a),

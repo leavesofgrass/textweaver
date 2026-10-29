@@ -1021,3 +1021,90 @@ fn the_check_in_form_names_each_field_and_the_broker_is_in_the_status_bar() {
     assert!(!r.status_bar().contains("Broker on"), "{}", r.status_bar());
     r.app.shutdown();
 }
+
+/// Show the join QR code in the textweaver app: a dialog whose
+/// description is the warning in words, an image named for joining the
+/// host (never the link), the link in a field named "Join link", and the
+/// buttons Copy the join link (focused first), Save the QR code and Close.
+#[cfg(feature = "mqtt")]
+#[test]
+fn the_join_qr_code_dialog_warns_first_and_names_its_image() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut r = rig(dir.path(), false);
+    let _ = r
+        .app
+        .update_settings(|s| s.live.broker.listen = vec!["127.0.0.1:0".into()]);
+    r.act(ActionId::StartBroker);
+    r.act(ActionId::ShowJoinQr);
+    let model = r.app.list_model().expect("the view").clone();
+    let view = r.app.live_join_qr().expect("the code").clone();
+    assert_eq!(model.items[0], "Anyone who sees this code can join.");
+    let link = model.items[2].clone();
+    assert!(link.starts_with("twjoin://127.0.0.1:"), "{link}");
+    let p = Palette::galaxy();
+    let c = r.app.catalog();
+    let d = gui::join_qr_dialog(&p, &c, &model.title, &model.items, &view).expect("built");
+    let dialog = d.modal.id();
+    let focus = d.focus;
+    let mut back = None;
+    gui::open_dialog_in(&mut r.h, d.modal, d.focus, &mut back);
+    let _ = r.h.redraw();
+    let node = r.h.access_node(dialog).unwrap();
+    assert_eq!(node.role(), Role::Dialog);
+    assert_eq!(node.label().as_deref(), Some("Join QR code"));
+    assert_eq!(
+        node.description().as_deref(),
+        Some("Anyone who sees this code can join.")
+    );
+    let image = r.h.get_widget(gui::QR_IMAGE).id();
+    let node = r.h.access_node(image).unwrap();
+    assert_eq!(node.role(), Role::Image);
+    assert_eq!(
+        node.label().as_deref(),
+        Some("QR code for joining 127.0.0.1")
+    );
+    let field = r.h.get_widget(gui::QR_LINK).id();
+    let node = r.h.access_node(field).unwrap();
+    assert_eq!(node.role(), Role::TextInput);
+    assert_eq!(node.label().as_deref(), Some("Join link"));
+    assert_eq!(node.value().as_deref(), Some(link.as_str()));
+    assert_eq!(r.h.focused_widget_id(), Some(focus));
+    let node = r.h.access_node(focus).unwrap();
+    assert_eq!(node.label().as_deref(), Some("Copy the join link"));
+    assert_eq!(d.copy, Some(3));
+    assert_eq!(
+        d.buttons.iter().map(|(_, row)| *row).collect::<Vec<_>>(),
+        [3, 4]
+    );
+    gui::close_dialog_in(&mut r.h, &mut back);
+    let _ = r.app.dispatch(Command::Cancel);
+    assert!(r.app.live_join_qr().is_none());
+    let heard = r.app.status_text();
+    assert!(!heard.contains("twjoin"), "{heard}");
+    r.act(ActionId::StopBroker);
+}
+
+/// Shift+F10 and the Applications key in a field of the live source form
+/// ask for the field's context menu.
+#[test]
+fn the_context_menu_key_in_a_form_field_asks_for_its_menu() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut r = rig(dir.path(), false);
+    let p = Palette::galaxy();
+    let c = r.app.catalog();
+    let mut back = None;
+    let (modal, field) = gui::prompt_dialog(&p, &c, "Join code, 4 of 7", "", "", false, true);
+    gui::open_dialog_in(&mut r.h, modal, field, &mut back);
+    let _ = dialog_actions(&mut r.h);
+    let mut k = masonry::core::KeyboardEvent {
+        state: masonry::core::keyboard::KeyState::Down,
+        key: Key::Named(NamedKey::F10),
+        ..Default::default()
+    };
+    k.modifiers = masonry::core::Modifiers::SHIFT;
+    r.h.process_text_event(TextEvent::Keyboard(k));
+    assert_eq!(dialog_actions(&mut r.h), [DialogAction::FieldMenu]);
+    r.h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::ContextMenu)));
+    assert_eq!(dialog_actions(&mut r.h), [DialogAction::FieldMenu]);
+    gui::close_dialog_in(&mut r.h, &mut back);
+}

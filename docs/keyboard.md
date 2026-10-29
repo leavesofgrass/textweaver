@@ -357,6 +357,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Copy the running broker's join code to the clipboard, in four groups of four | palette | palette | palette | `copy_join_code` |
 | Copy the running broker's join link to the clipboard: one line with its address, port, join code and shared topic | palette | palette | palette | `copy_join_link` |
 | Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it | palette | palette | palette | `open_join_link` |
+| Show the running broker's join link as a QR code to scan: a warning first, then the code, the link as text, and Copy and Save | palette | palette | palette | `show_join_qr` |
+| Join a broker from a QR code in an image: the image on the clipboard, else an image file, then the filled live source form | palette | palette | palette | `join_from_qr_image` |
 | Share the open document live: readers following its topic see it, and each save, in place | palette | palette | palette | `share_document_live` |
 | Stop sharing the document live; readers keep the last revision | palette | palette | palette | `stop_sharing` |
 | Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | palette | palette | palette | `send_check_in` |
@@ -683,6 +685,8 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Copy the running broker's join code to the clipboard, in four groups of four | `copy_join_code` |
 | Copy the running broker's join link to the clipboard: one line with its address, port, join code and shared topic | `copy_join_link` |
 | Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it | `open_join_link` |
+| Show the running broker's join link as a QR code to scan: a warning first, then the code, the link as text, and Copy and Save | `show_join_qr` |
+| Join a broker from a QR code in an image: the image on the clipboard, else an image file, then the filled live source form | `join_from_qr_image` |
 | Share the open document live: readers following its topic see it, and each save, in place | `share_document_live` |
 | Stop sharing the document live; readers keep the last revision | `stop_sharing` |
 | Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | `send_check_in` |

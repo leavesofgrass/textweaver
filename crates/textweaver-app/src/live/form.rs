@@ -225,6 +225,19 @@ fn default_port(tls: LiveTls) -> u16 {
     .port_or_default()
 }
 
+/// A command of the join code field's context menu.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FieldItem {
+    /// Copy the code in the field.
+    Copy,
+    /// Paste into the field.
+    Paste,
+    /// Show the code as typed.
+    Show,
+    /// Hide it again.
+    Hide,
+}
+
 /// Where the form came from, and so what Enter and Escape do.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum FormOrigin {
@@ -807,6 +820,114 @@ impl App {
         self.live_offer_open(&id)
     }
 
+    /// The form's field again, where it was (after the join code field's
+    /// context menu), said without interrupting what was just said.
+    pub(crate) fn live_form_reopen(&mut self) -> Vec<Effect> {
+        self.live_form_prompt(false)
+    }
+
+    /// The context menu key in the form ([`crate::PromptKey::ContextMenu`]):
+    /// on the join code field, its context menu: Copy, Paste, and Show or
+    /// Hide the join code (Hide while it is shown). `text` is what the
+    /// field holds, kept; elsewhere nothing happens.
+    pub(crate) fn live_field_menu(&mut self, text: String, shown: bool) -> Vec<Effect> {
+        let Some(form) = self.live_wire.form.as_mut() else {
+            return vec![Effect::Redraw];
+        };
+        if form.focus != FormField::JoinCode {
+            return vec![Effect::Redraw];
+        }
+        form.set(FormField::JoinCode, text);
+        self.prompt_model = None;
+        self.leave_prompt();
+        let toggle = if shown {
+            FieldItem::Hide
+        } else {
+            FieldItem::Show
+        };
+        let items = vec![FieldItem::Copy, FieldItem::Paste, toggle];
+        let labels: Vec<String> = items
+            .iter()
+            .map(|i| {
+                self.msg(match i {
+                    FieldItem::Copy => "name-copy",
+                    FieldItem::Paste => "name-paste",
+                    FieldItem::Show => "prompt-show-join-code",
+                    FieldItem::Hide => "live-field-hide-join-code",
+                })
+            })
+            .collect();
+        let title = self.msg("live-field-menu-title");
+        self.list = Some(ListKind::Live(LiveList::FieldMenu(items)));
+        self.pending_list_focus = Some(0);
+        self.say_result(&title);
+        vec![Effect::ShowList {
+            title,
+            items: labels,
+        }]
+    }
+
+    /// A command chosen in the join code field's context menu; then the
+    /// field again. Copy puts the code on the clipboard (never said);
+    /// Paste reads the clipboard as a paste into the field does; Show and
+    /// Hide open the field shown as typed, or masked.
+    pub(crate) fn live_field_menu_chose(&mut self, item: Option<FieldItem>) -> Vec<Effect> {
+        let Some(form) = self.live_wire.form.as_ref() else {
+            return vec![Effect::Redraw];
+        };
+        let held = form.value(FormField::JoinCode).to_owned();
+        match item {
+            Some(FieldItem::Copy) => {
+                let code = held.trim().to_owned();
+                if code.is_empty() {
+                    let m = self.msg("live-field-empty");
+                    self.tell(&m);
+                } else {
+                    self.authoring.copied = Some(code.clone());
+                    self.clipboard = Some(code);
+                    let m = self.msg("live-join-code-copied");
+                    self.tell(&m);
+                }
+            }
+            Some(FieldItem::Paste) => {
+                let clip: String = self
+                    .system_clipboard
+                    .as_mut()
+                    .and_then(|c| c.read().text)
+                    .filter(|t| !t.trim().is_empty())
+                    .or_else(|| self.authoring.copied.clone())
+                    .unwrap_or_default()
+                    .chars()
+                    .filter(|c| !c.is_control() || *c == '\n')
+                    .collect();
+                if clip.trim().is_empty() {
+                    let m = self.msg("paste-empty");
+                    self.tell(&m);
+                } else {
+                    let whole = format!("{held}{clip}");
+                    if let Some(effects) = self.live_form_pasted(&held, &whole, &clip) {
+                        return effects;
+                    }
+                    let typed: String = whole.chars().filter(|c| !c.is_control()).collect();
+                    if let Some(form) = self.live_wire.form.as_mut() {
+                        form.set(FormField::JoinCode, typed);
+                    }
+                }
+            }
+            Some(FieldItem::Show) => {
+                self.pending_prompt_shown = true;
+                let m = self.msg("prompt-showing-join-code");
+                self.tell(&m);
+            }
+            Some(FieldItem::Hide) => {
+                let m = self.msg("prompt-hiding-join-code");
+                self.tell(&m);
+            }
+            None => {}
+        }
+        self.live_form_prompt(false)
+    }
+
     /// Escape in the form: nothing is saved, and the owner hears so.
     pub(crate) fn cancel_live_form(&mut self) -> Vec<Effect> {
         let Some(form) = self.live_wire.form.take() else {
@@ -956,6 +1077,18 @@ impl App {
         self.live_form_prompt(false)
     }
 
+    /// The form, new, filled from `link` (a join link read from the
+    /// clipboard or a QR code), after `intro` is said.
+    #[cfg(feature = "mqtt")]
+    pub(crate) fn live_form_from_link(
+        &mut self,
+        link: &textweaver_mqtt::JoinLink,
+        intro: &str,
+    ) -> Vec<Effect> {
+        let _ = self.open_live_form(LiveSourceSettings::default(), FormOrigin::New, intro, None);
+        self.live_form_fill(link, "")
+    }
+
     /// Open a join link: the form, filled from the join link on the
     /// clipboard (the system's, or the text last copied in textweaver);
     /// with none there, empty, to paste one into.
@@ -970,9 +1103,7 @@ impl App {
         #[cfg(feature = "mqtt")]
         if let Some(Ok(link)) = textweaver_mqtt::JoinLink::find(&clip) {
             let intro = self.msg("live-form-intro-link-clipboard");
-            let _ =
-                self.open_live_form(LiveSourceSettings::default(), FormOrigin::New, &intro, None);
-            return self.live_form_fill(&link, "");
+            return self.live_form_from_link(&link, &intro);
         }
         let _ = clip;
         let intro = self.msg("live-form-intro-link");

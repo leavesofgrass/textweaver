@@ -422,6 +422,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-host",
     "textweaver-mqtt",
     "textweaver-ocr",
+    "textweaver-qr",
     "textweaver-render",
     "textweaver-tui",
     "textweaver-vault",
@@ -544,6 +545,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-mathcat",
     "textweaver-mqtt",
     "textweaver-ocr",
+    "textweaver-qr",
     "textweaver-render",
     "textweaver-speech",
     "textweaver-store",
@@ -1033,7 +1035,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "bins": [],
    "build_deps": [],
    "default_member": true,
-   "dependents": [],
+   "dependents": [
+    "textweaver-app",
+    "textweaver-cli"
+   ],
    "deps": [
     "textweaver-ocr"
    ],

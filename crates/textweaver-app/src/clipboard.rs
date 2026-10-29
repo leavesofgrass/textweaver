@@ -33,6 +33,7 @@ use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 
 use crate::app::App;
+use crate::clipboard_image::ClipboardImage;
 use crate::command::Effect;
 
 /// Formatted text longer than this many bytes is converted on a worker
@@ -77,13 +78,23 @@ impl ClipboardContents {
 pub trait Clipboard: Send {
     /// What the clipboard holds now. Forms it cannot read are `None`.
     fn read(&mut self) -> ClipboardContents;
+
+    /// The image the clipboard holds now, for Join from a QR image
+    /// (crate::clipboard_image); `None` when it holds none, or when this
+    /// clipboard cannot read images (the default).
+    fn read_image(&mut self) -> Option<ClipboardImage> {
+        None
+    }
 }
 
-/// A clipboard for tests: it holds what [`set`](Self::set) put on it.
-/// Clones share the contents, so a test keeps one and gives the app the
-/// other.
+/// A clipboard for tests: it holds what [`set`](Self::set) and
+/// [`set_image`](Self::set_image) put on it. Clones share the contents,
+/// so a test keeps one and gives the app the other.
 #[derive(Clone, Debug, Default)]
-pub struct FakeClipboard(Arc<Mutex<ClipboardContents>>);
+pub struct FakeClipboard {
+    contents: Arc<Mutex<ClipboardContents>>,
+    image: Arc<Mutex<Option<ClipboardImage>>>,
+}
 
 impl FakeClipboard {
     /// An empty clipboard.
@@ -93,15 +104,26 @@ impl FakeClipboard {
 
     /// Replaces the contents.
     pub fn set(&self, contents: ClipboardContents) {
-        if let Ok(mut c) = self.0.lock() {
+        if let Ok(mut c) = self.contents.lock() {
             *c = contents;
+        }
+    }
+
+    /// Replaces the image.
+    pub fn set_image(&self, image: Option<ClipboardImage>) {
+        if let Ok(mut i) = self.image.lock() {
+            *i = image;
         }
     }
 }
 
 impl Clipboard for FakeClipboard {
     fn read(&mut self) -> ClipboardContents {
-        self.0.lock().map(|c| c.clone()).unwrap_or_default()
+        self.contents.lock().map(|c| c.clone()).unwrap_or_default()
+    }
+
+    fn read_image(&mut self) -> Option<ClipboardImage> {
+        self.image.lock().ok().and_then(|i| i.clone())
     }
 }
 
@@ -234,6 +256,22 @@ impl App {
     /// last copied or cut in textweaver.
     pub fn set_clipboard(&mut self, clipboard: Box<dyn Clipboard>) {
         self.system_clipboard = Some(clipboard);
+    }
+
+    /// Gives the app a clipboard to read images from where its system
+    /// clipboard is not set (the terminal reader in a terminal that
+    /// pastes text itself). Only [`Clipboard::read_image`] is used.
+    pub fn set_image_clipboard(&mut self, clipboard: Box<dyn Clipboard>) {
+        self.image_clipboard = Some(clipboard);
+    }
+
+    /// The image on the clipboard: from the system clipboard, else from
+    /// the image clipboard ([`App::set_image_clipboard`]).
+    pub(crate) fn clipboard_image(&mut self) -> Option<ClipboardImage> {
+        if let Some(image) = self.system_clipboard.as_mut().and_then(|c| c.read_image()) {
+            return Some(image);
+        }
+        self.image_clipboard.as_mut().and_then(|c| c.read_image())
     }
 
     /// Paste and Paste as plain text: reads the clipboard and inserts it
