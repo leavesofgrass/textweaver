@@ -4,10 +4,10 @@ This page is for the person who runs the MQTT broker that a textweaver reader co
 
 There are two ways to run the broker:
 
-- **textweaver's own broker**, `tw broker`, described first. It is one command with no configuration file to write by hand: accounts are added with `tw broker account add`, TLS is on by default with a key the broker makes itself, and senders check that key by its pin. `tw send` and `tw share` publish to it, or to any MQTT broker.
+- **textweaver's own broker**, `tw broker`, described first. It is one command with no configuration file to write by hand: accounts are added with `tw broker account add`, TLS is on by default with a key the broker makes itself, and senders check that key by its pin. `tw publish` publishes to it, or to any MQTT broker.
 - **Mosquitto**, the widely used broker, from [What you need](#what-you-need) on. Choose it if you already run one, or need MQTT 5, WebSockets, bridging, or retained messages that survive a restart.
 
-A live source in the textweaver app only subscribes; it never publishes. Sending is a separate, small client, used by `tw send` and `tw share`, and in the app by Publish a check-in and Publish this document live. The app can also run textweaver's own broker itself, with Start your broker ([Running it from the textweaver app](#running-it-from-the-textweaver-app)).
+A live source in the textweaver app only subscribes; it never publishes. Sending is a separate, small client, used by `tw publish`, and in the app by Publish a check-in and Publish this document live. The app can also run textweaver's own broker itself, with Start your broker ([Running it from the textweaver app](#running-it-from-the-textweaver-app)).
 
 ## textweaver's own broker
 
@@ -75,7 +75,7 @@ With TLS, the broker makes a key and a self-signed certificate on its first star
 
 The pin stays the same across restarts as long as the two files stay. If they are moved away, the broker makes a new pair, and everyone who checks the pin needs the new one.
 
-`tw send` and `tw share` take the pin with `--pin`. A reader's live source takes it as the encryption **Pinned key** in the live source form, or `tls = "pinned"` with `pin = "..."` in `settings.toml` or a `.twlive` file you send; a pin is not a secret. Names and dates in the certificate are not checked, the key is, so the same pin works from any computer and through Tailscale.
+`tw publish` takes the pin with `--pin`. A reader's live source takes it as the encryption **Pinned key** in the live source form, or `tls = "pinned"` with `pin = "..."` in `settings.toml` or a `.twlive` file you send; a pin is not a secret. Names and dates in the certificate are not checked, the key is, so the same pin works from any computer and through Tailscale.
 
 ### A join code for a quick session
 
@@ -85,7 +85,7 @@ For a one-off session, such as a class or a meeting, start the broker with a joi
 tw broker --listen 0.0.0.0 --join-code --join-topic 'docs/#'
 ```
 
-It prints a code of 16 characters in four groups of four, such as `ABCD-EFGH-JKMN-PQRS`, to read aloud or show, and on its own line the join link to copy to readers, such as `Join link: twjoin://192.168.1.20:8883/ABCD-EFGH-JKMN-PQRS`. With `--listen 0.0.0.0`, the link names this computer's address on its main network. `--qr FILE` also saves the link as a QR code for a phone or another computer to scan: a PNG, or an SVG when the name ends in `.svg`, named "QR code for joining HOST" for screen readers. It prints "QR code saved: FILE", and textweaver keeps no other copy; anyone who sees the code can join. `tw join-qr IMAGE` reads a join link back out of a PNG or JPEG image, such as a photo of the code, and prints it as "Join link: ..."; with no join link in the image it prints one line saying why ("No join link: no QR code was found in the image.") and ends with exit status 1. The session gets a key of its own, held in memory only, so the code works only until the broker stops. The first 12 characters are the key's short pin and the last 4 are a secret. The login password is derived from the whole code, so someone who reaches the port and reads the certificate still cannot log in. Anyone with the code may read the `--join-topic` filters (every topic, by default) and may never publish. Accounts still work beside the code: a logger checks the session's key with the code's pin (`tw send --join-code CODE --user netcontrol`).
+It prints a code of 16 characters in four groups of four, such as `ABCD-EFGH-JKMN-PQRS`, to read aloud or show, and on its own line the join link to copy to readers, such as `Join link: twjoin://192.168.1.20:8883/ABCD-EFGH-JKMN-PQRS`. With `--listen 0.0.0.0`, the link names this computer's address on its main network. `--qr FILE` also saves the link as a QR code for a phone or another computer to scan: a PNG, or an SVG when the name ends in `.svg`, named "QR code for joining HOST" for screen readers. It prints "QR code saved: FILE", and textweaver keeps no other copy; anyone who sees the code can join. `tw join-qr IMAGE` reads a join link back out of a PNG or JPEG image, such as a photo of the code, and prints it as "Join link: ..."; with no join link in the image it prints one line saying why ("No join link: no QR code was found in the image.") and ends with exit status 1. The session gets a key of its own, held in memory only, so the code works only until the broker stops. The first 12 characters are the key's short pin and the last 4 are a secret. The login password is derived from the whole code, so someone who reaches the port and reads the certificate still cannot log in. Anyone with the code may read the `--join-topic` filters (every topic, by default) and may never publish. Accounts still work beside the code: a logger checks the session's key with the code's pin (`tw publish --check-in --join-code CODE --user netcontrol`).
 
 A reader in the textweaver app joins with the encryption **Join code** in the live source form, typing the code or pasting the join link into any field; textweaver keeps the password the code gives in the credential store and the code nowhere ([The form](live-documents.md#the-form)). Typing a code forgives case, spaces and dashes, and reads the letter O as zero and I or L as one. A wrong character is named with its group: "U in group 3 is not used in join codes." A join code needs TLS, so `--join-code` cannot be combined with `--plain`.
 
@@ -99,37 +99,39 @@ A reader in the textweaver app joins with the encryption **Join code** in the li
 
 Inside a tailnet, plain MQTT is protected by Tailscale's WireGuard tunnel, as [Reaching the broker over Tailscale](#reaching-the-broker-over-tailscale) explains.
 
-### Sending a check-in: tw send
+### Publishing a check-in: tw publish --check-in
 
-`tw send` publishes one entry, a JSON object, to a topic, and waits for the broker to acknowledge it (QoS 1). The fields are sent in the order given:
+`tw publish --check-in` publishes one entry, a JSON object, to a topic, and waits for the broker to acknowledge it (QoS 1). The fields are sent in the order given:
 
 ```bash
-tw send --host 100.64.0.10 --pin ABCD-EFGH-... --user netcontrol --topic netlog/checkins --field callsign=N0CALL --field 'name=Ada Example' --field 'notes=Mobile, portable antenna'
+tw publish --check-in --host 100.64.0.10 --pin ABCD-EFGH-... --user netcontrol --topic netlog/checkins --field callsign=N0CALL --field 'name=Ada Example' --field 'notes=Mobile, portable antenna'
 ```
 
 With no `--field`, it reads one JSON object from standard input:
 
 ```bash
-echo '{"callsign": "N0CALL", "name": "Ada Example"}' | tw send --plain --user netcontrol --topic netlog/checkins
+echo '{"callsign": "N0CALL", "name": "Ada Example"}' | tw publish --check-in --plain --user netcontrol --topic netlog/checkins
 ```
 
-How to reach the broker, for `tw send` and `tw share` alike:
+How to reach the broker, for a check-in and a document alike:
 
 - `--host` and `--port`: the broker. By default 127.0.0.1, on the port that goes with the encryption.
-- `--pin PIN`: TLS, trusting exactly the key with this pin. `--join-code CODE`: the same with a join code's short pin, and without `--user`, the code's own login. `--join-link LINK`: the host, the port and the join code in one, from a join link. With `--join-code` or `--join-link`, `tw share` prints the join link readers follow the document with ("Join link: ...") after the first revision, and `--qr FILE` saves it as a QR code as `tw broker --qr` does. `--ca-file FILE`: TLS checked against a private certificate authority or the broker's own certificate. `--plain`: no TLS. With none of these, TLS is checked against the bundled Mozilla root certificates, as for a public broker.
+- `--pin PIN`: TLS, trusting exactly the key with this pin. `--join-code CODE`: the same with a join code's short pin, and without `--user`, the code's own login. `--join-link LINK`: the host, the port and the join code in one, from a join link. With `--join-code` or `--join-link`, `tw publish FILE` prints the join link readers follow the document with ("Join link: ...") after the first revision, and `--qr FILE` saves it as a QR code as `tw broker --qr` does. `--ca-file FILE`: TLS checked against a private certificate authority or the broker's own certificate. `--plain`: no TLS. With none of these, TLS is checked against the bundled Mozilla root certificates, as for a public broker.
 - `--user NAME`: the password is asked without echo, or read from the environment variable `TEXTWEAVER_MQTT_PASSWORD` when it is set, for scripts. It is never given on the command line.
 
-The entry is not retained unless `--retain` is given. `tw send` prints "Published: one entry to netlog/checkins on 100.64.0.10:8883." When the broker refuses, it says why, for example: "Not sent: Refused: the broker closed the connection instead of taking the message. This account may not publish to netlog/checkins."
+The entry is not retained unless `--retain` is given. `tw publish --check-in` prints "Published: one entry to netlog/checkins on 100.64.0.10:8883." When the broker refuses, it says why, for example: "Not sent: Refused: the broker closed the connection instead of taking the message. This account may not publish to netlog/checkins."
 
-### Publishing a document: tw share
+### Publishing a document: tw publish
 
-`tw share` publishes a Markdown or text file as a live document, then again each time the file is saved, until Ctrl+C:
+`tw publish FILE` publishes a Markdown or text file as a live document, then again each time the file is saved, until Ctrl+C:
 
 ```bash
-tw share agenda.md --topic docs/agenda --plain --user netcontrol
+tw publish agenda.md --topic docs/agenda --plain --user netcontrol
 ```
 
-Each revision is one retained message on the topic, so a reader who joins late receives the current text at once. `--title` sets the title readers see (the file's name, by default), `--once` publishes once and stops, and `--every` sets the seconds between looks at the file (1). Each revision prints one line, such as "Published: revision 2, 4096 bytes." A save that cannot be published is said in words, and the next save tries again. When sharing stops, readers keep the last revision.
+Each revision is one retained message on the topic, so a reader who joins late receives the current text at once. `--title` sets the title readers see (the file's name, by default), `--once` publishes once and stops, and `--every` sets the seconds between looks at the file (1). Each revision prints one line, such as "Published: revision 2, 4096 bytes." A save that cannot be published is said in words, and the next save tries again. When publishing stops, readers keep the last revision.
+
+`--field` and `--retain` go only with `--check-in`, and `--title`, `--once`, `--every` and `--qr` only with a document. The names used earlier in beta 5 still work, with the same options and output, for scripts written with them: `tw share FILE` is `tw publish FILE`, and `tw send` is `tw publish --check-in`. They are left out of `tw --help`; `tw publish --help` names them.
 
 ### The live document message
 
@@ -148,7 +150,7 @@ A net log is one kind of live document, and its entries stay plain JSON objects,
 
 ### A net log, ready to copy
 
-The folder [`docs/examples/live/`](examples/live/) holds a complete example with placeholder names: `broker.toml` with a logger and a reader account, `netlog.twlive`, a live source file for readers, and `send-checkin.sh`, a sample `tw send` line. The example accounts' passwords are written in the file's comments, so make your own accounts before a real net.
+The folder [`docs/examples/live/`](examples/live/) holds a complete example with placeholder names: `broker.toml` with a logger and a reader account, `netlog.twlive`, a live source file for readers, and `send-checkin.sh`, a sample `tw publish --check-in` line. The example accounts' passwords are written in the file's comments, so make your own accounts before a real net.
 
 ### Testing it with Mosquitto's clients
 
