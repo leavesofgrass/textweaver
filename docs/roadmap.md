@@ -56,17 +56,19 @@ These were planned for earlier betas and arrive in beta 3:
 - **The Braille view,** braille dots drawn in the app for learning and teaching, with the braille grade setting that also decides contracted braille in BRF files ([The Braille view](reading-aids.md#the-braille-view)).
 - **CW (Morse code).** A speech engine, keying Morse code from a key or paddle into a document, Koch-method practice, and `tw cw monitor` and `tw cw ports` ([CW](cw.md)).
 - **Selecting with the mouse** in the textweaver app, in reading and edit mode ([Selecting with the mouse](gui.md#selecting-with-the-mouse)).
-- **Settings organized by task.** Twenty-four short sections that follow the speech engine, with All settings and a search, the same in the terminal reader and the app ([The settings screen](settings.md#the-settings-screen)).
+- **Settings organized by task.** Short sections that follow the speech engine, with All settings and a search, the same in the terminal reader and the app ([The settings screen](settings.md#the-settings-screen)).
 
 ## What beta 5 adds
 
-- **Live documents.** Any MQTT broker and topic opens as a document that grows while you read it: a log with one entry per message, as a list or a table, or the current values of a sensor, one line per field. New entries reach a screen reader and a Braille display without moving your place, and textweaver saves the log as JSON. textweaver only receives ([Live documents](live-documents.md), [Running the broker for a live log](live-broker.md)).
+- **Live documents.** Any MQTT broker and topic opens as a document that grows while you read it: a log with one entry per message, as a list or a table, or the current values of a sensor, one line per field. New entries reach a screen reader and a Braille display without moving your place, and textweaver saves the log as JSON. A live source only receives ([Live documents](live-documents.md)).
+- **Publishing, and textweaver's own broker.** `tw publish` publishes a Markdown or text file as a live document, again on each save, or with `--check-in` one entry. `tw broker` is a small MQTT broker with accounts for readers and loggers, TLS with a pinned key, and a join code for a quick session. The textweaver app runs the same broker (Tools, Live documents, Your broker) and publishes into it, or through a live source, with Publish this document live and Publish a check-in ([Running the broker for a live log](live-broker.md)).
+- **Joining by link or QR code.** A join link, `twjoin://HOST:PORT/CODE?topic=TOPIC`, carries the broker's address, the join code and a shared document's topic. It can be copied and pasted into the live source form, saved or shown as a QR code (`--qr` on `tw broker` and `tw publish`, Show the join QR code in the app), and read back from an image on the clipboard or in a PNG or JPEG file (Join from a QR image, `tw join-qr`). The join code field is masked, with a Show choice on `F3`. Scanning with a webcam is not built ([Known limits](known-limits.md#live-documents)).
 
 ## Shelved
 
-One piece of planned beta 4 work is set aside for later. It has no date. The research and a spike are kept for when the work is taken up again. (Live data from MQTT was shelved too, and is in beta 5; only receiving is built.)
+One piece of planned beta 4 work is set aside for later. It has no date. The research and a spike are kept for when the work is taken up again. (Live data from MQTT and a built-in broker were shelved too, and are in beta 5.)
 
-- **Live captions (CART):** receiving and sending streamed captions for deafblind readers, with a built-in broker, discovery, and pairing.
+- **Live captions (CART):** receiving and sending streamed captions for deafblind readers, with discovery and pairing of devices. The broker it would use is in beta 5.
 
 ## Being built next
 

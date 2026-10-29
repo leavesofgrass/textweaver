@@ -502,7 +502,17 @@ Reading an MQTT broker's messages as a document that grows. See [Live documents]
 - `live.min_interval_seconds`, default `10`, 0 to 3600: in the values view, the fewest seconds between two announcements of one field.
 - `live.quiet_hint_seconds`, default `60`, 0 to 3600: seconds without a message on a topic before a hint in words. 0 never hints. It is also the default time after which a value in the values view reads "no recent value".
 - `live.log_folder`, default `""`: where live logs are saved as JSON. Empty uses the `logs` folder in the data folder; a relative folder is inside the data folder. It stays on this computer.
-- `live.sources`: the sources, each a table `[live.sources.<id>]` with a host, topics, and more, written in `settings.toml`, by the live source form (Set up a live source, Edit a live source), or from a live source file (`.twlive`). They stay on this computer. A source's password is never in the file: it is kept in the system credential store.
+- `live.sources`: the sources, each a table `[live.sources.<id>]` with a host, topics, and more, written in `settings.toml`, by the live source form (Set up a live source, Edit a live source), or from a live source file (`.twlive`). They stay on this computer. A source's password is never in the file: it is kept in the system credential store. A source can check the broker's key by its pin (`tls = "pinned"` with `pin`), which is how a join code is kept; the code itself is kept nowhere.
+
+The broker textweaver runs inside the app, and where the app publishes (Tools, Live documents, Your broker and Publish), has its own keys. All of them stay on this computer and never sync:
+
+- `live.broker.listen`, default `["127.0.0.1"]`: the addresses the broker listens on, each with or without a port. Empty is this computer only.
+- `live.broker.port`, default `0`: the port for addresses given without one. 0 uses 8883 with TLS and 1883 without, 0 to 65535.
+- `live.broker.plain`, default `false`: run the broker without TLS. Only on this computer or over Tailscale.
+- `live.broker.join_code`, default `true`: make a join code each time the broker starts, for readers with no account. The code comes with a key of its own, so readers who pinned the broker's usual key need it off.
+- `live.broker.join_topics`, default `["#"]`: the topic filters a join code may read.
+- `live.broker.share_topic`, default `"textweaver/document"`: the topic Publish this document live publishes on.
+- `live.broker.checkin_topic`, default `"netlog/checkins"`: the topic Publish a check-in publishes on when the live source has no plain topic.
 
 ### Sync
 

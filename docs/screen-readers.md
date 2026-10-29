@@ -275,6 +275,12 @@ In Settings Center (**Insert+6**), Braille group. **Every item here is not yet v
 3. Open Find (**Ctrl+F**). Does the display show the label, then what you type?
 4. Press **Shift+W**, then go to page 12 of a PDF (**Ctrl+G**, `12`, Enter). Do the position and the page come first?
 5. Try the NVDA and JAWS settings above. Which ones work, and which do you keep?
+6. Open a live log ([Live documents](live-documents.md)) and let entries arrive while you read. Does each new entry appear whole on the display, meaning first, and stay long enough to read (NVDA's message timeout, JAWS's flash message time)? Does your place stay where it was? In the terminal reader, is the status line within 40 cells, with "..." where words were left out?
+7. In the live source form, move to the join code field. Does the screen reader say how many characters it holds, rather than the code? Does F3 show the code for you to check, and F3 again hide it?
+
+### Live documents on the display
+
+A live document sends each new or corrected entry to your screen reader as one polite message, with the meaning first, and textweaver's own voice stays off, so you can turn your screen reader's speech off and read the log by Braille alone, for example during a radio net. In the terminal reader, the status line carries the newest entry cut to one 40-cell line. The messages cover the display for as long as your screen reader's message time allows (the NVDA and JAWS settings above), so lengthen it if entries vanish before you finish them; **Say unread entries** (**Alt+Shift+F5**) brings back the newest one. The secret fields (a live source password, the GitHub token, the join code) show one star per character, and the join code field says how many characters it holds; **F3** shows what you typed. None of this has yet been tried on a Mantis Q40 at a real net; the checklist above has the steps. See [Announcements: Braille and speech](live-documents.md#announcements-braille-and-speech).
 
 ### The Braille view and CW
 

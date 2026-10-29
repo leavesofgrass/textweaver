@@ -47,6 +47,7 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 - **A log holds 20,000 entries** and the values view 2,000 fields; more are left out, and textweaver says so. Messages over 256 KiB, and binary messages, are left out.
 - **Not yet checked by ear.** Live announcements on a Braille display, and NVDA's and JAWS's message times with a live log, have been tested by computer but not on a Mantis Q40 at a real net ([Using textweaver with a screen reader](screen-readers.md)).
 - **There is no webcam scanning for join QR codes.** Scan the code with a phone, or save a photo of it and use Join from a QR image.
+- **A join code lasts one broker session.** The session's key is held in memory, so the code stops working when the broker stops, and a new run makes a new code. A QR code, like the code, lets anyone who sees it join until then. An image with a side over 16,384 pixels is refused when read from the clipboard.
 - **A quiet topic and a forbidden topic look the same** to textweaver, since Mosquitto accepts a subscription its access list denies. After `quiet_hint_seconds` it says so once, in words.
 
 ## Obsidian notes and vaults
