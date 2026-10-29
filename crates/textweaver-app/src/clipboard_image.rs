@@ -10,9 +10,10 @@
 //! - **Windows:** the clipboard's `PNG` format (browsers, the Snipping
 //!   Tool) as a file's bytes, else its device-independent bitmap
 //!   (`CF_DIB`: 24 or 32 bits a pixel, uncompressed), as RGBA pixels.
-//! - **macOS and Linux:** none yet. Reading an image there needs the
-//!   `image-data` feature of `arboard`, which brings new crates; until it
-//!   is approved, an image is read from a file.
+//! - **macOS and Linux:** through `arboard`'s `image-data` feature (with
+//!   the `mqtt` feature, which brings live documents): the pasteboard's
+//!   image on macOS (TIFF or PNG), and the `image/png` of the Wayland
+//!   (data-control) or X11 clipboard on Linux, as RGBA pixels.
 //!
 //! Nothing here keeps the image: it is read when asked for, and dropped
 //! once the code in it is read.
@@ -103,6 +104,22 @@ pub fn dib_to_rgba(dib: &[u8]) -> Option<(u32, u32, Vec<u8>)> {
         }
     }
     Some((w, h, out))
+}
+
+/// Pixels read from a clipboard as an image, if they are one: no side
+/// zero or over [`MAX_SIDE`], and exactly four bytes a pixel.
+pub fn checked_rgba(width: u32, height: u32, pixels: Vec<u8>) -> Option<ClipboardImage> {
+    if width == 0 || height == 0 || width > MAX_SIDE || height > MAX_SIDE {
+        return None;
+    }
+    if pixels.len() != width as usize * height as usize * 4 {
+        return None;
+    }
+    Some(ClipboardImage::Rgba {
+        width,
+        height,
+        pixels,
+    })
 }
 
 /// The image on the system clipboard, if there is one this build reads
@@ -201,7 +218,19 @@ mod imp {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), feature = "mqtt"))]
+mod imp {
+    use super::ClipboardImage;
+
+    pub fn read() -> Option<ClipboardImage> {
+        let image = arboard::Clipboard::new().ok()?.get_image().ok()?;
+        let width = u32::try_from(image.width).ok()?;
+        let height = u32::try_from(image.height).ok()?;
+        super::checked_rgba(width, height, image.bytes.into_owned())
+    }
+}
+
+#[cfg(all(not(windows), not(feature = "mqtt")))]
 mod imp {
     use super::ClipboardImage;
 
@@ -269,6 +298,25 @@ mod tests {
             "too wide"
         );
         assert_eq!(dib_to_rgba(&[1, 2, 3]), None);
+    }
+
+    #[test]
+    fn clipboard_pixels_are_checked_before_use() {
+        assert_eq!(
+            checked_rgba(1, 2, vec![0; 8]),
+            Some(ClipboardImage::Rgba {
+                width: 1,
+                height: 2,
+                pixels: vec![0; 8]
+            })
+        );
+        assert_eq!(checked_rgba(1, 2, vec![0; 7]), None, "short");
+        assert_eq!(checked_rgba(0, 2, vec![]), None, "no width");
+        assert_eq!(
+            checked_rgba(MAX_SIDE + 1, 1, vec![0; (MAX_SIDE as usize + 1) * 4]),
+            None,
+            "too wide"
+        );
     }
 
     #[test]

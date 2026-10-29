@@ -104,8 +104,8 @@ pub fn clipboard_is_local(env: impl Fn(&str) -> Option<String>) -> bool {
 }
 
 /// The system clipboard's image, for Join from a QR image
-/// (`textweaver_app::clipboard_image`): read on Windows, none elsewhere
-/// yet. It reads no text.
+/// (`textweaver_app::clipboard_image`): on Windows, macOS and Linux, from
+/// the clipboard of the computer the reader runs on. It reads no text.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SystemImages;
 

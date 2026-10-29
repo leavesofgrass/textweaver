@@ -348,10 +348,10 @@ mathcat = { version = "=0.7.6-rc.3", default-features = false, features = ["incl
 # Wave 4, Agent W4g: authoring extras (ADR-0032). Each is behind a
 # feature of the crate that uses it, and the lean reader links none.
 # The system clipboard where the terminal cannot take OSC 52. Default
-# features off: `image-data` would bring the image crate. Linux adds
-# `wayland-data-control` in textweaver-tui (x11rb and wl-clipboard-rs,
-# both pure Rust).
-arboard = { version = "3.6.1", default-features = false }
+# features off; textweaver-app turns on `image-data` on macOS and Linux
+# (the image crate) for Join from a QR image (beta 5, phase 8). Linux
+# adds `wayland-data-control` (x11rb and wl-clipboard-rs, both pure Rust).
+arboard = { version = "=3.6.1", default-features = false }
 # Code blocks highlighted in the terminal view and in HTML pages (textweaver-render). syntect's defaults build
 # the Oniguruma C library, so default features are off. Only `parsing`
 # (which loads two-face's syntax dumps) and the pure-Rust `regex-fancy`

@@ -27,7 +27,8 @@ impl Clipboard for System {
     }
 
     /// The clipboard's image, for Join from a QR image: on Windows its PNG
-    /// or bitmap; elsewhere none yet (`textweaver_app::clipboard_image`).
+    /// or bitmap, on macOS and Linux through arboard
+    /// (`textweaver_app::clipboard_image`).
     fn read_image(&mut self) -> Option<textweaver_app::ClipboardImage> {
         textweaver_app::clipboard_image::read_system_image()
     }

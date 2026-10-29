@@ -70,7 +70,7 @@ carta = ["textweaver-formats/carta", "textweaver-convert?/carta"]
 # releases. Off, the commands that open, set up, or close a live source
 # are hidden and say in words that live sources are not in this build;
 # a saved live log still opens.
-mqtt = ["dep:textweaver-mqtt", "dep:textweaver-broker", "dep:textweaver-qr", "textweaver-components/credentials"]
+mqtt = ["dep:textweaver-mqtt", "dep:textweaver-broker", "dep:textweaver-qr", "textweaver-components/credentials", "dep:arboard"]
 # Speech engines, passed through to textweaver-engines.
 espeak = ["textweaver-engines/espeak"]
 omnivox = ["textweaver-engines/omnivox"]
@@ -162,6 +162,15 @@ windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalizati
 # read as the textweaver app reads its text: `link!` declarations, with no
 # more features of `windows`.
 windows-core.workspace = true
+
+# The clipboard's image for Join from a QR image on macOS and Linux
+# (crate::clipboard_image), through arboard's `image-data` (the image
+# crate, with TIFF on macOS and PNG on Linux); with `mqtt` only.
+[target.'cfg(not(windows))'.dependencies]
+arboard = { workspace = true, optional = true, features = ["image-data"] }
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+arboard = { workspace = true, optional = true, features = ["image-data", "wayland-data-control"] }
 
 [dev-dependencies]
 tempfile.workspace = true
