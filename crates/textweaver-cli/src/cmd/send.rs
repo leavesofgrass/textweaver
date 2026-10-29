@@ -6,7 +6,9 @@
 //!   the entry is a JSON object read from standard input. Not retained
 //!   unless `--retain`.
 //! - `tw share FILE --topic T` publishes the document as one retained live
-//!   document message, then again each time the file is saved, until
+//!   document message (and, given `--join-code` or `--join-link`, prints
+//!   the join link readers follow it with), then again each time the file
+//!   is saved, until
 //!   Ctrl+C (or once, with `--once`). The message is
 //!   `{"type": "textweaver.document", "rev": N, "title": "...", "format":
 //!   "markdown", "text": "..."}`; `docs/live-broker.md` describes it.
@@ -204,6 +206,7 @@ pub fn share(args: ShareArgs) -> Result<()> {
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
     let config = args.conn.config()?;
+    let link = args.conn.reader_link(&args.topic)?;
     let mut rev = 1;
     let msg = message(&path, rev, &title)?;
     publish(&config, &args.topic, &msg).map_err(|e| Plain(format!("Not shared: {e}")))?;
@@ -212,6 +215,10 @@ pub fn share(args: ShareArgs) -> Result<()> {
         msg.len(),
         args.topic
     );
+    if let Some(link) = link {
+        // On a line of its own, to copy to readers.
+        outln!("Join link: {link}");
+    }
     if args.once {
         return Ok(());
     }

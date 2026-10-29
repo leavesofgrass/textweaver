@@ -325,3 +325,67 @@ fn send_and_share_reach_a_reader() {
     );
     broker.stop();
 }
+
+#[test]
+fn share_through_a_join_link_prints_the_link_for_readers() {
+    let mut accounts = Accounts::default();
+    accounts
+        .add(
+            Account::with_iterations(
+                "netcontrol",
+                Role::Logger,
+                vec!["netlog/#".into()],
+                vec!["netlog/#".into()],
+                "logger-pw",
+                1_000,
+            )
+            .unwrap(),
+            false,
+        )
+        .unwrap();
+    let mut cfg = BrokerConfig::new(home("join-broker-data"));
+    cfg.listen = vec![SocketAddr::from(([127, 0, 0, 1], 0))];
+    cfg.join_code = true;
+    cfg.accounts = accounts;
+    let broker = Broker::start(cfg, |_| {}).unwrap();
+    let addr = broker.local_addrs()[0];
+    let code = broker.join_code().unwrap().grouped();
+    let link = format!("twjoin://{addr}/{code}");
+    let h = home("join-share");
+    let doc = h.join("agenda.md");
+    std::fs::write(&doc, "# Agenda\n").unwrap();
+    let args = [
+        "share",
+        doc.to_str().unwrap(),
+        "--topic",
+        "netlog/agenda",
+        "--once",
+        "--join-link",
+        link.as_str(),
+        "--user",
+        "netcontrol",
+    ];
+    let out = tw(&h, &args, "", Some("logger-pw"));
+    assert!(out.status.success(), "{}", stderr(&out));
+    let text = stdout(&out);
+    let want = format!("Join link: {link}?topic=netlog/agenda\n");
+    assert!(text.contains(&want), "{text}");
+    // A link that is not one says why, meaning first.
+    let out = tw(
+        &h,
+        &[
+            "send",
+            "--topic",
+            "t",
+            "--join-link",
+            "twjoin://h:0/ABCD-EFGH-JKMN-PQRS",
+        ],
+        "{}",
+        None,
+    );
+    assert_eq!(
+        stderr(&out),
+        "Error: Join link error: the port is not a number from 1 to 65535.\n"
+    );
+    broker.stop();
+}
