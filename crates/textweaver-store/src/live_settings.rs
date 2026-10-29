@@ -71,8 +71,8 @@ pub struct LiveSettings {
     /// The sources, by id (`[live.sources.<id>]`). The id is plain:
     /// letters, digits, `-` and `_` ([`live_source_id_ok`]).
     pub sources: BTreeMap<String, LiveSourceSettings>,
-    /// `[live.broker]`: the broker the app starts (Tools, Live sources,
-    /// Start a broker), and the topics it shares and sends on.
+    /// `[live.broker]`: the broker the app starts (Tools, Live documents,
+    /// Sharing, Start a broker), and the topics it shares and sends on.
     pub broker: LiveBrokerSettings,
     /// Unknown keys, preserved.
     #[serde(flatten)]

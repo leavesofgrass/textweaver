@@ -52,7 +52,7 @@ When the computer's firewall asks whether textweaver may accept connections, all
 
 ### Running it from the textweaver app
 
-The same broker runs inside the textweaver app: Tools, Live sources, **Start a broker**. Its settings are the `[live.broker]` section ([Settings for a source](live-documents.md#settings-for-a-source)): the addresses to listen on (this computer only by default), the port, plain or TLS, whether to make a join code (on by default) and what it may read. The accounts are the same `broker.toml`. The app says how the broker runs and the join code, in groups of four; **Show the join code** says it again and shows it one group to a line; the status bar says "Broker on, 2 clients" while it runs; and **Stop the broker**, or quitting, stops it and frees its ports. **Send a check-in** and **Share this document live** publish into it directly, with no network and no login ([Sending: check-ins and sharing](live-documents.md#sending-check-ins-and-sharing)).
+The same broker runs inside the textweaver app: Tools, Live documents, Sharing, **Start a broker**. Its settings are the `[live.broker]` section ([Settings for a source](live-documents.md#settings-for-a-source)): the addresses to listen on (this computer only by default), the port, plain or TLS, whether to make a join code (on by default) and what it may read. The accounts are the same `broker.toml`. The app says how the broker runs and the join code, in groups of four; **Show the join code** says it again and shows it one group to a line; the status bar says "Broker on, 2 clients" while it runs; and **Stop the broker**, or quitting, stops it and frees its ports. **Send a check-in** and **Share this document live** publish into it directly, with no network and no login ([Sending: check-ins and sharing](live-documents.md#sending-check-ins-and-sharing)).
 
 ### Accounts
 
@@ -396,7 +396,7 @@ username = "reader"
 
 Never put a password in the file. textweaver refuses a `password` key, says so to the reader, and asks for the password after the source is saved, keeping it in the reader's system credential store. Send the password some other way, or let each reader have an account of their own.
 
-You do not have to write the file by hand. Set the source up once in your own textweaver, then run **Save live source as file** (Tools, Live sources): it writes the source without its password, ready to send.
+You do not have to write the file by hand. Set the source up once in your own textweaver, then run **Save live source as file** (Tools, Live documents): it writes the source without its password, ready to send.
 
 ## Checks before the net
 

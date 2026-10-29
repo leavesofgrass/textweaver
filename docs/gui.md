@@ -72,7 +72,7 @@ The choice is kept in the settings `gui.header_buttons` and `gui.toolbar_buttons
 
 ### A live document's buttons and status bar
 
-While a live document is open (a live source's log or values, opened with Tools, Live sources, Open live source), its buttons join the toolbar after Edit and before Slower and Faster, or the header when the toolbar is hidden. They are not saved with your button choice, and they go when the live document closes. In the log view, in this order:
+While a live document is open (a live source's log or values, opened with Tools, Live documents, Open live source), its buttons join the toolbar after Edit and before Slower and Faster, or the header when the toolbar is hidden. They are not saved with your button choice, and they go when the live document closes. In the log view, in this order:
 
 - **Pause updates** (Alt+Shift+F1), named **Resume updates** while updates are paused; new entries wait while paused.
 - **Jump to newest** (Alt+Shift+F6).

@@ -1674,18 +1674,22 @@ mod tests {
     #[test]
     fn every_live_command_is_reachable_and_answers_in_words() {
         let mut r = rig(&[("plain", practice(""))]);
-        // Live sources, and its Join code submenu.
-        let menu: Vec<ActionId> = [crate::menu::MenuId::Live, crate::menu::MenuId::JoinCode]
-            .into_iter()
-            .flat_map(|m| r.app.menu_view(m).items)
-            .filter_map(|i| match i.kind {
-                crate::menu::MenuItemKind::Action(a) => Some(a),
-                _ => None,
-            })
-            .collect();
+        // Live documents, and its Reading and Sharing submenus.
+        let menu: Vec<ActionId> = [
+            crate::menu::MenuId::Live,
+            crate::menu::MenuId::LiveReading,
+            crate::menu::MenuId::LiveSharing,
+        ]
+        .into_iter()
+        .flat_map(|m| r.app.menu_view(m).items)
+        .filter_map(|i| match i.kind {
+            crate::menu::MenuItemKind::Action(a) => Some(a),
+            _ => None,
+        })
+        .collect();
         for &a in COMMANDS {
             assert!(r.app.is_available(a), "{a:?} available with mqtt");
-            assert!(menu.contains(&a), "{a:?} in the Live sources menu");
+            assert!(menu.contains(&a), "{a:?} in the Live documents menu");
             let bound = !r.app.keymap().chords_for(a).is_empty();
             assert!(
                 bound || a.is_palette_command(),

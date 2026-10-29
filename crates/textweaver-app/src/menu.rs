@@ -57,7 +57,7 @@ pub const PENDING: &[ActionId] = &[
     ActionId::Dictate,
     ActionId::PauseDictation,
     ActionId::DownloadDictationModel,
-    // Live sources over MQTT (crate::live::wire), with the `mqtt` feature.
+    // Live documents over MQTT (crate::live::wire), with the `mqtt` feature.
     ActionId::OpenLiveSource,
     ActionId::SetUpLiveSource,
     ActionId::EditLiveSource,
@@ -176,11 +176,15 @@ pub enum MenuId {
     Cards,
     /// Tools, Morse code practice.
     CwPractice,
-    /// Tools, Live sources.
+    /// Tools, Live documents: everything about live documents (beta 5,
+    /// phase 8).
     Live,
-    /// Tools, Live sources, Join code: show and copy the broker's join
-    /// code and join link.
-    JoinCode,
+    /// Tools, Live documents, Reading: the open live document's reading
+    /// commands.
+    LiveReading,
+    /// Tools, Live documents, Sharing: the app's broker, sharing this
+    /// document live, and its join code, link and QR code.
+    LiveSharing,
 }
 
 /// One entry of a menu's definition.
@@ -208,7 +212,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 33] = [
+    pub const ALL: [MenuId; 34] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
@@ -241,7 +245,8 @@ impl MenuId {
         MenuId::Cards,
         MenuId::CwPractice,
         MenuId::Live,
-        MenuId::JoinCode,
+        MenuId::LiveReading,
+        MenuId::LiveSharing,
     ];
 
     /// The stable id, used in catalog ids (`menu-export-as`) and JSON-RPC.
@@ -279,7 +284,8 @@ impl MenuId {
             MenuId::Cards => "cards",
             MenuId::CwPractice => "cw-practice",
             MenuId::Live => "live",
-            MenuId::JoinCode => "join-code",
+            MenuId::LiveReading => "live-reading",
+            MenuId::LiveSharing => "live-sharing",
         }
     }
 
@@ -327,9 +333,18 @@ impl MenuId {
                 Do(A::OpenLiveSource),
                 Do(A::SetUpLiveSource),
                 Do(A::OpenJoinLink),
+                Do(A::JoinFromQrImage),
                 Do(A::EditLiveSource),
                 Do(A::CloseLiveSource),
                 Sep,
+                Sub(MenuId::LiveReading),
+                Sub(MenuId::LiveSharing),
+                Sep,
+                Do(A::SaveLiveLog),
+                Do(A::SaveLiveSourceFile),
+                Do(A::ForgetLiveSourcePassword),
+            ],
+            MenuId::LiveReading => &[
                 Do(A::LiveSayUnread),
                 Do(A::LiveJumpNewest),
                 Do(A::LiveSwitchView),
@@ -337,24 +352,19 @@ impl MenuId {
                 Do(A::LiveToggleSpeak),
                 Do(A::LiveToggleFieldShow),
                 Do(A::LiveToggleFieldSpeak),
-                Sep,
-                Do(A::SaveLiveLog),
-                Do(A::SaveLiveSourceFile),
-                Do(A::ForgetLiveSourcePassword),
-                Sep,
+            ],
+            MenuId::LiveSharing => &[
                 Do(A::StartBroker),
                 Do(A::StopBroker),
-                Sub(MenuId::JoinCode),
+                Sep,
                 Do(A::ShareDocumentLive),
                 Do(A::StopSharing),
                 Do(A::SendCheckIn),
-            ],
-            MenuId::JoinCode => &[
+                Sep,
                 Do(A::ShowJoinCode),
                 Do(A::CopyJoinCode),
                 Do(A::CopyJoinLink),
                 Do(A::ShowJoinQr),
-                Do(A::JoinFromQrImage),
             ],
             MenuId::ExportAs => &[
                 Do(A::ExportPdf),
