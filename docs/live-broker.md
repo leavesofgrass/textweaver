@@ -129,9 +129,9 @@ The entry is not retained unless `--retain` is given. `tw publish --check-in` pr
 tw publish agenda.md --topic docs/agenda --plain --user netcontrol
 ```
 
-Each revision is one retained message on the topic, so a reader who joins late receives the current text at once. `--title` sets the title readers see (the file's name, by default), `--once` publishes once and stops, and `--every` sets the seconds between looks at the file (1). Each revision prints one line, such as "Published: revision 2, 4096 bytes." A save that cannot be published is said in words, and the next save tries again. When publishing stops, readers keep the last revision.
+Each revision is one retained message on the topic, so a reader who joins late receives the current text at once. `--title` sets the title readers see (the file's name, by default), `--once` publishes once and stops, and `--every` sets the seconds between looks at the file (1). The first revision prints "Published: revision 1 of agenda, 4096 bytes, on docs/agenda." and then "Watching: each save is published. Press Ctrl+C to stop."; each later revision prints one line, such as "Published: revision 2, 4096 bytes." A save that cannot be published is said in words, and the next save tries again. When publishing stops, readers keep the last revision.
 
-`--field` and `--retain` go only with `--check-in`, and `--title`, `--once`, `--every` and `--qr` only with a document. The names used earlier in beta 5 still work, with the same options and output, for scripts written with them: `tw share FILE` is `tw publish FILE`, and `tw send` is `tw publish --check-in`. They are left out of `tw --help`; `tw publish --help` names them.
+`--field` and `--retain` go only with `--check-in`, and `--title`, `--once`, `--every` and `--qr` only with a document. `tw share` and `tw send` also work, as aliases with the same options and output: `tw share FILE` is `tw publish FILE`, and `tw send` is `tw publish --check-in`. They are left out of `tw --help`; `tw publish --help` names them.
 
 ### The live document message
 

@@ -57,7 +57,7 @@ tw library queue add week4.pdf
 
 An action can have actions of its own: `tw library queue` lists the reading queue, and `tw library queue add FILE`, `remove FILE` and `next` change it and read it; `tw library review` prints the review list ([The library](library.md#the-reading-queue)).
 
-`tw library` alone still lists the library, `tw stats` alone still prints the statistics, and `tw changes FILE` alone still lists the changes. The older option spellings still work for now, and will be removed after beta 1: `tw library --add`, `--remove`, `--search` and `--continue`, `tw stats --clear`, `tw dictate --list`, and `tw changes --accept-all` and `--reject-all`.
+`tw library` alone still lists the library, `tw stats` alone still prints the statistics, and `tw changes FILE` alone still lists the changes. The older option spellings still work, and are left out of `--help`: `tw library --add`, `--remove`, `--search` and `--continue`, `tw stats --clear`, `tw dictate --list`, and `tw changes --accept-all` and `--reject-all`.
 
 ## Output and format
 
@@ -68,7 +68,7 @@ tw speak "Hello" --out hello.wav
 tw cite export --to ris -o references.ris
 ```
 
-`--to` names the format. Older spellings still work for now, and will be removed after beta 1: `--format` (in `tw text` and `tw settings export`), `--export` (in `tw marks`), `--output`, and `--language` (in `tw dictate`). `tw cite format` keeps `--as` for its markup, because it chooses plain text, Markdown or HTML for the same references.
+`--to` names the format. Older spellings still work, and are left out of `--help`: `--format` (in `tw text` and `tw settings export`), `--export` (in `tw marks`), `--output`, and `--language` (in `tw dictate`). `tw cite format` keeps `--as` for its markup, because it chooses plain text, Markdown or HTML for the same references.
 
 ## JSON
 
