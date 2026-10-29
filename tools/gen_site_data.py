@@ -111,6 +111,7 @@ CRATE_ADRS = {
     "cw": [],  # no ADR; beta 4, the design is in the CW guide
     "mqtt": [],  # no ADR; beta 5, the design is in the architecture guide
     "broker": [],  # no ADR; beta 5, the design is in the architecture guide and the beta 4 broker spike
+    "qr": [],  # no ADR; beta 5, the design is in the architecture guide
     "fonts": ["0017", "0022"],
     "lexicon": ["0025"],
     "engines": ["0001", "0012"],
@@ -125,6 +126,7 @@ CRATE_NO_ADR_NOTE = {
     "launcher": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
     "cw": ("CW: reading in Morse code", "../cw.md"),
     "mqtt": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
+    "qr": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
 }
 
 # ---------------------------------------------------------------------------
@@ -142,7 +144,7 @@ LAYERS = [
     ("output", "Output and aids", "Writing other formats, and what changes how text looks.",
      ["render", "convert", "writers", "fonts", "theme", "aids", "summary", "lexicon", "vault", "dictation"]),
     ("state", "State and input", "Settings, saved positions, sync between computers, keys, announcements, and editing.",
-     ["store", "sync", "mqtt", "broker", "keymap", "a11y", "editor"]),
+     ["store", "sync", "mqtt", "broker", "qr", "keymap", "a11y", "editor"]),
     ("speech", "Speech", "The speech service, its backends, and audio export.",
      ["speech", "engines", "enginehost", "host", "eci", "sapi", "apple", "dectalk", "espeak", "piper", "cw", "export"]),
     ("document", "Document", "The document model and what loads, speaks, and cites it.",

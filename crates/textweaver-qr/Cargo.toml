@@ -1,0 +1,25 @@
+[package]
+name = "textweaver-qr"
+description = "QR codes for textweaver's join links: encode a link to a module matrix, a PNG or an SVG, and read one back from an image file or clipboard pixels"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Pure Rust. The link is plain text here: its type and parser live in
+# textweaver-mqtt, and callers check what is read back with that parser.
+[dependencies]
+qrcode.workspace = true
+rqrr.workspace = true
+png.workspace = true
+# PNG and JPEG decoding with size limits, shared with OCR (`GrayImage`).
+# A path, not the workspace entry, so default features (the ocrs engine)
+# stay off: the picture decoders only, as in textweaver-formats.
+textweaver-ocr = { path = "../textweaver-ocr", default-features = false }
+thiserror.workspace = true
+
+[lints]
+workspace = true
