@@ -17,7 +17,8 @@
 //!   ([`JoinCode::password`]): the secret part never leaves the broker
 //!   except by being read aloud or shown.
 //!
-//! Parsing forgives case, spaces, dashes and dots, and reads O as zero and
+//! Parsing forgives case, spaces, line breaks, dashes, dots and commas,
+//! and reads O as zero and
 //! I or L as one, as Crockford's alphabet intends. A wrong character or
 //! length is said in words, meaning first.
 
@@ -146,6 +147,29 @@ impl JoinCode {
         }
     }
 
+    /// Reads a code from pasted text, which may hold more than the code:
+    /// a join link ([`crate::JoinLink`]), whose code is taken; the code
+    /// across line breaks; a label before it, such as `Join code:`;
+    /// quotes around it; or the "Show the join code" list as copied, whose
+    /// first line is the code. When none of those gives a code, the error
+    /// is [`JoinCode::parse`]'s for the whole text.
+    pub fn from_pasted(text: &str) -> Result<JoinCode, String> {
+        if let Some(link) = crate::link::JoinLink::find(text) {
+            return link.map(|l| l.code().clone());
+        }
+        let whole = match JoinCode::parse(unquote(text)) {
+            Ok(code) => return Ok(code),
+            Err(e) => e,
+        };
+        for line in text.lines() {
+            let after_label = line.rsplit(':').next().unwrap_or(line);
+            if let Ok(code) = JoinCode::parse(unquote(after_label)) {
+                return Ok(code);
+            }
+        }
+        Err(whole)
+    }
+
     /// The short pin the code carries, to check the broker's certificate.
     pub fn pin(&self) -> Pin {
         Pin(self.0[..SHORT_PIN_CHARS].to_string())
@@ -180,6 +204,19 @@ impl fmt::Debug for JoinCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("JoinCode((hidden))")
     }
+}
+
+/// `text` without the space, quotes, angle brackets and final period
+/// that copying adds around a code.
+fn unquote(text: &str) -> &str {
+    const QUOTES: &[char] = &[
+        '"', '\'', '<', '>', '\u{2018}', '\u{2019}', '\u{201c}', '\u{201d}',
+    ];
+    text.trim()
+        .trim_matches(QUOTES)
+        .trim()
+        .trim_end_matches('.')
+        .trim()
 }
 
 /// Constant-time equality for secrets and pins.
@@ -217,7 +254,8 @@ fn grouped(chars: &str) -> String {
         .join("-")
 }
 
-/// Uppercase, drop spaces, dashes, dots and underscores, read O as zero
+/// Uppercase, drop spaces, line breaks, dashes, dots, commas and
+/// underscores, read O as zero
 /// and I or L as one. Any other character is an error naming it and its
 /// group of four.
 fn normalize(text: &str, what: &str, kind: &str) -> Result<String, String> {
@@ -226,7 +264,7 @@ fn normalize(text: &str, what: &str, kind: &str) -> Result<String, String> {
     }
     let mut out = String::new();
     for c in text.chars() {
-        if matches!(c, ' ' | '-' | '.' | '_' | '\t') {
+        if matches!(c, ' ' | '-' | '.' | '_' | ',' | '\t' | '\r' | '\n') {
             continue;
         }
         let up = match c.to_ascii_uppercase() {
@@ -365,6 +403,32 @@ mod tests {
         assert_eq!(
             JoinCode::parse(" - ").unwrap_err(),
             "Join code error: no code was given."
+        );
+    }
+
+    #[test]
+    fn pasted_codes_keep_only_the_code() {
+        let want = JoinCode::parse("ABCD-EFGH-JKMN-PQRS").unwrap();
+        for text in [
+            "ABCD-EFGH-JKMN-PQRS",
+            "ABCD\nEFGH\r\nJKMN\nPQRS\n",
+            "Join code: ABCD-EFGH-JKMN-PQRS",
+            "Join code: ABCD, EFGH, JKMN, PQRS.",
+            "\"abcd-efgh-jkmn-pqrs\"",
+            "\u{201c}ABCD EFGH JKMN PQRS\u{201d}",
+            "ABCD-EFGH-JKMN-PQRS\nGroup 1 of 4: ABCD\nGroup 2 of 4: EFGH\nGroup 3 of 4: JKMN\nGroup 4 of 4: PQRS",
+            "twjoin://10.0.0.5:8883/ABCD-EFGH-JKMN-PQRS?topic=a",
+        ] {
+            assert_eq!(JoinCode::from_pasted(text).as_ref(), Ok(&want), "{text:?}");
+        }
+        assert_eq!(
+            JoinCode::from_pasted("ABCD-EFGH-JKUN-PQRS").unwrap_err(),
+            "Join code error: U in group 3 is not used in join codes. Check that character."
+        );
+        assert!(
+            JoinCode::from_pasted("twjoin://h/ABCD")
+                .unwrap_err()
+                .starts_with("Join code error: the code has 4")
         );
     }
 
