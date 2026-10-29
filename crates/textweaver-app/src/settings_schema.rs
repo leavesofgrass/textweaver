@@ -1878,8 +1878,8 @@ pub const INFO: &[Info] = &[
     ),
     text(
         "live.broker.share_topic",
-        "Share topic",
-        "The topic Share this document live publishes on.",
+        "Publish topic",
+        "The topic Publish this document live publishes on.",
     ),
     text(
         "live.broker.checkin_topic",

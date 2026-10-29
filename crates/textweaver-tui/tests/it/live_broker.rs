@@ -1,5 +1,5 @@
 //! The sending side and the document view in the terminal reader (beta
-//! 5, phase 5b): Send a check-in is the prompt line, its label first,
+//! 5, phase 5b): Publish a check-in is the prompt line, its label first,
 //! inside one 40-cell Braille line; joining by code is a choice of the
 //! live source form; the broker's state is on the title line in words; a
 //! shared document keeps its lines, and a new revision leaves the
@@ -128,7 +128,7 @@ fn the_check_in_form_is_the_prompt_line_and_the_broker_is_on_the_title_line() {
         h.tui
             .app()
             .status_text()
-            .contains("Canceled. No check-in sent."),
+            .contains("Canceled. No check-in published."),
         "{}",
         h.tui.app().status_text()
     );
@@ -203,7 +203,7 @@ fn a_shared_document_keeps_its_lines_and_the_readers_row() {
     );
     assert_eq!(t, c + 1, "one line each: {rows:#?}");
     let status = h.tui.app().status_text().to_owned();
-    assert_eq!(status, "Agenda, revision 1, shared live.");
+    assert_eq!(status, "Agenda, revision 1, published live.");
     assert!(braille_cells(&status) <= BRAILLE_CELLS);
     // The reader on Traffic; revision 2 changes the line below it.
     let text = h.tui.app().session().unwrap().doc.text().to_string();

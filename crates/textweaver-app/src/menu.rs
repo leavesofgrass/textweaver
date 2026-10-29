@@ -87,7 +87,7 @@ pub const NOT_IN_MENUS: &[ActionId] = &[ActionId::Menu, ActionId::ContextMenu, A
 /// it only picks the commands that fit where the cursor is. Cut and the
 /// pastes show in edit mode, Open link on a link, the join code's Copy
 /// commands and Show the join QR code while the app's broker has a join
-/// code, and Stop sharing while a document is shared live.
+/// code, and Stop publishing while a document is published live.
 pub const CONTEXT_MENU: &[ActionId] = &[
     ActionId::Cut,
     ActionId::Copy,
@@ -182,9 +182,14 @@ pub enum MenuId {
     /// Tools, Live documents, Reading: the open live document's reading
     /// commands.
     LiveReading,
-    /// Tools, Live documents, Sharing: the app's broker, sharing this
-    /// document live, and its join code, link and QR code.
-    LiveSharing,
+    /// Tools, Live documents, Your broker: the broker the app runs.
+    LiveBroker,
+    /// Tools, Live documents, Your broker, Invite others: the broker's
+    /// join code, link and QR code.
+    LiveInvite,
+    /// Tools, Live documents, Publish: publishing this document live and
+    /// check-ins.
+    LivePublish,
 }
 
 /// One entry of a menu's definition.
@@ -212,7 +217,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 34] = [
+    pub const ALL: [MenuId; 36] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
@@ -246,7 +251,9 @@ impl MenuId {
         MenuId::CwPractice,
         MenuId::Live,
         MenuId::LiveReading,
-        MenuId::LiveSharing,
+        MenuId::LiveBroker,
+        MenuId::LiveInvite,
+        MenuId::LivePublish,
     ];
 
     /// The stable id, used in catalog ids (`menu-export-as`) and JSON-RPC.
@@ -285,7 +292,9 @@ impl MenuId {
             MenuId::CwPractice => "cw-practice",
             MenuId::Live => "live",
             MenuId::LiveReading => "live-reading",
-            MenuId::LiveSharing => "live-sharing",
+            MenuId::LiveBroker => "live-broker",
+            MenuId::LiveInvite => "live-invite",
+            MenuId::LivePublish => "live-publish",
         }
     }
 
@@ -338,7 +347,8 @@ impl MenuId {
                 Do(A::CloseLiveSource),
                 Sep,
                 Sub(MenuId::LiveReading),
-                Sub(MenuId::LiveSharing),
+                Sub(MenuId::LiveBroker),
+                Sub(MenuId::LivePublish),
                 Sep,
                 Do(A::SaveLiveLog),
                 Do(A::SaveLiveSourceFile),
@@ -353,18 +363,21 @@ impl MenuId {
                 Do(A::LiveToggleFieldShow),
                 Do(A::LiveToggleFieldSpeak),
             ],
-            MenuId::LiveSharing => &[
+            MenuId::LiveBroker => &[
                 Do(A::StartBroker),
                 Do(A::StopBroker),
-                Sep,
-                Do(A::ShareDocumentLive),
-                Do(A::StopSharing),
-                Do(A::SendCheckIn),
-                Sep,
+                Sub(MenuId::LiveInvite),
+            ],
+            MenuId::LiveInvite => &[
                 Do(A::ShowJoinCode),
                 Do(A::CopyJoinCode),
                 Do(A::CopyJoinLink),
                 Do(A::ShowJoinQr),
+            ],
+            MenuId::LivePublish => &[
+                Do(A::ShareDocumentLive),
+                Do(A::StopSharing),
+                Do(A::SendCheckIn),
             ],
             MenuId::ExportAs => &[
                 Do(A::ExportPdf),

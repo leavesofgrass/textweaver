@@ -693,7 +693,7 @@ actions! {
         "Copy the running broker's join code to the clipboard, in four groups of four",
         gui [], term [], shared [];
     CopyJoinLink = "copy_join_link", File,
-        "Copy the running broker's join link to the clipboard: one line with its address, port, join code and shared topic",
+        "Copy the running broker's join link to the clipboard: one line with its address, port, join code and published topic",
         gui [], term [], shared [];
     OpenJoinLink = "open_join_link", File,
         "Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it",
@@ -705,13 +705,13 @@ actions! {
         "Join a broker from a QR code in an image: the image on the clipboard, else an image file, then the filled live source form",
         gui [], term [], shared [];
     ShareDocumentLive = "share_document_live", File,
-        "Share the open document live: readers following its topic see it, and each save, in place",
+        "Publish the open document live: readers following its topic see it, and each save, in place",
         gui [], term [], shared [];
     StopSharing = "stop_sharing", File,
-        "Stop sharing the document live; readers keep the last revision",
+        "Stop publishing the document live; readers keep the last revision",
         gui [], term [], shared [];
     SendCheckIn = "send_check_in", File,
-        "Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry",
+        "Publish a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry",
         gui [], term [], shared [];
     Quit = "quit", File, "Quit, saving the reading position",
         gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared [];

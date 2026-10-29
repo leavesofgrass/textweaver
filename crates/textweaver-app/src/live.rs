@@ -35,7 +35,7 @@
 //!   source files (`.twlive`) that fill it ([`App::live_setup`]).
 //! - [`document`]: the document view, for live document messages: the
 //!   shared document replaced in place, keeping the reader's place.
-//! - `checkin`: the Send a check-in form.
+//! - `checkin`: the Publish a check-in form.
 //! - `broker` (with the `mqtt` feature): textweaver's own broker inside
 //!   the app, sharing a document live, and publishing check-ins.
 //! - `mqtt` (with the `mqtt` feature): the MQTT client adapted to

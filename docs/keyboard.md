@@ -355,13 +355,13 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Stop the broker the app runs: every reader is disconnected and every port freed | palette | palette | palette | `stop_broker` |
 | Say the running broker's join code in groups of four and show it in a list, or its certificate pin when it has no code | palette | palette | palette | `show_join_code` |
 | Copy the running broker's join code to the clipboard, in four groups of four | palette | palette | palette | `copy_join_code` |
-| Copy the running broker's join link to the clipboard: one line with its address, port, join code and shared topic | palette | palette | palette | `copy_join_link` |
+| Copy the running broker's join link to the clipboard: one line with its address, port, join code and published topic | palette | palette | palette | `copy_join_link` |
 | Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it | palette | palette | palette | `open_join_link` |
 | Show the running broker's join link as a QR code to scan: a warning first, then the code, the link as text, and Copy and Save | palette | palette | palette | `show_join_qr` |
 | Join a broker from a QR code in an image: the image on the clipboard, else an image file, then the filled live source form | palette | palette | palette | `join_from_qr_image` |
-| Share the open document live: readers following its topic see it, and each save, in place | palette | palette | palette | `share_document_live` |
-| Stop sharing the document live; readers keep the last revision | palette | palette | palette | `stop_sharing` |
-| Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | palette | palette | palette | `send_check_in` |
+| Publish the open document live: readers following its topic see it, and each save, in place | palette | palette | palette | `share_document_live` |
+| Stop publishing the document live; readers keep the last revision | palette | palette | palette | `stop_sharing` |
+| Publish a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | palette | palette | palette | `send_check_in` |
 | Quit, saving the reading position | `Ctrl+Q` | `Ctrl+Q` | `Cmd+Q` | `quit` |
 
 ## Editing
@@ -683,13 +683,13 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Stop the broker the app runs: every reader is disconnected and every port freed | `stop_broker` |
 | Say the running broker's join code in groups of four and show it in a list, or its certificate pin when it has no code | `show_join_code` |
 | Copy the running broker's join code to the clipboard, in four groups of four | `copy_join_code` |
-| Copy the running broker's join link to the clipboard: one line with its address, port, join code and shared topic | `copy_join_link` |
+| Copy the running broker's join link to the clipboard: one line with its address, port, join code and published topic | `copy_join_link` |
 | Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it | `open_join_link` |
 | Show the running broker's join link as a QR code to scan: a warning first, then the code, the link as text, and Copy and Save | `show_join_qr` |
 | Join a broker from a QR code in an image: the image on the clipboard, else an image file, then the filled live source form | `join_from_qr_image` |
-| Share the open document live: readers following its topic see it, and each save, in place | `share_document_live` |
-| Stop sharing the document live; readers keep the last revision | `stop_sharing` |
-| Send a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | `send_check_in` |
+| Publish the open document live: readers following its topic see it, and each save, in place | `share_document_live` |
+| Stop publishing the document live; readers keep the last revision | `stop_sharing` |
+| Publish a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | `send_check_in` |
 | Insert a wiki link to a note in the vault, or to a heading or block in it | `insert_wiki_link` |
 | Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | `cycle_task_status` |
 | Insert a callout of a type you choose; selected lines become its text | `insert_callout` |

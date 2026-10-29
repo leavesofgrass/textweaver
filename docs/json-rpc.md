@@ -360,7 +360,7 @@ A prompt's `purpose` is one of these 38 purposes. The names are fixed: within pr
 - `save_live_source_file`: the file to save a live source to, as a `.twlive` file without its password; `.twlive` is added when the name has no extension.
 - `save_join_qr`: the file to save the join QR code to: a PNG, or an SVG when the name ends in `.svg`; `.png` is added when the name has no extension, and empty cancels. Anyone who sees the code can join.
 - `join_qr_image`: a PNG or JPEG image with a join QR code in it; the join link read from it fills the live source form, and empty cancels.
-- `live_check_in`: one field of the Send a check-in form: the live source's mapped fields, or callsign, name and notes. The `label` names the field and its place ("Callsign, 1 of 3"). `prompt_key` with `tab` and `shift_tab` moves between the fields, keeping each value; `answer` publishes the entry, and an entry with every field empty opens the prompt again.
+- `live_check_in`: one field of the Publish a check-in form: the live source's mapped fields, or callsign, name and notes. The `label` names the field and its place ("Callsign, 1 of 3"). `prompt_key` with `tab` and `shift_tab` moves between the fields, keeping each value; `answer` publishes the entry, and an entry with every field empty opens the prompt again.
 
 The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before responding, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
 

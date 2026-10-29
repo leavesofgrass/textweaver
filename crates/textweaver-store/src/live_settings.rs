@@ -72,7 +72,7 @@ pub struct LiveSettings {
     /// letters, digits, `-` and `_` ([`live_source_id_ok`]).
     pub sources: BTreeMap<String, LiveSourceSettings>,
     /// `[live.broker]`: the broker the app starts (Tools, Live documents,
-    /// Sharing, Start a broker), and the topics it shares and sends on.
+    /// Your broker, Start your broker), and the topics it shares and sends on.
     pub broker: LiveBrokerSettings,
     /// Unknown keys, preserved.
     #[serde(flatten)]
@@ -123,9 +123,9 @@ pub struct LiveBrokerSettings {
     pub join_code: bool,
     /// What a join code may read (`#`: everything but `$` topics).
     pub join_topics: Vec<String>,
-    /// The topic "Share this document live" publishes on.
+    /// The topic "Publish this document live" publishes on.
     pub share_topic: String,
-    /// The topic "Send a check-in" publishes on when the open live source
+    /// The topic "Publish a check-in" publishes on when the open live source
     /// subscribes to no plain topic (one without `+` or `#`).
     pub checkin_topic: String,
     /// Unknown keys, preserved.

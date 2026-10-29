@@ -1,4 +1,4 @@
-//! Send a check-in (beta 5, phase 5b): one entry, typed in a form and
+//! Publish a check-in (beta 5, phase 5b): one entry, typed in a form and
 //! published as a JSON object, so every reader's log view adds it.
 //!
 //! The form is the shared prompt model, as the edit details form
@@ -37,7 +37,7 @@ use crate::command::{Effect, PromptPurpose};
 /// Where a check-in or a shared document is published.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum SendTarget {
-    /// The broker the app runs (Start a broker): no network, no login.
+    /// The broker the app runs (Start your broker): no network, no login.
     Broker,
     /// The broker of live source `id`, signed in as that source.
     Source(String),
@@ -370,7 +370,7 @@ mod tests {
         let texts =
             || -> Vec<String> { said.lock().texts().iter().map(|s| s.to_string()).collect() };
         assert!(
-            texts().iter().any(|t| t == "Check-in to Club net, on club/in. Tab moves between fields, Enter sends, Escape cancels."),
+            texts().iter().any(|t| t == "Check-in to Club net, on club/in. Tab moves between fields, Enter publishes, Escape cancels."),
             "the first plain topic: {:?}",
             texts()
         );
@@ -401,7 +401,7 @@ mod tests {
         assert_eq!(label(&app), "op, 1 of 2");
         app.dispatch(Command::PromptKey(PromptKey::Escape));
         assert!(app.prompt_model().is_none());
-        assert_eq!(texts().last().unwrap(), "Canceled. No check-in sent.");
+        assert_eq!(texts().last().unwrap(), "Canceled. No check-in published.");
         // No source: the net log's fields and the check-in topic.
         assert_eq!(
             app.live_checkin_fields(None)

@@ -26,8 +26,8 @@
 //!   source.
 //! - **Forget live source password** removes the open source's password
 //!   (or a chosen source's) from the system credential store.
-//! - **Start a broker**, **Stop the broker**, **Show the join code**,
-//!   **Share this document live**, **Stop sharing** and **Send a
+//! - **Start your broker**, **Stop your broker**, **Show the join code**,
+//!   **Publish this document live**, **Stop publishing** and **Publish a
 //!   check-in**: the sending side, with textweaver's own broker inside the
 //!   app (crate::live::broker, crate::live::checkin).
 //!
@@ -187,10 +187,10 @@ pub(crate) enum LiveList {
     /// row on. Enter on a Copy row copies; on any other row, it closes.
     #[cfg(feature = "mqtt")]
     Code(Option<usize>),
-    /// Share this document live through which source: the ids, by row.
+    /// Publish this document live through which source: the ids, by row.
     #[cfg(feature = "mqtt")]
     ShareThrough(Vec<String>),
-    /// Send a check-in through which source: the ids, by row.
+    /// Publish a check-in through which source: the ids, by row.
     #[cfg(feature = "mqtt")]
     CheckInThrough(Vec<String>),
     /// Show the join QR code (crate::live::qr): its rows and the code.
@@ -785,7 +785,7 @@ mod tests {
             for (id, src) in list {
                 s.live.sources.insert(id, src);
             }
-            // Start a broker: loopback, a port the system picks.
+            // Start your broker: loopback, a port the system picks.
             s.live.broker.listen = vec!["127.0.0.1:0".into()];
         });
         let wire = Wire::default();
@@ -1674,11 +1674,13 @@ mod tests {
     #[test]
     fn every_live_command_is_reachable_and_answers_in_words() {
         let mut r = rig(&[("plain", practice(""))]);
-        // Live documents, and its Reading and Sharing submenus.
+        // Live documents, and its submenus.
         let menu: Vec<ActionId> = [
             crate::menu::MenuId::Live,
             crate::menu::MenuId::LiveReading,
-            crate::menu::MenuId::LiveSharing,
+            crate::menu::MenuId::LiveBroker,
+            crate::menu::MenuId::LiveInvite,
+            crate::menu::MenuId::LivePublish,
         ]
         .into_iter()
         .flat_map(|m| r.app.menu_view(m).items)

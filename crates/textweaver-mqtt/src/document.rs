@@ -1,6 +1,6 @@
 //! The live document message: one retained message on a share topic that
 //! carries a whole document, published by `tw share` and the app's
-//! "Share this document live", and shown by a reader's document view.
+//! "Publish this document live", and shown by a reader's document view.
 //!
 //! ```json
 //! {"type": "textweaver.document", "rev": 3, "title": "Agenda",
