@@ -96,6 +96,29 @@ pub fn detect(os: Os, env: impl Fn(&str) -> Option<String>) -> Route {
     }
 }
 
+/// True when this computer's clipboard is the listener's: not over SSH
+/// or inside tmux (`env` returns a variable's value).
+pub fn clipboard_is_local(env: impl Fn(&str) -> Option<String>) -> bool {
+    let set = |name: &str| env(name).is_some_and(|v| !v.is_empty());
+    !(set("SSH_CONNECTION") || set("SSH_TTY") || set("TMUX"))
+}
+
+/// The system clipboard's image, for Join from a QR image
+/// (`textweaver_app::clipboard_image`): read on Windows, none elsewhere
+/// yet. It reads no text.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SystemImages;
+
+impl textweaver_app::Clipboard for SystemImages {
+    fn read(&mut self) -> textweaver_app::ClipboardContents {
+        textweaver_app::ClipboardContents::default()
+    }
+
+    fn read_image(&mut self) -> Option<textweaver_app::ClipboardImage> {
+        textweaver_app::clipboard_image::read_system_image()
+    }
+}
+
 /// The route for this process's terminal.
 pub fn detect_here() -> Route {
     detect(Os::current(), |name| std::env::var(name).ok())

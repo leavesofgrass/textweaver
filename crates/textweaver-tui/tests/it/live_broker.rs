@@ -221,3 +221,44 @@ fn a_shared_document_keeps_its_lines_and_the_readers_row() {
     assert!(h.rows().iter().any(|r| r.trim() == "Close at nine"));
     assert_eq!(h.tui.app().status_text(), "Agenda updated, revision 2.");
 }
+
+/// Show the join QR code in the terminal reader: the warning first, the
+/// link, Copy, Save, Draw and Close; no image row. The code is drawn in
+/// block characters only when Draw is chosen, after a one-line warning,
+/// and the status line never holds the link.
+#[test]
+fn the_join_qr_code_is_drawn_only_when_asked() {
+    let mut h = launch();
+    h.act(ActionId::StartBroker);
+    h.act(ActionId::ShowJoinQr);
+    let items = h.tui.app().list_model().expect("the view").items.clone();
+    assert_eq!(items[0], "Anyone who sees this code can join.");
+    assert!(items[1].starts_with("twjoin://127.0.0.1:"), "{items:?}");
+    assert_eq!(
+        items[2..],
+        [
+            "Copy the join link",
+            "Save the QR code",
+            "Draw the QR code in characters",
+            "Close",
+        ]
+    );
+    let screen = h.rows().join("\n");
+    assert!(screen.contains("Anyone who sees this code can join."));
+    assert!(!screen.contains('\u{2588}'), "not drawn yet");
+    let status = h.tui.app().status_text();
+    assert!(!status.contains("twjoin"), "{status}");
+    for _ in 0..4 {
+        h.key(KeyCode::Down);
+    }
+    h.key(KeyCode::Enter);
+    let screen = h.rows().join("\n");
+    assert!(
+        screen.contains("Block characters follow, for a camera;"),
+        "{screen}"
+    );
+    assert!(screen.contains('\u{2588}'), "{screen}");
+    h.key(KeyCode::Esc);
+    assert!(h.tui.app().list_model().is_none());
+    h.act(ActionId::StopBroker);
+}
