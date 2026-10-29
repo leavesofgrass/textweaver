@@ -360,6 +360,19 @@ If you hear "Speech stopped working", textweaver restarts speech once on its own
 
 The Braille view is in the textweaver app, and in the terminal reader only in self-voicing mode; with a screen reader running in the terminal there is no row, by design. Contracted braille needs liblouis; without it the view shows uncontracted braille, and its caption says so. See [The Braille view](reading-aids.md#the-braille-view).
 
+### A live source or the broker does not work
+
+Live documents have their own messages, and each one says what to do. [Connection messages](live-documents.md#connection-messages) lists them. The common cases:
+
+1. **"Not authorized".** The user name or password is wrong. Run Forget live source password in Tools, Live documents, open the source, and type the password again.
+2. **"Unreachable".** Check the host and the port, that the broker runs, and that Tailscale or your network is up. The reader keeps trying.
+3. **A TLS failure.** A private certificate needs the encryption CA file, or Pinned key with the broker's pin. A join code needs the whole 16 characters; a character that cannot be in a code is named with its group.
+4. **"Broker not started".** Start your broker (or `tw broker`) says why. "The port is in use by another program" means another broker or a second textweaver has the port: stop it, or set `live.broker.port`. With no accounts and no join code, nobody could sign in; add an account with `tw broker account add`, or turn the join code on.
+5. **Readers cannot reach the broker.** By default it listens on this computer only. Set `live.broker.listen` (or `tw broker --listen`) to the Tailscale or network address, and allow textweaver when the firewall asks. On Windows, canceling that question blocks the program on every network without saying so; change the rule in Windows Defender Firewall.
+6. **Readers who pinned the broker's key cannot connect.** A join code gives the session a key of its own. Turn `live.broker.join_code` off, or give those readers the new code.
+7. **Join from a QR image finds nothing.** The clipboard must hold the image itself, not a file name; otherwise choose the image file. A blurred or partly hidden code is said in words; try a sharper or larger image. Over SSH the terminal reader reads the clipboard of the computer it runs on, so choose a file.
+8. **Nothing seems to arrive.** A quiet topic and a topic the account may not read look the same to a reader. After `quiet_hint_seconds` textweaver says so once; check the topic and the account's access.
+
 ## Report a bug
 
 A good report allows someone else to reproduce the problem. Include:
