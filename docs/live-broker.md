@@ -119,7 +119,7 @@ How to reach the broker, for a check-in and a document alike:
 - `--pin PIN`: TLS, trusting exactly the key with this pin. `--join-code CODE`: the same with a join code's short pin, and without `--user`, the code's own login. `--join-link LINK`: the host, the port and the join code in one, from a join link. With `--join-code` or `--join-link`, `tw publish FILE` prints the join link readers follow the document with ("Join link: ...") after the first revision, and `--qr FILE` saves it as a QR code as `tw broker --qr` does. `--ca-file FILE`: TLS checked against a private certificate authority or the broker's own certificate. `--plain`: no TLS. With none of these, TLS is checked against the bundled Mozilla root certificates, as for a public broker.
 - `--user NAME`: the password is asked without echo, or read from the environment variable `TEXTWEAVER_MQTT_PASSWORD` when it is set, for scripts. It is never given on the command line.
 
-The entry is not retained unless `--retain` is given. `tw publish --check-in` prints "Published: one entry to netlog/checkins on 100.64.0.10:8883." When the broker refuses, it says why, for example: "Not sent: Refused: the broker closed the connection instead of taking the message. This account may not publish to netlog/checkins."
+The entry is not retained unless `--retain` is given. `tw publish --check-in` prints "Published: one entry to netlog/checkins on 100.64.0.10:8883." When the broker refuses, it says why, for example: "Not published: Refused: the broker closed the connection instead of taking the message. This account may not publish to netlog/checkins."
 
 ### Publishing a document: tw publish
 

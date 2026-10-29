@@ -317,7 +317,7 @@ fn publish_and_its_older_names_reach_a_reader() {
     let out = tw(&h, &reader, "{}", Some("reader-pw"));
     assert_eq!(out.status.code(), Some(1));
     assert!(
-        stderr(&out).starts_with("Error: Not sent: Refused: the broker closed the connection"),
+        stderr(&out).starts_with("Error: Not published: Refused: the broker closed the connection"),
         "{}",
         stderr(&out)
     );

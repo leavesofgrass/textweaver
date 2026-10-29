@@ -169,7 +169,7 @@ pub fn send(args: SendArgs) -> Result<()> {
     };
     let config = args.conn.config()?;
     publish_once(&config, &args.topic, payload.as_bytes(), args.retain)
-        .map_err(|e| Plain(format!("Not sent: {e}")))?;
+        .map_err(|e| Plain(format!("Not published: {e}")))?;
     outln!(
         "Published: one entry to {} on {}{}.",
         args.topic,
