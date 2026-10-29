@@ -67,6 +67,9 @@ pub const PENDING: &[ActionId] = &[
     ActionId::StartBroker,
     ActionId::StopBroker,
     ActionId::ShowJoinCode,
+    ActionId::CopyJoinCode,
+    ActionId::CopyJoinLink,
+    ActionId::OpenJoinLink,
     ActionId::ShareDocumentLive,
     ActionId::StopSharing,
     ActionId::SendCheckIn,
@@ -80,7 +83,8 @@ pub const NOT_IN_MENUS: &[ActionId] = &[ActionId::Menu, ActionId::ContextMenu, A
 /// The context menu's commands, in order (beta 1, B1-cm): each is in one
 /// menu of the bar as well, so the context menu repeats no definition;
 /// it only picks the commands that fit where the cursor is. Cut and the
-/// pastes show in edit mode, and Open link on a link.
+/// pastes show in edit mode, Open link on a link, and the join code's
+/// Copy commands while the app's broker has a join code.
 pub const CONTEXT_MENU: &[ActionId] = &[
     ActionId::Cut,
     ActionId::Copy,
@@ -92,6 +96,8 @@ pub const CONTEXT_MENU: &[ActionId] = &[
     ActionId::DefineWord,
     ActionId::ReadFromCursor,
     ActionId::FollowLink,
+    ActionId::CopyJoinLink,
+    ActionId::CopyJoinCode,
 ];
 
 /// How many recent commands are kept.
@@ -310,6 +316,7 @@ impl MenuId {
             MenuId::Live => &[
                 Do(A::OpenLiveSource),
                 Do(A::SetUpLiveSource),
+                Do(A::OpenJoinLink),
                 Do(A::EditLiveSource),
                 Do(A::CloseLiveSource),
                 Sep,
@@ -328,6 +335,8 @@ impl MenuId {
                 Do(A::StartBroker),
                 Do(A::StopBroker),
                 Do(A::ShowJoinCode),
+                Do(A::CopyJoinCode),
+                Do(A::CopyJoinLink),
                 Do(A::ShareDocumentLive),
                 Do(A::StopSharing),
                 Do(A::SendCheckIn),
@@ -1321,6 +1330,7 @@ impl App {
             .filter(|&a| match a {
                 A::Cut | A::Paste | A::PastePlainText => editing,
                 A::FollowLink => on_link,
+                A::CopyJoinLink | A::CopyJoinCode => self.live_has_join_code(),
                 _ => true,
             })
             .map(|a| self.action_item(a))

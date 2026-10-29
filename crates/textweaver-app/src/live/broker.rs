@@ -11,8 +11,15 @@
 //! - **Stop the broker** stops it: every connection ends and every port
 //!   is free before the command answers. Quitting stops it too.
 //! - **Show the join code** says the code in groups of four and shows it
-//!   in a list, one group to a line; with no join code, the certificate
-//!   pin, which readers pin instead.
+//!   in a list, one group to a line, then Copy the join code and Copy the
+//!   join link as the list's last rows; with no join code, the
+//!   certificate pin, which readers pin instead.
+//! - **Copy the join code** and **Copy the join link** put them on the
+//!   clipboard, as Copy does, and say so. The join link
+//!   ([`textweaver_mqtt::JoinLink`]) carries the broker's address, port
+//!   and code, and the shared document's topic while one is shared into
+//!   the broker. Both hold the secret: neither is said, logged, saved or
+//!   shown in the status line.
 //! - **Share this document live** publishes the open document as a live
 //!   document message (crate::live::document), retained, on
 //!   `[live.broker] share_topic`, then again each time it is saved, until
@@ -31,7 +38,7 @@ use std::sync::{Arc, Mutex};
 
 use textweaver_broker::{ACCOUNTS_FILE, Accounts, Broker, BrokerConfig, BrokerEvent, Network};
 use textweaver_lexicon::args;
-use textweaver_mqtt::{document_message, format_for_name, publish_once};
+use textweaver_mqtt::{JoinLink, document_message, format_for_name, publish_once};
 
 use super::checkin::SendTarget;
 use super::wire::{LiveList, Sent};
@@ -133,6 +140,80 @@ impl App {
     pub fn live_broker_join_code(&self) -> Option<String> {
         let b = self.live_wire.broker.as_ref()?;
         b.broker.join_code().map(|c| c.grouped())
+    }
+
+    /// The app's broker's join link: the address readers reach (the
+    /// first one that is not loopback, else the first), its port, the join
+    /// code, and the share topic while a document is shared into the
+    /// broker. `None` without a join code.
+    pub fn live_join_link(&self) -> Option<JoinLink> {
+        let b = self.live_wire.broker.as_ref()?;
+        let code = b.broker.join_code()?.clone();
+        let addrs = b.broker.local_addrs();
+        let addr = addrs
+            .iter()
+            .find(|a| !a.ip().is_loopback())
+            .or_else(|| addrs.first())?;
+        let topic = self
+            .live_wire
+            .share
+            .as_ref()
+            .filter(|s| s.target == SendTarget::Broker)
+            .map(|s| s.topic.as_str());
+        JoinLink::new(&JoinLink::host_for(addr.ip()), addr.port(), code, topic).ok()
+    }
+
+    /// True while the app's broker has a join code to copy.
+    pub(crate) fn live_has_join_code(&self) -> bool {
+        self.live_wire
+            .broker
+            .as_ref()
+            .is_some_and(|b| b.broker.join_code().is_some())
+    }
+
+    /// Copy the join code: the code, in groups of four, to the clipboard.
+    pub fn live_copy_join_code(&mut self) -> Vec<Effect> {
+        match self.live_broker_join_code() {
+            Some(code) => {
+                self.live_copy_secret(code, "live-join-code-copied");
+                vec![Effect::Redraw]
+            }
+            None => self.live_say_no_join_code(),
+        }
+    }
+
+    /// Copy the join link: the link, on one line, to the clipboard.
+    pub fn live_copy_join_link(&mut self) -> Vec<Effect> {
+        match self.live_join_link() {
+            Some(link) => {
+                self.live_copy_secret(link.to_string(), "live-join-link-copied");
+                vec![Effect::Redraw]
+            }
+            None => self.live_say_no_join_code(),
+        }
+    }
+
+    /// Puts a secret on the clipboard as Copy does (the frontend takes it
+    /// with [`App::take_clipboard`]) and says `said_id`, never the secret.
+    fn live_copy_secret(&mut self, secret: String, said_id: &str) {
+        self.authoring.copied = Some(secret.clone());
+        self.clipboard = Some(secret);
+        let m = self.msg(said_id);
+        self.tell(&m);
+    }
+
+    /// Why there is no join code to copy, in words.
+    fn live_say_no_join_code(&mut self) -> Vec<Effect> {
+        let id = if self.live_wire.broker.is_none() {
+            "live-broker-not-running"
+        } else if self.live_broker_pin().is_some() {
+            "live-broker-no-join-code"
+        } else {
+            "live-broker-no-join-code-plain"
+        };
+        let m = self.msg(id);
+        self.tell(&m);
+        vec![Effect::Redraw]
     }
 
     /// The app's broker's certificate pin, in groups of four, with TLS.
@@ -286,7 +367,8 @@ impl App {
     }
 
     /// Show the join code: said in groups of four, and shown in a list,
-    /// one group to a line; without a join code, the certificate pin.
+    /// one group to a line, then the two Copy rows; without a join code,
+    /// the certificate pin.
     pub fn live_show_join_code(&mut self) -> Vec<Effect> {
         if self.live_wire.broker.is_none() {
             let m = self.msg("live-broker-not-running");
@@ -312,7 +394,8 @@ impl App {
         let groups: Vec<&str> = grouped.split('-').collect();
         let total = groups.len();
         let mut items = Vec::new();
-        if !first.is_empty() {
+        let has_code = !first.is_empty();
+        if has_code {
             items.push(first);
         }
         items.extend(groups.iter().enumerate().map(|(i, g)| {
@@ -321,7 +404,13 @@ impl App {
                 &args!["n" => i + 1, "total" => total, "group" => *g],
             )
         }));
-        self.list = Some(ListKind::Live(LiveList::Code));
+        // The Copy rows, as buttons: Enter on one copies.
+        let copy_rows = has_code.then_some(items.len());
+        if has_code {
+            items.push(self.msg("name-copy-join-code"));
+            items.push(self.msg("name-copy-join-link"));
+        }
+        self.list = Some(ListKind::Live(LiveList::Code(copy_rows)));
         vec![Effect::ShowList { title, items }]
     }
 
@@ -694,7 +783,7 @@ mod tests {
 
     use super::*;
     use crate::AppConfig;
-    use crate::command::Command;
+    use crate::command::{Command, PromptPurpose};
     use crate::list_model::{ListKey, PromptKey};
     use crate::live::form::JOIN_USER;
     use textweaver_keymap::ActionId;
@@ -873,7 +962,7 @@ mod tests {
         assert_eq!(list.items[0], code);
         let groups: Vec<&str> = code.split('-').collect();
         assert_eq!(list.items[1], format!("Group 1 of 4: {}", groups[0]));
-        assert_eq!(list.items.len(), 5);
+        assert_eq!(list.items.len(), 7, "the code, four groups, two Copy rows");
         s.app.dispatch(Command::ListKey(ListKey::Escape));
         // Starting again says it runs, and the code again.
         s.act(ActionId::StartBroker);
@@ -1034,6 +1123,200 @@ mod tests {
         );
         let _ = LiveSourceSettings::default();
         assert_eq!(s.count("Broker on"), 0);
+    }
+
+    #[test]
+    fn the_join_code_and_link_copy_from_the_menu_the_list_and_the_context_menu() {
+        let mut s = Side::new();
+        s.act(ActionId::CopyJoinLink);
+        assert!(s.any("No broker is running."), "{:?}", s.texts());
+        assert_eq!(s.app.take_clipboard(), None);
+        s.act(ActionId::StartBroker);
+        let addr = s.app.live_broker_addrs()[0];
+        let code = s.app.live_broker_join_code().unwrap();
+        let heard = s.texts().len();
+        s.act(ActionId::CopyJoinCode);
+        assert_eq!(s.app.take_clipboard().as_deref(), Some(code.as_str()));
+        s.act(ActionId::CopyJoinLink);
+        let link = s.app.take_clipboard().unwrap();
+        assert_eq!(link, format!("twjoin://{addr}/{code}"));
+        let said = s.texts()[heard..].to_vec();
+        assert_eq!(said, ["Join code copied.", "Join link copied."]);
+        // Sharing into the broker puts the topic in the link.
+        let path = s.file("agenda.md", "# Agenda\n");
+        s.app.dispatch(Command::Open(path));
+        s.act(ActionId::ShareDocumentLive);
+        s.act(ActionId::CopyJoinLink);
+        assert_eq!(
+            s.app.take_clipboard().unwrap(),
+            format!("twjoin://{addr}/{code}?topic=textweaver/document")
+        );
+        // The list's last two rows are the Copy buttons.
+        s.act(ActionId::ShowJoinCode);
+        let items = s.app.list_model().unwrap().items.clone();
+        assert_eq!(items.len(), 7);
+        assert_eq!(items[5], "Copy the join code");
+        assert_eq!(items[6], "Copy the join link");
+        for _ in 0..6 {
+            s.app.dispatch(Command::ListKey(ListKey::Down));
+        }
+        s.app.dispatch(Command::ListKey(ListKey::Enter));
+        assert!(s.app.take_clipboard().unwrap().starts_with("twjoin://"));
+        assert!(s.app.list_model().is_none(), "the list closes");
+        // The context menu offers both while there is a code.
+        let context: Vec<ActionId> = s
+            .app
+            .context_menu()
+            .iter()
+            .filter_map(|i| match i.kind {
+                crate::menu::MenuItemKind::Action(a) => Some(a),
+                _ => None,
+            })
+            .collect();
+        assert!(context.contains(&ActionId::CopyJoinLink), "{context:?}");
+        assert!(context.contains(&ActionId::CopyJoinCode), "{context:?}");
+        // Neither the code nor the link is ever said, or in the status.
+        for t in s.texts() {
+            assert!(!t.contains("twjoin"), "the link was said: {t}");
+        }
+        assert!(
+            !s.app.title_parts(None).iter().any(|p| p.contains(&code)),
+            "{:?}",
+            s.app.title_parts(None)
+        );
+        s.act(ActionId::StopBroker);
+        assert!(!s.app.context_menu().iter().any(|i| matches!(
+            i.kind,
+            crate::menu::MenuItemKind::Action(ActionId::CopyJoinLink)
+        )));
+        s.app.shutdown();
+    }
+
+    #[test]
+    fn a_pasted_join_link_fills_the_form_and_enter_joins() {
+        let mut s = Side::new();
+        s.act(ActionId::StartBroker);
+        let path = s.file("agenda.md", "# Agenda\n\n- Traffic\n");
+        s.app.dispatch(Command::Open(path));
+        s.act(ActionId::ShareDocumentLive);
+        s.act(ActionId::CopyJoinLink);
+        let link = s.app.take_clipboard().unwrap();
+        let port = s.app.live_broker_addrs()[0].port();
+
+        let mut r = Side::new();
+        r.act(ActionId::SetUpLiveSource);
+        let heard = r.texts().len();
+        // Pasted into the name, the first field.
+        r.key(PromptKey::Paste(format!("Join link: {link}\n")));
+        let new = r.texts()[heard..].to_vec();
+        assert!(
+            new[0].starts_with("Filled from the join link: host, port, code and topic."),
+            "{new:?}"
+        );
+        for t in r.texts() {
+            assert!(!t.contains("twjoin"), "the link was echoed: {t}");
+        }
+        let model = r.app.prompt_model().unwrap();
+        assert!(model.label.starts_with("Name, 1 of 7"), "{}", model.label);
+        assert_eq!(model.text(), "127.0.0.1", "the name is the host");
+        // Enter saves and connects, with no question first.
+        r.key(PromptKey::Enter);
+        assert!(r.any("Password kept for 127.0.0.1"), "{:?}", r.texts());
+        let src = r
+            .app
+            .settings()
+            .live
+            .sources
+            .values()
+            .next()
+            .unwrap()
+            .clone();
+        assert_eq!(src.port, Some(port).filter(|p| *p != 8883));
+        assert_eq!(src.topics, ["textweaver/document"]);
+        assert_eq!(src.username, JOIN_USER);
+        let toml = r.app.settings().to_minimal_toml().unwrap();
+        assert!(!toml.contains("twjoin"), "the link is kept nowhere: {toml}");
+        assert!(
+            r.app
+                .prompt_history(PromptPurpose::LiveSetup)
+                .iter()
+                .all(|a| !a.contains("twjoin")),
+            "no link in the history"
+        );
+        until(&mut [&mut s, &mut r], "the shared document", |v| {
+            v[1].app.live_shows_document()
+        });
+        r.app.shutdown();
+        s.app.shutdown();
+    }
+
+    #[test]
+    fn the_join_code_field_takes_the_code_out_of_what_is_pasted() {
+        let mut r = Side::new();
+        r.act(ActionId::SetUpLiveSource);
+        r.key(PromptKey::Tab);
+        r.key(PromptKey::Tab);
+        for _ in 0..4 {
+            r.key(PromptKey::Down);
+        }
+        r.key(PromptKey::Tab);
+        assert!(r.app.prompt_model().unwrap().is_masked());
+        let heard = r.texts().len();
+        // The Show the join code list, as copied: line breaks and labels.
+        r.key(PromptKey::Paste(
+            "ABCD-EFGH-JKMN-PQRS\nGroup 1 of 4: ABCD\nGroup 2 of 4: EFGH\n".into(),
+        ));
+        assert_eq!(r.app.prompt_model().unwrap().text(), "ABCD-EFGH-JKMN-PQRS");
+        let new = r.texts()[heard..].to_vec();
+        assert_eq!(new[0], "Join code pasted.", "{new:?}");
+        assert!(
+            new.iter().all(|t| !t.contains("ABCD")),
+            "never said: {new:?}"
+        );
+        // A link that is not one is refused in words, and not kept.
+        r.key(PromptKey::Paste(
+            "twjoin://host:0/ABCD-EFGH-JKMN-PQRS".into(),
+        ));
+        assert!(
+            r.any("Not a join link: the port is not a number from 1 to 65535."),
+            "{:?}",
+            r.texts()
+        );
+        assert_eq!(r.app.prompt_model().unwrap().text(), "ABCD-EFGH-JKMN-PQRS");
+        // A GUI field sends its whole text: the same.
+        r.key(PromptKey::SetText(String::new()));
+        r.key(PromptKey::SetText("Join code: abcd efgh jkmn pqrs.".into()));
+        assert_eq!(r.app.prompt_model().unwrap().text(), "ABCD-EFGH-JKMN-PQRS");
+    }
+
+    #[test]
+    fn open_a_join_link_fills_the_form_from_the_clipboard() {
+        let mut r = Side::new();
+        let clip = crate::clipboard::FakeClipboard::new();
+        r.app.set_clipboard(Box::new(clip.clone()));
+        r.act(ActionId::OpenJoinLink);
+        assert!(
+            r.any("Join from a link. Paste the join link"),
+            "{:?}",
+            r.texts()
+        );
+        r.key(PromptKey::Escape);
+        clip.set(crate::clipboard::ClipboardContents::text(
+            "twjoin://10.0.0.5:8884/ABCD-EFGH-JKMN-PQRS",
+        ));
+        r.act(ActionId::OpenJoinLink);
+        assert!(
+            r.any("Join from the link on the clipboard."),
+            "{:?}",
+            r.texts()
+        );
+        assert!(
+            r.any("Filled from the join link: host, port and code. Type the topic."),
+            "{:?}",
+            r.texts()
+        );
+        let model = r.app.prompt_model().unwrap();
+        assert!(model.label.starts_with("Topic, 6 of 7"), "{}", model.label);
     }
 
     #[test]

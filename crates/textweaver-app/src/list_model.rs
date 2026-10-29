@@ -845,15 +845,34 @@ impl App {
             }
             PromptKey::Char(_) => {}
             PromptKey::Paste(text) => {
+                let before = mb.text();
                 for c in text.chars().filter(|c| !c.is_control()) {
                     mb.insert(c);
                 }
                 mb.candidate = None;
+                // A join link or join code pasted into the live source
+                // form fills it, and is never echoed.
+                if mb.purpose == PromptPurpose::LiveSetup {
+                    let whole = mb.text();
+                    if let Some(effects) = self.live_form_pasted(&before, &whole, &text) {
+                        return effects;
+                    }
+                }
                 echo = Some(text);
             }
             PromptKey::SetText(text) => {
+                let before = mb.text();
                 mb.set_text(&text);
                 mb.candidate = None;
+                // A GUI field sends its whole text: more than one new
+                // character at once is a paste.
+                let pasted = text.chars().count() > before.chars().count() + 1;
+                if pasted
+                    && mb.purpose == PromptPurpose::LiveSetup
+                    && let Some(effects) = self.live_form_pasted(&before, &text, &text)
+                {
+                    return effects;
+                }
             }
             PromptKey::KillToStart => echo = Some(mb.kill_to_start()),
             PromptKey::KillToEnd => echo = Some(mb.kill_to_end()),

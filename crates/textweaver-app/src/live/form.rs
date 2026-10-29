@@ -30,6 +30,20 @@
 //! masked, never echoed or recalled, its value said as a count of
 //! characters, until the show key shows it.
 //!
+//! **Join links** (crate::live::broker's Copy the join link,
+//! `textweaver_mqtt::JoinLink`): pasting a link into any field fills the
+//! host, the port, the encryption (Join code), the code and the topic,
+//! and the name with the host when it is empty, and says what it filled;
+//! the field the link was pasted into keeps what it held, unless the link
+//! fills it. The focus goes to the topic when the link names none.
+//! Pasting into the join code field takes the code out of whatever came
+//! with it: line breaks, a "Join code:" label, quotes, the "Show the join
+//! code" list, or a link. A form filled from a link connects on Enter,
+//! with no Open it now question. **Open a join link** opens the form
+//! filled from the link on the clipboard, or empty for one to be pasted.
+//! A link is never echoed, kept in the prompt history, or saved: only
+//! its host, port, short pin and topic are, as for a typed join code.
+//!
 //! **Set up a live source** opens the form empty; **Edit a live source**
 //! (or F2 in the Open live source list) opens it filled in, and keeps the
 //! keys the form does not show (field mapping, `id_field`). Opening a
@@ -234,6 +248,8 @@ pub(crate) struct LiveForm {
     /// The field being edited.
     focus: FormField,
     origin: FormOrigin,
+    /// Filled from a join link: Enter saves and connects at once.
+    from_link: bool,
 }
 
 impl LiveForm {
@@ -329,6 +345,7 @@ impl App {
             values,
             focus: FormField::Name,
             origin,
+            from_link: false,
         });
         self.tell(intro);
         if let Some(extra) = extra {
@@ -688,7 +705,7 @@ impl App {
         }
         #[cfg(feature = "mqtt")]
         {
-            let code = textweaver_mqtt::JoinCode::parse(typed)
+            let code = textweaver_mqtt::JoinCode::from_pasted(typed)
                 .map_err(|_| self.msg("live-form-join-bad"))?;
             let password =
                 textweaver_components::credentials::Password::new(code.password().expose());
@@ -774,6 +791,10 @@ impl App {
         if let Some(password) = join_password {
             // Joined by code: the derived password, never the code.
             self.keep_live_password(&id, password);
+            if form.from_link {
+                // A pasted link means "join": no question first.
+                return self.open_configured_live_source(&id);
+            }
             return self.live_offer_open(&id);
         }
         if signs_in && (user_changed || self.live_password(&id).is_none()) {
@@ -833,6 +854,135 @@ impl App {
         let title = self.msg_args("live-setup-offer-title", &args!["name" => name.as_str()]);
         self.list = Some(ListKind::Live(LiveList::SetupOffer(id.to_owned())));
         vec![Effect::ShowList { title, items }]
+    }
+
+    // ----- Join links ---------------------------------------------------
+
+    /// Text pasted into the form's focused field, which held `before` and
+    /// holds `whole` now (`pasted` is what came in, line breaks and all):
+    /// a join link fills the form, and the join code field keeps only the
+    /// code. `None` when the paste is ordinary text, typed on as usual.
+    pub(crate) fn live_form_pasted(
+        &mut self,
+        before: &str,
+        whole: &str,
+        pasted: &str,
+    ) -> Option<Vec<Effect>> {
+        #[cfg(feature = "mqtt")]
+        {
+            use textweaver_mqtt::{JoinCode, JoinLink};
+            let focus = self.live_wire.form.as_ref()?.focus;
+            let source = [pasted, whole].into_iter().find(|t| JoinLink::is_in(t));
+            if let Some(found) = source.and_then(JoinLink::find) {
+                return Some(match found {
+                    Ok(link) => self.live_form_fill(&link, before),
+                    Err(reason) => {
+                        // The link is not kept in the field, and not said.
+                        if let Some(form) = self.live_wire.form.as_mut() {
+                            form.set(focus, before.to_owned());
+                        }
+                        // "Not a join link: the port is ...", not "Not a
+                        // join link: Join link error: the port is ...".
+                        let reason = ["Join link error: ", "Join code error: "]
+                            .iter()
+                            .find_map(|p| reason.strip_prefix(p))
+                            .unwrap_or(&reason)
+                            .to_owned();
+                        let m = self.msg_args("live-join-link-bad", &args!["reason" => reason]);
+                        self.error(&m);
+                        self.live_form_prompt(false)
+                    }
+                });
+            }
+            if focus != FormField::JoinCode {
+                return None;
+            }
+            let code = JoinCode::from_pasted(pasted)
+                .or_else(|_| JoinCode::from_pasted(whole))
+                .ok()?;
+            if let Some(form) = self.live_wire.form.as_mut() {
+                form.set(FormField::JoinCode, code.grouped());
+            }
+            let m = self.msg("live-join-code-pasted");
+            self.tell(&m);
+            Some(self.live_form_prompt(false))
+        }
+        #[cfg(not(feature = "mqtt"))]
+        {
+            let _ = (before, whole, pasted);
+            None
+        }
+    }
+
+    /// Fills the open form from `link`: host, port, Join code, the code,
+    /// the topic it names, and the name (the host) when empty. The
+    /// focused field gets back `before` unless the link fills it.
+    #[cfg(feature = "mqtt")]
+    fn live_form_fill(&mut self, link: &textweaver_mqtt::JoinLink, before: &str) -> Vec<Effect> {
+        let join_word = self.tls_word(Protect::Join);
+        let Some(mut form) = self.live_wire.form.take() else {
+            return vec![Effect::Redraw];
+        };
+        let focus = form.focus;
+        form.set(focus, before.to_owned());
+        form.set(FormField::Tls, join_word);
+        form.set(FormField::Host, link.host().to_owned());
+        form.set(FormField::Port, link.port().to_string());
+        form.set(FormField::JoinCode, link.code().grouped());
+        form.set(FormField::Username, String::new());
+        if let Some(topic) = link.topic() {
+            form.set(FormField::Topic, topic.to_owned());
+        }
+        if form.value(FormField::Name).trim().is_empty() {
+            form.set(FormField::Name, link.host().to_owned());
+        }
+        form.from_link = true;
+        let fields = self.live_form_fields(&form);
+        form.focus = if form.value(FormField::Topic).trim().is_empty() {
+            FormField::Topic
+        } else if fields.contains(&focus) {
+            focus
+        } else {
+            FormField::JoinCode
+        };
+        let said = if link.topic().is_some() {
+            "live-join-link-filled"
+        } else {
+            "live-join-link-filled-no-topic"
+        };
+        self.live_wire.form = Some(form);
+        let m = self.msg(said);
+        self.tell(&m);
+        self.live_form_prompt(false)
+    }
+
+    /// Open a join link: the form, filled from the join link on the
+    /// clipboard (the system's, or the text last copied in textweaver);
+    /// with none there, empty, to paste one into.
+    pub fn live_open_join_link(&mut self) -> Vec<Effect> {
+        let clip = self
+            .system_clipboard
+            .as_mut()
+            .and_then(|c| c.read().text)
+            .filter(|t| !t.trim().is_empty())
+            .or_else(|| self.authoring.copied.clone())
+            .unwrap_or_default();
+        #[cfg(feature = "mqtt")]
+        if let Some(Ok(link)) = textweaver_mqtt::JoinLink::find(&clip) {
+            let intro = self.msg("live-form-intro-link-clipboard");
+            let _ =
+                self.open_live_form(LiveSourceSettings::default(), FormOrigin::New, &intro, None);
+            return self.live_form_fill(&link, "");
+        }
+        let _ = clip;
+        let intro = self.msg("live-form-intro-link");
+        let mut effects =
+            self.open_live_form(LiveSourceSettings::default(), FormOrigin::New, &intro, None);
+        if let Some(form) = self.live_wire.form.as_mut() {
+            form.from_link = true;
+        }
+        effects.push(Effect::Redraw);
+        effects
     }
 
     // ----- Live source files --------------------------------------------
