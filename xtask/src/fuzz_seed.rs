@@ -141,6 +141,8 @@ const TARGETS: &[(&str, &[Seeds])] = &[
     ("twlive", &[seeds("fixtures/b5/twlive", &["twlive"], false)]),
     // Beta 5, phase 5a: what clients send to textweaver's own broker.
     ("broker", &[seeds("fixtures/b5/broker", &["bin"], false)]),
+    // Beta 5, phase 7b: join links' QR codes, as small PNG files.
+    ("qr", &[seeds("fixtures/b5/qr", &["png"], false)]),
 ];
 
 /// The repository root.

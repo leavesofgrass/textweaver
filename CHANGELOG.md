@@ -13,6 +13,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 ### QR codes for join links
 
 - New crate `textweaver-qr`, the groundwork for showing and scanning a join link as a QR code: it encodes a link as a QR code and writes it as a PNG or SVG file, the SVG with an accessible name, and reads codes back from PNG and JPEG files and from clipboard pixels, dark on light or light on dark, at any rotation. Both libraries are pure Rust (qrcode and rqrr). Errors are said in words ("no QR code was found in the image"), and none of them, nor any log, carries the link, which holds the join code. The commands and the app's views come later in beta 5.
+- A new fuzz target, `qr`, for what the QR reader is given, in the nightly run.
 
 ### textweaver's own broker and the sending side
 
