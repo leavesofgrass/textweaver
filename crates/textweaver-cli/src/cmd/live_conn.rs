@@ -1,4 +1,4 @@
-//! What `tw send` and `tw share` share: the options that say how to reach
+//! What `tw publish` and its older names share: the options that say how to reach
 //! a broker, and the password prompt, which `tw broker account add` uses
 //! too. Passwords are never taken on the command line: they are asked
 //! without echo, read from `TEXTWEAVER_MQTT_PASSWORD`, or derived from a

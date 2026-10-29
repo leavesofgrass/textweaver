@@ -16,7 +16,7 @@
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
 //! `library`, `vault`, `dictate`, `marks`, `notes`, `lint`, `migrate-star`, `cite`,
-//! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, `components`, `update`, and, with the `mqtt` feature, `broker` and `send` (`tw send` and `tw share`, with `live_conn` for their connection options). Each module's docs name the ADR and crate it
+//! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, `components`, `update`, and, with the `mqtt` feature, `broker`, `publish` (`tw publish`, with the older names `tw send` and `tw share` as hidden aliases, and `live_conn` for their connection options) and `join_qr`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
 use std::ffi::{OsStr, OsString};
@@ -127,12 +127,17 @@ enum Cmd {
     /// Run textweaver's own MQTT broker for live documents and net logs, or manage its accounts.
     #[cfg(feature = "mqtt")]
     Broker(cmd::broker::Args),
-    /// Publish one entry, a JSON object, to a topic on a broker.
+    /// Publish a document live to a broker, again on each save, or with --check-in one check-in.
     #[cfg(feature = "mqtt")]
-    Send(cmd::send::SendArgs),
-    /// Publish a document live to a broker, then again on each save.
+    Publish(cmd::publish::PublishArgs),
+    /// The older name of tw publish --check-in: publish one entry, a JSON object.
     #[cfg(feature = "mqtt")]
-    Share(cmd::send::ShareArgs),
+    #[command(hide = true)]
+    Send(cmd::publish::SendArgs),
+    /// The older name of tw publish FILE: publish a document live.
+    #[cfg(feature = "mqtt")]
+    #[command(hide = true)]
+    Share(cmd::publish::ShareArgs),
     /// Read the join link from a QR code in an image (PNG or JPEG) and print it.
     #[cfg(feature = "mqtt")]
     JoinQr(cmd::join_qr::Args),
@@ -216,9 +221,11 @@ fn run(cli: Cli) -> Result<()> {
         #[cfg(feature = "mqtt")]
         Cmd::Broker(a) => cmd::broker::run(a),
         #[cfg(feature = "mqtt")]
-        Cmd::Send(a) => cmd::send::send(a),
+        Cmd::Publish(a) => cmd::publish::run(a),
         #[cfg(feature = "mqtt")]
-        Cmd::Share(a) => cmd::send::share(a),
+        Cmd::Send(a) => cmd::publish::send(a),
+        #[cfg(feature = "mqtt")]
+        Cmd::Share(a) => cmd::publish::share(a),
         #[cfg(feature = "mqtt")]
         Cmd::JoinQr(a) => cmd::join_qr::run(a),
         Cmd::Update(a) => cmd::update::run(a),
@@ -290,5 +297,109 @@ mod tests {
         for not in ["book.md", "--help", "", "Convert", "help"] {
             assert!(!super::is_command(OsStr::new(not)), "{not}");
         }
+    }
+
+    /// `tw publish FILE` publishes a document live; `tw publish
+    /// --check-in` one entry; the options of one never go with the other.
+    #[cfg(feature = "mqtt")]
+    #[test]
+    fn publish_takes_a_document_or_a_check_in() {
+        let cli =
+            Cli::try_parse_from(["tw", "publish", "agenda.md", "--topic", "docs/agenda"]).unwrap();
+        let Some(Cmd::Publish(a)) = cli.command else {
+            panic!("not publish");
+        };
+        assert_eq!(a.file.as_deref(), Some(std::path::Path::new("agenda.md")));
+        assert!(!a.check_in);
+        let cli = Cli::try_parse_from([
+            "tw",
+            "publish",
+            "--check-in",
+            "--topic",
+            "netlog/checkins",
+            "--field",
+            "callsign=N0CALL",
+            "--retain",
+        ])
+        .unwrap();
+        let Some(Cmd::Publish(a)) = cli.command else {
+            panic!("not publish");
+        };
+        assert!(a.check_in && a.retain && a.file.is_none());
+        assert_eq!(a.field, ["callsign=N0CALL"]);
+        for bad in [
+            &["tw", "publish", "--topic", "t"][..],
+            &["tw", "publish", "a.md", "--check-in", "--topic", "t"],
+            &["tw", "publish", "a.md", "--topic", "t", "--field", "a=1"],
+            &["tw", "publish", "a.md", "--topic", "t", "--retain"],
+            &["tw", "publish", "--check-in", "--topic", "t", "--once"],
+            &[
+                "tw",
+                "publish",
+                "--check-in",
+                "--topic",
+                "t",
+                "--title",
+                "A",
+            ],
+            &[
+                "tw",
+                "publish",
+                "--check-in",
+                "--topic",
+                "t",
+                "--qr",
+                "a.png",
+            ],
+            &[
+                "tw",
+                "publish",
+                "--check-in",
+                "--topic",
+                "t",
+                "--every",
+                "2",
+            ],
+        ] {
+            assert!(Cli::try_parse_from(bad).is_err(), "{bad:?}");
+        }
+    }
+
+    /// The older names keep their arguments, stay out of the command list,
+    /// and are named in `tw publish --help`.
+    #[cfg(feature = "mqtt")]
+    #[test]
+    fn share_and_send_are_hidden_aliases_named_in_the_publish_help() {
+        use clap::CommandFactory as _;
+        use std::ffi::OsStr;
+        let cli =
+            Cli::try_parse_from(["tw", "share", "agenda.md", "--topic", "t", "--once"]).unwrap();
+        assert!(matches!(cli.command, Some(Cmd::Share(_))));
+        let cli = Cli::try_parse_from(["tw", "send", "--topic", "t", "--field", "a=1"]).unwrap();
+        assert!(matches!(cli.command, Some(Cmd::Send(_))));
+        for name in ["publish", "share", "send"] {
+            assert!(super::is_command(OsStr::new(name)), "{name}");
+        }
+        let help = Cli::command().render_help().to_string();
+        let listed: Vec<&str> = help
+            .lines()
+            .filter_map(|l| l.strip_prefix("  "))
+            .filter_map(|l| l.split_whitespace().next())
+            .collect();
+        assert!(listed.contains(&"publish"), "{help}");
+        assert!(
+            !listed.contains(&"share") && !listed.contains(&"send"),
+            "{help}"
+        );
+        let err = Cli::command()
+            .try_get_matches_from(["tw", "publish", "--help"])
+            .unwrap_err();
+        let publish = err.render().to_string();
+        assert!(publish.contains("Usage: tw publish"), "{publish}");
+        assert!(publish.contains("--check-in"), "{publish}");
+        assert!(
+            publish.contains("Also: tw share and tw send, the older names"),
+            "{publish}"
+        );
     }
 }

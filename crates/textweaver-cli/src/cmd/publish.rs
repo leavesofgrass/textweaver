@@ -1,11 +1,13 @@
-//! `tw send` and `tw share`: the sending side of live documents, through
-//! textweaver_mqtt's small publisher (QoS 1, acknowledged).
+//! `tw publish`: the sending side of live documents, through
+//! textweaver_mqtt's small publisher (QoS 1, acknowledged). The older
+//! names stay as hidden aliases with their own arguments: `tw share FILE`
+//! is `tw publish FILE`, and `tw send` is `tw publish --check-in`.
 //!
-//! - `tw send --topic T --field name=value ...` publishes one entry, a
-//!   JSON object with the fields in the order given; with no `--field`,
-//!   the entry is a JSON object read from standard input. Not retained
-//!   unless `--retain`.
-//! - `tw share FILE --topic T` publishes the document as one retained live
+//! - `tw publish --check-in --topic T --field name=value ...` publishes
+//!   one entry, a JSON object with the fields in the order given; with no
+//!   `--field`, the entry is a JSON object read from standard input. Not
+//!   retained unless `--retain`.
+//! - `tw publish FILE --topic T` publishes the document as one retained live
 //!   document message (and, given `--join-code` or `--join-link`, prints
 //!   the join link readers follow it with, and with `--qr FILE` saves its
 //!   QR code), then again each time the file
@@ -30,7 +32,82 @@ use crate::cmd::{Plain, outln};
 /// The largest message: the receiver's own cap.
 const MAX_MESSAGE: usize = 256 * 1024;
 
-/// Arguments for `tw send`.
+/// The older names, named at the end of `tw publish --help`.
+const ALSO: &str = "Also: tw share and tw send, the older names, with the same options. tw share FILE is tw publish FILE, and tw send is tw publish --check-in.";
+
+/// Arguments for `tw publish`: a document live, or with `--check-in`
+/// one entry.
+#[derive(clap::Args, Debug)]
+#[command(after_help = ALSO)]
+pub struct PublishArgs {
+    /// The document to publish live: Markdown or plain text. Leave it out
+    /// with --check-in.
+    #[arg(required_unless_present = "check_in", conflicts_with = "check_in")]
+    pub file: Option<PathBuf>,
+    /// Publish one check-in instead of a document: an entry, a JSON
+    /// object, from --field or from standard input.
+    #[arg(long)]
+    pub check_in: bool,
+    /// The topic to publish to, such as docs/agenda or netlog/checkins
+    /// (no + or #).
+    #[arg(long, value_name = "TOPIC")]
+    pub topic: String,
+    /// With --check-in, a field of the entry, as name=value, such as
+    /// callsign=N0CALL. Repeat for more; they are sent in this order.
+    /// With none, a JSON object is read from standard input.
+    #[arg(long, value_name = "NAME=VALUE", conflicts_with = "file")]
+    pub field: Vec<String>,
+    /// With --check-in, ask the broker to keep the entry for readers who
+    /// connect later. A document is always kept.
+    #[arg(long, conflicts_with = "file")]
+    pub retain: bool,
+    /// The title readers see. Default: the file's name without its
+    /// extension.
+    #[arg(long, value_name = "TEXT", conflicts_with = "check_in")]
+    pub title: Option<String>,
+    /// Publish once and stop, instead of again on each save.
+    #[arg(long, conflicts_with = "check_in")]
+    pub once: bool,
+    /// How often to look for a save, in seconds.
+    #[arg(
+        long,
+        value_name = "SECONDS",
+        default_value_t = 1,
+        conflicts_with = "check_in"
+    )]
+    pub every: u64,
+    /// Save the join link's QR code to this file: a PNG, or an SVG when
+    /// the name ends in .svg. Needs --join-code or --join-link. Anyone who
+    /// sees the code can join.
+    #[arg(long, value_name = "FILE", conflicts_with = "check_in")]
+    pub qr: Option<PathBuf>,
+    /// How to reach the broker.
+    #[command(flatten)]
+    pub conn: Conn,
+}
+
+/// Runs `tw publish`: one check-in, or a document live.
+pub fn run(args: PublishArgs) -> Result<()> {
+    match args.file {
+        None => send(SendArgs {
+            topic: args.topic,
+            field: args.field,
+            retain: args.retain,
+            conn: args.conn,
+        }),
+        Some(file) => share(ShareArgs {
+            file,
+            topic: args.topic,
+            title: args.title,
+            once: args.once,
+            every: args.every,
+            qr: args.qr,
+            conn: args.conn,
+        }),
+    }
+}
+
+/// Arguments for `tw send`, the older name of `tw publish --check-in`.
 #[derive(clap::Args, Debug)]
 pub struct SendArgs {
     /// The topic to publish to, such as netlog/checkins (no + or #).
@@ -49,10 +126,10 @@ pub struct SendArgs {
     pub conn: Conn,
 }
 
-/// Arguments for `tw share`.
+/// Arguments for `tw share`, the older name of `tw publish FILE`.
 #[derive(clap::Args, Debug)]
 pub struct ShareArgs {
-    /// The document to share: Markdown or plain text.
+    /// The document to publish live: Markdown or plain text.
     pub file: PathBuf,
     /// The topic to publish to, such as docs/agenda (no + or #).
     #[arg(long, value_name = "TOPIC")]
@@ -77,7 +154,7 @@ pub struct ShareArgs {
     pub conn: Conn,
 }
 
-/// Runs `tw send`.
+/// Publishes one entry: `tw publish --check-in`, or `tw send`.
 pub fn send(args: SendArgs) -> Result<()> {
     let payload = if args.field.is_empty() {
         if std::io::stdin().is_terminal() {
@@ -199,7 +276,7 @@ fn publish(config: &MqttConfig, topic: &str, msg: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Runs `tw share`.
+/// Publishes a document live: `tw publish FILE`, or `tw share FILE`.
 pub fn share(args: ShareArgs) -> Result<()> {
     let path = args.file.clone();
     let title = args.title.clone().unwrap_or_else(|| {

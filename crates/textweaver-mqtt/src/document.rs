@@ -1,5 +1,5 @@
 //! The live document message: one retained message on a share topic that
-//! carries a whole document, published by `tw share` and the app's
+//! carries a whole document, published by `tw publish` and the app's
 //! "Publish this document live", and shown by a reader's document view.
 //!
 //! ```json

@@ -25,8 +25,8 @@ default = ["opus", "carta", "cw-midi", "mqtt"]
 # through its WinRT backend, which also sees Bluetooth LE MIDI devices.
 # On in releases.
 cw-midi = ["textweaver-app/cw-midi"]
-# Live sources over MQTT in the terminal reader, and `tw broker`, `tw send`
-# and `tw share` (beta 5); on in releases.
+# Live sources over MQTT in the terminal reader, and `tw broker` and
+# `tw publish` (beta 5); on in releases.
 mqtt = [
     "textweaver-app/mqtt",
     "textweaver-tui/mqtt",
@@ -83,18 +83,18 @@ anyhow.workspace = true
 ratatui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-# Beta 5, phase 5a: `tw broker`, `tw send` and `tw share` (the `mqtt`
-# feature). ctrlc stops the broker and the share loop cleanly.
+# Beta 5, phase 5a: `tw broker` and `tw publish` (the `mqtt` feature).
+# ctrlc stops the broker and the publishing loop cleanly.
 textweaver-mqtt = { workspace = true, optional = true }
 textweaver-broker = { workspace = true, optional = true }
 # Beta 5, phase 7c: `tw join-qr IMAGE`, and `--qr FILE` on `tw broker` and
-# `tw share` (the `mqtt` feature).
+# `tw publish` (the `mqtt` feature).
 textweaver-qr = { workspace = true, optional = true }
 ctrlc = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
-# `tw send` and `tw share` against a broker inside the test program.
+# `tw publish` against a broker inside the test program.
 textweaver-broker.workspace = true
 textweaver-mqtt.workspace = true
 textweaver-enginehost.workspace = true

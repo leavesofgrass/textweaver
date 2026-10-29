@@ -1,4 +1,4 @@
-//! A small publish client for textweaver's senders (`tw send`, `tw share`,
+//! A small publish client for textweaver's senders (`tw publish`,
 //! and later the app's check-in form): connect and log in, publish at QoS
 //! 1 and wait for the broker's PUBACK, disconnect. It runs on the caller's
 //! thread, with no async runtime and no thread of its own, and reuses the
