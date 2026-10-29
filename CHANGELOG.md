@@ -60,6 +60,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 ### Security
 
 - tokio 1.53.1 to 1.53.3 in the lock, for RUSTSEC-2026-0386 (`AsyncFd` constructors). cargo deny, which checks every feature, found it through AccessKit's Linux adapter and rumqttc; textweaver-mqtt compiles tokio through rumqttc but never starts a runtime.
+- pulldown-cmark 0.13.4 to 0.13.5 in the lock, for RUSTSEC-2026-0414 (exponential parser output from wikilinks with empty display text). harper-core, the grammar checker, brings it.
 
 ## [0.1.0-beta.4] - 2026-10-24
 
