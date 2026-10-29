@@ -1002,7 +1002,27 @@ fn status_plan(
 }
 
 impl Widget for StatusRow {
-    type Action = NoAction;
+    /// A right-click on the status line (the broker and sharing status)
+    /// opens the context menu, as on the document.
+    type Action = crate::document::DocAction;
+
+    fn on_pointer_event(
+        &mut self,
+        ctx: &mut EventCtx<'_>,
+        _props: &mut PropertiesMut<'_>,
+        event: &PointerEvent,
+    ) {
+        if let PointerEvent::Down(masonry::core::PointerButtonEvent { state, button, .. }) = event
+            && *button == Some(masonry::core::PointerButton::Secondary)
+        {
+            let p = ctx.to_window(ctx.local_position(state.position));
+            let at = (p.x.round() as i32, p.y.round() as i32);
+            ctx.submit_action::<crate::document::DocAction>(
+                crate::document::DocAction::ContextMenu { at },
+            );
+            ctx.set_handled();
+        }
+    }
 
     fn register_children(&mut self, ctx: &mut RegisterCtx<'_>) {
         ctx.register_child(&mut self.message);

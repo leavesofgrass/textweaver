@@ -68,6 +68,10 @@ pub enum DialogAction {
     /// The show key (F3) in a secret prompt (`Modal::with_show_box`): its
     /// text shown as typed, or hidden again (`PromptKey::ToggleShown`).
     ToggleShown,
+    /// The context menu key (the Applications key, Shift+F10) in a form's
+    /// field (`Modal::with_tab_fields`): the field's context menu
+    /// (`PromptKey::ContextMenu`).
+    FieldMenu,
     /// A key typed in a question (`Modal::with_answer_keys`): `y` is yes,
     /// `n` and `a` are no, any other character asks again, as in the
     /// terminal (`Command::Confirm`).
@@ -119,6 +123,8 @@ pub struct Modal {
     /// A secret prompt's Show box: the show key toggles it, and in a form
     /// Tab reaches it from the field before the next field.
     show_box: Option<WidgetId>,
+    /// What the dialog says beyond its name (the join QR code's warning).
+    description: Option<String>,
 }
 
 impl Modal {
@@ -141,7 +147,14 @@ impl Modal {
             app_chords: false,
             platform: Platform::current(),
             show_box: None,
+            description: None,
         }
+    }
+
+    /// The dialog's description, heard after its name as it opens.
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
     }
 
     /// A secret prompt with a Show box, `id`, right after its field: the
@@ -222,6 +235,16 @@ impl Widget for Modal {
             && matches!(&k.key, Key::Character(s) if s.eq_ignore_ascii_case("l"))
         {
             ctx.submit_action::<DialogAction>(DialogAction::ShowMatches);
+            ctx.set_handled();
+            return;
+        }
+        // The context menu key in a form's field: the field's menu.
+        if self.tab_fields
+            && k.state == KeyState::Down
+            && (crate::keys::is_context_menu_key(k)
+                || (k.modifiers.shift() && !command && matches!(&k.key, Key::Named(NamedKey::F10))))
+        {
+            ctx.submit_action::<DialogAction>(DialogAction::FieldMenu);
             ctx.set_handled();
             return;
         }
@@ -362,6 +385,9 @@ impl Widget for Modal {
         node: &mut Node,
     ) {
         node.set_label(self.label.as_str());
+        if let Some(d) = &self.description {
+            node.set_description(d.as_str());
+        }
         node.set_modal();
     }
 

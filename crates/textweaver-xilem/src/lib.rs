@@ -74,6 +74,7 @@ pub mod menus;
 pub mod parity;
 pub mod placement;
 pub mod preview;
+pub mod qr_view;
 pub mod rsvp;
 pub mod runs;
 pub mod safety;
