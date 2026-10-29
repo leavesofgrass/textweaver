@@ -307,6 +307,8 @@ The context menu gathers the commands that fit where the cursor is: Cut, Copy, P
 
 In the terminal reader, **Ctrl+F10** opens the context menu as a list ("Context menu"), because **Shift+F10** opens Settings there. A terminal that reports the Applications key opens it with that key too. Move with the arrow keys or press an item's letter, press **Enter** to run the item, and press **Escape** to close the menu; you hear "Context menu closed." and the cursor is where it was. In the graphical version, **Shift+F10** is the context menu key.
 
+Inside a prompt, **Shift+F10** (in the terminal reader as well, where it otherwise opens Settings) opens the menu of the field you are in, when it has one. The join code field of the live source form is the one that does: Copy, Paste, and Show or Hide the join code ([Live documents](live-documents.md#the-form)). In a prompt for a secret, **F3** shows what you typed or hides it again, instead of finding the next match; the prompt says so as it opens.
+
 Pasting into a prompt such as Find inserts the text into the prompt.
 
 ## Citations

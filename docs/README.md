@@ -42,7 +42,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, reading level, and the Braille view.
 - [Themes](themes.md): the 24 built-in color themes, following your system, and writing your own.
 - [Math](math.md): hearing math read aloud, and writing it in Markdown.
-- [Live documents](live-documents.md): reading an MQTT broker's messages as a document that grows, as a log or as current values, with new entries on a Braille display; setting up a source, the JSON log, privacy, and connection messages.
+- [Live documents](live-documents.md): an advanced feature under Tools, Live documents. Reading an MQTT broker's messages as a document that grows, as a log or as current values, or as a shared document replaced in place, with new entries on a Braille display; setting up a source, joining by a join code or link, publishing from textweaver, the JSON log, privacy, and connection messages.
 - [Running the broker for a live log](live-broker.md): for the person who runs the broker: textweaver's own broker (`tw broker`, accounts, the certificate pin, join codes, `tw publish`), and Mosquitto on Debian 13, accounts and read-only access, Tailscale, 44Net, TLS with a private certificate authority, testing, and example messages.
 
 ### Writing
@@ -89,7 +89,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [The crates](dev/architecture.md#the-crates): what each of the 43 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
-- [Fuzzing](../fuzz/README.md): the 35 cargo-fuzz targets, run by the nightly workflow when started by hand: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, and the engine-host protocol.
+- [Fuzzing](../fuzz/README.md): the 39 cargo-fuzz targets, run by the nightly workflow when started by hand: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, the engine-host protocol, and the live document pieces (MQTT packets, the broker's packets, live source files, and the join QR code reader).
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licenses.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
