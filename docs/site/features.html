@@ -257,7 +257,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 70,
+  "done": 76,
   "not yet": 0,
   "partial": 3
  },
@@ -996,6 +996,71 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
   {
    "features": [
     {
+     "description": "Open an MQTT broker's topic as a document that changes while you read it, as a log of entries or as one line per field, and your place never moves.",
+     "guide": {
+      "href": "../live-documents.md",
+      "title": "Live documents guide"
+     },
+     "name": "Live documents over MQTT",
+     "note": "Tools, Live documents; Alt+Shift+F5 says the unread entries and Alt+Shift+F6 jumps to the newest.",
+     "status": "done"
+    },
+    {
+     "description": "Each new entry goes to the screen reader whole, meaning first, so it reaches a Braille display; textweaver's own voice stays quiet unless you turn it on.",
+     "guide": {
+      "href": "../live-documents.md",
+      "title": "Live documents guide"
+     },
+     "name": "New entries on a Braille display",
+     "note": "The terminal reader's status line carries the newest entry in 40 cells.",
+     "status": "done"
+    },
+    {
+     "description": "Follow a document someone else publishes as it changes, with each revision replacing the text in place.",
+     "guide": {
+      "href": "../live-documents.md",
+      "title": "Live documents guide"
+     },
+     "name": "A shared document",
+     "note": "Published by tw publish or Publish this document live.",
+     "status": "done"
+    },
+    {
+     "description": "A small MQTT broker with named accounts, readers that can never publish, TLS with a pinned key, and join codes, run by tw broker or inside the app.",
+     "guide": {
+      "href": "../live-broker.md",
+      "title": "Running the broker for a live log"
+     },
+     "name": "textweaver's own broker",
+     "note": "Tools, Live documents, Your broker; Mosquitto works too.",
+     "status": "done"
+    },
+    {
+     "description": "Publish the open document again at each save, or one check-in entry from a form or the command line.",
+     "guide": {
+      "href": "../live-documents.md",
+      "title": "Live documents guide"
+     },
+     "name": "Publish a document or a check-in",
+     "note": "tw publish FILE and tw publish --check-in; Tools, Live documents, Publish.",
+     "status": "done"
+    },
+    {
+     "description": "Copy and paste a join code or link, or show and read a QR code, to join a broker quickly.",
+     "guide": {
+      "href": "../live-documents.md",
+      "title": "Live documents guide"
+     },
+     "name": "Join by code, link, or QR code",
+     "note": "Tools, Live documents, Your broker, Invite others; tw join-qr. The webcam is not used.",
+     "status": "done"
+    }
+   ],
+   "name": "Live documents"
+  },
+  {
+   "features": [
+    {
      "description": "Download a package and run it.",
      "guide": {
       "href": "../install.md",
@@ -1065,7 +1130,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 73
+ "total": 79
 }
 </script>
 <!-- END generated: site-data -->

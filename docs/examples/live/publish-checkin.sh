@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Sends one check-in to the Example Net log on textweaver's own broker, as
+# Publishes one check-in to the Example Net log on textweaver's own broker, as
 # the logger account netcontrol. Placeholder callsign and name. The
 # password is asked without echo, or read from TEXTWEAVER_MQTT_PASSWORD.
 #

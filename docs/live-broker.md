@@ -150,7 +150,7 @@ A net log is one kind of live document, and its entries stay plain JSON objects,
 
 ### A net log, ready to copy
 
-The folder [`docs/examples/live/`](examples/live/) holds a complete example with placeholder names: `broker.toml` with a logger and a reader account, `netlog.twlive`, a live source file for readers, and `send-checkin.sh`, a sample `tw publish --check-in` line. The example accounts' passwords are written in the file's comments, so make your own accounts before a real net.
+The folder [`docs/examples/live/`](examples/live/) holds a complete example with placeholder names: `broker.toml` with a logger and a reader account, `netlog.twlive`, a live source file for readers, and `publish-checkin.sh`, a sample `tw publish --check-in` line. The example accounts' passwords are written in the file's comments, so make your own accounts before a real net.
 
 ### Testing it with Mosquitto's clients
 

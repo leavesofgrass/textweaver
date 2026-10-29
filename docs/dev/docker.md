@@ -108,6 +108,10 @@ ALSA inside the image is routed to PulseAudio. Point `PULSE_SERVER` at a PulseAu
 
 `scripts/voxin-docker.sh` wraps the Voxin commands above; see [scripts/README.md](../../scripts/README.md#voxin-dockersh).
 
+## The Mosquitto test image
+
+The ignored tests of live documents run against Debian 13's own Mosquitto, in a second, small image that is not part of the development container: `textweaver-mosquitto-test`, built from `crates/textweaver-mqtt/docker/` on the local `debian:trixie` (never pulled), with only `mosquitto` and `mosquitto-clients` and test accounts. `crates/textweaver-mqtt/docker/run-mosquitto-test.sh` builds it and runs two tests (textweaver's client against Mosquitto, and Mosquitto's own clients against textweaver's broker). The tests publish ports on 127.0.0.1 only, start each container with a name of their own or `--rm`, and remove only what they started; the image stays for the next run. Set `CARGO_TARGET_DIR` first, and `MSYS_NO_PATHCONV=1` in Git Bash (the script does). The image is small, but remove it with the other cleanup after a wave if you are short of disk; that is a delete, so list it first.
+
 ## The Linux release image
 
 `docker/appimage/` holds a second image, only for building the Linux release packages: Ubuntu 22.04 (an older glibc, so the packages run on older distributions), Rust, and the AppImage tools, checked against their published checksums. `cargo xtask appimage --docker` builds the image and the packages from any system with Docker, into `target/dist/`, and `bash docker/appimage/test-distros.sh target/dist` runs them on Debian, Fedora, and Arch. [Releasing](releasing.md#the-linux-packages) has the details.

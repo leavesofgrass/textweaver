@@ -1,6 +1,6 @@
 # Documentation coverage
 
-This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, and again for beta 4 on Friday, October 23, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
+This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, again for beta 4 on Friday, October 23, 2026, and for beta 5 on Thursday, October 29, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
 
 The generated pages (`keyboard.md` and `settings-reference.md`) list every key and setting, so this page tracks the guides that explain them.
 
@@ -109,11 +109,18 @@ Every guide was read again against the beta 4 entries of the changelog. The feat
 - Morse code practice (Koch lessons and drills), `cw_copy` in JSON-RPC: cw.md, json-rpc.md. Pass.
 - The `textweaver-cw` crate, the vault resolver and index, canvases in formats, and the tree dump retries: dev/architecture.md, dev/testing.md, site/architecture.html. Pass, after fix.
 
-## Beta 5, written on Monday, October 26, 2026
+## Beta 5, written on Monday, October 26, 2026 and extended for the release on Thursday, October 29, 2026
 
-- Live documents: the log view, the values view, announcements, the JSON log, the settings, passwords, privacy, and connection messages: live-documents.md, gui.md, settings.md, privacy.md, accessibility.md, known-limits.md, roadmap.md, whats-new.md. Pass.
+The release sweep read every guide against the beta 5 entries of the changelog. The features new since beta 4:
+
+- Live documents: the log view, the values view, stale values, the document view, announcements, the JSON log, read only, and the terminal reader's and the app's buttons and status: live-documents.md, gui.md, reading.md, settings.md, accessibility.md, screen-readers.md, privacy.md, known-limits.md, roadmap.md, whats-new.md. Pass.
+- Live sources: the connection messages, the one form, Edit, `.twlive` files, passwords, pinned keys and join codes, and the Tools, Live documents menu: live-documents.md, keyboard.md, settings.md, json-rpc.md, troubleshooting.md. Pass.
 - The broker's side, with Mosquitto, Tailscale, 44Net, TLS, and example messages: live-broker.md. Pass, with the Tailscale access rule and the broker's behavior after a reboot marked as not yet tested.
+- textweaver's own broker (`tw broker`, accounts, the pinned key, join codes, and the broker in the app) and the example in `docs/examples/live/`: live-broker.md, live-documents.md, command-line.md, privacy.md. Pass.
+- Publishing (`tw publish`, with `tw share` and `tw send` as hidden aliases; Publish this document live; Publish a check-in) and the live document message format: live-broker.md, live-documents.md, command-line.md. Pass.
+- Join links, Copy the join code and link, pasting to fill the form, the masked join code field and Show (`F3`), QR codes (`tw join-qr`, `--qr`, Show the join QR code, Join from a QR image, clipboard images), and the context menus: live-documents.md, live-broker.md, command-line.md, keyboard.md, json-rpc.md, known-limits.md, screen-readers.md. Pass.
 - The live keys and settings reference: keyboard.md and settings-reference.md, generated. Pass.
+- The crates `textweaver-mqtt`, `textweaver-broker` and `textweaver-qr`, the live document route through the app, the `mqtt` feature, the four fuzz targets (`mqtt`, `twlive`, `broker`, `qr`), and the Docker test with Mosquitto: dev/architecture.md, dev/building.md, dev/testing.md, fuzz/README.md, site/architecture.html, CONTRIBUTING.md. Pass, after fix.
 
 ## Still open
 

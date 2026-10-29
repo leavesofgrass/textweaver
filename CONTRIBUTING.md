@@ -102,6 +102,7 @@ Every change must work for people who do not look at the screen.
 - Every third-party crate is declared once, in `[workspace.dependencies]` in the root `Cargo.toml`, and used with `name.workspace = true`. A new dependency is a decision for the maintainers; propose it in the issue or pull request, with its license.
 - No async runtime in the speech path. Speech engines have thread affinity ([ADR-0003](docs/adr/0003-speech-threading-and-event-timing.md)).
 - Every state change is announced through the app's announcer, filtered by verbosity, and routed by the accessibility mode with `textweaver_a11y::route`, so a screen reader never hears it twice.
+- Anything that arrives from a network, or in a file someone else sends (a broker's messages, a `.twlive` file, a join link, a QR code), is hostile data: cap its size, clean it of control, escape and direction characters, say a refusal in words, and give the reader a fuzz target (`fuzz/README.md`). A password, join code, join link or QR image is never logged, said, written to settings or a file, or kept in a prompt's history. The MQTT client and the broker use std threads and no async runtime, and their tests reach 127.0.0.1 only.
 - Every file the app writes while it runs goes through the writer thread (`crates/textweaver-app/src/writer.rs`), never from the input thread.
 - Tests never play audio aloud. Write audio to a temporary file, or use a silent output.
 - Integration tests go in one test program per crate, `tests/it/main.rs`. A new integration test is a module there (`tests/it/<name>.rs`, with `mod <name>;` in `main.rs`), never a new file directly in `tests/`: every file there is a program of its own, which links the crate again and slows every test build. [Testing](docs/dev/testing.md#where-tests-go) has the details.
@@ -116,7 +117,7 @@ The [architecture decision records](docs/adr/README.md) (ADRs) explain why the c
 2. Fork the repository and make a branch for your change.
 3. Make the change, with a test that fails without it.
 4. If you changed a key, a setting, a dependency, or a crate, run `cargo xtask regen` to rebuild the generated files, and commit what changed. Then run the checks.
-5. Add a line to `CHANGELOG.md` under "Unreleased" for anything a user would notice.
+5. Add a line to `CHANGELOG.md` under "Unreleased" for anything a user would notice, under an area heading or one of your own; the lines are grouped by area before a release ([Releasing](docs/dev/releasing.md#steps)).
 6. Open a pull request. The template asks what changed, why, and how you checked it.
 
 A maintainer will review it. Reviews may ask for changes; that is normal, and not a judgment of you.
