@@ -378,7 +378,7 @@ pub enum PromptPurpose {
     /// Answer is the file to save a live source to (`.twlive`), without
     /// its password.
     SaveLiveSourceFile,
-    /// Answer is one field of the Send a check-in form (crate::live::
+    /// Answer is one field of the Publish a check-in form (crate::live::
     /// checkin): the source's mapped fields, or callsign, name and notes.
     /// Tab and Shift+Tab move between the fields; Enter sends the entry.
     LiveCheckIn,

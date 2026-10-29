@@ -26,8 +26,8 @@
 //!   source.
 //! - **Forget live source password** removes the open source's password
 //!   (or a chosen source's) from the system credential store.
-//! - **Start a broker**, **Stop the broker**, **Show the join code**,
-//!   **Share this document live**, **Stop sharing** and **Send a
+//! - **Start your broker**, **Stop your broker**, **Show the join code**,
+//!   **Publish this document live**, **Stop publishing** and **Publish a
 //!   check-in**: the sending side, with textweaver's own broker inside the
 //!   app (crate::live::broker, crate::live::checkin).
 //!
@@ -187,10 +187,10 @@ pub(crate) enum LiveList {
     /// row on. Enter on a Copy row copies; on any other row, it closes.
     #[cfg(feature = "mqtt")]
     Code(Option<usize>),
-    /// Share this document live through which source: the ids, by row.
+    /// Publish this document live through which source: the ids, by row.
     #[cfg(feature = "mqtt")]
     ShareThrough(Vec<String>),
-    /// Send a check-in through which source: the ids, by row.
+    /// Publish a check-in through which source: the ids, by row.
     #[cfg(feature = "mqtt")]
     CheckInThrough(Vec<String>),
     /// Show the join QR code (crate::live::qr): its rows and the code.
@@ -785,7 +785,7 @@ mod tests {
             for (id, src) in list {
                 s.live.sources.insert(id, src);
             }
-            // Start a broker: loopback, a port the system picks.
+            // Start your broker: loopback, a port the system picks.
             s.live.broker.listen = vec!["127.0.0.1:0".into()];
         });
         let wire = Wire::default();
@@ -1674,18 +1674,24 @@ mod tests {
     #[test]
     fn every_live_command_is_reachable_and_answers_in_words() {
         let mut r = rig(&[("plain", practice(""))]);
-        // Live sources, and its Join code submenu.
-        let menu: Vec<ActionId> = [crate::menu::MenuId::Live, crate::menu::MenuId::JoinCode]
-            .into_iter()
-            .flat_map(|m| r.app.menu_view(m).items)
-            .filter_map(|i| match i.kind {
-                crate::menu::MenuItemKind::Action(a) => Some(a),
-                _ => None,
-            })
-            .collect();
+        // Live documents, and its submenus.
+        let menu: Vec<ActionId> = [
+            crate::menu::MenuId::Live,
+            crate::menu::MenuId::LiveReading,
+            crate::menu::MenuId::LiveBroker,
+            crate::menu::MenuId::LiveInvite,
+            crate::menu::MenuId::LivePublish,
+        ]
+        .into_iter()
+        .flat_map(|m| r.app.menu_view(m).items)
+        .filter_map(|i| match i.kind {
+            crate::menu::MenuItemKind::Action(a) => Some(a),
+            _ => None,
+        })
+        .collect();
         for &a in COMMANDS {
             assert!(r.app.is_available(a), "{a:?} available with mqtt");
-            assert!(menu.contains(&a), "{a:?} in the Live sources menu");
+            assert!(menu.contains(&a), "{a:?} in the Live documents menu");
             let bound = !r.app.keymap().chords_for(a).is_empty();
             assert!(
                 bound || a.is_palette_command(),

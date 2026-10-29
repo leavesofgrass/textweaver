@@ -94,7 +94,7 @@ pub fn send(args: SendArgs) -> Result<()> {
     publish_once(&config, &args.topic, payload.as_bytes(), args.retain)
         .map_err(|e| Plain(format!("Not sent: {e}")))?;
     outln!(
-        "Sent: one entry to {} on {}{}.",
+        "Published: one entry to {} on {}{}.",
         args.topic,
         config.target(),
         if args.retain { ", retained" } else { "" }
@@ -176,14 +176,14 @@ fn message(path: &Path, rev: u64, title: &str) -> Result<String> {
         std::fs::read(path).with_context(|| format!("Could not read {}", path.display()))?;
     let text = String::from_utf8(bytes).map_err(|_| {
         Plain(format!(
-            "{} is not UTF-8 text. Share Markdown or plain text files.",
+            "{} is not UTF-8 text. Publish Markdown or plain text files.",
             path.display()
         ))
     })?;
     let msg = document_message(rev, title, format_of(path), &text);
     if msg.len() > MAX_MESSAGE {
         bail!(Plain(format!(
-            "{} is too large to share: the message would be {} bytes; the limit is {MAX_MESSAGE}.",
+            "{} is too large to publish: the message would be {} bytes; the limit is {MAX_MESSAGE}.",
             path.display(),
             msg.len()
         )));
@@ -223,9 +223,9 @@ pub fn share(args: ShareArgs) -> Result<()> {
     }
     let mut rev = 1;
     let msg = message(&path, rev, &title)?;
-    publish(&config, &args.topic, &msg).map_err(|e| Plain(format!("Not shared: {e}")))?;
+    publish(&config, &args.topic, &msg).map_err(|e| Plain(format!("Not published: {e}")))?;
     outln!(
-        "Shared: revision {rev} of {name}, {} bytes, on {}.",
+        "Published: revision {rev} of {name}, {} bytes, on {}.",
         msg.len(),
         args.topic
     );
@@ -240,12 +240,12 @@ pub fn share(args: ShareArgs) -> Result<()> {
         return Ok(());
     }
     let stop = on_ctrl_c()?;
-    outln!("Watching: each save is shared. Press Ctrl+C to stop.");
+    outln!("Watching: each save is published. Press Ctrl+C to stop.");
     let every = Duration::from_secs(args.every.max(1));
     let mut last = stamp(&path);
     loop {
         if stop.recv_timeout(every).is_ok() {
-            outln!("Stopped sharing. Readers keep revision {rev}.");
+            outln!("Stopped publishing. Readers keep revision {rev}.");
             return Ok(());
         }
         let now = stamp(&path);
@@ -259,7 +259,7 @@ pub fn share(args: ShareArgs) -> Result<()> {
             Err(e) => {
                 let why = e.to_string();
                 outln!(
-                    "Not shared: {}. Trying again at the next save.",
+                    "Not published: {}. Trying again at the next save.",
                     why.trim_end_matches('.')
                 );
                 continue;
@@ -268,11 +268,11 @@ pub fn share(args: ShareArgs) -> Result<()> {
         match publish(&config, &args.topic, &msg) {
             Ok(()) => {
                 rev = next;
-                outln!("Shared: revision {rev}, {} bytes.", msg.len());
+                outln!("Published: revision {rev}, {} bytes.", msg.len());
             }
             Err(e) => {
                 outln!(
-                    "Not shared: {}. Trying again at the next save.",
+                    "Not published: {}. Trying again at the next save.",
                     e.trim_end_matches('.')
                 );
             }

@@ -20,7 +20,7 @@
 //! system credential store.
 //!
 //! **Joining by code** (textweaver's own broker, `tw broker --join-code`
-//! or Start a broker): the code's 16 characters are typed in the form, in
+//! or Start your broker): the code's 16 characters are typed in the form, in
 //! any case, with or without separators. The source is saved as a pinned
 //! key (the code's first 12 characters) with the user name `join`, and
 //! the password derived from the whole code goes straight to the system

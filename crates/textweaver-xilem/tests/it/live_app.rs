@@ -898,7 +898,7 @@ fn a_pasted_join_link_fills_the_form_in_the_app() {
     assert!(!heard.contains("twjoin"), "{heard}");
 }
 
-/// A live document message as `tw share` or Share this document live
+/// A live document message as `tw share` or Publish this document live
 /// sends it.
 fn shared(rev: u64, text: &str) -> String {
     serde_json::json!({
@@ -963,7 +963,7 @@ fn a_new_revision_keeps_every_other_node_and_says_one_short_line() {
     );
 }
 
-/// Send a check-in: each field is a text input named by its label and
+/// Publish a check-in: each field is a text input named by its label and
 /// place, Tab moves to the next; the broker's state is in the status bar
 /// in words.
 #[cfg(feature = "mqtt")]

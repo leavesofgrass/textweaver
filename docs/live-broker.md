@@ -7,7 +7,7 @@ There are two ways to run the broker:
 - **textweaver's own broker**, `tw broker`, described first. It is one command with no configuration file to write by hand: accounts are added with `tw broker account add`, TLS is on by default with a key the broker makes itself, and senders check that key by its pin. `tw send` and `tw share` publish to it, or to any MQTT broker.
 - **Mosquitto**, the widely used broker, from [What you need](#what-you-need) on. Choose it if you already run one, or need MQTT 5, WebSockets, bridging, or retained messages that survive a restart.
 
-A live source in the textweaver app only subscribes; it never publishes. Sending is a separate, small client, used by `tw send` and `tw share`, and in the app by Send a check-in and Share this document live. The app can also run textweaver's own broker itself, with Start a broker ([Running it from the textweaver app](#running-it-from-the-textweaver-app)).
+A live source in the textweaver app only subscribes; it never publishes. Sending is a separate, small client, used by `tw send` and `tw share`, and in the app by Publish a check-in and Publish this document live. The app can also run textweaver's own broker itself, with Start your broker ([Running it from the textweaver app](#running-it-from-the-textweaver-app)).
 
 ## textweaver's own broker
 
@@ -52,7 +52,7 @@ When the computer's firewall asks whether textweaver may accept connections, all
 
 ### Running it from the textweaver app
 
-The same broker runs inside the textweaver app: Tools, Live sources, **Start a broker**. Its settings are the `[live.broker]` section ([Settings for a source](live-documents.md#settings-for-a-source)): the addresses to listen on (this computer only by default), the port, plain or TLS, whether to make a join code (on by default) and what it may read. The accounts are the same `broker.toml`. The app says how the broker runs and the join code, in groups of four; **Show the join code** says it again and shows it one group to a line; the status bar says "Broker on, 2 clients" while it runs; and **Stop the broker**, or quitting, stops it and frees its ports. **Send a check-in** and **Share this document live** publish into it directly, with no network and no login ([Sending: check-ins and sharing](live-documents.md#sending-check-ins-and-sharing)).
+The same broker runs inside the textweaver app: Tools, Live documents, Your broker, **Start your broker**. Its settings are the `[live.broker]` section ([Settings for a source](live-documents.md#settings-for-a-source)): the addresses to listen on (this computer only by default), the port, plain or TLS, whether to make a join code (on by default) and what it may read. The accounts are the same `broker.toml`. The app says how the broker runs and the join code, in groups of four; **Show the join code** says it again and shows it one group to a line; the status bar says "Broker on, 2 clients" while it runs; and **Stop your broker**, or quitting, stops it and frees its ports. **Publish a check-in** and **Publish this document live** publish into it directly, with no network and no login ([Your broker and publishing](live-documents.md#your-broker-and-publishing)).
 
 ### Accounts
 
@@ -119,9 +119,9 @@ How to reach the broker, for `tw send` and `tw share` alike:
 - `--pin PIN`: TLS, trusting exactly the key with this pin. `--join-code CODE`: the same with a join code's short pin, and without `--user`, the code's own login. `--join-link LINK`: the host, the port and the join code in one, from a join link. With `--join-code` or `--join-link`, `tw share` prints the join link readers follow the document with ("Join link: ...") after the first revision, and `--qr FILE` saves it as a QR code as `tw broker --qr` does. `--ca-file FILE`: TLS checked against a private certificate authority or the broker's own certificate. `--plain`: no TLS. With none of these, TLS is checked against the bundled Mozilla root certificates, as for a public broker.
 - `--user NAME`: the password is asked without echo, or read from the environment variable `TEXTWEAVER_MQTT_PASSWORD` when it is set, for scripts. It is never given on the command line.
 
-The entry is not retained unless `--retain` is given. `tw send` prints "Sent: one entry to netlog/checkins on 100.64.0.10:8883." When the broker refuses, it says why, for example: "Not sent: Refused: the broker closed the connection instead of taking the message. This account may not publish to netlog/checkins."
+The entry is not retained unless `--retain` is given. `tw send` prints "Published: one entry to netlog/checkins on 100.64.0.10:8883." When the broker refuses, it says why, for example: "Not sent: Refused: the broker closed the connection instead of taking the message. This account may not publish to netlog/checkins."
 
-### Sharing a document: tw share
+### Publishing a document: tw share
 
 `tw share` publishes a Markdown or text file as a live document, then again each time the file is saved, until Ctrl+C:
 
@@ -129,7 +129,7 @@ The entry is not retained unless `--retain` is given. `tw send` prints "Sent: on
 tw share agenda.md --topic docs/agenda --plain --user netcontrol
 ```
 
-Each revision is one retained message on the topic, so a reader who joins late receives the current text at once. `--title` sets the title readers see (the file's name, by default), `--once` publishes once and stops, and `--every` sets the seconds between looks at the file (1). Each revision prints one line, such as "Shared: revision 2, 4096 bytes." A save that cannot be published is said in words, and the next save tries again. When sharing stops, readers keep the last revision.
+Each revision is one retained message on the topic, so a reader who joins late receives the current text at once. `--title` sets the title readers see (the file's name, by default), `--once` publishes once and stops, and `--every` sets the seconds between looks at the file (1). Each revision prints one line, such as "Published: revision 2, 4096 bytes." A save that cannot be published is said in words, and the next save tries again. When sharing stops, readers keep the last revision.
 
 ### The live document message
 
@@ -396,7 +396,7 @@ username = "reader"
 
 Never put a password in the file. textweaver refuses a `password` key, says so to the reader, and asks for the password after the source is saved, keeping it in the reader's system credential store. Send the password some other way, or let each reader have an account of their own.
 
-You do not have to write the file by hand. Set the source up once in your own textweaver, then run **Save live source as file** (Tools, Live sources): it writes the source without its password, ready to send.
+You do not have to write the file by hand. Set the source up once in your own textweaver, then run **Save live source as file** (Tools, Live documents): it writes the source without its password, ready to send.
 
 ## Checks before the net
 

@@ -4,7 +4,7 @@
 //!
 //! A live document message is one JSON object, retained on its topic:
 //! `{"type": "textweaver.document", "rev": N, "title": "...", "format":
-//! "markdown", "text": "..."}` (`tw share`, or Share this document live
+//! "markdown", "text": "..."}` (`tw share`, or Publish this document live
 //! in the app). Its text keeps its line breaks: the MQTT client cleans it
 //! with its own, larger cap (`textweaver_mqtt::clean_document_text`).
 //!
@@ -238,7 +238,7 @@ mod tests {
         assert!(
             texts(&said)
                 .iter()
-                .any(|t| t == "Agenda, revision 1, shared live.")
+                .any(|t| t == "Agenda, revision 1, published live.")
         );
         assert_eq!(app.live_position().unwrap(), ["Revision 1"]);
         // The reader on Traffic.
@@ -284,7 +284,7 @@ mod tests {
             texts(&said)
                 .last()
                 .unwrap()
-                .starts_with("This is a shared document")
+                .starts_with("This is a published document")
         );
         assert_eq!(
             app.live_buttons(),

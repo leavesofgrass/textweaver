@@ -237,7 +237,7 @@ fn send_and_share_reach_a_reader() {
     assert!(out.status.success(), "{}", stderr(&out));
     assert_eq!(
         stdout(&out),
-        format!("Sent: one entry to netlog/checkins on 127.0.0.1:{port}, retained.\n")
+        format!("Published: one entry to netlog/checkins on 127.0.0.1:{port}, retained.\n")
     );
 
     let doc = h.join("agenda.md");
@@ -253,7 +253,7 @@ fn send_and_share_reach_a_reader() {
     let out = tw(&h, &args, "", Some("logger-pw"));
     assert!(out.status.success(), "{}", stderr(&out));
     assert!(
-        stdout(&out).starts_with("Shared: revision 1 of agenda.md,"),
+        stdout(&out).starts_with("Published: revision 1 of agenda.md,"),
         "{}",
         stdout(&out)
     );

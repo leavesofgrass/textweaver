@@ -1,14 +1,14 @@
 //! textweaver's own broker inside the app, and the app's senders (beta 5,
 //! phase 5b, with the `mqtt` feature).
 //!
-//! - **Start a broker** runs the same broker as `tw broker`
+//! - **Start your broker** runs the same broker as `tw broker`
 //!   (`textweaver_broker`), as `[live.broker]` says: on 127.0.0.1 with
 //!   TLS unless other addresses are set, the accounts of `broker.toml` in
 //!   the data folder, and a join code for the session unless it is
 //!   turned off. Its status is in words, meaning first: said when it
 //!   starts, when a reader joins or leaves, and when it refuses someone,
 //!   and shown in the status bar ("Broker on, 2 clients").
-//! - **Stop the broker** stops it: every connection ends and every port
+//! - **Stop your broker** stops it: every connection ends and every port
 //!   is free before the command answers. Quitting stops it too.
 //! - **Show the join code** says the code in groups of four and shows it
 //!   in a list, one group to a line, then Copy the join code and Copy the
@@ -20,12 +20,12 @@
 //!   and code, and the shared document's topic while one is shared into
 //!   the broker. Both hold the secret: neither is said, logged, saved or
 //!   shown in the status line.
-//! - **Share this document live** publishes the open document as a live
+//! - **Publish this document live** publishes the open document as a live
 //!   document message (crate::live::document), retained, on
 //!   `[live.broker] share_topic`, then again each time it is saved, until
-//!   **Stop sharing**. It goes into the app's broker when one runs, else
+//!   **Stop publishing**. It goes into the app's broker when one runs, else
 //!   through a live source chosen from a list, signed in as that source.
-//! - **Send a check-in** (crate::live::checkin) publishes one entry.
+//! - **Publish a check-in** (crate::live::checkin) publishes one entry.
 //!
 //! Publishing through a live source's broker connects, publishes at QoS 1
 //! and waits for the acknowledgment on a helper thread, so the keys never
@@ -228,7 +228,7 @@ impl App {
     }
 
     /// The broker and the sharing, in words, for the status bar, meaning
-    /// first ("Broker on, 2 clients", "Sharing, revision 3"); `None` when
+    /// first ("Broker on, 2 clients", "Publishing, revision 3"); `None` when
     /// neither runs.
     pub fn live_broker_words(&self) -> Option<String> {
         let broker =
@@ -248,7 +248,7 @@ impl App {
         }
     }
 
-    /// Start a broker: the same broker as `tw broker`, as `[live.broker]`
+    /// Start your broker: the same broker as `tw broker`, as `[live.broker]`
     /// says. Its addresses, encryption and join code are said.
     pub fn live_start_broker(&mut self) -> Vec<Effect> {
         if self.live_wire.broker.is_some() {
@@ -419,7 +419,7 @@ impl App {
         vec![Effect::ShowList { title, items }]
     }
 
-    /// Stop the broker: every connection ends and every port is free.
+    /// Stop your broker: every connection ends and every port is free.
     /// Sharing into it stops too.
     pub fn live_stop_broker(&mut self) -> Vec<Effect> {
         let Some(b) = self.live_wire.broker.take() else {
@@ -620,7 +620,7 @@ impl App {
 
     // ----- Sharing ------------------------------------------------------
 
-    /// Share this document live: the open document, published now and
+    /// Publish this document live: the open document, published now and
     /// at each save, into the app's broker or through a chosen source.
     pub fn live_share_command(&mut self) -> Vec<Effect> {
         if let Some(s) = &self.live_wire.share {
@@ -723,7 +723,7 @@ impl App {
         let _ = self.live_share_publish();
     }
 
-    /// Stop sharing: no more revisions; readers keep the last one.
+    /// Stop publishing: no more revisions; readers keep the last one.
     pub fn live_stop_sharing(&mut self) -> Vec<Effect> {
         let Some(s) = self.live_wire.share.take() else {
             let m = self.msg("live-share-none");
@@ -740,7 +740,7 @@ impl App {
 
     // ----- Check-ins ----------------------------------------------------
 
-    /// Send a check-in: the form, for the app's broker, the open live
+    /// Publish a check-in: the form, for the app's broker, the open live
     /// source, or a source chosen from a list.
     pub fn live_checkin_command(&mut self) -> Vec<Effect> {
         let open = self.open_configured_id();
@@ -992,7 +992,7 @@ mod tests {
         s.app.dispatch(Command::Open(path.clone()));
         s.act(ActionId::ShareDocumentLive);
         assert!(
-            s.any("Shared: Agenda, revision 1, on textweaver/document."),
+            s.any("Published: Agenda, revision 1, on textweaver/document."),
             "{:?}",
             s.texts()
         );
@@ -1000,7 +1000,7 @@ mod tests {
             s.app
                 .title_parts(None)
                 .iter()
-                .any(|p| p.contains("Sharing, revision 1"))
+                .any(|p| p.contains("Publishing, revision 1"))
         );
 
         let mut r = Side::new();
@@ -1008,7 +1008,11 @@ mod tests {
         until(&mut [&mut s, &mut r], "the shared document", |v| {
             v[1].app.live_shows_document()
         });
-        assert!(r.any("Agenda, revision 1, shared live."), "{:?}", r.texts());
+        assert!(
+            r.any("Agenda, revision 1, published live."),
+            "{:?}",
+            r.texts()
+        );
         let text = r.doc_text();
         assert!(
             text.contains("Check-ins\nTraffic\nClose\n"),
@@ -1046,13 +1050,13 @@ mod tests {
         r.type_in("N0CALL");
         r.key(PromptKey::Enter);
         until(&mut [&mut s, &mut r], "the refusal", |v| {
-            v[1].any("Check-in not sent")
+            v[1].any("Check-in not published")
         });
         assert!(r.any("Refused"), "{:?}", r.texts());
         assert!(s.any("Publish refused: join"), "{:?}", s.texts());
-        // Stop sharing: readers keep the last revision.
+        // Stop publishing: readers keep the last revision.
         s.act(ActionId::StopSharing);
-        assert!(s.any("Stopped sharing Agenda. Readers keep revision 2."));
+        assert!(s.any("Stopped publishing Agenda. Readers keep revision 2."));
         r.app.shutdown();
         s.app.shutdown();
         assert!(!s.app.live_broker_running());
@@ -1082,7 +1086,7 @@ mod tests {
         s.type_in("Ada Example");
         s.key(PromptKey::Enter);
         assert!(
-            s.any("Sent: N0CALL, on netlog/checkins."),
+            s.any("Published: N0CALL, on netlog/checkins."),
             "{:?}",
             s.texts()
         );
@@ -1117,12 +1121,12 @@ mod tests {
             "{:?}",
             s.texts()
         );
-        // Sharing with nothing to send through says how to get one.
+        // Publishing with nothing to publish through says how to get one.
         let path = s.file("notes.txt", "one\ntwo\n");
         s.app.dispatch(Command::Open(path));
         s.act(ActionId::ShareDocumentLive);
         assert!(
-            s.any("Nothing to send through. Start a broker"),
+            s.any("Nothing to publish through. Start your broker"),
             "{:?}",
             s.texts()
         );

@@ -320,7 +320,7 @@ Only the speech engine's own settings are listed here: the voice, rate and pitch
 - `live.broker.plain`: default off (`false`). Plain broker. The broker without TLS. Only on this computer or over Tailscale. On or off: `true` or `false`. Stays on this computer.
 - `live.broker.join_code`: default on (`true`). Broker join code. A join code each time the broker starts, for readers with no account. On or off: `true` or `false`. Stays on this computer.
 - `live.broker.join_topics`: default # (`["#"]`). Join code topics. Topic filters a join code may read. # reads everything. A list of texts, such as `["a", "b"]`. Stays on this computer.
-- `live.broker.share_topic`: default `"textweaver/document"`. Share topic. The topic Share this document live publishes on. Text. Stays on this computer.
+- `live.broker.share_topic`: default `"textweaver/document"`. Publish topic. The topic Publish this document live publishes on. Text. Stays on this computer.
 - `live.broker.checkin_topic`: default `"netlog/checkins"`. Check-in topic. The topic for check-ins when the live source has no plain topic. Text. Stays on this computer.
 
 ## Sync

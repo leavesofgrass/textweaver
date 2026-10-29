@@ -127,10 +127,10 @@ enum Cmd {
     /// Run textweaver's own MQTT broker for live documents and net logs, or manage its accounts.
     #[cfg(feature = "mqtt")]
     Broker(cmd::broker::Args),
-    /// Send one entry, a JSON object, to a topic on a broker.
+    /// Publish one entry, a JSON object, to a topic on a broker.
     #[cfg(feature = "mqtt")]
     Send(cmd::send::SendArgs),
-    /// Share a document live: publish it to a broker, then again on each save.
+    /// Publish a document live to a broker, then again on each save.
     #[cfg(feature = "mqtt")]
     Share(cmd::send::ShareArgs),
     /// Read the join link from a QR code in an image (PNG or JPEG) and print it.
