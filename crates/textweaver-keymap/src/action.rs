@@ -698,6 +698,12 @@ actions! {
     OpenJoinLink = "open_join_link", File,
         "Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it",
         gui [], term [], shared [];
+    ShowJoinQr = "show_join_qr", File,
+        "Show the running broker's join link as a QR code to scan: a warning first, then the code, the link as text, and Copy and Save",
+        gui [], term [], shared [];
+    JoinFromQrImage = "join_from_qr_image", File,
+        "Join a broker from a QR code in an image: the image on the clipboard, else an image file, then the filled live source form",
+        gui [], term [], shared [];
     ShareDocumentLive = "share_document_live", File,
         "Share the open document live: readers following its topic see it, and each save, in place",
         gui [], term [], shared [];

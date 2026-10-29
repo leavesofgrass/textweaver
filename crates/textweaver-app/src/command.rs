@@ -388,6 +388,12 @@ pub enum PromptPurpose {
     /// Answer is what the learner copied of the CW practice group just
     /// sent; empty sends it again (crate::cw_practice).
     CwCopy,
+    /// Answer is the file to save the join QR code to: a PNG, or an SVG
+    /// when the name ends in `.svg` (crate::live::qr). Empty cancels.
+    SaveJoinQr,
+    /// Answer is an image file (PNG or JPEG) with a join QR code in it,
+    /// read into the live source form (crate::live::qr). Empty cancels.
+    JoinQrImage,
 }
 
 impl PromptPurpose {
@@ -440,6 +446,8 @@ impl PromptPurpose {
             PromptPurpose::ImportCards => "Import study cards from Anki package",
             // The app labels each group from the message catalog.
             PromptPurpose::CwCopy => "Type what you heard",
+            PromptPurpose::SaveJoinQr => "Save the QR code to file (.png or .svg)",
+            PromptPurpose::JoinQrImage => "Image file with the QR code",
         }
     }
 

@@ -57,6 +57,7 @@ pub mod log;
 #[cfg(feature = "mqtt")]
 pub mod mqtt;
 pub mod order;
+pub mod qr;
 pub mod source;
 pub mod values;
 pub mod wire;

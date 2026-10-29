@@ -244,6 +244,8 @@ fn purpose_name(p: PromptPurpose) -> &'static str {
         PromptPurpose::LiveCheckIn => "live_check_in",
         PromptPurpose::ImportCards => "import_cards",
         PromptPurpose::CwCopy => "cw_copy",
+        PromptPurpose::SaveJoinQr => "save_join_qr",
+        PromptPurpose::JoinQrImage => "join_qr_image",
     }
 }
 
@@ -1017,6 +1019,7 @@ fn prompt_key(name: &str) -> Result<crate::list_model::PromptKey, RpcError> {
         "kill_to_end" => K::KillToEnd,
         "delete_word_back" => K::DeleteWordBack,
         "toggle_shown" => K::ToggleShown,
+        "context_menu" => K::ContextMenu,
         other => return Err(RpcError::params(format!("No prompt key {other}"))),
     })
 }
@@ -1196,7 +1199,7 @@ mod tests {
 
     /// Every prompt purpose and its protocol name: a change here is a
     /// protocol change, so clients are told (see the protocol version rule).
-    const PURPOSES: [(PromptPurpose, &str); 36] = [
+    const PURPOSES: [(PromptPurpose, &str); 38] = [
         (PromptPurpose::Find, "find"),
         (PromptPurpose::GoTo, "go_to"),
         (PromptPurpose::Open, "open"),
@@ -1233,10 +1236,12 @@ mod tests {
         (PromptPurpose::LiveCheckIn, "live_check_in"),
         (PromptPurpose::ImportCards, "import_cards"),
         (PromptPurpose::CwCopy, "cw_copy"),
+        (PromptPurpose::SaveJoinQr, "save_join_qr"),
+        (PromptPurpose::JoinQrImage, "join_qr_image"),
     ];
 
     #[test]
-    fn the_35_purpose_names_are_pinned() {
+    fn the_purpose_names_are_pinned() {
         let mut seen = std::collections::HashSet::new();
         for (p, name) in PURPOSES {
             assert_eq!(purpose_name(p), name, "{p:?}");
@@ -1278,7 +1283,9 @@ mod tests {
                 | PromptPurpose::SaveLiveSourceFile
                 | PromptPurpose::LiveCheckIn
                 | PromptPurpose::ImportCards
-                | PromptPurpose::CwCopy => name,
+                | PromptPurpose::CwCopy
+                | PromptPurpose::SaveJoinQr
+                | PromptPurpose::JoinQrImage => name,
             };
             assert!(!variant.is_empty());
         }

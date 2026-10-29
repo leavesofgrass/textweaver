@@ -202,8 +202,13 @@ impl App {
         self.tell(&m);
     }
 
+    /// True while a document is shared live.
+    pub(crate) fn live_is_sharing(&self) -> bool {
+        self.live_wire.share.is_some()
+    }
+
     /// Why there is no join code to copy, in words.
-    fn live_say_no_join_code(&mut self) -> Vec<Effect> {
+    pub(crate) fn live_say_no_join_code(&mut self) -> Vec<Effect> {
         let id = if self.live_wire.broker.is_none() {
             "live-broker-not-running"
         } else if self.live_broker_pin().is_some() {

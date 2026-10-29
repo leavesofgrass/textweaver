@@ -70,6 +70,8 @@ pub const PENDING: &[ActionId] = &[
     ActionId::CopyJoinCode,
     ActionId::CopyJoinLink,
     ActionId::OpenJoinLink,
+    ActionId::ShowJoinQr,
+    ActionId::JoinFromQrImage,
     ActionId::ShareDocumentLive,
     ActionId::StopSharing,
     ActionId::SendCheckIn,
@@ -83,8 +85,9 @@ pub const NOT_IN_MENUS: &[ActionId] = &[ActionId::Menu, ActionId::ContextMenu, A
 /// The context menu's commands, in order (beta 1, B1-cm): each is in one
 /// menu of the bar as well, so the context menu repeats no definition;
 /// it only picks the commands that fit where the cursor is. Cut and the
-/// pastes show in edit mode, Open link on a link, and the join code's
-/// Copy commands while the app's broker has a join code.
+/// pastes show in edit mode, Open link on a link, the join code's Copy
+/// commands and Show the join QR code while the app's broker has a join
+/// code, and Stop sharing while a document is shared live.
 pub const CONTEXT_MENU: &[ActionId] = &[
     ActionId::Cut,
     ActionId::Copy,
@@ -98,6 +101,8 @@ pub const CONTEXT_MENU: &[ActionId] = &[
     ActionId::FollowLink,
     ActionId::CopyJoinLink,
     ActionId::CopyJoinCode,
+    ActionId::ShowJoinQr,
+    ActionId::StopSharing,
 ];
 
 /// How many recent commands are kept.
@@ -348,6 +353,8 @@ impl MenuId {
                 Do(A::ShowJoinCode),
                 Do(A::CopyJoinCode),
                 Do(A::CopyJoinLink),
+                Do(A::ShowJoinQr),
+                Do(A::JoinFromQrImage),
             ],
             MenuId::ExportAs => &[
                 Do(A::ExportPdf),
@@ -1338,7 +1345,8 @@ impl App {
             .filter(|&a| match a {
                 A::Cut | A::Paste | A::PastePlainText => editing,
                 A::FollowLink => on_link,
-                A::CopyJoinLink | A::CopyJoinCode => self.live_has_join_code(),
+                A::CopyJoinLink | A::CopyJoinCode | A::ShowJoinQr => self.live_has_join_code(),
+                A::StopSharing => self.live_is_sharing(),
                 _ => true,
             })
             .map(|a| self.action_item(a))

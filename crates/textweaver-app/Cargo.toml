@@ -70,7 +70,7 @@ carta = ["textweaver-formats/carta", "textweaver-convert?/carta"]
 # releases. Off, the commands that open, set up, or close a live source
 # are hidden and say in words that live sources are not in this build;
 # a saved live log still opens.
-mqtt = ["dep:textweaver-mqtt", "dep:textweaver-broker", "textweaver-components/credentials"]
+mqtt = ["dep:textweaver-mqtt", "dep:textweaver-broker", "dep:textweaver-qr", "textweaver-components/credentials"]
 # Speech engines, passed through to textweaver-engines.
 espeak = ["textweaver-engines/espeak"]
 omnivox = ["textweaver-engines/omnivox"]
@@ -130,6 +130,8 @@ textweaver-export = { workspace = true, optional = true }
 textweaver-mqtt = { workspace = true, optional = true }
 # Beta 5, phase 5b: the broker the app starts (crate::live::broker).
 textweaver-broker = { workspace = true, optional = true }
+# Beta 5, phase 7c: the join QR code (crate::live::qr).
+textweaver-qr = { workspace = true, optional = true }
 pulldown-cmark.workspace = true
 # Anki packages (B1-f3): the SQLite collection, the zip, and the newest
 # format's zstd collection; sha1 for the checksum Anki keeps per note.
@@ -156,6 +158,10 @@ midir = { workspace = true, optional = true, features = ["winrt"] }
 # GetLogicalDrives and GetDriveTypeW, for the file browser's drives (W6f);
 # ShellExecuteW, to open links and files without a shell (W8a).
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalization", "Win32_Storage_FileSystem", "Win32_System_SystemInformation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+# The clipboard's image for Join from a QR image (crate::clipboard_image),
+# read as the textweaver app reads its text: `link!` declarations, with no
+# more features of `windows`.
+windows-core.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

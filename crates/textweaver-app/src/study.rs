@@ -223,6 +223,8 @@ pub(crate) fn prompt_label(c: &Catalog, purpose: PromptPurpose) -> String {
         P::LiveCheckIn => "prompt-live-check-in",
         P::ImportCards => "prompt-import-cards",
         P::CwCopy => "prompt-cw-copy",
+        P::SaveJoinQr => "prompt-save-join-qr",
+        P::JoinQrImage => "prompt-join-qr-image",
     })
 }
 

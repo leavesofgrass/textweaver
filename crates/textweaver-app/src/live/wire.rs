@@ -59,6 +59,8 @@ pub const NEEDS_MQTT: &[ActionId] = &[
     ActionId::CopyJoinCode,
     ActionId::CopyJoinLink,
     ActionId::OpenJoinLink,
+    ActionId::ShowJoinQr,
+    ActionId::JoinFromQrImage,
     ActionId::ShareDocumentLive,
     ActionId::StopSharing,
     ActionId::SendCheckIn,
@@ -86,6 +88,8 @@ pub const COMMANDS: &[ActionId] = &[
     ActionId::CopyJoinCode,
     ActionId::CopyJoinLink,
     ActionId::OpenJoinLink,
+    ActionId::ShowJoinQr,
+    ActionId::JoinFromQrImage,
     ActionId::ShareDocumentLive,
     ActionId::StopSharing,
     ActionId::SendCheckIn,
@@ -189,6 +193,15 @@ pub(crate) enum LiveList {
     /// Send a check-in through which source: the ids, by row.
     #[cfg(feature = "mqtt")]
     CheckInThrough(Vec<String>),
+    /// Show the join QR code (crate::live::qr): its rows and the code.
+    #[cfg(feature = "mqtt")]
+    Qr(super::qr::JoinQrView),
+    /// The join QR code in block characters; Enter closes it.
+    #[cfg(feature = "mqtt")]
+    QrDrawing,
+    /// The join code field's context menu (crate::live::form): its
+    /// commands, by row. Escape goes back to the field.
+    FieldMenu(Vec<super::form::FieldItem>),
 }
 
 impl App {
@@ -207,6 +220,8 @@ impl App {
             | ActionId::CopyJoinCode
             | ActionId::CopyJoinLink
             | ActionId::OpenJoinLink
+            | ActionId::ShowJoinQr
+            | ActionId::JoinFromQrImage
             | ActionId::ShareDocumentLive
             | ActionId::StopSharing
             | ActionId::SendCheckIn => self.run_registered(a),
@@ -311,6 +326,11 @@ impl App {
                 ),
                 None => vec![Effect::Redraw],
             },
+            #[cfg(feature = "mqtt")]
+            LiveList::Qr(view) => self.live_choose_qr(&view, n),
+            #[cfg(feature = "mqtt")]
+            LiveList::QrDrawing => vec![Effect::Redraw],
+            LiveList::FieldMenu(items) => self.live_field_menu_chose(items.get(n).copied()),
         }
     }
 
@@ -584,6 +604,10 @@ pub(crate) fn register(app: &mut App) {
         app.register_handler(ActionId::CopyJoinCode, |app| app.live_copy_join_code());
         app.register_handler(ActionId::CopyJoinLink, |app| app.live_copy_join_link());
         app.register_handler(ActionId::OpenJoinLink, |app| app.live_open_join_link());
+        app.register_handler(ActionId::ShowJoinQr, |app| app.live_show_join_qr());
+        app.register_handler(ActionId::JoinFromQrImage, |app| {
+            app.live_join_from_qr_image()
+        });
         app.register_handler(ActionId::ShareDocumentLive, |app| app.live_share_command());
         app.register_handler(ActionId::StopSharing, |app| app.live_stop_sharing());
         app.register_handler(ActionId::SendCheckIn, |app| app.live_checkin_command());
@@ -608,6 +632,23 @@ impl App {
 
     pub(crate) fn live_has_join_code(&self) -> bool {
         false
+    }
+
+    pub(crate) fn live_is_sharing(&self) -> bool {
+        false
+    }
+
+    pub(crate) fn answer_save_join_qr(&mut self, _text: &str) -> Vec<Effect> {
+        self.live_not_in_build()
+    }
+
+    pub(crate) fn answer_join_qr_image(&mut self, _text: &str) -> Vec<Effect> {
+        self.live_not_in_build()
+    }
+
+    /// The join QR code view: never, in this build.
+    pub fn live_join_qr(&self) -> Option<&super::qr::JoinQrView> {
+        None
     }
 
     pub(crate) fn live_share_saved(&mut self, _path: &std::path::Path) {}
