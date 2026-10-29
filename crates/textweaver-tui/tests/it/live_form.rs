@@ -227,7 +227,10 @@ fn a_pasted_join_link_fills_the_form_and_is_never_shown() {
     // Back to the code: a pasted list keeps only the code.
     h.press(KeyCode::BackTab, KeyModifiers::SHIFT);
     h.press(KeyCode::BackTab, KeyModifiers::SHIFT);
-    h.press(KeyCode::Char('u'), KeyModifiers::CONTROL);
+    for _ in 0..19 {
+        h.key(KeyCode::Backspace);
+    }
+    assert_eq!(h.field_text(), "");
     h.tui
         .paste("WXYZ-WXYZ-WXYZ-WXYZ\r\nGroup 1 of 4: WXYZ\r\nGroup 2 of 4: WXYZ\r\n");
     h.draw();
