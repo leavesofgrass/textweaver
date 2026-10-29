@@ -133,6 +133,9 @@ enum Cmd {
     /// Share a document live: publish it to a broker, then again on each save.
     #[cfg(feature = "mqtt")]
     Share(cmd::send::ShareArgs),
+    /// Read the join link from a QR code in an image (PNG or JPEG) and print it.
+    #[cfg(feature = "mqtt")]
+    JoinQr(cmd::join_qr::Args),
 }
 
 /// Runs `tw` and turns the result into its exit status: 0 done, 1 failed
@@ -216,6 +219,8 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Send(a) => cmd::send::send(a),
         #[cfg(feature = "mqtt")]
         Cmd::Share(a) => cmd::send::share(a),
+        #[cfg(feature = "mqtt")]
+        Cmd::JoinQr(a) => cmd::join_qr::run(a),
         Cmd::Update(a) => cmd::update::run(a),
     }
 }

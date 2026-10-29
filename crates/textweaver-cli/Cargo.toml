@@ -32,6 +32,7 @@ mqtt = [
     "textweaver-tui/mqtt",
     "dep:textweaver-mqtt",
     "dep:textweaver-broker",
+    "dep:textweaver-qr",
     "dep:ctrlc",
 ]
 # carta (B1-k2): `tw convert`, `tw text`, and the reader read Org,
@@ -86,6 +87,9 @@ serde_json.workspace = true
 # feature). ctrlc stops the broker and the share loop cleanly.
 textweaver-mqtt = { workspace = true, optional = true }
 textweaver-broker = { workspace = true, optional = true }
+# Beta 5, phase 7c: `tw join-qr IMAGE`, and `--qr FILE` on `tw broker` and
+# `tw share` (the `mqtt` feature).
+textweaver-qr = { workspace = true, optional = true }
 ctrlc = { workspace = true, optional = true }
 
 [dev-dependencies]

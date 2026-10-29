@@ -6,7 +6,8 @@
 //!   the broker says in words whether each address is loopback, Tailscale
 //!   or something else. `--join-code` makes a session key and a join code
 //!   whose holders may read the `--join-topic` filters, and prints the
-//!   join link (`Join link: twjoin://...`) to copy to readers.
+//!   join link (`Join link: twjoin://...`) to copy to readers; `--qr
+//!   FILE` also saves its QR code (a PNG, or an SVG).
 //! - `tw broker account add|remove|list` change `broker.toml` in the data
 //!   folder. The password is asked without echo (twice), or read as one
 //!   line from standard input when it is piped; never on the command line.
@@ -69,6 +70,10 @@ pub struct RunArgs {
     /// A topic filter a join code may read. Repeat for more. Default: #.
     #[arg(long, value_name = "FILTER", requires = "join_code")]
     pub join_topic: Vec<String>,
+    /// Save the join link's QR code to this file: a PNG, or an SVG when
+    /// the name ends in .svg. Anyone who sees the code can join.
+    #[arg(long, value_name = "FILE", requires = "join_code")]
+    pub qr: Option<PathBuf>,
     /// Use this folder for textweaver's data (broker.toml and the key)
     /// instead of the usual one.
     #[arg(long, value_name = "DIR")]
@@ -196,6 +201,9 @@ fn serve(args: RunArgs) -> Result<()> {
             "No accounts and no join code, so nobody could log in. Add an account with tw broker account add, or start with --join-code.".into()
         ));
     }
+    if let Some(path) = &args.qr {
+        crate::cmd::join_qr::check_qr_path(path)?;
+    }
     let tls = !args.plain;
     let port = args.port.unwrap_or(if tls { TLS_PORT } else { PLAIN_PORT });
     let mut config = BrokerConfig::new(&dir);
@@ -234,6 +242,12 @@ fn serve(args: RunArgs) -> Result<()> {
         outln!("Join code: {}", code.grouped());
         if let Some(link) = join_link(broker.local_addrs(), code) {
             outln!("Join link: {link}");
+            if let Some(path) = &args.qr
+                && let Err(e) = crate::cmd::join_qr::write_qr(path, &link)
+            {
+                // The broker runs on: the QR code is a convenience.
+                crate::cmd::write_out(format_args!("{e}\n"));
+            }
         }
         outln!("The join code may read: {join_topics}.");
     }

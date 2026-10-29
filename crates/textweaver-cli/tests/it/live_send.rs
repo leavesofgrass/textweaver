@@ -389,3 +389,165 @@ fn share_through_a_join_link_prints_the_link_for_readers() {
     );
     broker.stop();
 }
+
+/// A QR fixture made by textweaver-qr's tests.
+fn qr_fixture(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/b5/qr")
+        .join(name)
+}
+
+#[test]
+fn join_qr_prints_the_link_in_an_image_or_says_why_not() {
+    let h = home("join-qr");
+    let image = qr_fixture("join-link.png");
+    let out = tw(&h, &["join-qr", image.to_str().unwrap()], "", None);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(
+        stdout(&out),
+        "Join link: twjoin://broker.example:8883/ABCD-EFGH-JKMN-PQRS?topic=textweaver/live/demo\n"
+    );
+    // A light code on a dark ground reads too.
+    let image = qr_fixture("dark-theme.png");
+    let out = tw(&h, &["join-qr", image.to_str().unwrap()], "", None);
+    assert!(
+        stdout(&out).starts_with("Join link: twjoin://"),
+        "{}",
+        stderr(&out)
+    );
+    // Other text: one line, meaning first, and a failure.
+    let image = qr_fixture("plain-text.png");
+    let out = tw(&h, &["join-qr", image.to_str().unwrap()], "", None);
+    assert_eq!(out.status.code(), Some(1));
+    assert_eq!(
+        stderr(&out),
+        "Error: No join link: the QR code holds something else.\n"
+    );
+    assert_eq!(stdout(&out), "");
+    // Not an image.
+    let notes = h.join("notes.png");
+    std::fs::write(&notes, "not an image").unwrap();
+    let out = tw(&h, &["join-qr", notes.to_str().unwrap()], "", None);
+    assert_eq!(out.status.code(), Some(1));
+    let err = stderr(&out);
+    assert!(err.starts_with("Error: No join link: "), "{err}");
+    assert_eq!(err.lines().count(), 1, "{err}");
+}
+
+#[test]
+fn share_saves_the_join_qr_code_where_asked() {
+    let mut cfg = BrokerConfig::new(home("qr-broker-data"));
+    cfg.listen = vec![SocketAddr::from(([127, 0, 0, 1], 0))];
+    cfg.join_code = true;
+    let mut accounts = Accounts::default();
+    accounts
+        .add(
+            Account::with_iterations(
+                "netcontrol",
+                Role::Logger,
+                vec!["netlog/#".into()],
+                vec!["netlog/#".into()],
+                "logger-pw",
+                1_000,
+            )
+            .unwrap(),
+            false,
+        )
+        .unwrap();
+    cfg.accounts = accounts;
+    let broker = Broker::start(cfg, |_| {}).unwrap();
+    let addr = broker.local_addrs()[0];
+    let code = broker.join_code().unwrap().grouped();
+    let link = format!("twjoin://{addr}/{code}");
+    let h = home("qr-share");
+    let doc = h.join("agenda.md");
+    std::fs::write(&doc, "# Agenda\n").unwrap();
+    let png = h.join("join-qr.png");
+    let mut args = [
+        "share",
+        doc.to_str().unwrap(),
+        "--topic",
+        "netlog/agenda",
+        "--once",
+        "--join-link",
+        link.as_str(),
+        "--user",
+        "netcontrol",
+        "--qr",
+        png.to_str().unwrap(),
+    ];
+    let out = tw(&h, &args, "", Some("logger-pw"));
+    assert!(out.status.success(), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("QR code saved: "), "{text}");
+    let read = tw(&h, &["join-qr", png.to_str().unwrap()], "", None);
+    assert_eq!(
+        stdout(&read),
+        format!("Join link: {link}?topic=netlog/agenda\n")
+    );
+    // An SVG names the host, never the link.
+    let svg = h.join("join-qr.svg");
+    args[10] = svg.to_str().unwrap();
+    let out = tw(&h, &args, "", Some("logger-pw"));
+    assert!(out.status.success(), "{}", stderr(&out));
+    let body = std::fs::read_to_string(&svg).unwrap();
+    assert!(body.contains("QR code for joining 127.0.0.1"), "{body}");
+    assert!(!body.contains("twjoin") && !body.contains(&code));
+    // Without a join code or link, and with another kind of file: refused
+    // before anything is sent.
+    let out = tw(
+        &h,
+        &[
+            "share",
+            doc.to_str().unwrap(),
+            "--topic",
+            "t",
+            "--host",
+            "127.0.0.1",
+            "--plain",
+            "--once",
+            "--qr",
+            "out.png",
+        ],
+        "",
+        None,
+    );
+    assert_eq!(
+        stderr(&out),
+        "Error: No QR code: --qr needs --join-code or --join-link.\n"
+    );
+    args[10] = "join-qr.gif";
+    let out = tw(&h, &args, "", Some("logger-pw"));
+    assert_eq!(
+        stderr(&out),
+        "Error: QR code not saved: join-qr.gif does not end in .png or .svg.\n"
+    );
+    broker.stop();
+}
+
+#[test]
+fn broker_qr_needs_a_join_code_and_a_png_or_svg_name() {
+    let h = home("qr-broker-args");
+    // Checked before the broker starts, so nothing listens.
+    let out = tw(
+        &h,
+        &[
+            "broker",
+            "--join-code",
+            "--qr",
+            "join-qr.gif",
+            "--listen",
+            "127.0.0.1:0",
+        ],
+        "",
+        None,
+    );
+    assert_eq!(out.status.code(), Some(1));
+    assert_eq!(
+        stderr(&out),
+        "Error: QR code not saved: join-qr.gif does not end in .png or .svg.\n"
+    );
+    let out = tw(&h, &["broker", "--qr", "join-qr.png"], "", None);
+    assert_eq!(out.status.code(), Some(2), "a usage error");
+    assert!(stderr(&out).contains("--join-code"), "{}", stderr(&out));
+}
