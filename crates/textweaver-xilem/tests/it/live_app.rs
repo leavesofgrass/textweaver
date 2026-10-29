@@ -898,7 +898,7 @@ fn a_pasted_join_link_fills_the_form_in_the_app() {
     assert!(!heard.contains("twjoin"), "{heard}");
 }
 
-/// A live document message as `tw share` or Publish this document live
+/// A live document message as `tw publish` or Publish this document live
 /// sends it.
 fn shared(rev: u64, text: &str) -> String {
     serde_json::json!({

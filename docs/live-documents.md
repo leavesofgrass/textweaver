@@ -6,7 +6,7 @@ MQTT is a small publish and subscribe protocol that sensors, home automation, an
 
 A live source only receives. It never publishes a message, so a live document cannot change what the broker holds. Sending is separate: **Publish a check-in** publishes one entry, **Publish this document live** publishes the document you have open, and **Start your broker** runs textweaver's own broker inside the app ([Your broker and publishing](#your-broker-and-publishing)).
 
-This guide is for the person who reads the live document. If you also run the broker, [Running the broker for a live log](live-broker.md) covers textweaver's own broker (`tw broker`, `tw send` and `tw share`), Mosquitto, Tailscale, and 44Net.
+This guide is for the person who reads the live document. If you also run the broker, [Running the broker for a live log](live-broker.md) covers textweaver's own broker (`tw broker` and `tw publish`), Mosquitto, Tailscale, and 44Net.
 
 ## In brief
 
@@ -120,7 +120,7 @@ A field's changes are announced at most once every `min_interval_seconds` (10 by
 
 ## The document view
 
-A shared document is a whole document published as one message, by `tw share` or by **Publish this document live** in another copy of textweaver ([The live document message](live-broker.md#the-live-document-message)). When such a message arrives, the source shows the document itself, as Markdown or as plain text, in place of a log. You read it as any document, with headings, lists, links and find.
+A shared document is a whole document published as one message, by `tw publish` or by **Publish this document live** in another copy of textweaver ([The live document message](live-broker.md#the-live-document-message)). When such a message arrives, the source shows the document itself, as Markdown or as plain text, in place of a log. You read it as any document, with headings, lists, links and find.
 
 - **A new revision replaces it in place.** textweaver changes only the lines that differ, so your cursor, selection, bookmarks and the screen reader's place stay on the same text. In the textweaver app the lines that did not change keep their place in the accessibility tree, so the screen reader does not read them again.
 - **The revision is said once, briefly and politely:** "Agenda updated, revision 3." The text itself is never read out. The first revision says "Agenda, revision 1, published live." The title line shows "Revision 3" where a log shows its unread count.

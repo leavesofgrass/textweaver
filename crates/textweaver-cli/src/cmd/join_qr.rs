@@ -4,7 +4,7 @@
 //! in the image, one line says why and the exit status is 1.
 //!
 //! [`write_qr`] writes a join link's QR code for `tw broker --qr FILE` and
-//! `tw share --qr FILE`: a PNG, or an SVG when the file name ends in
+//! `tw publish --qr FILE`: a PNG, or an SVG when the file name ends in
 //! `.svg`. Only where the user names; textweaver keeps no copy.
 //!
 //! A join link holds the join code. It is printed only on request, to

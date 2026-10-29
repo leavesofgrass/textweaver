@@ -4,7 +4,7 @@
 //!
 //! A live document message is one JSON object, retained on its topic:
 //! `{"type": "textweaver.document", "rev": N, "title": "...", "format":
-//! "markdown", "text": "..."}` (`tw share`, or Publish this document live
+//! "markdown", "text": "..."}` (`tw publish`, or Publish this document live
 //! in the app). Its text keeps its line breaks: the MQTT client cleans it
 //! with its own, larger cap (`textweaver_mqtt::clean_document_text`).
 //!

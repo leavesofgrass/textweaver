@@ -26,9 +26,9 @@ pub mod notes;
 pub mod ocr;
 pub mod open;
 pub mod profiles;
-pub mod search;
 #[cfg(feature = "mqtt")]
-pub mod send;
+pub mod publish;
+pub mod search;
 pub mod serve;
 pub mod settings;
 pub mod speak;

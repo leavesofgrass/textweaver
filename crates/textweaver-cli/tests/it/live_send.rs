@@ -1,4 +1,5 @@
-//! `tw broker account`, `tw send` and `tw share`, against textweaver's own
+//! `tw broker account` and `tw publish` (with its older names, `tw send`
+//! and `tw share`), against textweaver's own
 //! broker running inside this test program on 127.0.0.1. Never a real
 //! broker, never audio. The data folders are under the target directory.
 
@@ -216,14 +217,15 @@ fn read_all(port: u16, secs: u64) -> Vec<MqttEvent> {
 }
 
 #[test]
-fn send_and_share_reach_a_reader() {
+fn publish_and_its_older_names_reach_a_reader() {
     let broker = start_broker();
     let port = broker.local_addrs()[0].port().to_string();
     let h = home("send");
     let conn = ["--plain", "--port", port.as_str(), "--user", "netcontrol"];
 
     let mut args = vec![
-        "send",
+        "publish",
+        "--check-in",
         "--topic",
         "netlog/checkins",
         "--retain",
@@ -243,7 +245,7 @@ fn send_and_share_reach_a_reader() {
     let doc = h.join("agenda.md");
     std::fs::write(&doc, "# Agenda\n\n1. Check-ins\n").unwrap();
     let mut args = vec![
-        "share",
+        "publish",
         doc.to_str().unwrap(),
         "--topic",
         "netlog/agenda",
@@ -284,11 +286,17 @@ fn send_and_share_reach_a_reader() {
     // A document's text keeps its line breaks, still cleaned.
     assert_eq!(d["text"], "# Agenda\n\n1. Check-ins\n");
 
-    // From standard input, and refusals in one line.
+    // From standard input, and refusals in one line. The older name,
+    // `tw send`, takes the same options and prints the same line.
+    let mut new = vec!["publish", "--check-in", "--topic", "netlog/checkins"];
+    new.extend(conn);
+    let out = tw(&h, &new, r#"{"callsign": "N1TEST"}"#, Some("logger-pw"));
+    assert!(out.status.success(), "{}", stderr(&out));
     let mut args = vec!["send", "--topic", "netlog/checkins"];
     args.extend(conn);
-    let out = tw(&h, &args, r#"{"callsign": "N1TEST"}"#, Some("logger-pw"));
-    assert!(out.status.success(), "{}", stderr(&out));
+    let old = tw(&h, &args, r#"{"callsign": "N1TEST"}"#, Some("logger-pw"));
+    assert!(old.status.success(), "{}", stderr(&old));
+    assert_eq!(stdout(&old), stdout(&out));
     let out = tw(&h, &args, "[1, 2]", Some("logger-pw"));
     assert!(stderr(&out).starts_with("Error: The entry must be one JSON object"));
     let out = tw(&h, &args, "{}", None);
@@ -327,7 +335,7 @@ fn send_and_share_reach_a_reader() {
 }
 
 #[test]
-fn share_through_a_join_link_prints_the_link_for_readers() {
+fn publish_through_a_join_link_prints_the_link_for_readers() {
     let mut accounts = Accounts::default();
     accounts
         .add(
@@ -354,8 +362,8 @@ fn share_through_a_join_link_prints_the_link_for_readers() {
     let h = home("join-share");
     let doc = h.join("agenda.md");
     std::fs::write(&doc, "# Agenda\n").unwrap();
-    let args = [
-        "share",
+    let mut args = [
+        "publish",
         doc.to_str().unwrap(),
         "--topic",
         "netlog/agenda",
@@ -370,6 +378,12 @@ fn share_through_a_join_link_prints_the_link_for_readers() {
     let text = stdout(&out);
     let want = format!("Join link: {link}?topic=netlog/agenda\n");
     assert!(text.contains(&want), "{text}");
+    // The older name, `tw share`, takes the same options and prints the
+    // same lines.
+    args[0] = "share";
+    let out = tw(&h, &args, "", Some("logger-pw"));
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(stdout(&out), text);
     // A link that is not one says why, meaning first.
     let out = tw(
         &h,
@@ -435,7 +449,7 @@ fn join_qr_prints_the_link_in_an_image_or_says_why_not() {
 }
 
 #[test]
-fn share_saves_the_join_qr_code_where_asked() {
+fn publish_saves_the_join_qr_code_where_asked() {
     let mut cfg = BrokerConfig::new(home("qr-broker-data"));
     cfg.listen = vec![SocketAddr::from(([127, 0, 0, 1], 0))];
     cfg.join_code = true;
@@ -464,7 +478,7 @@ fn share_saves_the_join_qr_code_where_asked() {
     std::fs::write(&doc, "# Agenda\n").unwrap();
     let png = h.join("join-qr.png");
     let mut args = [
-        "share",
+        "publish",
         doc.to_str().unwrap(),
         "--topic",
         "netlog/agenda",
@@ -498,7 +512,7 @@ fn share_saves_the_join_qr_code_where_asked() {
     let out = tw(
         &h,
         &[
-            "share",
+            "publish",
             doc.to_str().unwrap(),
             "--topic",
             "t",
