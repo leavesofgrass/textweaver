@@ -192,3 +192,76 @@ fn the_join_code_is_stars_until_f3_shows_it() {
     assert!(status.contains("Hiding the join code"), "{status}");
     assert_eq!(h.field_text(), "ABCD");
 }
+
+/// A join link pasted into the form (the terminal's bracketed paste)
+/// fills it, and the link is never on the prompt line or said; the join
+/// code field keeps only the code from a paste of the "Show the join
+/// code" list.
+#[test]
+fn a_pasted_join_link_fills_the_form_and_is_never_shown() {
+    let mut h = launch();
+    h.tui.dispatch(Command::Action(ActionId::SetUpLiveSource));
+    h.draw();
+    h.tui
+        .paste("Join link: twjoin://10.0.0.5:8884/ABCD-EFGH-JKMN-PQRS?topic=net/agenda\r\n");
+    h.draw();
+    h.shows("Name, 1 of 7", "10.0.0.5");
+    assert!(!h.prompt_line().contains("twjoin"), "{}", h.prompt_line());
+    let status = h.tui.app().status_text();
+    assert!(!status.contains("twjoin"), "{status}");
+    assert!(!status.contains("PQRS"), "{status}");
+    for _ in 0..3 {
+        h.key(KeyCode::Tab);
+    }
+    h.shows("Join code, 4 of 7", "****");
+    assert!(
+        h.prompt_line().ends_with(&"*".repeat(19)),
+        "{}",
+        h.prompt_line()
+    );
+    assert!(!h.prompt_line().contains("ABCD"), "{}", h.prompt_line());
+    h.key(KeyCode::Tab);
+    h.shows("Port, 5 of 7", "8884");
+    h.key(KeyCode::Tab);
+    h.shows("Topic, 6 of 7", "net/agenda");
+    // Back to the code: a pasted list keeps only the code.
+    h.press(KeyCode::BackTab, KeyModifiers::SHIFT);
+    h.press(KeyCode::BackTab, KeyModifiers::SHIFT);
+    for _ in 0..19 {
+        h.key(KeyCode::Backspace);
+    }
+    assert_eq!(h.field_text(), "");
+    h.tui
+        .paste("WXYZ-WXYZ-WXYZ-WXYZ\r\nGroup 1 of 4: WXYZ\r\nGroup 2 of 4: WXYZ\r\n");
+    h.draw();
+    assert_eq!(h.field_text(), "WXYZ-WXYZ-WXYZ-WXYZ");
+    let status = h.tui.app().status_text();
+    assert!(status.contains("Join code pasted."), "{status}");
+}
+
+/// Copy the join link goes to the terminal's clipboard (OSC 52), as Copy
+/// does, and only "Join link copied." is said.
+#[test]
+fn copy_the_join_link_reaches_the_terminal_clipboard() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (speech, _log) = recording_service().unwrap();
+    let mut app = App::new(AppConfig {
+        speech,
+        paths: Some(textweaver_app::store::Paths::under(tmp.path())),
+        ..AppConfig::for_tests()
+    });
+    let _ = app.update_settings(|s| s.live.broker.listen = vec!["127.0.0.1:0".into()]);
+    let mut tui = Tui::with_color_support(app, ColorSupport::NoColor);
+    tui.dispatch(Command::Action(ActionId::StartBroker));
+    assert!(tui.app().live_broker_running());
+    let _ = tui.take_clipboard_sequence();
+    tui.dispatch(Command::Action(ActionId::CopyJoinLink));
+    let osc = tui
+        .take_clipboard_sequence()
+        .expect("sent to the clipboard");
+    assert!(osc.starts_with("\u{1b}]52;c;"), "{osc:?}");
+    let status = tui.app().status_text();
+    assert!(status.contains("Join link copied."), "{status}");
+    assert!(!status.contains("twjoin"), "{status}");
+    tui.dispatch(Command::Action(ActionId::StopBroker));
+}

@@ -826,6 +826,78 @@ fn the_join_code_is_a_password_field_with_a_show_box() {
     let _ = r.app.dispatch(Command::PromptKey(PromptKey::Escape));
 }
 
+/// A join link pasted into a field of the live source form in the
+/// textweaver app (the field sends its whole text) fills the form: the
+/// field the app opens again holds the host, never the link, and the
+/// join code field is a password field of stars, its Show box after it.
+#[cfg(feature = "mqtt")]
+#[test]
+fn a_pasted_join_link_fills_the_form_in_the_app() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut r = rig(dir.path(), false);
+    r.act(ActionId::SetUpLiveSource);
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Tab));
+    let effects = r.app.dispatch(Command::PromptKey(PromptKey::SetText(
+        "twjoin://10.0.0.5:8884/ABCD-EFGH-JKMN-PQRS?topic=net/agenda".into(),
+    )));
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, textweaver_app::Effect::Prompt { .. })),
+        "the form opens again: {effects:?}"
+    );
+    let model = r.app.prompt_model().expect("the host field").clone();
+    assert!(
+        model.label.starts_with("Broker host, 2 of 7"),
+        "{}",
+        model.label
+    );
+    assert_eq!(model.shown_text(), "10.0.0.5");
+    let p = Palette::galaxy();
+    let c = r.app.catalog();
+    let mut back = None;
+    let (modal, field) =
+        gui::prompt_dialog(&p, &c, &model.label, "", &model.shown_text(), false, true);
+    gui::open_dialog_in(&mut r.h, modal, field, &mut back);
+    let _ = r.h.redraw();
+    let node = r.h.access_node(field).unwrap();
+    assert_eq!(node.role(), Role::TextInput);
+    assert_eq!(node.value().as_deref(), Some("10.0.0.5"));
+    gui::close_dialog_in(&mut r.h, &mut back);
+    // The join code field: stars in a password field.
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Tab));
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Tab));
+    let model = r.app.prompt_model().unwrap().clone();
+    assert!(
+        model.label.starts_with("Join code, 4 of 7"),
+        "{}",
+        model.label
+    );
+    assert!(model.is_masked());
+    let show_name = c.tr(model.show_message_ids().0);
+    let (modal, field) = gui::secret_prompt_dialog(
+        &p,
+        &c,
+        &model.label,
+        "",
+        &model.shown_text(),
+        true,
+        &show_name,
+    );
+    gui::open_dialog_in(&mut r.h, modal, field, &mut back);
+    r.h.edit_widget(gui::PROMPT_FIELD, |mut f| {
+        TextArea::set_password(&mut f, true)
+    });
+    let _ = r.h.redraw();
+    let node = r.h.access_node(field).unwrap();
+    assert_eq!(node.role(), Role::PasswordInput);
+    assert_eq!(node.value().as_deref(), Some("*".repeat(19).as_str()));
+    gui::close_dialog_in(&mut r.h, &mut back);
+    let _ = r.app.dispatch(Command::PromptKey(PromptKey::Escape));
+    let heard = r.app.status_text();
+    assert!(!heard.contains("twjoin"), "{heard}");
+}
+
 /// A live document message as `tw share` or Share this document live
 /// sends it.
 fn shared(rev: u64, text: &str) -> String {

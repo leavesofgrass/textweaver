@@ -56,6 +56,9 @@ pub const NEEDS_MQTT: &[ActionId] = &[
     ActionId::StartBroker,
     ActionId::StopBroker,
     ActionId::ShowJoinCode,
+    ActionId::CopyJoinCode,
+    ActionId::CopyJoinLink,
+    ActionId::OpenJoinLink,
     ActionId::ShareDocumentLive,
     ActionId::StopSharing,
     ActionId::SendCheckIn,
@@ -80,6 +83,9 @@ pub const COMMANDS: &[ActionId] = &[
     ActionId::StartBroker,
     ActionId::StopBroker,
     ActionId::ShowJoinCode,
+    ActionId::CopyJoinCode,
+    ActionId::CopyJoinLink,
+    ActionId::OpenJoinLink,
     ActionId::ShareDocumentLive,
     ActionId::StopSharing,
     ActionId::SendCheckIn,
@@ -172,9 +178,11 @@ pub(crate) enum LiveList {
     SaveFile(Vec<String>),
     /// The form saved a source: open source `id` now, or not.
     SetupOffer(String),
-    /// Show the join code: the code, then its groups; Enter closes.
+    /// Show the join code: the code, then its groups, then (with a join
+    /// code) the rows Copy the join code and Copy the join link, from this
+    /// row on. Enter on a Copy row copies; on any other row, it closes.
     #[cfg(feature = "mqtt")]
-    Code,
+    Code(Option<usize>),
     /// Share this document live through which source: the ids, by row.
     #[cfg(feature = "mqtt")]
     ShareThrough(Vec<String>),
@@ -196,6 +204,9 @@ impl App {
             | ActionId::StartBroker
             | ActionId::StopBroker
             | ActionId::ShowJoinCode
+            | ActionId::CopyJoinCode
+            | ActionId::CopyJoinLink
+            | ActionId::OpenJoinLink
             | ActionId::ShareDocumentLive
             | ActionId::StopSharing
             | ActionId::SendCheckIn => self.run_registered(a),
@@ -282,7 +293,11 @@ impl App {
                 }
             }
             #[cfg(feature = "mqtt")]
-            LiveList::Code => vec![Effect::Redraw],
+            LiveList::Code(copy_rows) => match copy_rows.map(|first| n.checked_sub(first)) {
+                Some(Some(0)) => self.live_copy_join_code(),
+                Some(Some(1)) => self.live_copy_join_link(),
+                _ => vec![Effect::Redraw],
+            },
             #[cfg(feature = "mqtt")]
             LiveList::ShareThrough(ids) => match ids.get(n) {
                 Some(id) => self.live_share_start(super::checkin::SendTarget::Source(id.clone())),
@@ -566,6 +581,9 @@ pub(crate) fn register(app: &mut App) {
         app.register_handler(ActionId::StartBroker, |app| app.live_start_broker());
         app.register_handler(ActionId::StopBroker, |app| app.live_stop_broker());
         app.register_handler(ActionId::ShowJoinCode, |app| app.live_show_join_code());
+        app.register_handler(ActionId::CopyJoinCode, |app| app.live_copy_join_code());
+        app.register_handler(ActionId::CopyJoinLink, |app| app.live_copy_join_link());
+        app.register_handler(ActionId::OpenJoinLink, |app| app.live_open_join_link());
         app.register_handler(ActionId::ShareDocumentLive, |app| app.live_share_command());
         app.register_handler(ActionId::StopSharing, |app| app.live_stop_sharing());
         app.register_handler(ActionId::SendCheckIn, |app| app.live_checkin_command());
@@ -587,6 +605,10 @@ impl App {
     }
 
     pub(crate) fn live_broker_shutdown(&mut self) {}
+
+    pub(crate) fn live_has_join_code(&self) -> bool {
+        false
+    }
 
     pub(crate) fn live_share_saved(&mut self, _path: &std::path::Path) {}
 
@@ -1611,11 +1633,10 @@ mod tests {
     #[test]
     fn every_live_command_is_reachable_and_answers_in_words() {
         let mut r = rig(&[("plain", practice(""))]);
-        let menu: Vec<ActionId> = r
-            .app
-            .menu_view(crate::menu::MenuId::Live)
-            .items
+        // Live sources, and its Join code submenu.
+        let menu: Vec<ActionId> = [crate::menu::MenuId::Live, crate::menu::MenuId::JoinCode]
             .into_iter()
+            .flat_map(|m| r.app.menu_view(m).items)
             .filter_map(|i| match i.kind {
                 crate::menu::MenuItemKind::Action(a) => Some(a),
                 _ => None,

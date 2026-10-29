@@ -3453,9 +3453,10 @@ impl Gui {
     fn prompt_changed(&mut self, ctx: &mut DriverCtx<'_>, field: String) {
         // Shown as typed, the field holds the secret itself.
         let Some(model) = self.app.prompt_model().filter(|p| p.is_masked()) else {
-            let _ = self
+            let effects = self
                 .app
                 .dispatch(Command::PromptKey(PromptKey::SetText(field)));
+            self.prompt_reopened(ctx, effects);
             return;
         };
         // Where the edit was: the field's selection before it (all stars,
@@ -3474,9 +3475,12 @@ impl Gui {
             .take_while(|(i, _)| *i < after_byte)
             .count();
         let (secret, caret) = secret_edit(&model.text(), &field, before, after);
-        let _ = self
+        let effects = self
             .app
             .dispatch(Command::PromptKey(PromptKey::SetText(secret)));
+        if self.prompt_reopened(ctx, effects) {
+            return;
+        }
         let shown = self
             .app
             .prompt_model()
@@ -3490,6 +3494,28 @@ impl Gui {
                     TextArea::select_byte_range(&mut f, caret, caret);
                 });
         }
+    }
+
+    /// After an edit of the prompt's field: when the app opened a prompt
+    /// again (a join link pasted into the live source form fills the
+    /// form, and a pasted join code keeps only the code), the field shows
+    /// the new prompt's text and the effects run, as for a key. True when
+    /// it did.
+    fn prompt_reopened(&mut self, ctx: &mut DriverCtx<'_>, effects: Vec<Effect>) -> bool {
+        if !effects.iter().any(|e| matches!(e, Effect::Prompt { .. })) {
+            return false;
+        }
+        if let Some(text) = self
+            .app
+            .prompt_model()
+            .map(textweaver_app::PromptModel::shown_text)
+        {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(PROMPT_FIELD, |mut f| TextArea::reset_text(&mut f, &text));
+        }
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
+        true
     }
 
     /// A key for the app's prompt: the app changes its text (history,

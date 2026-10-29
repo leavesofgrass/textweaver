@@ -2610,6 +2610,9 @@ impl App {
             | A::StartBroker
             | A::StopBroker
             | A::ShowJoinCode
+            | A::CopyJoinCode
+            | A::CopyJoinLink
+            | A::OpenJoinLink
             | A::ShareDocumentLive
             | A::StopSharing
             | A::SendCheckIn => return self.live_action(a),

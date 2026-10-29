@@ -5,7 +5,8 @@
 //!   `--listen` names addresses; `--plain` turns TLS off (port 1883) and
 //!   the broker says in words whether each address is loopback, Tailscale
 //!   or something else. `--join-code` makes a session key and a join code
-//!   whose holders may read the `--join-topic` filters.
+//!   whose holders may read the `--join-topic` filters, and prints the
+//!   join link (`Join link: twjoin://...`) to copy to readers.
 //! - `tw broker account add|remove|list` change `broker.toml` in the data
 //!   folder. The password is asked without echo (twice), or read as one
 //!   line from standard input when it is piped; never on the command line.
@@ -231,12 +232,29 @@ fn serve(args: RunArgs) -> Result<()> {
     }
     if let Some(code) = broker.join_code() {
         outln!("Join code: {}", code.grouped());
+        if let Some(link) = join_link(broker.local_addrs(), code) {
+            outln!("Join link: {link}");
+        }
         outln!("The join code may read: {join_topics}.");
     }
     outln!("Running: press Ctrl+C to stop.");
     let _ = stop.recv();
     broker.stop();
     Ok(())
+}
+
+/// The join link for a broker on `addrs`: the first address that is not
+/// loopback (else the first), as readers reach it.
+fn join_link(
+    addrs: &[SocketAddr],
+    code: &textweaver_mqtt::JoinCode,
+) -> Option<textweaver_mqtt::JoinLink> {
+    let addr = addrs
+        .iter()
+        .find(|a| !a.ip().is_loopback())
+        .or_else(|| addrs.first())?;
+    let host = textweaver_mqtt::JoinLink::host_for(addr.ip());
+    textweaver_mqtt::JoinLink::new(&host, addr.port(), code.clone(), None).ok()
 }
 
 fn pin(args: PinArgs) -> Result<()> {

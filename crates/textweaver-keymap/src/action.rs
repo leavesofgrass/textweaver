@@ -689,6 +689,15 @@ actions! {
     ShowJoinCode = "show_join_code", File,
         "Say the running broker's join code in groups of four and show it in a list, or its certificate pin when it has no code",
         gui [], term [], shared [];
+    CopyJoinCode = "copy_join_code", File,
+        "Copy the running broker's join code to the clipboard, in four groups of four",
+        gui [], term [], shared [];
+    CopyJoinLink = "copy_join_link", File,
+        "Copy the running broker's join link to the clipboard: one line with its address, port, join code and shared topic",
+        gui [], term [], shared [];
+    OpenJoinLink = "open_join_link", File,
+        "Join a broker from a join link: the live source form, filled from the link on the clipboard or the one pasted into it",
+        gui [], term [], shared [];
     ShareDocumentLive = "share_document_live", File,
         "Share the open document live: readers following its topic see it, and each save, in place",
         gui [], term [], shared [];
