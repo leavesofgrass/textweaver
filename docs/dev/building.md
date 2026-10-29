@@ -34,7 +34,7 @@ To build without cmake, turn off the `opus` feature. Opus export then goes throu
 cargo build -p textweaver-cli --no-default-features
 ```
 
-For the app, list its other default features: `cargo build -p textweaver-xilem --no-default-features --features screenshot,renderer-vello,publish,lint,grammar,dictation,audio-export`. A build of the whole workspace, such as `cargo build --workspace`, always includes Opus, because `tw` turns it on.
+For the app, list its other default features: `cargo build -p textweaver-xilem --no-default-features --features screenshot,renderer-vello,publish,lint,grammar,dictation,audio-export,carta,cw-midi,mqtt`. A build of the whole workspace, such as `cargo build --workspace`, always includes Opus, because `tw` turns it on.
 
 ## Your first contribution
 
@@ -123,7 +123,15 @@ cargo build -p textweaver-tui --no-default-features
 
 `cargo xtask deps --check` makes sure that build links none of the conversion and citation stack, not grammar checking (harper-core), and not audio export (`textweaver-export`, with LAME and libopus, which need a C compiler and cmake).
 
-Grammar checking (the `grammar` feature) is on by default since Wave 7, in the terminal reader, the textweaver app, `tw`, and the packages. It costs about 11 MB and, on a clean build, 67 more crates (harper-core and the burn framework under it). To leave only grammar out, turn off the default features and name the others: `--no-default-features --features publish,lint,clipboard,highlight,dictation,audio-export,opus` for the reader. [ADR-0032](../adr/0032-grammar-lint-highlighting-clipboard.md) has the measurements.
+Grammar checking (the `grammar` feature) is on by default since Wave 7, in the terminal reader, the textweaver app, `tw`, and the packages. It costs about 11 MB and, on a clean build, 67 more crates (harper-core and the burn framework under it). To leave only grammar out, turn off the default features and name the others: `--no-default-features --features publish,lint,clipboard,highlight,dictation,audio-export,opus,carta,mqtt` for the reader. [ADR-0032](../adr/0032-grammar-lint-highlighting-clipboard.md) has the measurements.
+
+### Live documents and the `mqtt` feature
+
+Live documents (beta 5) are behind the cargo feature `mqtt`, on by default in the app, the terminal reader, `tw` and the textweaver app, and in every release. It brings in `textweaver-mqtt` (the client), `textweaver-broker` (`tw broker`, and the broker inside the app), `textweaver-qr` (QR codes for join links), the system credential store (`textweaver-components/credentials`, through `keyring`) and, in the app, arboard's `image-data` feature for a clipboard image. It needs no build tool beyond what the rest of the workspace has, and TLS is the ring-backed rustls, so there is no OpenSSL.
+
+Build without it with `--no-default-features` and the others you want (the `--features` lists in this guide, leaving out `mqtt`). The live commands are then hidden and say in words that live sources are not in this version; a JSON log that textweaver saved still opens.
+
+Tests for live documents never reach a network beyond 127.0.0.1. The ignored tests that use Debian 13's Mosquitto need Docker; see [Testing](testing.md).
 
 ## Scripts
 
