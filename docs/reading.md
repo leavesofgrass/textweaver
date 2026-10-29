@@ -424,7 +424,7 @@ You hear the match number, the count, and the line, for example "Match 2 of 5:" 
 - **F3** or **n**: next match.
 - **F4** or **Shift+N**: previous match (**Shift+F3** in the graphical version).
 
-At the end, the search wraps and says "Wrapped to top." or "Wrapped to bottom." If you have not searched yet, these keys open the Find prompt. The graphical version uses **F3** and **Shift+F3**, as other Windows programs do, besides **n** and **Shift+N**.
+At the end, the search wraps and says "Wrapped to top." or "Wrapped to bottom." If you have not searched yet, these keys open the Find prompt. The graphical version uses **F3** and **Shift+F3**, as other Windows programs do, besides **n** and **Shift+N**. In a prompt for a secret, such as a live source's password, **F3** instead shows or hides what you typed.
 
 ### Search options
 

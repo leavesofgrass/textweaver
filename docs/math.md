@@ -170,7 +170,7 @@ The values:
 - `"mathcat"`: MathCAT in ClearSpeak.
 - `"mathcat_simplespeak"`: MathCAT in SimpleSpeak.
 
-You can also change it in the settings screen (`Shift+F10`): "Math speech". The change applies from the next sentence read.
+You can also change it in the settings screen (`Shift+F10` in the terminal reader, `Ctrl+,` in the app): "Math speech". The change applies from the next sentence read.
 
 What stays the same:
 
