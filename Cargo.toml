@@ -43,6 +43,7 @@ members = [
     "crates/textweaver-cw",
     "crates/textweaver-mqtt",
     "crates/textweaver-broker",
+    "crates/textweaver-qr",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
@@ -90,6 +91,7 @@ default-members = [
     "crates/textweaver-cw",
     "crates/textweaver-mqtt",
     "crates/textweaver-broker",
+    "crates/textweaver-qr",
 ]
 
 [workspace.package]
@@ -166,6 +168,8 @@ textweaver-cw = { path = "crates/textweaver-cw" }
 textweaver-mqtt = { path = "crates/textweaver-mqtt" }
 # Beta 5, phase 5a: textweaver's own MQTT broker (`tw broker`).
 textweaver-broker = { path = "crates/textweaver-broker" }
+# Beta 5, phase 7b: QR codes for join links.
+textweaver-qr = { path = "crates/textweaver-qr" }
 
 # text and formats
 ropey = "1.6"
@@ -450,6 +454,17 @@ ring = "0.17.14"
 tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "net", "io-util", "time", "macros", "sync"] }
 tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
 rcgen = { version = "0.14.10", default-features = false, features = ["ring", "pem"] }
+
+# Beta 5, phase 7b: QR codes for join links (textweaver-qr), both pure
+# Rust and pinned exactly. qrcode (MIT OR Apache-2.0) encodes; its default
+# features (the image crate, its own SVG and PIC writers) are off, because
+# textweaver-qr writes PNG through the png crate already in the tree and
+# its own SVG with an accessible title. rqrr ((MIT OR Apache-2.0) AND ISC)
+# finds and reads codes in greyscale pixels; its `img` feature (the image
+# crate) is off. It brings lru, already in the tree, and g2p with g2gen
+# (a proc macro) and g2poly, small Galois field crates, MIT OR Apache-2.0.
+qrcode = { version = "=0.14.1", default-features = false }
+rqrr = { version = "=0.11.0", default-features = false }
 
 # tests
 proptest = "1.11"

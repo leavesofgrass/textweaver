@@ -1025,6 +1025,29 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "version": "0.1.0-beta.4"
   },
   {
+   "adr_note": {
+    "href": "../dev/architecture.md#the-crates",
+    "text": "Architecture guide: the crates"
+   },
+   "adrs": [],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [],
+   "deps": [
+    "textweaver-ocr"
+   ],
+   "description": "QR codes for textweaver's join links: encode a link to a module matrix, a PNG or an SVG, and read one back from an image file or clipboard pixels",
+   "dev_deps": [],
+   "job": "QR codes for textweaver's join links.",
+   "layer": "state",
+   "name": "textweaver-qr",
+   "path": "crates/textweaver-qr",
+   "short": "qr",
+   "tool": false,
+   "version": "0.1.0-beta.4"
+  },
+  {
    "adr_note": null,
    "adrs": [
     {
@@ -1657,7 +1680,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [
     "textweaver-app",
     "textweaver-cli",
-    "textweaver-formats"
+    "textweaver-formats",
+    "textweaver-qr"
    ],
    "deps": [
     "textweaver-components",
@@ -1916,6 +1940,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-sync",
     "textweaver-mqtt",
     "textweaver-broker",
+    "textweaver-qr",
     "textweaver-keymap",
     "textweaver-a11y",
     "textweaver-editor"

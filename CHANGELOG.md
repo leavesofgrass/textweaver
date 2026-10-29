@@ -10,6 +10,11 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Show, off by default,** in the join code field and every secret prompt (a live source password, the GitHub token). `F3` shows the text as typed or hides it again, in the terminal reader and the textweaver app; the app also has a check box right after the field, named "Show the password", "Show the token" or "Show the join code", which `Tab` reaches from the field (in the form, before the next field). textweaver says "Showing the join code" or "Hiding the join code"; the text and the caret stay. While shown, the field is an ordinary text field, so a screen reader and a Braille display can check it. Show resets each time the prompt or field opens and is never saved. The terminal reader names the key as a secret opens ("F3 shows it.").
 - JSON-RPC: the prompt key `toggle_shown`, and `secret` and `shown` in `prompt_state`.
 
+### QR codes for join links
+
+- New crate `textweaver-qr`, the groundwork for showing and scanning a join link as a QR code: it encodes a link as a QR code and writes it as a PNG or SVG file, the SVG with an accessible name, and reads codes back from PNG and JPEG files and from clipboard pixels, dark on light or light on dark, at any rotation. Both libraries are pure Rust (qrcode and rqrr). Errors are said in words ("no QR code was found in the image"), and none of them, nor any log, carries the link, which holds the join code. The commands and the app's views come later in beta 5.
+- A new fuzz target, `qr`, for what the QR reader is given, in the nightly run.
+
 ### textweaver's own broker and the sending side
 
 - **New: `tw broker`,** textweaver's own small MQTT 3.1.1 broker for live documents and net logs, in a new crate, `textweaver-broker`, on the beta 4 spike's design: rumqttc's packet codec behind textweaver's rustls with ring, one listener thread per address and one thread per client, no async runtime. QoS 0 and 1 (QoS 2 accepted and passed on at QoS 1), retained messages, keepalive, clean sessions, and wildcards; MQTT 5 clients are refused with the code for an unacceptable protocol version. Stopping ends every thread and frees every port before it returns. It listens on 127.0.0.1 unless `--listen` names addresses, with TLS by default; `--plain` turns TLS off, and each listening line says in words whether the address is loopback, Tailscale or something else, with a warning for the last. Status lines are words, meaning first, one per event, with no spinner.
@@ -60,6 +65,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 ### Security
 
 - tokio 1.53.1 to 1.53.3 in the lock, for RUSTSEC-2026-0386 (`AsyncFd` constructors). cargo deny, which checks every feature, found it through AccessKit's Linux adapter and rumqttc; textweaver-mqtt compiles tokio through rumqttc but never starts a runtime.
+- pulldown-cmark 0.13.4 to 0.13.5 in the lock, for RUSTSEC-2026-0414 (exponential parser output from wikilinks with empty display text). harper-core, the grammar checker, brings it.
 
 ## [0.1.0-beta.4] - 2026-10-24
 
