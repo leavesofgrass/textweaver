@@ -173,6 +173,9 @@ pub enum MenuId {
     CwPractice,
     /// Tools, Live sources.
     Live,
+    /// Tools, Live sources, Join code: show and copy the broker's join
+    /// code and join link.
+    JoinCode,
 }
 
 /// One entry of a menu's definition.
@@ -200,7 +203,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 32] = [
+    pub const ALL: [MenuId; 33] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
@@ -233,6 +236,7 @@ impl MenuId {
         MenuId::Cards,
         MenuId::CwPractice,
         MenuId::Live,
+        MenuId::JoinCode,
     ];
 
     /// The stable id, used in catalog ids (`menu-export-as`) and JSON-RPC.
@@ -270,6 +274,7 @@ impl MenuId {
             MenuId::Cards => "cards",
             MenuId::CwPractice => "cw-practice",
             MenuId::Live => "live",
+            MenuId::JoinCode => "join-code",
         }
     }
 
@@ -334,12 +339,15 @@ impl MenuId {
                 Sep,
                 Do(A::StartBroker),
                 Do(A::StopBroker),
-                Do(A::ShowJoinCode),
-                Do(A::CopyJoinCode),
-                Do(A::CopyJoinLink),
+                Sub(MenuId::JoinCode),
                 Do(A::ShareDocumentLive),
                 Do(A::StopSharing),
                 Do(A::SendCheckIn),
+            ],
+            MenuId::JoinCode => &[
+                Do(A::ShowJoinCode),
+                Do(A::CopyJoinCode),
+                Do(A::CopyJoinLink),
             ],
             MenuId::ExportAs => &[
                 Do(A::ExportPdf),

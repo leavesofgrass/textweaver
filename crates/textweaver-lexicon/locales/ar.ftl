@@ -5855,6 +5855,7 @@ action-live-toggle-field-show = في عرض القيم المباشر، إظها
 name-live-toggle-field-speak = نطق تغييرات هذا الحقل
 action-live-toggle-field-speak = في عرض القيم المباشر، نطق تغييرات الحقل في سطر المؤشر بصوت textweaver نفسه، تشغيل أو إيقاف؛ ويُحفظ الاختيار
 menu-live = المصادر المباشرة
+menu-join-code = رمز الانضمام
 prompt-live-setup = إعداد مصدر مباشر
 prompt-save-live-source-file = حفظ المصدر المباشر في ملف
 live-failed = تعذر الاتصال بـ { $name }: { $reason } لا مزيد من المحاولات؛ أصلح ذلك ثم افتح المصدر مرة أخرى.

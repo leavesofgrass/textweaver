@@ -5464,6 +5464,7 @@ action-live-toggle-field-show = Numa visualização de valores ao vivo, mostrar 
 name-live-toggle-field-speak = Falar as mudanças deste campo
 action-live-toggle-field-speak = Numa visualização de valores ao vivo, falar as mudanças do campo da linha do cursor com a própria voz do textweaver, ligado ou desligado; a escolha é salva
 menu-live = Fontes ao vivo
+menu-join-code = Código de acesso
 prompt-live-setup = Configurar uma fonte ao vivo
 prompt-save-live-source-file = Salvar fonte como arquivo
 live-failed = Não é possível conectar a { $name }: { $reason } Sem novas tentativas; corrija isso e abra a fonte de novo.

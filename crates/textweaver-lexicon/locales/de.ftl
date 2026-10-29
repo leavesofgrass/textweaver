@@ -5471,6 +5471,7 @@ action-live-toggle-field-show = In einer Live-Werteansicht die Änderungen des F
 name-live-toggle-field-speak = Änderungen dieses Felds sprechen
 action-live-toggle-field-speak = In einer Live-Werteansicht die Änderungen des Felds in der Zeile des Cursors mit der eigenen Stimme von textweaver sprechen, ein oder aus; die Wahl wird gespeichert
 menu-live = Live-Quellen
+menu-join-code = Beitrittscode
 prompt-live-setup = Live-Quelle einrichten
 prompt-save-live-source-file = Quelle als Datei speichern
 live-failed = Keine Verbindung zu { $name }: { $reason } Keine weiteren Versuche; beheben Sie das und öffnen Sie die Quelle erneut.

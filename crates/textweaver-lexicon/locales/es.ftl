@@ -5447,6 +5447,7 @@ action-live-toggle-field-show = En una vista de valores en vivo, mostrar los cam
 name-live-toggle-field-speak = Decir los cambios de este campo
 action-live-toggle-field-speak = En una vista de valores en vivo, decir los cambios del campo de la línea del cursor con la voz propia de textweaver, sí o no; la elección se guarda
 menu-live = Fuentes en vivo
+menu-join-code = Código de acceso
 prompt-live-setup = Configurar una fuente en vivo
 prompt-save-live-source-file = Guardar fuente como archivo
 live-failed = No se puede conectar con { $name }: { $reason } No habrá más intentos; corríjalo y vuelva a abrir la fuente.

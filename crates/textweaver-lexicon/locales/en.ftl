@@ -5554,6 +5554,7 @@ action-live-toggle-field-show = In a live values view, show the changes of the f
 name-live-toggle-field-speak = Speak changes of this field
 action-live-toggle-field-speak = In a live values view, speak the changes of the field on the cursor's line in textweaver's own voice, on or off; the choice is saved
 menu-live = Live sources
+menu-join-code = Join code
 prompt-live-setup = Set up a live source
 prompt-save-live-source-file = Save live source as file
 live-failed = Cannot connect to { $name }: { $reason } No more tries; fix this, then open the source again.
