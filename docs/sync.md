@@ -24,7 +24,7 @@ Library details travel with each document, as part of how it is recognized: its 
 
 Some things never sync, because they are tied to one machine or would expose what you read:
 
-- **Machine settings**: the speech engine, the voice, the volume, the access mode, your NVDA or JAWS key preset, the keyboard layout, the wrap width, the author name written into new documents, the MIDI notes and channel of your Morse key adapter, the number of cells your Braille display has, every path (library folders, the glossary file, engine libraries, the sync folder), and the sync settings themselves.
+- **Machine settings**: the speech engine, the voice, the volume, the access mode, your NVDA or JAWS key preset, the keyboard layout, the wrap width, the author name written into new documents, the MIDI notes and channel of your Morse key adapter, the number of cells your Braille display has, every path (library folders, the glossary file, engine libraries, the sync folder), the live sources and the broker settings of [Live documents](live-documents.md#settings-for-a-source) (a live document itself is never synced either), and the sync settings themselves.
 - **Recent files.** The paths differ from computer to computer, and the file names themselves would reveal what was read on a shared lab computer. **Continue reading** (below) takes their place: it is built from the synced places, and lists only documents found on this computer.
 - **Navigation history, recovery snapshots and unsaved text, caches, and logs.**
 - **The documents themselves.** Only what you did with them syncs.
