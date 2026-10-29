@@ -99,6 +99,8 @@ Not checked yet, so a reviewer reads for them: meaning first, casing, and units 
 
 Write English first. Then add the same id to the five other catalogs, in the same place. If you cannot translate, copy the English and say so in your pull request; a maintainer finds a translator. Translations go through a native-speaker review before a release.
 
+The commands of `tw` that print for a person on a terminal, such as `tw broker`, `tw publish`, `tw join-qr` and `tw cw`, print English only and are not in the catalog; what the app and the terminal reader say about live documents, the broker, publishing and joining is in all six catalogs. When a message needs a secret (a password, a join code, a join link), write the message so it names the secret and never holds it: "Join link copied." and "Join code: 16 characters, hidden.".
+
 ## See also
 
 - [CONTRIBUTING.md](../../CONTRIBUTING.md): the accessibility expectations every change meets.
