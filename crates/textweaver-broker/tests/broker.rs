@@ -441,15 +441,18 @@ fn write(s: &mut TcpStream, p: Packet) {
 }
 
 /// Reads one packet, or `None` when the broker closed the connection.
+/// A byte at a time, so a second packet that arrived in the same TCP
+/// segment stays on the socket for the next call instead of being lost
+/// with this call's buffer.
 fn read(s: &mut TcpStream) -> Option<Packet> {
     let mut buf = BytesMut::new();
-    let mut chunk = [0u8; 4096];
+    let mut byte = [0u8; 1];
     loop {
         match Packet::read(&mut buf, 1 << 20) {
             Ok(p) => return Some(p),
-            Err(rumqttc::mqttbytes::Error::InsufficientBytes(_)) => match s.read(&mut chunk) {
+            Err(rumqttc::mqttbytes::Error::InsufficientBytes(_)) => match s.read(&mut byte) {
                 Ok(0) | Err(_) => return None,
-                Ok(n) => buf.extend_from_slice(&chunk[..n]),
+                Ok(_) => buf.extend_from_slice(&byte),
             },
             Err(e) => panic!("broker sent a bad packet: {e}"),
         }
