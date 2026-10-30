@@ -234,7 +234,7 @@ fn first_line(text: &str) -> String {
 fn notices(root: &Path, mode: Mode) -> Outcome {
     if !crate::notices::cargo_about_installed() {
         return Outcome::Skipped(
-            "cargo-about is not installed (cargo install --locked cargo-about)".into(),
+            "cargo-about is not installed (cargo install --locked --features cli cargo-about@0.9.3)".into(),
         );
     }
     let result = match mode {

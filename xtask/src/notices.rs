@@ -14,7 +14,7 @@
 //!
 //! `--check` regenerates it in memory and fails when the committed file
 //! differs (line endings aside). Both need `cargo-about`
-//! (`cargo install --locked cargo-about`).
+//! (`cargo install --locked --features cli cargo-about@0.9.3`).
 
 use std::fs;
 use std::path::Path;
@@ -149,10 +149,10 @@ fn cargo_about(root: &Path) -> anyhow::Result<String> {
         .arg(&file)
         .arg(ABOUT_TEMPLATE)
         .output()
-        .context("running cargo about (install it with `cargo install --locked cargo-about`)")?;
+        .context("running cargo about (install it with `cargo install --locked --features cli cargo-about@0.9.3`)")?;
     if !out.status.success() {
         bail!(
-            "cargo about failed (install it with `cargo install --locked cargo-about`):\n{}",
+            "cargo about failed (install it with `cargo install --locked --features cli cargo-about@0.9.3`):\n{}",
             String::from_utf8_lossy(&out.stderr)
         );
     }

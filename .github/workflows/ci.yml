@@ -53,7 +53,7 @@ jobs:
         run: python tools/check_site_a11y.py
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-about
+          tool: cargo-about@0.9.3
       # Every generated file, through the same command as dev-check
       # (xtask/src/regen.rs), so a check added there runs here too: the
       # third-party notices, docs/settings-reference.md, docs/keyboard.md,
@@ -93,7 +93,7 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-about
+          tool: cargo-about@0.9.3
       - name: docs/keyboard.md is current
         run: cargo xtask keyboard --check
       - name: Dependency direction
