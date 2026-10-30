@@ -266,7 +266,9 @@ impl App {
     }
 
     /// The image on the clipboard: from the system clipboard, else from
-    /// the image clipboard ([`App::set_image_clipboard`]).
+    /// the image clipboard ([`App::set_image_clipboard`]). Only Join from a
+    /// QR image reads it, so only builds with live documents have it.
+    #[cfg(feature = "mqtt")]
     pub(crate) fn clipboard_image(&mut self) -> Option<ClipboardImage> {
         if let Some(image) = self.system_clipboard.as_mut().and_then(|c| c.read_image()) {
             return Some(image);
