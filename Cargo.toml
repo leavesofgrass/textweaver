@@ -418,7 +418,7 @@ mp3lame-encoder = "=0.2.5"
 # and decodes exports back in tests. A normal dependency since the owner's
 # approval on Friday, October 9, 2026 (B1-r3); AAC and MP4 audio are left
 # out (the r1 research found them in few books).
-symphonia = { version = "=0.5.5", default-features = false, features = ["mp3", "wav", "pcm"] }
+symphonia = { version = "=0.6.1", default-features = false, features = ["mp3", "wav", "pcm"] }
 # Wave 7, W7o (libopus approved by the owner, Wednesday, September 30,
 # 2026): Ogg Opus in process with libopus 1.6.1, the reference encoder,
 # built from the source bundled in opusic-sys with cmake and linked
