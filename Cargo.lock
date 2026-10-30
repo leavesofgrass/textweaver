@@ -9813,7 +9813,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-a11y"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -9823,7 +9823,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-aids"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "proptest",
  "serde",
@@ -9841,7 +9841,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-app"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "arboard",
  "harper-core",
@@ -9895,7 +9895,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-apple"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "block2 0.6.2",
  "log",
@@ -9912,7 +9912,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-broker"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "bytes",
  "rcgen",
@@ -9928,7 +9928,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-cite"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "biblatex",
  "hayagriva",
@@ -9945,7 +9945,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-cli"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -9976,7 +9976,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-components"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "flate2",
  "keyring",
@@ -9996,7 +9996,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-convert"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "log",
  "notify",
@@ -10021,7 +10021,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-core"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "proptest",
  "ropey",
@@ -10033,11 +10033,11 @@ dependencies = [
 
 [[package]]
 name = "textweaver-cw"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 
 [[package]]
 name = "textweaver-dectalk"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "libloading 0.9.0",
  "log",
@@ -10050,7 +10050,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-dictation"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "earshot",
  "log",
@@ -10071,7 +10071,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-eci"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "libloading 0.9.0",
  "log",
@@ -10086,7 +10086,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-editor"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "log",
  "proptest",
@@ -10101,7 +10101,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-enginehost"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "log",
  "proptest",
@@ -10116,7 +10116,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-engines"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "tempfile",
  "textweaver-apple",
@@ -10134,7 +10134,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-espeak"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "log",
  "tempfile",
@@ -10145,7 +10145,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-export"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "claxon",
  "flacenc",
@@ -10173,7 +10173,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-fonts"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "sha2 0.10.9",
  "tempfile",
@@ -10184,7 +10184,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-formats"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "calamine",
  "carta",
@@ -10219,7 +10219,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-host"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "textweaver-dectalk",
  "textweaver-eci",
@@ -10230,7 +10230,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-keymap"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "bitflags 2.13.2",
  "serde",
@@ -10240,14 +10240,14 @@ dependencies = [
 
 [[package]]
 name = "textweaver-launcher"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "tempfile",
 ]
 
 [[package]]
 name = "textweaver-lexicon"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "fst",
  "log",
@@ -10261,7 +10261,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-math"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "insta",
  "proptest",
@@ -10273,7 +10273,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-mathcat"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "log",
  "mathcat",
@@ -10284,7 +10284,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-mqtt"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "bytes",
  "rcgen",
@@ -10301,7 +10301,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-ocr"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "directories",
  "hayro",
@@ -10322,7 +10322,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-piper"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "espeak-ng",
  "log",
@@ -10344,7 +10344,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-qr"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "png",
  "qrcode",
@@ -10355,7 +10355,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-render"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "ammonia",
  "comrak 0.55.0",
@@ -10378,7 +10378,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-sapi"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "log",
  "proptest",
@@ -10392,7 +10392,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-speech"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "bitflags 2.13.2",
  "encoding_rs",
@@ -10414,7 +10414,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-store"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "directories",
  "log",
@@ -10430,7 +10430,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-summary"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "proptest",
  "textweaver-core",
@@ -10440,7 +10440,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-sync"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "log",
  "proptest",
@@ -10455,7 +10455,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-text"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "icu_segmenter",
  "proptest",
@@ -10470,7 +10470,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-theme"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "insta",
  "proptest",
@@ -10483,7 +10483,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-tui"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "anyhow",
  "arboard",
@@ -10502,7 +10502,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-vault"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "regex",
  "serde",
@@ -10515,7 +10515,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-writers"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "krilla",
  "ropey",
@@ -10536,7 +10536,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-xilem"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "accesskit_consumer",
  "arboard",
@@ -13185,7 +13185,7 @@ checksum = "9440ea3e5aeabb0ac63af70daf835274065238cdd0cec83418f417eae38bacee"
 
 [[package]]
 name = "xtask"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 dependencies = [
  "anyhow",
  "directories",

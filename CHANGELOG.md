@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-beta.5] - 2026-10-29
+
 In short: beta 5 adds live documents. A document can now change while you read it, fed by an MQTT broker, and it never moves your place: a log of check-ins, a sensor's current values, or a document someone else is writing. textweaver also gains its own small broker (`tw broker`, or inside the app), a way to publish a document or a check-in to it (`tw publish`), and joining by a code, a link or a QR code. Everything is in Tools, Live documents, in the textweaver app and the terminal reader. New entries go to the screen reader and so to a Braille display, and to textweaver's own voice only if you turn that on.
 
 ### Live documents
@@ -1243,6 +1245,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-beta.5]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.2
