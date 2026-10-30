@@ -91,6 +91,15 @@ In short: beta 5 adds live documents. A document can now change while you read i
 - tokio 1.53.1 to 1.53.3 in the lock, for RUSTSEC-2026-0386 (`AsyncFd` constructors). cargo deny, which checks every feature, found it through AccessKit's Linux adapter and rumqttc; textweaver-mqtt compiles tokio through rumqttc but never starts a runtime.
 - pulldown-cmark 0.13.4 to 0.13.5 in the lock, for RUSTSEC-2026-0414 (exponential parser output from wikilinks with empty display text). harper-core, the grammar checker, brings it.
 
+### Package sizes
+
+- `textweaver-0.1.0-beta.5-linux-aarch64.AppImage`: 44.2 MB (46,324,232 bytes)
+- `textweaver-0.1.0-beta.5-linux-aarch64.tar.gz`: 46.5 MB (48,785,739 bytes)
+- `textweaver-0.1.0-beta.5-linux-x86_64.AppImage`: 47.3 MB (49,564,152 bytes)
+- `textweaver-0.1.0-beta.5-linux-x86_64.tar.gz`: 49.8 MB (52,221,526 bytes)
+- `textweaver-0.1.0-beta.5-macos-universal.zip`: 78.9 MB (82,716,950 bytes)
+- `textweaver-0.1.0-beta.5-windows-x86_64.zip`: 50.4 MB (52,878,596 bytes)
+
 ## [0.1.0-beta.4] - 2026-10-24
 
 ### CW (Morse code)
