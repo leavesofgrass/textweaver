@@ -384,11 +384,11 @@ jobs:
             target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
 
   # The publish jobs build nothing: they download the checked package, attest
-  # its build provenance, and upload it. Not in a dry run.
+  # its build provenance, and upload it. In a dry run they only download it,
+  # so the hand-off is tested; nothing is attested or uploaded.
   publish-windows:
     name: Publish the Windows package
     needs: windows
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.tag != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -408,11 +408,17 @@ jobs:
         with:
           name: package-windows
           path: target/dist
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+      # Runs in a dry run too, so the hand-off from the build job is tested.
+      - name: The package arrived
+        run: ls -l target/dist && test -n "$(ls target/dist)"
+      - name: Attest the build provenance
+        if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
             target/dist/textweaver-*-windows-x86_64.zip
       - name: Upload to the release
+        if: env.DRY_RUN != 'true'
         run: |
           tools/release-upload.sh --no-sums "$TAG" \
             target/dist/textweaver-*-windows-x86_64.zip
@@ -420,7 +426,6 @@ jobs:
   publish-macos:
     name: Publish the macOS package
     needs: macos
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.tag != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -440,11 +445,17 @@ jobs:
         with:
           name: package-macos
           path: target/dist
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+      # Runs in a dry run too, so the hand-off from the build job is tested.
+      - name: The package arrived
+        run: ls -l target/dist && test -n "$(ls target/dist)"
+      - name: Attest the build provenance
+        if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
             target/dist/textweaver-*-macos-universal.zip
       - name: Upload to the release
+        if: env.DRY_RUN != 'true'
         run: |
           tools/release-upload.sh --no-sums "$TAG" \
             target/dist/textweaver-*-macos-universal.zip
@@ -452,7 +463,6 @@ jobs:
   publish-linux:
     name: Publish the Linux packages, ${{ matrix.arch }}
     needs: linux
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.tag != ''
     strategy:
       fail-fast: false
       matrix:
@@ -476,12 +486,18 @@ jobs:
         with:
           name: package-linux-${{ matrix.arch }}
           path: target/dist
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+      # Runs in a dry run too, so the hand-off from the build job is tested.
+      - name: The package arrived
+        run: ls -l target/dist && test -n "$(ls target/dist)"
+      - name: Attest the build provenance
+        if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
             target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
       - name: Upload to the release
+        if: env.DRY_RUN != 'true'
         run: |
           tools/release-upload.sh --no-sums "$TAG" \
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage \
