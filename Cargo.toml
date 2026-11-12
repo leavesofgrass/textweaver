@@ -273,7 +273,7 @@ fontique = { version = "0.11.1", default-features = false }
 # W4s (GUI session prep): the xilem crate's tests check options against
 # AccessKit's own filter, the one the platform adapters use. Already in the
 # tree through masonry_testing; a dev-dependency only.
-accesskit_consumer = "0.39.1"
+accesskit_consumer = "0.39.2"
 # W4s: `--announce uia` implements one small COM provider with the `windows`
 # crate's `#[implement]`, which names `windows_core` by its own name. The
 # same version AccessKit's Windows adapter already uses (Windows only).
@@ -547,7 +547,7 @@ codegen-units = 1
 # vendored Masonry (ADR-0027). No other crate in the workspace uses Parley.
 [patch.crates-io]
 parley = { path = "third_party/xilem/parley" }
-# Wave 4, Agent W4a3: AccessKit's Windows adapter 0.35.1 with the keyboard
+# Wave 4, Agent W4a3: AccessKit's Windows adapter (0.35.2 since beta 6) with the keyboard
 # shortcut given to UI Automation as AcceleratorKey, so screen readers can
 # say a button's key (ADR-0033, third_party/accesskit_windows/TEXTWEAVER.md).
 accesskit_windows = { path = "third_party/accesskit_windows" }
