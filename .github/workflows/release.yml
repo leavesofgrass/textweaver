@@ -160,7 +160,6 @@ jobs:
         run: cargo xtask release-assets --dir target/dist --platform windows
       # Kept for the publish job; no release is touched here.
       - name: Keep the package for the publish job
-        if: env.DRY_RUN != 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-windows
@@ -240,7 +239,6 @@ jobs:
         run: cargo xtask release-assets --dir target/dist --platform macos
       # Kept for the publish job; no release is touched here.
       - name: Keep the package for the publish job
-        if: env.DRY_RUN != 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-macos
@@ -364,7 +362,6 @@ jobs:
         run: cargo xtask release-assets --dir target/dist --platform linux-${{ matrix.arch }}
       # Kept for the publish job; no release is touched here.
       - name: Keep the packages for the publish job
-        if: env.DRY_RUN != 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-linux-${{ matrix.arch }}
