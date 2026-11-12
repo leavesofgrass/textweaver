@@ -1,0 +1,8 @@
+### For contributors
+
+- **The local check matches CI more closely.** `scripts/dev-check.ps1` and `scripts/dev-check.sh` gain the lean terminal reader build, `cargo xtask deps --check`, `cargo xtask parity`, `cargo deny check` (skipped, in words, when cargo-deny is missing), and the real-folder sentinel around the tests. Every cargo call has `--locked`, the tests have `--no-fail-fast`, and `RUSTFLAGS` is `-D warnings`, as in CI. The help says that a green Windows run does not cover CI's Linux `--all-features` leg.
+- **New: a fast check.** `cargo xtask affected --base main` prints the crates a branch changed and every crate that depends on them; `dev-check -Fast` (`--fast`) runs fmt, clippy, the tests (with cargo-nextest when installed) and the doc tests on that set only, plus the lean build and the generated checks when the change calls for them.
+- **New: tool versions in one place.** `tools.toml` pins cargo-about, cargo-deny, cargo-nextest, cargo-fuzz, actionlint and shellcheck; `cargo xtask tools --check` fails in words when an installed tool differs.
+- **New: changelog fragments.** Branches add `changelog.d/<branch>.md` instead of editing `CHANGELOG.md`; `cargo xtask changelog` folds them into `[Unreleased]` by area and removes them with `git rm`.
+- **Four new fuzz targets:** `join_link` (join links and pasted join codes), `update` (the update check's release list and checksums), `dib` (clipboard bitmaps) and `canvas` (Obsidian canvases), in the nightly matrix.
+- The release guide adds three steps before a tag: the fuzz job, a CI run on a `ci/<name>` branch, and `cargo xtask tools --check`.
