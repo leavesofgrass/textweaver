@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # Only the library and its data: textweaver loads libespeak-ng at run
       # time, so no headers are needed.
       - name: espeak-ng
@@ -75,7 +75,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libespeak-ng1 espeak-ng-data libasound2-dev pkg-config
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: engines-linux
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -100,7 +100,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: engines-linux
           path: |
@@ -124,13 +124,13 @@ jobs:
     # its result is recorded, or make it standing if it is run again.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: espeak-ng and Valgrind
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libespeak-ng1 espeak-ng-data libasound2-dev pkg-config valgrind
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: engines-linux
           save-if: false
@@ -162,7 +162,7 @@ jobs:
           exit "$status"
       - name: Upload the log
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: engines-valgrind
           path: |
@@ -178,10 +178,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: rustup toolchain install
       - run: rustup target add i686-pc-windows-msvc
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: engines-windows
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -245,7 +245,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: engines-windows
           path: |
@@ -262,9 +262,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: engines-${{ matrix.os }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -294,7 +294,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: engines-${{ matrix.os }}
           path: |

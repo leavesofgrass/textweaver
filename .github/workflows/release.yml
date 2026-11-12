@@ -74,7 +74,7 @@ jobs:
       # Create the release (gh release create). The job builds nothing.
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
           persist-credentials: false
@@ -104,7 +104,7 @@ jobs:
     # textweaver (Vello and wgpu, fat LTO), the launcher, and the 32-bit host.
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
           persist-credentials: false
@@ -161,7 +161,7 @@ jobs:
       # Kept for the publish job; no release is touched here.
       - name: Keep the package for the publish job
         if: env.DRY_RUN != 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-windows
           path: |
@@ -170,7 +170,7 @@ jobs:
           if-no-files-found: error
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dry-run-windows
           path: |
@@ -184,7 +184,7 @@ jobs:
       contents: read
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
           persist-credentials: false
@@ -241,7 +241,7 @@ jobs:
       # Kept for the publish job; no release is touched here.
       - name: Keep the package for the publish job
         if: env.DRY_RUN != 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-macos
           path: |
@@ -250,7 +250,7 @@ jobs:
           if-no-files-found: error
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dry-run-macos
           path: |
@@ -277,7 +277,7 @@ jobs:
       contents: read
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
           persist-credentials: false
@@ -365,7 +365,7 @@ jobs:
       # Kept for the publish job; no release is touched here.
       - name: Keep the packages for the publish job
         if: env.DRY_RUN != 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-linux-${{ matrix.arch }}
           path: |
@@ -376,7 +376,7 @@ jobs:
           if-no-files-found: error
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dry-run-linux-${{ matrix.arch }}
           path: |
@@ -400,15 +400,15 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.TAG }}
           persist-credentials: false
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: package-windows
           path: target/dist
-      - uses: actions/attest-build-provenance@v4
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
             target/dist/textweaver-*-windows-x86_64.zip
@@ -432,15 +432,15 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.TAG }}
           persist-credentials: false
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: package-macos
           path: target/dist
-      - uses: actions/attest-build-provenance@v4
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
             target/dist/textweaver-*-macos-universal.zip
@@ -468,15 +468,15 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.TAG }}
           persist-credentials: false
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: package-linux-${{ matrix.arch }}
           path: target/dist
-      - uses: actions/attest-build-provenance@v4
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
@@ -504,7 +504,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.TAG }}
           persist-credentials: false
@@ -514,7 +514,7 @@ jobs:
         run: tools/release-upload.sh "$TAG"
       - name: Fetch the checksums file
         run: gh release download "$TAG" --pattern SHA256SUMS.txt --dir sums
-      - uses: actions/attest-build-provenance@v4
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: sums/SHA256SUMS.txt
 
@@ -531,7 +531,7 @@ jobs:
       # Read the release's asset list.
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.TAG }}
           persist-credentials: false

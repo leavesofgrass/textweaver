@@ -65,15 +65,15 @@ jobs:
       matrix:
         target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame, daisy, pptx, sheet, archive, image, web, latex_math, asciimath, bibtex, ris, csl_json, theme, lexicon, vault_import, rpc, rtf, odt, docx_revisions, latex, eml, json, svg, obsidian, pdf_annots, sync_record, sync_group, mqtt, twlive, broker, qr]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Nightly Rust (this job only)
         run: rustup toolchain install nightly --profile minimal
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
         with:
           tool: cargo-fuzz
       # The toolchain in rust-toolchain.toml, for `cargo xtask`.
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: |
             fuzz
@@ -103,7 +103,7 @@ jobs:
           cargo +nightly fuzz run --target x86_64-unknown-linux-gnu ${{ matrix.target }} $FEATURES -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
       - name: Upload the crash
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: fuzz-crash-${{ matrix.target }}
           path: fuzz/artifacts/${{ matrix.target }}
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Nightly Rust with Miri (this job only)
         run: |
           rustup toolchain install nightly --profile minimal --component miri,rust-src
@@ -143,7 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: System libraries
         run: |
           sudo apt-get update
@@ -176,17 +176,17 @@ jobs:
     # and its cache was never saved.
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: System libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libespeak-ng1 espeak-ng-data libasound2-dev pkg-config
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: nightly-release
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
         with:
           tool: cargo-nextest
       # cargo-nextest with the nightly profile (.config/nextest.toml): each
@@ -200,7 +200,7 @@ jobs:
         run: cargo test --locked --release --workspace --exclude textweaver-xilem --all-features --doc
       - name: Keep the test report
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: nextest-junit
           path: target/nextest/nightly/junit.xml
@@ -215,7 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: System libraries
         run: |
           sudo apt-get update
@@ -230,7 +230,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Build the development image
         run: docker build -t textweaver-dev docker
       # The image installs pandoc, so the pandoc fallback test must run
@@ -246,13 +246,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: System libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: soak
       - name: Soak
@@ -270,7 +270,7 @@ jobs:
       CARGO_PROFILE_RELEASE_STRIP: 'false'
       CARGO_PROFILE_RELEASE_DEBUG: line-tables-only
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: System libraries and perf
         run: |
           sudo apt-get update
@@ -279,7 +279,7 @@ jobs:
           sudo sysctl -w kernel.perf_event_paranoid=1
           sudo sysctl -w kernel.kptr_restrict=0
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: profile
       # flamegraph turns perf's samples into an SVG; pinned.
@@ -317,7 +317,7 @@ jobs:
               echo
             } >> "$GITHUB_STEP_SUMMARY"
           done
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: profile
           path: |
@@ -330,7 +330,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: System libraries
         run: |
           sudo apt-get update
@@ -339,7 +339,7 @@ jobs:
             libxkbcommon-x11-0 libxcursor1 libxrandr2 libxi6 libx11-xcb1 \
             libdbus-1-dev libatspi2.0-dev libx11-xcb-dev pkg-config
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: frames
       # No window opens: the probe runs the widget passes headless.
@@ -354,7 +354,7 @@ jobs:
             echo
             sed 's/^/- /' frames.txt
           } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: frames
           path: frames.json
@@ -366,17 +366,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: System libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libespeak-ng1 espeak-ng-data libasound2-dev pkg-config
       - run: rustup toolchain install
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
         with:
           tool: cargo-hack
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: features
       - name: Clippy, each feature on its own

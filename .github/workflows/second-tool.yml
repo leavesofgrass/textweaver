@@ -63,13 +63,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: System libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: second-tool
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -151,7 +151,7 @@ jobs:
       # Ace by DAISY: EPUB Accessibility 1.1 and axe-core's rules over each
       # content document. docs/dev/research/legal-and-standards.md asks
       # for every fixture EPUB to pass with no serious violation.
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
@@ -323,7 +323,7 @@ jobs:
 
       - name: Upload the EPUB and PDF reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: second-tool-reports
           path: |
@@ -340,7 +340,7 @@ jobs:
       # braille-check is its own workspace; its build shares this target.
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # liblouis's tables are built with m4.
       - name: Build tools
         run: |
@@ -352,7 +352,7 @@ jobs:
           echo "$RUNNER_TEMP/liblouis/bin" >> "$GITHUB_PATH"
           echo "LD_LIBRARY_PATH=$RUNNER_TEMP/liblouis/lib" >> "$GITHUB_ENV"
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: second-tool-braille
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -383,7 +383,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the braille files and results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: second-tool-braille
           path: ${{ runner.temp }}/braille
