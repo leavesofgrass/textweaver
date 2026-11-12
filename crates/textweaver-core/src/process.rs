@@ -225,6 +225,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri cannot start a process")]
     fn a_missing_program_gives_nothing() {
         let missing = Path::new("textweaver-no-such-program");
         assert_eq!(
