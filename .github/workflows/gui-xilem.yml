@@ -17,7 +17,9 @@ name: GUI (Xilem)
 
 on:
   push:
-    branches: [main]
+    # ci/<name> branches run the same jobs as main (a path filter still
+    # applies; start the workflow by hand to run it regardless).
+    branches: [main, 'ci/**']
     paths:
       - 'crates/**'
       - 'third_party/xilem/**'
