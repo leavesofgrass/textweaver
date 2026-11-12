@@ -10,4 +10,6 @@ mod command_line;
 mod host_mode;
 #[cfg(feature = "mqtt")]
 mod live_send;
+mod terminal_output;
+mod user_agent;
 mod vault_index;

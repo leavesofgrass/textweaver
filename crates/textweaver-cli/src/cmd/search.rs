@@ -56,7 +56,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             "matches": hits.iter().map(|h| hit_json(&doc, *h)).collect::<Vec<_>>(),
         });
         // A closed pipe (`tw search --json ... | head`) ends quietly.
-        return super::print_all(&format!(
+        return super::print_text(&format!(
             "{}
 ",
             serde_json::to_string_pretty(&v)?
@@ -66,9 +66,14 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         .iter()
         .map(|h| format!("{}\n", hit_line(&doc, *h)))
         .collect();
-    super::print_all(&lines)?;
+    super::print_text(&lines)?;
     if hits.is_empty() {
-        eprintln!("No matches for \"{}\".", args.pattern);
+        let pattern = if super::is_terminal(&std::io::stderr()) {
+            super::terminal_safe(&args.pattern)
+        } else {
+            std::borrow::Cow::Borrowed(args.pattern.as_str())
+        };
+        eprintln!("No matches for \"{pattern}\".");
         return Err(super::NothingFound.into());
     }
     eprintln!(

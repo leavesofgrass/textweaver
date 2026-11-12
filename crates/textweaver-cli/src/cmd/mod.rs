@@ -143,6 +143,45 @@ pub(crate) fn print_all(text: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// The environment variable that makes `tw` treat its output as a
+/// terminal, for tests: `1` turns on what [`terminal_safe`] does without
+/// a pseudo terminal.
+pub(crate) const ASSUME_TERMINAL_ENV: &str = "TEXTWEAVER_ASSUME_TERMINAL";
+
+/// Whether `stream` (standard output or standard error) is a terminal, or
+/// [`ASSUME_TERMINAL_ENV`] says to act as if it were.
+pub(crate) fn is_terminal(stream: &impl std::io::IsTerminal) -> bool {
+    stream.is_terminal() || std::env::var_os(ASSUME_TERMINAL_ENV).is_some_and(|v| v == "1")
+}
+
+/// `text` without C0 and C1 control characters (and DEL), except tab and
+/// line feed: the characters a terminal acts on instead of showing. A
+/// document can hold an escape sequence that sets the window title or
+/// writes the clipboard (OSC 52); with its escape character gone, the rest
+/// of it prints as harmless text. Live text is cleaned by the same rule
+/// (`textweaver_mqtt::clean_text`). Unchanged, and not copied, when there
+/// is nothing to drop.
+pub(crate) fn terminal_safe(text: &str) -> std::borrow::Cow<'_, str> {
+    let drop = |c: char| c.is_control() && c != '\t' && c != '\n';
+    if text.chars().any(drop) {
+        std::borrow::Cow::Owned(text.chars().filter(|&c| !drop(c)).collect())
+    } else {
+        std::borrow::Cow::Borrowed(text)
+    }
+}
+
+/// Writes a document's text, or anything quoting it, to standard output
+/// through [`print_all`]: on a terminal through [`terminal_safe`] first,
+/// and unchanged when the output is piped or redirected (`tw text`,
+/// `tw search` and `tw info`).
+pub(crate) fn print_text(text: &str) -> anyhow::Result<()> {
+    if is_terminal(&std::io::stdout()) {
+        print_all(&terminal_safe(text))
+    } else {
+        print_all(text)
+    }
+}
+
 /// An error that ends `tw` with exit status 1 without printing anything
 /// more: the command has already said what it found (or did not find).
 /// Search with no match, define with no definition, lint with problems,
@@ -209,6 +248,10 @@ pub(crate) fn one_line(err: &anyhow::Error) -> String {
     if !has_step && let Some(step) = next_step(err) {
         line.push(' ');
         line.push_str(step);
+    }
+    // A cause can quote a document's title or a file's name.
+    if is_terminal(&std::io::stderr()) {
+        line = terminal_safe(&line).into_owned();
     }
     format!("Error: {line}")
 }
@@ -299,6 +342,16 @@ mod tests {
     fn a_plain_error_keeps_its_own_next_step() {
         let err = anyhow::Error::new(super::Plain("Stopped. Add --yes.".into()));
         assert_eq!(super::one_line(&err), "Error: Stopped. Add --yes.");
+    }
+
+    #[test]
+    fn terminal_safe_drops_controls_but_tab_and_line_feed() {
+        let osc52 = "a\u{1b}]52;c;aGk=\u{7}b\tc\nd\r\u{7f}\u{9b}e";
+        assert_eq!(super::terminal_safe(osc52), "a]52;c;aGk=b\tc\nde");
+        assert!(matches!(
+            super::terminal_safe("plain \u{e9}"),
+            std::borrow::Cow::Borrowed(_)
+        ));
     }
 
     #[test]

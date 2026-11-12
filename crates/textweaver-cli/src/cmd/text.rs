@@ -38,7 +38,7 @@ pub struct Args {
 /// Runs `tw text`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     let doc = load_document(&args.file)?;
-    super::print_all(&render(
+    super::print_text(&render(
         &doc,
         if args.json { "json" } else { &args.format },
         args.structure,
