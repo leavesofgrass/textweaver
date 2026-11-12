@@ -304,7 +304,7 @@ png = "0.18"
 zune-jpeg = "0.5"
 # Spreadsheets (XLSX, XLS, ODS) and archives (tar, tar.gz, 7z). flate2 was
 # in the tree already (zip, png); its default back end is pure Rust.
-calamine = "0.36.1"
+calamine = "0.38"
 flate2 = "1.1"
 tar = { version = "0.4.46", default-features = false }
 sevenz-rust2 = { version = "0.23.0", default-features = false }
