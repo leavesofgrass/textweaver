@@ -22,11 +22,15 @@ To run the full Linux set, with every feature, inside the container:
 scripts/dev-check.sh --docker
 ```
 
-The steps, in order:
+A green run on Windows matches CI's Windows leg, which uses `--features textweaver-speech/omnivox`. It does not cover CI's Linux leg, which builds and tests with `--all-features` (eSpeak NG and speech-dispatcher code included); `--docker` does.
+
+Every cargo call has `--locked`, so a change that would rewrite `Cargo.lock` fails here as it does in CI, and `RUSTFLAGS` is `-D warnings` for every step, as CI sets it, so a warning that only `rustc` reports (in a test or doc build) fails here too. The steps, in order:
 
 - **fmt**: `cargo fmt --all --check`. Formatting follows `rustfmt.toml`.
 - **clippy**: `cargo clippy --workspace --all-targets` with the features for your system, and `-D warnings`. Every warning is an error.
-- **test**: `cargo test --workspace` with the same features.
+- **lean**: `cargo build -p textweaver-tui --no-default-features`, the lean terminal reader, in its own target subfolder (`lean`) so the main one is not rebuilt. Code that only the full build uses is dead code here, and a warning.
+- **test**: `cargo test --workspace --no-fail-fast` with the same features, so one failing crate does not hide the others. It runs between the sentinel's record and check ([Tests never touch the real data folders](#tests-never-touch-the-real-data-folders)), with `TEXTWEAVER_HOME` set to an empty folder in the target folder, as in CI.
+- **sentinel**: the sentinel's check after the tests. On your own machine it can fail because textweaver itself changed your real folders while the tests ran; the file it names tells you which.
 - **doc**: `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"`. The usual failures are a redundant link target (write ``[`X`]``, not ``[`X`](crate::X)``), a link to a private item from public docs, and square brackets in prose (put `[mm:ss]` or `[@key]` in backticks).
 - **pseudo**: `cargo test -p textweaver-app --test it -- pseudo_locale::`. The interface in the pseudo-locales en-XA and ar-XB: it fails on any message that does not come from the translation catalog ([ADR-0030](../adr/0030-interface-translations.md)). CI runs it in the docs job.
 - **generated**: `cargo xtask regen --check`. Every generated file is current. It runs each check below, even after one fails, and reports each on one line, meaning first, such as "notices: pass" or "site data: FAIL, out of date; run cargo xtask regen". A check whose tool is missing (cargo-about, or Python) is reported as skipped. `--only keyboard` or `--only site` selects this step. The checks, in order:
@@ -40,6 +44,9 @@ The steps, in order:
 
 The Python checks are written `python3` below. On Windows, run them with `py -3` instead (`py -3 tools/check_links.py`): `python` and `python3` there may be the Microsoft Store stub.
 
+- **deps**: `cargo xtask deps --check`. The dependency direction between the workspace crates ([docs/dev/architecture.md](architecture.md#dependency-direction)), with cargo features resolved: the reader built with `--no-default-features` must not reach the conversion and citation stack.
+- **parity**: `cargo xtask parity`. Word and sentence segmentation against the star corpus, with every difference explained and the counts as committed in `xtask/parity-baseline.txt`.
+- **deny**: `cargo deny check`. Licenses, advisories, duplicate versions, and sources, from `deny.toml`. Skipped, in words, when cargo-deny is not installed.
 - **links**: `python3 tools/check_links.py`. Every relative link and anchor in the Markdown docs and in `docs/site` must resolve.
 - **site-a11y**: `python3 tools/check_site_a11y.py`. Static accessibility checks of the `docs/site` pages: language, title, one level-1 heading and no skipped levels, the skip link, landmarks, a label for every control, text alternatives, and references that resolve.
 - **hosts32** (Windows only): the 32-bit engine hosts build (Eloquence, SAPI 5, DECtalk, and eSpeak NG).
@@ -47,10 +54,20 @@ The Python checks are written `python3` below. On Windows, run them with `py -3`
 
 Useful options: `--only fmt,clippy` runs some steps, `--fail-fast` stops at the first failure, and `--dry-run` prints the commands.
 
-CI also runs two checks that `dev-check` does not. Run them yourself when you change dependencies:
+The tool versions these checks rely on (cargo-about, cargo-deny, cargo-nextest, cargo-fuzz, actionlint, shellcheck) are pinned in `tools.toml` at the repository root. `cargo xtask tools --check` compares the installed versions with the pins and fails in words, such as "Fail: cargo-about is 0.9.2; the repository pins 0.9.3." A missing optional tool is a note, not a failure.
 
-- **deps**: `cargo xtask deps --check`. The dependency direction between the workspace crates ([docs/dev/architecture.md](architecture.md#dependency-direction)), with cargo features resolved: the reader built with `--no-default-features` must not reach the conversion and citation stack.
-- **deny**: `cargo deny check`. Licenses, advisories, duplicate versions, and sources, from `deny.toml`.
+### Check tiers
+
+The full check takes 15 to 20 minutes. A branch does not need it after every change:
+
+- **While working:** `cargo check -p CRATE` and `cargo fmt --check`.
+- **Before handing a branch back, and after each merge: the fast check.** `scripts/dev-check.sh --fast` (`-Fast` in PowerShell) runs on the crates the branch changed and the crates that depend on them, nothing else.
+- **Once per batch of merges, before pushing `main`:** the full check above, with `deny`, and `--docker` for the Linux set.
+- **Before a tag:** a CI run on a `ci/<name>` branch and the release dry run ([Releasing](releasing.md#steps)).
+
+`cargo xtask affected --base main` prints the set, one crate per line: the workspace crates with a file changed since the merge base of `main` (committed, staged, unstaged, or new and not ignored), and every crate that depends on one of them, by any kind of dependency. `--args` prints the same set as `-p NAME` arguments. A change to the root `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo/` or `third_party/` selects the whole workspace. The graph comes from `cargo metadata`, so it needs no build.
+
+The fast check runs fmt and clippy on the set, the tests with `cargo nextest run` (or `cargo test` when cargo-nextest is not installed) between the sentinel's record and check, and `cargo test --doc`, since nextest does not run doc tests. It adds the lean build when `textweaver-app`, `textweaver-tui` or `textweaver-components` is in the set, and the generated and deps steps when the change touches the docs, a locale catalog, the settings schema, the keymap or a `Cargo.toml`. Steps it leaves out are listed as skipped, with the reason. A change to `textweaver-core`, `textweaver-text` or `textweaver-store` selects nearly everything, so there the fast check is close to the full one; leaf and top crates gain the most.
 
 The writers' output is also checked by other tools, in `.github/workflows/second-tool.yml`. It runs weekly and on any change to the writers. The Markdown fixtures are converted to EPUB and PDF; each EPUB is checked with epubcheck 5.4.0, and each PDF with veraPDF 1.30.2 against the PDF/UA-1 profile. Both tools come from Maven Central, pinned and checked by SHA-256. Each line of the job summary starts with Pass, Fail, Allowed, or Warning, in words. A known warning that is accepted goes in `tools/second_tool_allowlist.txt`, with its reason.
 
@@ -123,7 +140,7 @@ Where CI installs the tool, a skip would be a gate that never runs, so CI names 
 
 ### Tests never touch the real data folders
 
-A test uses a temporary folder for settings, state, and caches (`Paths::under`, or `TEXTWEAVER_HOME` set to a temporary folder for a child process), never the user's own. CI checks this around the test step on every system: `cargo xtask sentinel record FILE` lists every file in textweaver's platform folders and in an empty `TEXTWEAVER_HOME` set for the tests, and `cargo xtask sentinel check FILE` after the tests fails, naming each file added, changed, or removed. Run it in a container, not on your own machine: textweaver itself may change your real folders while the tests run.
+A test uses a temporary folder for settings, state, and caches (`Paths::under`, or `TEXTWEAVER_HOME` set to a temporary folder for a child process), never the user's own. CI checks this around the test step on every system: `cargo xtask sentinel record FILE` lists every file in textweaver's platform folders and in an empty `TEXTWEAVER_HOME` set for the tests, and `cargo xtask sentinel check FILE` after the tests fails, naming each file added, changed, or removed. Both `dev-check` scripts run it around their test step too. On your own machine, textweaver itself may change your real folders while the tests run; close it first, or run the check in a container.
 
 ### Where tests go
 
@@ -567,6 +584,10 @@ Every step with `continue-on-error` has a comment with its reason and a review p
 - **The one-time Valgrind job (`engines.yml`): report-only by design.** Started by hand; its result goes into ADR-0039.
 
 Standing since this walk: building accessibility-cli, the tree comparison step (a broken comparison fails, a changed tree never does), and the tree upload, on all three systems.
+
+### Fuzzing
+
+The cargo-fuzz targets in `fuzz/` need a nightly toolchain and are not part of `dev-check`. To type-check them without fuzzing, see [Fuzzing](../../fuzz/README.md). The nightly workflow, run by hand and before every tag ([Releasing](releasing.md#steps)), fuzzes each target for 10 minutes.
 
 ### Release checks
 
