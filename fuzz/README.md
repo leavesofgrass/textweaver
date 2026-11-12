@@ -1,6 +1,6 @@
 # Fuzzing textweaver
 
-This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders, the settings and keyboard files, the saved state, the sync folder's records, the engine-host protocol, the MQTT packets and payloads of live sources, the QR codes of join links, and the parsers a student's own writing goes through: math, citations, themes, the lexicon, Obsidian vaults, and JSON-RPC requests. It is its own Cargo workspace, so the main build, `cargo test`, and CI never build it.
+This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders, the settings and keyboard files, the saved state, the sync folder's records, the engine-host protocol, the MQTT packets and payloads of live sources, join links and their QR codes, the update check's answers, clipboard bitmaps, and the parsers a student's own writing goes through: math, citations, themes, the lexicon, Obsidian vaults, and JSON-RPC requests. It is its own Cargo workspace, so the main build, `cargo test`, and CI never build it.
 
 Each target feeds random input to one part of textweaver. A loader may refuse the input with an error, but it must never panic, and a document it returns must have every marker inside its text, in order. The checks are in `src/lib.rs`.
 
@@ -45,6 +45,10 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `twlive`: live source files (`.twlive`), which someone else sends. The bytes are read as one, under its size cap, with unknown keys and any password left out and every string cleaned. Nothing may panic, and a file that reads writes back as a file that reads again the same, with nothing left out.
 - `broker`: what a client sends to textweaver's own broker. The bytes are served as one connection, with small caps, a test logger account and a join password, through the login, subscriptions, publishing at each QoS, retained messages, and the size cap. Nothing may panic.
 - `qr`: what the join QR reader is given. The bytes are read as a PNG or JPEG file, and straight into the detector as a square of greyscale pixels and as RGBA clipboard pixels; nothing may panic. Short UTF-8 input is also made into a QR code, written as PNG and SVG, and must read back as the same text. The reader catches a panic in the detector and reports an unreadable code, but under the fuzzer a panic still counts as a crash, so the nightly run finds them.
+- `join_link`: join links and join codes as other people send them, pasted or read from a QR code. The text is read as a join link, searched for one inside a message, and read as a pasted join code. Nothing may panic; a link that reads writes back as a link that reads again the same, and a pasted code, grouped, reads again the same.
+- `update`: what the update check reads from the network. The bytes are read as GitHub's release list and as a checksum file, searched for each listed file's name. Nothing may panic, and a checksum that is found is 64 hexadecimal digits.
+- `dib`: a device-independent bitmap from the Windows clipboard, which any other program may have put there, read for Join from a QR image. Nothing may panic, and a bitmap that reads has four bytes for every pixel, within the size limit, all opaque. This target links the app, like `rpc`, so it builds only with `--features app` (on Linux with the ALSA headers).
+- `canvas`: Obsidian canvas files (JSON Canvas 1.0), read as a document by the canvas loader. A canvas may be refused with an error, but nothing may panic, and every marker lies inside the text.
 
 The loaders are built with the formats crate's `images` feature instead of `ocr`: the picture and scanned-page loaders are fuzzed with OCR off, so the in-process OCR engine, which took 45 minutes to compile under the sanitizer, is left out. The `rpc` target links the app, which still brings it.
 
@@ -76,6 +80,18 @@ The `rpc` target needs its feature, and on Linux the ALSA headers:
 ```bash
 cargo +nightly fuzz run rpc --features rpc
 ```
+
+The `dib` target needs the `app` feature the same way: `cargo +nightly fuzz run dib --features app`.
+
+## Type-check without fuzzing
+
+Fuzzing needs nightly, but the targets compile on the stable toolchain. To check that they still build after changing a crate they use, without running them:
+
+```bash
+cargo check --manifest-path fuzz/Cargo.toml --bins --features rpc
+```
+
+`--features rpc` includes the targets that link the app (`rpc` and `dib`). The fuzz folder is its own workspace with its own `Cargo.lock`, which is not committed, so the first check resolves its dependencies.
 
 To list the targets:
 

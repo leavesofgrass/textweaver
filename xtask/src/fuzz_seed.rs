@@ -143,6 +143,12 @@ const TARGETS: &[(&str, &[Seeds])] = &[
     ("broker", &[seeds("fixtures/b5/broker", &["bin"], false)]),
     // Beta 5, phase 7b: join links' QR codes, as small PNG files.
     ("qr", &[seeds("fixtures/b5/qr", &["png"], false)]),
+    // Beta 6 (security QW9). Join links, the update check's answers, and
+    // clipboard bitmaps have no fixtures yet and start from nothing.
+    ("join_link", &[]),
+    ("update", &[]),
+    ("dib", &[]),
+    ("canvas", &[seeds("fixtures/b4", &["canvas"], false)]),
 ];
 
 /// The repository root.
