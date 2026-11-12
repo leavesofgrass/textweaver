@@ -120,6 +120,10 @@ fn every_request_uses_the_one_neutral_user_agent() {
     let mut bad = Vec::new();
     let mut calls = 0;
     for (path, text) in &files {
+        // This file describes the patterns it looks for.
+        if path.ends_with(Path::new("tests").join("it").join("user_agent.rs")) {
+            continue;
+        }
         calls += text.matches(concat!(".user_agent", "(")).count();
         for p in problems(text) {
             let shown = path.strip_prefix(&root).unwrap_or(path).display();
