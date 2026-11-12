@@ -22,7 +22,8 @@ mod decode;
 mod encode;
 
 pub use decode::{
-    MAX_DECODE_SIDE, MAX_FILE_BYTES, decode_bytes, decode_file, decode_image, decode_rgba,
+    MAX_DECODE_SIDE, MAX_FILE_BYTES, MAX_QR_PIXELS, decode_bytes, decode_file, decode_image,
+    decode_rgba,
 };
 pub use encode::{DEFAULT_MODULE_PIXELS, MAX_MODULE_PIXELS, QUIET_ZONE, QrMatrix, encode};
 /// The greyscale image the decoder reads, shared with OCR.

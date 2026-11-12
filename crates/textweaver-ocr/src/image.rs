@@ -3,7 +3,9 @@
 //!
 //! Every decoder runs with limits, so a hostile file cannot claim a huge
 //! canvas and exhaust memory: images wider or taller than
-//! [`MAX_SIDE`] pixels, or larger than [`MAX_PIXELS`] in all, are refused.
+//! [`MAX_SIDE`] pixels, or larger than [`MAX_PIXELS`] in all, are refused,
+//! and the size is read from the file's header ([`GrayImage::dimensions`])
+//! and checked before any pixel is decoded.
 
 use std::io::Cursor;
 
@@ -100,12 +102,30 @@ impl GrayImage {
         })
     }
 
-    /// Decodes a PNG or JPEG file (found by its signature).
+    /// Decodes a PNG or JPEG file (found by its signature). The size the
+    /// file's header declares is checked against the limits first, so an
+    /// image that is too large is refused before any pixel is decoded.
     pub fn decode(bytes: &[u8]) -> Result<Self, OcrError> {
-        if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        let (width, height) = Self::dimensions(bytes)?;
+        checked_pixels(width, height)?;
+        if bytes.starts_with(PNG_SIGNATURE) {
             decode_png(bytes)
-        } else if bytes.starts_with(&[0xFF, 0xD8]) {
+        } else {
             decode_jpeg(bytes)
+        }
+    }
+
+    /// The width and height a PNG or JPEG file declares in its header,
+    /// read without decoding any pixels or allocating for them, so a
+    /// caller can refuse a large image before [`GrayImage::decode`].
+    pub fn dimensions(bytes: &[u8]) -> Result<(u32, u32), OcrError> {
+        if bytes.starts_with(PNG_SIGNATURE) {
+            png_dimensions(bytes)
+                .ok_or_else(|| OcrError::Image("not a readable PNG image: no image header".into()))
+        } else if bytes.starts_with(&[0xFF, 0xD8]) {
+            jpeg_dimensions(bytes).ok_or_else(|| {
+                OcrError::Image("not a readable JPEG image: no size in its header".into())
+            })
         } else {
             Err(OcrError::Image(
                 "only PNG and JPEG images can be recognized".into(),
@@ -258,6 +278,59 @@ impl GrayImage {
     }
 }
 
+/// The eight bytes every PNG file starts with.
+const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+
+/// Width and height from a PNG's first chunk, which must be `IHDR`.
+fn png_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    let be = |at: usize| -> Option<u32> {
+        let b: [u8; 4] = bytes.get(at..at + 4)?.try_into().ok()?;
+        Some(u32::from_be_bytes(b))
+    };
+    (bytes.get(12..16)? == b"IHDR").then_some(())?;
+    Some((be(16)?, be(20)?))
+}
+
+/// Width and height from a JPEG's start-of-frame segment, found by
+/// walking the segments from the start of the file. `None` when the
+/// file ends, or its image data begins, before one.
+fn jpeg_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    let be = |at: usize| -> Option<u16> {
+        let b: [u8; 2] = bytes.get(at..at + 2)?.try_into().ok()?;
+        Some(u16::from_be_bytes(b))
+    };
+    let mut i = 2;
+    loop {
+        // A marker: one or more 0xFF fill bytes, then its code.
+        while *bytes.get(i)? != 0xFF {
+            i += 1;
+        }
+        while *bytes.get(i)? == 0xFF {
+            i += 1;
+        }
+        let marker = *bytes.get(i)?;
+        i += 1;
+        match marker {
+            // Markers without a segment.
+            0x01 | 0xD0..=0xD7 => continue,
+            // The end of the image, or its compressed data, before a frame.
+            0xD9 | 0xDA => return None,
+            _ => {}
+        }
+        let len = usize::from(be(i)?);
+        if len < 2 {
+            return None;
+        }
+        // Start of frame, in every coding (not DHT, JPG or DAC).
+        if matches!(marker, 0xC0..=0xC3 | 0xC5..=0xC7 | 0xC9..=0xCB | 0xCD..=0xCF) {
+            let height = be(i + 3)?;
+            let width = be(i + 5)?;
+            return Some((u32::from(width), u32::from(height)));
+        }
+        i += len;
+    }
+}
+
 fn decode_png(bytes: &[u8]) -> Result<GrayImage, OcrError> {
     let limits = png::Limits {
         bytes: usize::try_from(MAX_PIXELS * 8).unwrap_or(usize::MAX),
@@ -341,6 +414,34 @@ mod tests {
         assert!(GrayImage::new(0, 0, vec![]).is_err());
         assert!(GrayImage::decode(b"GIF89a").is_err());
         assert!(GrayImage::decode(&[0xFF, 0xD8, 0xFF, 0x00]).is_err());
+    }
+
+    /// The start of a baseline JPEG declaring `width` by `height` pixels,
+    /// with no image data after its frame header.
+    fn jpeg_header(width: u16, height: u16) -> Vec<u8> {
+        let mut b = vec![0xFF, 0xD8];
+        // An APP0 segment first, as in most files.
+        b.extend([0xFF, 0xE0, 0x00, 0x04, 0x00, 0x00]);
+        b.extend([0xFF, 0xC0, 0x00, 0x0B, 0x08]);
+        b.extend(height.to_be_bytes());
+        b.extend(width.to_be_bytes());
+        b.extend([0x01, 0x01, 0x11, 0x00]);
+        b
+    }
+
+    #[test]
+    fn sizes_come_from_the_header_and_large_ones_are_refused_first() {
+        let png = sample().to_png().unwrap();
+        assert_eq!(GrayImage::dimensions(&png).unwrap(), (3, 2));
+        assert_eq!(
+            GrayImage::dimensions(&jpeg_header(640, 480)).unwrap(),
+            (640, 480)
+        );
+        // 20,000 by 20,000 is 400 million pixels: refused from the
+        // header, before the decoder sees the file.
+        let err = GrayImage::decode(&jpeg_header(20_000, 20_000)).unwrap_err();
+        assert!(err.to_string().contains("20000 by 20000"), "{err}");
+        assert!(GrayImage::dimensions(&[0xFF, 0xD8, 0xFF, 0xDA, 0x00, 0x02]).is_err());
     }
 
     #[test]

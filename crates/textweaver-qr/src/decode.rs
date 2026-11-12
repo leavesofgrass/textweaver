@@ -15,6 +15,12 @@ pub const MAX_DECODE_SIDE: u32 = 4096;
 /// The largest image file [`decode_file`] reads, in bytes (64 MiB).
 pub const MAX_FILE_BYTES: u64 = 64 * 1024 * 1024;
 
+/// The most pixels an image may have to be read for a QR code (40
+/// million, a little more than an 8K screenshot). The size in a file's
+/// header is checked against it before anything is decoded, so a hostile
+/// image cannot hold up the reader or claim a large buffer.
+pub const MAX_QR_PIXELS: u64 = 40_000_000;
+
 /// Images whose longer side is shorter than this are enlarged before a
 /// second try, so a code drawn one or two pixels to a module still reads.
 const SMALL_SIDE: u32 = 400;
@@ -37,6 +43,8 @@ pub fn decode_file(path: &Path) -> Result<Vec<String>, QrError> {
 ///
 /// See [`decode_image`] for what is returned.
 pub fn decode_bytes(bytes: &[u8]) -> Result<Vec<String>, QrError> {
+    let (width, height) = GrayImage::dimensions(bytes)?;
+    check_size(width, height)?;
     let image = GrayImage::decode(bytes)?;
     decode_image(&image)
 }
@@ -47,6 +55,7 @@ pub fn decode_bytes(bytes: &[u8]) -> Result<Vec<String>, QrError> {
 ///
 /// See [`decode_image`] for what is returned.
 pub fn decode_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<String>, QrError> {
+    check_size(width, height)?;
     let image = GrayImage::from_interleaved(width, height, 4, rgba)?;
     decode_image(&image)
 }
@@ -58,9 +67,11 @@ pub fn decode_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<String>, 
 /// theme) are both read, at any rotation. The texts are returned as found:
 /// check a join link with its parser before using it.
 ///
-/// Errors: [`QrError::NotFound`] when there is no code, and
-/// [`QrError::Unreadable`] when there is one that cannot be read.
+/// Errors: [`QrError::NotFound`] when there is no code,
+/// [`QrError::Unreadable`] when there is one that cannot be read, and
+/// [`QrError::Image`] for an image of more than [`MAX_QR_PIXELS`].
 pub fn decode_image(image: &GrayImage) -> Result<Vec<String>, QrError> {
+    check_size(image.width, image.height)?;
     let image: Cow<'_, GrayImage> = if image.width.max(image.height) > MAX_DECODE_SIDE {
         Cow::Owned(image.fit_within(MAX_DECODE_SIDE))
     } else {
@@ -90,6 +101,16 @@ pub fn decode_image(image: &GrayImage) -> Result<Vec<String>, QrError> {
     } else {
         QrError::NotFound
     })
+}
+
+/// Refuses an image of more than [`MAX_QR_PIXELS`], in words.
+fn check_size(width: u32, height: u32) -> Result<(), QrError> {
+    if u64::from(width) * u64::from(height) > MAX_QR_PIXELS {
+        return Err(QrError::Image(format!(
+            "the image is too large to read a QR code from ({width} by {height} pixels); crop it to the code and try again"
+        )));
+    }
+    Ok(())
 }
 
 /// What one pass of the detector found.
