@@ -413,3 +413,21 @@ fn hostile_daisy202_books_load() {
     let sections = doc.marker_index().count(MarkerKind::SectionBreak, None);
     assert_eq!(sections, 1);
 }
+
+/// Deeply nested image wikilinks (`![[`) load quickly (RUSTSEC-2026-0433:
+/// pulldown-cmark before 0.13.6 rescanned the body once for every enclosing
+/// `![[`, and the Markdown loader turns wikilinks on). The old cost was the
+/// depth times the body: 2,000 levels over 2 MB took 2.7 seconds in a debug
+/// build, and these 10,000 levels over 1 MB take far longer than the bound.
+/// The fixed parser is linear, well under a second here. The bound is
+/// generous so a loaded machine never fails it.
+#[test]
+fn markdown_nested_image_wikilinks_load_quickly() {
+    let body = "note ".repeat(200_000);
+    let src = format!("{}{body}{}", "![[".repeat(10_000), "]]".repeat(10_000));
+    let started = std::time::Instant::now();
+    let doc = load(src.into_bytes(), "md").unwrap();
+    let took = started.elapsed();
+    assert!(!doc.text().to_string().is_empty());
+    assert!(took.as_secs() < 5, "took {took:?}");
+}

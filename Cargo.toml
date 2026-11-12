@@ -175,7 +175,7 @@ textweaver-qr = { path = "crates/textweaver-qr" }
 ropey = "1.6"
 unicode-segmentation = "1.13"
 regex = "1.13"
-pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+pulldown-cmark = { version = "0.13.6", default-features = false, features = ["html"] }
 scraper = "0.27"
 # Wave 4, Agent W4b: every compression method a zip member may use, all in
 # pure Rust: deflate through zlib-rs, LZMA and XZ through lzma-rust2, bzip2
