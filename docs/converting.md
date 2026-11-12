@@ -83,8 +83,10 @@ The watcher follows star's hot-folder rules:
 
 - A file is converted only after its size has remained unchanged for 2 seconds, so a file still being copied is never read partway. The wait is set with `--stable-seconds 5`.
 - After a successful conversion the source moves to `Inbox/processed`; `--keep-sources` leaves it in place.
-- A file that fails moves to `Inbox/failed`, so it is not retried indefinitely. If a name is already taken in either folder, the date and time are appended to it; nothing is overwritten.
+- A file that fails moves to `Inbox/failed`, so it is not retried indefinitely. If a name is already taken in either folder, the date and time in UTC are appended to it, and then a counter: `notes.20261112-140307.md`, then `notes.20261112-140307-2.md`. Nothing is overwritten.
+- Every name textweaver writes is a plain one, since anyone who can write to the folder chooses the names in it. Letters, digits, `-`, `_` and `.` are kept, and each run of anything else, such as a space, a dollar sign or a parenthesis, becomes one `_`: `my report (final).docx` is converted to `my_report_final.md` and moved to `processed/my_report_final.docx`.
 - Files textweaver cannot read, such as pictures, stay where they are, and "Ignored" is announced once for each.
+- Links are never followed. A symbolic link, or on Windows a junction, could point at any file you can read, so the watcher leaves it where it is and announces once: "Ignored notes.md: it is a link, and the hot folder does not follow links." Copy the file itself into the folder instead.
 - Every event is also logged with its time to `textweaver-watch.log` in the output folder.
 
 Only the folder itself is watched, not its subfolders.
