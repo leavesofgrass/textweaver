@@ -28,6 +28,12 @@ use crate::reference::{CslDate, Name, Reference, non_empty};
 /// The default request timeout.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
 
+/// The User-Agent sent with every request: the project, nothing personal
+/// and no version (the owner's rule). The same string as
+/// `textweaver_components::USER_AGENT`, which this crate does not depend
+/// on; a workspace test checks every User-Agent in the sources.
+pub const USER_AGENT: &str = "textweaver-research (+https://github.com/leavesofgrass/textweaver)";
+
 const DOI_SERVICE: &str = "doi.org";
 const ISBN_SERVICE: &str = "Open Library";
 const CSL_JSON_ACCEPT: &str = "application/vnd.citationstyles.csl+json";
@@ -243,11 +249,7 @@ impl UreqClient {
         let config = ureq::Agent::config_builder()
             .timeout_global(Some(timeout))
             .http_status_as_error(false)
-            .user_agent(concat!(
-                "textweaver/",
-                env!("CARGO_PKG_VERSION"),
-                " (reference lookup; https://github.com/leavesofgrass/textweaver)"
-            ))
+            .user_agent(USER_AGENT)
             .build();
         UreqClient {
             agent: config.into(),
