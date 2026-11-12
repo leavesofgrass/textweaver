@@ -1173,7 +1173,7 @@ textweaver is built from these Rust crates. Each licence below lists the crates 
 Licences, with the number of crates under each:
 
 - Apache License 2.0: 590
-- MIT License: 198
+- MIT License: 199
 - BSD 3-Clause "New" or "Revised" License: 31
 - ISC License: 30
 - Unicode License v3: 27
@@ -13904,7 +13904,7 @@ Used by:
 - ahash 0.8.12, https://github.com/tkaitchuck/ahash
 - arrayvec 0.7.8, https://github.com/bluss/arrayvec
 - async-channel 2.5.0, https://github.com/smol-rs/async-channel
-- async-executor 1.14.0, https://github.com/smol-rs/async-executor
+- async-executor 1.14.1, https://github.com/smol-rs/async-executor
 - async-io 2.6.0, https://github.com/smol-rs/async-io
 - async-lock 3.4.2, https://github.com/smol-rs/async-lock
 - async-process 2.5.0, https://github.com/smol-rs/async-process
@@ -18572,7 +18572,7 @@ APPENDIX: How to apply the Apache License to your work
 
 Used by:
 
-- accesskit_windows 0.35.1, https://github.com/AccessKit/accesskit
+- accesskit_windows 0.35.2, https://github.com/AccessKit/accesskit
 - linebender_include_doc_path 0.1.0, https://github.com/linebender/xilem
 - masonry 0.4.0, https://github.com/linebender/xilem
 - masonry_core 0.4.0, https://github.com/linebender/xilem
@@ -18581,12 +18581,12 @@ Used by:
 - tree_arena 0.2.0, https://github.com/linebender/xilem
 - ab_glyph 0.2.32, https://github.com/alexheretic/ab-glyph
 - ab_glyph_rasterizer 0.1.10, https://github.com/alexheretic/ab-glyph
-- accesskit 0.25.1, https://github.com/AccessKit/accesskit
-- accesskit_atspi_common 0.21.0, https://github.com/AccessKit/accesskit
-- accesskit_consumer 0.39.1, https://github.com/AccessKit/accesskit
-- accesskit_macos 0.27.1, https://github.com/AccessKit/accesskit
-- accesskit_unix 0.24.0, https://github.com/AccessKit/accesskit
-- accesskit_winit 0.34.1, https://github.com/AccessKit/accesskit
+- accesskit 0.25.2, https://github.com/AccessKit/accesskit
+- accesskit_atspi_common 0.21.1, https://github.com/AccessKit/accesskit
+- accesskit_consumer 0.39.2, https://github.com/AccessKit/accesskit
+- accesskit_macos 0.27.2, https://github.com/AccessKit/accesskit
+- accesskit_unix 0.24.1, https://github.com/AccessKit/accesskit
+- accesskit_winit 0.34.2, https://github.com/AccessKit/accesskit
 - allocator-api2 0.2.21, https://github.com/zakarumych/allocator-api2
 - alsa 0.11.0, https://github.com/diwic/alsa-rs
 - anyhow 1.0.104, https://github.com/dtolnay/anyhow
@@ -24056,7 +24056,7 @@ Used by:
 
 - tokio-stream 0.1.19, https://github.com/tokio-rs/tokio
 - tokio-util 0.7.19, https://github.com/tokio-rs/tokio
-- tokio 1.53.3, https://github.com/tokio-rs/tokio
+- tokio 1.54.1, https://github.com/tokio-rs/tokio
 
 ```text
 MIT License
@@ -24358,7 +24358,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 Used by:
 
 - pulldown-cmark-escape 0.11.0, https://github.com/raphlinus/pulldown-cmark
-- pulldown-cmark 0.13.5, https://github.com/raphlinus/pulldown-cmark
+- pulldown-cmark 0.13.6, https://github.com/raphlinus/pulldown-cmark
 
 ```text
 The MIT License
@@ -24878,7 +24878,8 @@ SOFTWARE.
 
 Used by:
 
-- calamine 0.36.1, https://github.com/tafia/calamine
+- calamine 0.38.0, https://github.com/tafia/calamine
+- quick-xml 0.42.0, https://github.com/tafia/quick-xml
 
 ```text
 The MIT License (MIT)
