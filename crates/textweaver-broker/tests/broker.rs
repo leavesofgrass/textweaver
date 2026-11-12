@@ -623,3 +623,274 @@ fn the_example_accounts_file_reads() {
     assert!(reader.verify("example-reader-password"));
     assert!(!reader.verify("example-logger-password"));
 }
+
+/// Sends a CONNECT as `client_id`, and returns the CONNACK's code, or
+/// `None` when the broker closed the connection without one.
+fn connack_code(
+    s: &mut TcpStream,
+    client_id: &str,
+    user: &str,
+    pw: &str,
+) -> Option<rumqttc::mqttbytes::v4::ConnectReturnCode> {
+    let mut c = Connect::new(client_id);
+    c.set_login(user, pw);
+    let mut b = BytesMut::new();
+    Packet::Connect(c).write(&mut b, usize::MAX).unwrap();
+    // A write to a socket the broker already closed may fail; that is a
+    // refusal too.
+    s.write_all(&b).ok()?;
+    match read(s) {
+        Some(Packet::ConnAck(a)) => Some(a.code),
+        _ => None,
+    }
+}
+
+/// Logs in with a fresh connection until it is answered, for up to
+/// `secs`: connections that just closed give their places back on the
+/// broker's own threads, a moment later.
+fn login_eventually(
+    port: u16,
+    client_id: &str,
+    user: &str,
+    pw: &str,
+    secs: u64,
+) -> Option<(TcpStream, rumqttc::mqttbytes::v4::ConnectReturnCode)> {
+    let deadline = Instant::now() + Duration::from_secs(secs);
+    loop {
+        let mut s = raw(port);
+        if let Some(code) = connack_code(&mut s, client_id, user, pw) {
+            return Some((s, code));
+        }
+        if Instant::now() >= deadline {
+            return None;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn a_burst_of_wrong_logins_gets_no_more_answers_than_the_limit() {
+    use rumqttc::mqttbytes::v4::ConnectReturnCode as Code;
+    // The per-address cap on connections still logging in is raised, so
+    // this tests the count of logins being checked, not that cap.
+    let limits = BrokerLimits {
+        max_fails: 5,
+        max_waiting_per_addr: 64,
+        ..BrokerLimits::default()
+    };
+    let (broker, events) = start_with("burst", false, false, limits);
+    let p = port(&broker);
+    let n = 50;
+    let conns: Vec<TcpStream> = (0..n).map(|_| raw(p)).collect();
+    let barrier = Arc::new(std::sync::Barrier::new(n));
+    let threads: Vec<_> = conns
+        .into_iter()
+        .enumerate()
+        .map(|(i, mut s)| {
+            let b = barrier.clone();
+            std::thread::spawn(move || {
+                b.wait();
+                connack_code(&mut s, &format!("c{i}"), "ada", &format!("guess{i}"))
+            })
+        })
+        .collect();
+    let codes: Vec<_> = threads.into_iter().map(|t| t.join().unwrap()).collect();
+    let answered = codes
+        .iter()
+        .filter(|c| **c == Some(Code::NotAuthorized))
+        .count();
+    assert!(
+        (1..=5).contains(&answered),
+        "{answered} wrong logins were answered: {codes:?}"
+    );
+    assert!(
+        codes.iter().all(|c| matches!(
+            c,
+            Some(Code::NotAuthorized | Code::ServiceUnavailable) | None
+        )),
+        "{codes:?}"
+    );
+    assert!(wait_event(&events, 5, |e| matches!(
+        e,
+        BrokerEvent::LockedOut { .. }
+    )));
+    broker.stop();
+
+    // With the default caps, most of the burst is not even taken.
+    let (broker, _) = start("burst-default", false, false);
+    let p = port(&broker);
+    let conns: Vec<TcpStream> = (0..n).map(|_| raw(p)).collect();
+    let barrier = Arc::new(std::sync::Barrier::new(n));
+    let threads: Vec<_> = conns
+        .into_iter()
+        .enumerate()
+        .map(|(i, mut s)| {
+            let b = barrier.clone();
+            std::thread::spawn(move || {
+                b.wait();
+                connack_code(&mut s, &format!("c{i}"), "ada", &format!("guess{i}"))
+            })
+        })
+        .collect();
+    let answered = threads
+        .into_iter()
+        .map(|t| t.join().unwrap())
+        .filter(|c| *c == Some(Code::NotAuthorized))
+        .count();
+    assert!(answered <= 5, "{answered}");
+    broker.stop();
+}
+
+#[test]
+fn one_address_may_hold_only_so_many_connections() {
+    use rumqttc::mqttbytes::v4::ConnectReturnCode as Code;
+    let limits = BrokerLimits {
+        max_waiting_per_addr: 3,
+        max_per_addr: 4,
+        ..BrokerLimits::default()
+    };
+    let (broker, events) = start_with("per-address", false, false, limits);
+    let p = port(&broker);
+
+    // Before login: three wait; the fourth is closed unanswered, and the
+    // broker says so once.
+    let idle: Vec<TcpStream> = (0..3).map(|_| raw(p)).collect();
+    let mut fourth = raw(p);
+    assert!(read(&mut fourth).is_none());
+    assert!(wait_event(&events, 5, |e| e.to_string()
+        == "Refused connections: 127.0.0.1 has 3 still logging in, its limit."));
+    drop(idle);
+
+    // After login: four stay up; the fifth is refused in words.
+    let mut held = Vec::new();
+    for i in 0..4 {
+        let (s, code) =
+            login_eventually(p, &format!("ada-{i}"), "ada", READER_PW, 5).expect("an answer");
+        assert_eq!(code, Code::Success);
+        held.push(s);
+    }
+    let (_, code) = login_eventually(p, "ada-5", "ada", READER_PW, 5).expect("an answer");
+    assert_eq!(code, Code::ServiceUnavailable);
+    assert!(wait_event(&events, 5, |e| e.to_string()
+        == "Refused a login: 127.0.0.1 has 4 connections, its limit."));
+    // A takeover of one's own client id is not a fifth connection.
+    let (_, code) = login_eventually(p, "ada-0", "ada", READER_PW, 5).expect("an answer");
+    assert_eq!(code, Code::Success);
+    broker.stop();
+}
+
+#[test]
+fn join_readers_keep_their_client_ids_and_have_a_cap() {
+    let limits = BrokerLimits {
+        max_join: 2,
+        ..BrokerLimits::default()
+    };
+    let (broker, events) = start_with("join-caps", true, true, limits);
+    let p = port(&broker);
+    let code = broker.join_code().unwrap().clone();
+    let join_config = |id: &str| {
+        let mut c = config(
+            p,
+            Tls::Pinned(code.pin()),
+            textweaver_mqtt::JOIN_USER,
+            code.password().expose(),
+        );
+        c.client_id = id.into();
+        c
+    };
+    let join = |id: &str| Publisher::connect(&join_config(id));
+    let mut first = Reader::start(join_config("same-id"));
+    assert!(first.wait(5, |e| matches!(e, MqttEvent::Connected { .. })));
+    // A second reader with the same client id is refused, and the first
+    // stays up.
+    let err = join("same-id").err().unwrap();
+    assert!(err.text().starts_with("Refused:"), "{err}");
+    assert!(wait_event(&events, 5, |e| e.to_string()
+        == "Refused: a join reader asked for client id same-id, which another join reader is using."));
+    broker.publish("netlog/doc", b"still here", true).unwrap();
+    assert!(first.wait(5, |e| text_is(e, "still here")));
+    assert!(
+        !first.seen.iter().any(|e| down(e).is_some()),
+        "the first reader was never pushed off: {:?}",
+        first.seen
+    );
+    assert!(
+        !events
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|e| matches!(e, BrokerEvent::Left { .. })),
+        "nobody left"
+    );
+    let second = join("other-id").unwrap();
+    assert_eq!(broker.clients(), 2, "both readers are up");
+    // A third is over the cap.
+    let err = join("third-id").err().unwrap();
+    assert!(err.text().starts_with("Unreachable:"), "{err}");
+    assert!(wait_event(&events, 5, |e| e.to_string()
+        == "Refused a join login: 2 readers have joined with the code, its limit."));
+    second.disconnect();
+    first.stop();
+    broker.stop();
+}
+
+#[test]
+fn too_many_wrong_join_codes_turn_the_code_off_but_not_the_accounts() {
+    assert_eq!(BrokerLimits::default().join_budget, 200);
+    let limits = BrokerLimits {
+        join_budget: 6,
+        // Out of the way, so only the session budget is tested.
+        max_fails: 1000,
+        ..BrokerLimits::default()
+    };
+    let (broker, events) = start_with("join-budget", true, true, limits);
+    let p = port(&broker);
+    let code = broker.join_code().unwrap().clone();
+    let pin = broker.pin().unwrap().clone();
+    let mut n = 0;
+    for guess in [
+        "0000", "0001", "0002", "0003", "0004", "0005", "0006", "0007",
+    ] {
+        let g = JoinCode::parse(&format!("{}{guess}", pin.short().as_str())).unwrap();
+        if g == code {
+            continue;
+        }
+        let err = Publisher::connect(&config(
+            p,
+            Tls::Pinned(g.pin()),
+            textweaver_mqtt::JOIN_USER,
+            g.password().expose(),
+        ))
+        .err()
+        .unwrap();
+        assert!(err.text().starts_with("Not authorized:"), "{err}");
+        n += 1;
+        if n == 6 {
+            break;
+        }
+    }
+    assert!(wait_event(&events, 5, |e| e.to_string()
+        == "Join code off: too many wrong codes. Start the broker again for a new code."));
+    let offs = events
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|e| matches!(e, BrokerEvent::JoinCodeOff { .. }))
+        .count();
+    assert_eq!(offs, 1, "said once");
+    // The right code is refused now.
+    let err = Publisher::connect(&config(
+        p,
+        Tls::Pinned(code.pin()),
+        textweaver_mqtt::JOIN_USER,
+        code.password().expose(),
+    ))
+    .err()
+    .unwrap();
+    assert!(err.text().starts_with("Not authorized:"), "{err}");
+    // Accounts keep working.
+    let mut logger =
+        Publisher::connect(&config(p, Tls::Pinned(pin), "netcontrol", LOGGER_PW)).unwrap();
+    logger.publish("netlog/checkins", b"{}", false).unwrap();
+    broker.stop();
+}
