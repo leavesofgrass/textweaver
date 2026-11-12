@@ -89,10 +89,13 @@ pm_install() {
   elif command -v dnf > /dev/null; then
     dnf install -y -q "$@" > /tmp/pm.log 2>&1 || pm_failed "$@"
   elif command -v pacman > /dev/null; then
+    # A full upgrade (-Syu), never -Sy alone: Arch does not support
+    # installing onto an out-of-date image, and it failed that way on
+    # Thursday, November 12, 2026 ("installing openssl breaks dependency").
     # The second try is for a pacman whose download sandbox cannot start in
     # a container.
-    pacman -Sy --noconfirm --needed "$@" > /tmp/pm.log 2>&1 ||
-      pacman -Sy --noconfirm --needed --disable-sandbox "$@" >> /tmp/pm.log 2>&1 ||
+    pacman -Syu --noconfirm --needed "$@" > /tmp/pm.log 2>&1 ||
+      pacman -Syu --noconfirm --needed --disable-sandbox "$@" >> /tmp/pm.log 2>&1 ||
       pm_failed "$@"
   fi
 }
