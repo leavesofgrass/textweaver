@@ -1,0 +1,43 @@
+# The tool versions textweaver's checks rely on, in one place.
+#
+# `cargo xtask tools --check` compares the installed versions with these
+# pins and fails in words when one differs ("cargo-about is 0.9.2; the
+# repository pins 0.9.3"). A missing tool fails only when it is required;
+# a missing optional tool is a note. Change a pin here first, then in the
+# places that still name the version: `.github/workflows/ci.yml` (twice),
+# `docs/dev/releasing.md`, and `xtask/src/notices.rs`. `cargo test -p
+# xtask` checks that those agree with this file.
+#
+# Each table: `version` (the pin), `command` (prints the version, split at
+# spaces), and `required` (default false).
+
+# THIRD-PARTY-NOTICES.md (cargo xtask notices, regen --require-all in CI).
+[cargo-about]
+version = "0.9.3"
+command = "cargo about --version"
+required = true
+
+# Licenses, advisories, duplicates, and sources (deny.toml); the deny step.
+[cargo-deny]
+version = "0.20.2"
+command = "cargo deny --version"
+
+# The test runner of the fast check and the nightly profile.
+[cargo-nextest]
+version = "0.9.148"
+command = "cargo nextest --version"
+
+# The fuzz targets in fuzz/ (needs a nightly toolchain).
+[cargo-fuzz]
+version = "0.13.2"
+command = "cargo fuzz --version"
+
+# The workflow lint (CI's scripts workflow).
+[actionlint]
+version = "1.7.12"
+command = "actionlint --version"
+
+# The shell script lint (dev-check.sh's scripts step, CI's scripts workflow).
+[shellcheck]
+version = "0.11.0"
+command = "shellcheck --version"

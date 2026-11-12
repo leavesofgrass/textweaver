@@ -1,5 +1,9 @@
 //! `cargo xtask <task>`: maintenance tasks.
 //!
+//! - `affected [--base REF] [--args] [--feature PKG/FEAT] [--generated]`:
+//!   the workspace crates changed since the merge base of REF (default
+//!   `main`) and every crate that depends on them, for the fast check
+//!   (see `affected.rs`).
 //! - `appimage [--docker]`: the Linux AppImage and tarball, each holding
 //!   the app and `tw` (see `appimage.rs`).
 //! - `bench`: time the reading and authoring hot paths on generated Markdown
@@ -8,6 +12,9 @@
 //!   (`--baseline xtask/bench-baseline.json`, the two-way ratchet in
 //!   `ratchet.rs`) or an earlier report (`--baseline FILE --max-ratio R`);
 //!   `--update-baseline --reason TEXT` writes the baseline.
+//! - `changelog [--check]`: fold the fragments in `changelog.d/` into
+//!   `[Unreleased]` in `CHANGELOG.md` and remove them with `git rm`
+//!   (see `changelog.rs`).
 //! - `deps [--check]`: the dependency direction between workspace crates
 //!   (see `deps.rs`).
 //! - `hosts`: build the combined 32-bit engine host (Windows; the programs
@@ -50,11 +57,15 @@
 //!   changed anything in the real data folders (see `sentinel.rs`).
 //! - `soak [--minutes N]`: read the 10 MB corpus to the end with random
 //!   navigation, edits, rate changes, and engine-host kills (see `soak.rs`).
+//! - `tools [--check]`: the tool versions pinned in `tools.toml`, compared
+//!   with the installed ones (see `tools.rs`).
 //! - `startup [--baseline FILE --max-ratio R]`: time `tw --version`,
 //!   `tw text`, `tw info`, and `tw backends` (see `bench.rs`).
 
+mod affected;
 mod appimage;
 mod bench;
+mod changelog;
 mod deps;
 mod dist;
 mod docs_check;
@@ -75,6 +86,7 @@ mod sapi;
 mod sentinel;
 mod sizes;
 mod soak;
+mod tools;
 #[cfg(test)]
 mod workflows;
 
@@ -85,10 +97,12 @@ static ALLOC: bench::alloc::Counting = bench::alloc::Counting;
 fn main() -> anyhow::Result<()> {
     let task = std::env::args().nth(1).unwrap_or_default();
     match task.as_str() {
+        "affected" => affected::run(),
         "appimage" => appimage::run(),
         "bench" => bench::run(),
         #[cfg(feature = "bench")]
         "bench-run" => bench::run_inner(),
+        "changelog" => changelog::run(),
         "deps" => deps::run(),
         "dist" => dist::run(),
         "docs" => docs_check::run(),
@@ -111,9 +125,10 @@ fn main() -> anyhow::Result<()> {
         #[cfg(feature = "bench")]
         "soak-run" => soak::run_inner(),
         "startup" => bench::startup(),
+        "tools" => tools::run(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <appimage|bench|deps|dist|docs|frames|fuzz-seed|gui-dist|hosts|eci-host|keyboard|listen|notices|parity|regen|release|sapi-host|settings-doc|soak|startup>"
+                "usage: cargo xtask <affected|appimage|bench|changelog|deps|dist|docs|frames|fuzz-seed|gui-dist|hosts|eci-host|keyboard|listen|notices|parity|regen|release|sapi-host|settings-doc|soak|startup|tools>"
             );
             std::process::exit(2);
         }
