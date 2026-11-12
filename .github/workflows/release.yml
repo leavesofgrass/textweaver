@@ -178,7 +178,9 @@ jobs:
   macos:
     name: macOS package
     needs: release
-    runs-on: macos-14
+    # macos-14 runners were withdrawn (a dry run on Thursday, November 12,
+    # 2026: "The configuration 'macos-14-arm64-us-default' is not supported").
+    runs-on: macos-15
     permissions:
       contents: read
     timeout-minutes: 180
