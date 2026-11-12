@@ -5788,6 +5788,7 @@ live-broker-joined = Joined: { $user }.
 live-broker-left = Left: { $user }.
 live-broker-refused = Sign-in refused: { $user }, from { $address }.
 live-broker-event = Broker: { $event }
+live-broker-join-off = Join code off: too many wrong codes. Start the broker again for a new code.
 live-send-too-large = the message is { $len } bytes; the limit is { $max }.
 live-send-no-password = Not sent: no password is kept for { $name }. Open it once to type the password.
 live-checkin-sent = Published: { $entry }, on { $topic }.

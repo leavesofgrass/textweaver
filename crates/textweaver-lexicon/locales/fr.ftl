@@ -5710,6 +5710,7 @@ live-broker-joined = Connecté : { $user }.
 live-broker-left = Parti : { $user }.
 live-broker-refused = Connexion refusée : { $user }, depuis { $address }.
 live-broker-event = Broker : { $event }
+live-broker-join-off = Code d’accès désactivé : trop de codes erronés. Redémarrez le broker pour obtenir un nouveau code.
 live-send-too-large = le message fait { $len } octets ; la limite est { $max }.
 live-send-no-password = Non envoyé : aucun mot de passe n’est gardé pour { $name }. Ouvrez-la une fois pour le taper.
 live-checkin-sent = Publié : { $entry }, sur { $topic }.
