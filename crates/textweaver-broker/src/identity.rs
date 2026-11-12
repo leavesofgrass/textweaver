@@ -123,9 +123,12 @@ fn identity(
     })
 }
 
-/// Writes a file only its owner can read on Unix (mode 0600); on Windows
-/// it takes the folder's permissions, which for the data folder are the
-/// user's own.
+/// Writes a file only its owner can read on Unix (mode 0600, set again
+/// after opening, so a stale file left with wider permissions is narrowed
+/// before anything is written to it); on Windows it takes the folder's
+/// permissions, which for the data folder under the user's profile are the
+/// user's own. An explicit owner-only access list on Windows needs a
+/// system call this crate does not make (see `docs/known-limits.md`).
 pub(crate) fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let mut options = std::fs::OpenOptions::new();
     options.write(true).create(true).truncate(true);
@@ -135,6 +138,11 @@ pub(crate) fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         options.mode(0o600);
     }
     let mut file = options.open(path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    }
     file.write_all(bytes)?;
     file.sync_all()
 }
@@ -142,6 +150,20 @@ pub(crate) fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn a_stale_wider_file_is_narrowed_to_the_owner() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("broker.toml.new");
+        std::fs::write(&path, b"old").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        write_private(&path, b"new").unwrap();
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "{mode:o}");
+        assert_eq!(std::fs::read(&path).unwrap(), b"new");
+    }
 
     #[test]
     fn stable_identity_keeps_its_pin() {
