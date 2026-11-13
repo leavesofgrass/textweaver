@@ -149,6 +149,10 @@ const TARGETS: &[(&str, &[Seeds])] = &[
     ("update", &[]),
     ("dib", &[]),
     ("canvas", &[seeds("fixtures/b4", &["canvas"], false)]),
+    (
+        "captions",
+        &[seeds("fixtures/captions", &["srt", "vtt"], false)],
+    ),
 ];
 
 /// The repository root.

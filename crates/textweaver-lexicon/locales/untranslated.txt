@@ -8,6 +8,19 @@
 # least one language, and that every message a language lacks is listed.
 # See docs/dev/messages.md.
 access-hybrid-inferred
+access-info-and
+access-info-certifier
+access-info-conformance
+access-info-features
+access-info-friendly
+access-info-given
+access-info-hazards
+access-info-modes
+access-info-none
+access-info-not-text
+access-info-or
+access-info-sufficient
+access-info-summary
 choice-gui-graphics-auto
 choice-gui-graphics-dx12
 choice-gui-graphics-gl

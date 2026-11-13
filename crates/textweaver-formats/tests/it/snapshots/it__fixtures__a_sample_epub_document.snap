@@ -237,6 +237,9 @@ expression: view(&doc)
     "format": "epub",
     "language": "en",
     "path": null,
+    "properties": {
+      "textweaver.accessibility": "{\"summary\":null,\"access_modes\":[],\"sufficient\":[],\"features\":[],\"hazards\":[],\"conformance\":[],\"certifier\":null}"
+    },
     "title": "Sample EPUB Book"
   },
   "text": "Sample EPUB Book\n\nBy Ada Author and Grace Writer.\n\nChapter One: Beginnings\n\nThe first chapter opens with bold words. Dr. Smith opened the library at 9:30 a.m. on Friday.1\n\nA Section Inside\n\nThis section is a nested entry in the table of contents.\n\nChapter Two: Tables and Lists\n\nA map of the old town\n\nThe café serves crème brûlée.\n\nOpening hours\n\nDay | Hours\nMonday | 9 to 5\n\nArrive early.\nFind a seat."

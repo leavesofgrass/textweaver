@@ -146,7 +146,7 @@ fn failures_read_well_and_say_nothing_was_added() {
     );
     assert_eq!(
         err.to_string(),
-        "doi.org has no record for DOI 10.1234/missing. Nothing was added."
+        "doi.org has no record for DOI 10.1234/missing. Nothing was added; check it for a typing mistake."
     );
 
     let err = lookup.lookup("9780306406157").unwrap_err();
@@ -231,6 +231,178 @@ fn the_cache_answers_offline_and_is_bounded() {
     }
     let count = std::fs::read_dir(small.dir()).unwrap().count();
     assert_eq!(count, 2);
+}
+
+const ESUMMARY: &str =
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id=";
+
+fn pubmed_client() -> RecordedClient {
+    RecordedClient::new()
+        .with(
+            &format!("{ESUMMARY}12345678"),
+            200,
+            &recorded("pubmed-esummary-12345678.json"),
+        )
+        .with(
+            &format!("{ESUMMARY}99999999"),
+            200,
+            r#"{"header":{"type":"esummary","version":"0.3"},"result":{"uids":["99999999"],"99999999":{"uid":"99999999","error":"cannot get document summary"}}}"#,
+        )
+        .with(
+            &format!("{ESUMMARY}88888888"),
+            200,
+            r#"{"header":{"type":"esummary","version":"0.3"},"result":{"uids":[]}}"#,
+        )
+}
+
+#[test]
+fn pubmed_ids_are_recognized_but_never_guessed() {
+    for typed in [
+        "PMID:12345678",
+        "pmid 12345678",
+        "PMID12345678",
+        "PubMed: 012345678",
+    ] {
+        let id = Identifier::parse(typed);
+        if typed.contains("012345678") {
+            // Nine digits: too long for a PubMed ID.
+            assert!(
+                matches!(id, Err(LookupError::InvalidPmid { .. })),
+                "{typed}"
+            );
+        } else {
+            assert_eq!(id, Ok(Identifier::Pmid("12345678".into())), "{typed}");
+        }
+    }
+    assert_eq!(
+        Identifier::parse("pmid: 0042"),
+        Ok(Identifier::Pmid("42".into()))
+    );
+    for bad in ["PMID", "pmid: 0", "pmid abc"] {
+        assert!(
+            matches!(Identifier::parse(bad), Err(LookupError::InvalidPmid { .. })),
+            "{bad}"
+        );
+    }
+    // A bare number is not taken for a PubMed ID.
+    let err = Identifier::parse("12345678").unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "12345678 is too short for an ISBN. If it is a PubMed ID, write PMID 12345678."
+    );
+    assert!(matches!(
+        Identifier::parse("ISBN 12345"),
+        Err(LookupError::InvalidIsbn { .. })
+    ));
+    // Unless the user says so.
+    assert_eq!(
+        Identifier::parse_pmid(" 12345678 "),
+        Ok(Identifier::Pmid("12345678".into()))
+    );
+    assert_eq!(
+        Identifier::parse_pmid("PMID: 7"),
+        Ok(Identifier::Pmid("7".into()))
+    );
+    assert!(Identifier::parse_pmid("123456789").is_err());
+    assert_eq!(Identifier::Pmid("7".into()).describe(), "PMID 7");
+}
+
+#[test]
+fn pubmed_summary_becomes_a_journal_article() {
+    let c = pubmed_client();
+    let r = Lookup::new(&c).lookup("PMID 12345678").unwrap();
+    assert_eq!(r.kind, "article-journal");
+    assert_eq!(
+        r.title.as_deref(),
+        Some("Reading by ear: text-to-speech in medical school"),
+        "markup and the closing period removed"
+    );
+    assert_eq!(
+        r.author,
+        vec![
+            Name::new("Example", "A."),
+            Name::new("van Example", "B. C."),
+            Name::literal("Example Study Group"),
+        ]
+    );
+    assert_eq!(
+        r.container_title.as_deref(),
+        Some("Journal of example medical education")
+    );
+    assert_eq!(
+        r.container_title_short.as_deref(),
+        Some("J Example Med Educ")
+    );
+    assert_eq!(r.volume.as_deref(), Some("12"));
+    assert_eq!(r.issue.as_deref(), Some("3"));
+    assert_eq!(r.page.as_deref(), Some("101-109"));
+    assert_eq!(
+        r.issued.as_ref().and_then(|d| d.iso()).as_deref(),
+        Some("2024-03-05")
+    );
+    assert_eq!(r.doi.as_deref(), Some("10.5555/example.2024.0003"));
+    assert_eq!(r.issn.as_deref(), Some("0000-0000"));
+    assert_eq!(
+        r.extra.get("PMID").and_then(|v| v.as_str()),
+        Some("12345678")
+    );
+    assert_eq!(
+        r.extra.get("PMCID").and_then(|v| v.as_str()),
+        Some("PMC0000001")
+    );
+    // One request, naming nobody: no tool, email, or API key.
+    let requests = c.requests();
+    assert_eq!(requests, [format!("{ESUMMARY}12345678")]);
+    for word in ["tool=", "email=", "api_key="] {
+        assert!(!requests[0].contains(word), "{word}");
+    }
+}
+
+#[test]
+fn pubmed_refusals_read_well_with_a_next_step() {
+    let c = pubmed_client();
+    let lookup = Lookup::new(&c);
+    for missing in ["PMID 99999999", "PMID 88888888"] {
+        let err = lookup.lookup(missing).unwrap_err();
+        assert!(matches!(err, LookupError::NotFound { .. }), "{err}");
+        assert!(
+            err.to_string().starts_with("PubMed has no record for PMID"),
+            "{err}"
+        );
+        assert!(err.to_string().ends_with("check it for a typing mistake."));
+    }
+    let err = lookup.lookup("PMID 11111111").unwrap_err();
+    assert!(matches!(err, LookupError::Offline { .. }));
+    assert!(
+        err.to_string().starts_with(
+            "Could not reach PubMed. You may be offline; nothing was added. Try again when you are connected."
+        ),
+        "{err}"
+    );
+    let err = Lookup::new(&SlowClient)
+        .lookup("PMID 12345678")
+        .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "PubMed did not answer within 15 seconds. Nothing was added; try again later."
+    );
+}
+
+#[test]
+fn pubmed_answers_are_cached_offline() {
+    let dir = tempfile::tempdir().unwrap();
+    let online = pubmed_client();
+    let first = Lookup::new(&online)
+        .with_cache(Cache::new(dir.path()))
+        .lookup("PMID:12345678")
+        .unwrap();
+    let offline = RecordedClient::new();
+    let again = Lookup::new(&offline)
+        .with_cache(Cache::new(dir.path()))
+        .identifier(&Identifier::parse_pmid("12345678").unwrap())
+        .unwrap();
+    assert_eq!(again, first);
+    assert!(offline.requests().is_empty());
 }
 
 /// Hits doi.org and Open Library for real. Run with

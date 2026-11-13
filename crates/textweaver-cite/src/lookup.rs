@@ -1,4 +1,4 @@
-//! DOI and ISBN lookup.
+//! DOI, ISBN, and PubMed ID lookup.
 //!
 //! - **DOI**: doi.org content negotiation, asking for CSL-JSON
 //!   (`Accept: application/vnd.citationstyles.csl+json`). This works for
@@ -8,6 +8,12 @@
 //!   author records (no key needed). star used Open Library's Books API
 //!   (`/api/books?bibkeys=`), which answered 404 for every ISBN when this
 //!   was written.
+//! - **PubMed ID** (PMID): NCBI's E-utilities document summary
+//!   (`esummary.fcgi?db=pubmed&retmode=json&id=`), with no API key and no
+//!   `tool` or `email` parameter, so the request names nobody. A PMID is
+//!   1 to 8 digits written as `PMID:12345678` or `pmid 12345678`; a bare
+//!   number is never taken for one (it may be a mistyped ISBN), except
+//!   through [`Identifier::parse_pmid`], which `tw cite add --pmid` uses.
 //!
 //! Lookups are blocking (one request each; ADR-0001 allows async outside
 //! speech, but nothing here needs parallel requests) and go through the
@@ -47,6 +53,8 @@ pub enum Identifier {
     Doi(String),
     /// An ISBN (digits, with `X` as a possible ISBN-10 check digit).
     Isbn(String),
+    /// A PubMed ID: 1 to 8 digits, without leading zeros.
+    Pmid(String),
 }
 
 impl Identifier {
@@ -65,6 +73,12 @@ impl Identifier {
                 input: t.to_owned(),
             });
         }
+        if let Some(rest) = ["pmid", "pubmed"]
+            .iter()
+            .find_map(|p| lower.strip_prefix(p))
+        {
+            return pmid_digits(rest.trim_start_matches([':', ' ', '-']), t);
+        }
         let stripped = lower
             .strip_prefix("isbn")
             .map(|s| s.trim_start_matches([':', ' ', '-']))
@@ -73,6 +87,16 @@ impl Identifier {
             .chars()
             .filter(|c| !matches!(c, '-' | ' '))
             .collect();
+        // A short bare number may be a PubMed ID, but is never taken for
+        // one: the message says how to give it.
+        if !lower.starts_with("isbn")
+            && (1..=8).contains(&candidate.len())
+            && candidate.chars().all(|c| c.is_ascii_digit())
+        {
+            return Err(LookupError::ShortNumber {
+                input: t.to_owned(),
+            });
+        }
         if !candidate.is_empty() && candidate.chars().all(|c| c.is_ascii_digit() || c == 'x') {
             return match normalize_isbn(&candidate) {
                 Some(isbn) => Ok(Identifier::Isbn(isbn)),
@@ -86,13 +110,41 @@ impl Identifier {
         })
     }
 
-    /// "DOI 10.1/x" or "ISBN 9780306406157", for messages.
+    /// A PubMed ID given as such (`tw cite add --pmid`): a bare number
+    /// of 1 to 8 digits, or the forms [`parse`](Self::parse) takes.
+    pub fn parse_pmid(input: &str) -> Result<Identifier, LookupError> {
+        let t = input.trim();
+        let lower = t.to_ascii_lowercase();
+        let rest = ["pmid", "pubmed"]
+            .iter()
+            .find_map(|p| lower.strip_prefix(p))
+            .map_or(lower.as_str(), |r| r.trim_start_matches([':', ' ', '-']));
+        pmid_digits(rest, t)
+    }
+
+    /// "DOI 10.1/x", "ISBN 9780306406157" or "PMID 12345678", for
+    /// messages.
     pub fn describe(&self) -> String {
         match self {
             Identifier::Doi(d) => format!("DOI {d}"),
             Identifier::Isbn(i) => format!("ISBN {i}"),
+            Identifier::Pmid(p) => format!("PMID {p}"),
         }
     }
+}
+
+/// `digits` as a PubMed ID (1 to 8 digits, not all zeros, leading zeros
+/// dropped); `typed` is what the user typed, for the error.
+fn pmid_digits(digits: &str, typed: &str) -> Result<Identifier, LookupError> {
+    let digits = digits.trim();
+    let valid = (1..=8).contains(&digits.len()) && digits.bytes().all(|b| b.is_ascii_digit());
+    let trimmed = digits.trim_start_matches('0');
+    if !valid || trimmed.is_empty() {
+        return Err(LookupError::InvalidPmid {
+            input: typed.to_owned(),
+        });
+    }
+    Ok(Identifier::Pmid(trimmed.to_owned()))
 }
 
 /// Strips `https://doi.org/`, `http://dx.doi.org/`, `doi:` and surrounding
@@ -369,6 +421,7 @@ impl Cache {
         let (kind, value) = match id {
             Identifier::Doi(d) => ("doi", d.to_lowercase()),
             Identifier::Isbn(i) => ("isbn", isbn_to_13(i).unwrap_or_else(|| i.clone())),
+            Identifier::Pmid(p) => ("pmid", p.clone()),
         };
         let readable: String = value
             .chars()
@@ -452,6 +505,15 @@ fn fnv1a(bytes: &[u8]) -> u64 {
 /// Open Library's base URL.
 pub const OPEN_LIBRARY: &str = "https://openlibrary.org";
 
+/// NCBI's E-utilities base URL.
+pub const EUTILS: &str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils";
+
+const PUBMED_SERVICE: &str = "PubMed";
+
+/// Most authors kept from a PubMed record (large collaborations list
+/// thousands).
+const MAX_PUBMED_AUTHORS: usize = 100;
+
 /// Looks up references by DOI or ISBN.
 pub struct Lookup<'a> {
     client: &'a dyn HttpClient,
@@ -487,6 +549,7 @@ impl<'a> Lookup<'a> {
         let r = match id {
             Identifier::Doi(d) => self.doi(d)?,
             Identifier::Isbn(i) => self.isbn(i)?,
+            Identifier::Pmid(p) => self.pmid(p)?,
         };
         if let Some(cache) = &self.cache {
             cache.put(id, &r);
@@ -520,6 +583,23 @@ impl<'a> Lookup<'a> {
             }),
             status => Err(LookupError::Http {
                 service: DOI_SERVICE,
+                status,
+            }),
+        }
+    }
+
+    /// The PubMed document summary for `pmid`.
+    fn pmid(&self, pmid: &str) -> Result<Reference, LookupError> {
+        let url = format!("{EUTILS}/esummary.fcgi?db=pubmed&retmode=json&id={pmid}");
+        let resp = self.fetch(PUBMED_SERVICE, &url, "application/json")?;
+        match resp.status {
+            200..=299 => reference_from_pubmed(pmid, &resp.body),
+            404 | 410 => Err(LookupError::NotFound {
+                service: PUBMED_SERVICE,
+                what: format!("PMID {pmid}"),
+            }),
+            status => Err(LookupError::Http {
+                service: PUBMED_SERVICE,
                 status,
             }),
         }
@@ -836,6 +916,119 @@ pub fn reference_from_open_library(
     if let Some(n) = edition.get("number_of_pages").and_then(Value::as_u64) {
         r.extra
             .insert("number-of-pages".into(), Value::String(n.to_string()));
+    }
+    Ok(r)
+}
+
+/// A PubMed author ("Example AB", family name then initials) as a name:
+/// family "Example", given "A. B."; a group author is kept whole.
+fn pubmed_name(name: &str, group: bool) -> Name {
+    if group {
+        return Name::literal(name);
+    }
+    let words: Vec<&str> = name.split_whitespace().collect();
+    match words.split_last() {
+        Some((initials, family))
+            if !family.is_empty()
+                && (1..=4).contains(&initials.len())
+                && initials.chars().all(|c| c.is_ascii_uppercase()) =>
+        {
+            let given: Vec<String> = initials.chars().map(|c| format!("{c}.")).collect();
+            Name::new(&family.join(" "), &given.join(" "))
+        }
+        _ => Name::parse(name),
+    }
+}
+
+/// Turns an E-utilities document summary (`esummary`, JSON) into a
+/// journal article: title (markup and its closing period removed),
+/// authors, journal, volume, issue, pages, date, DOI, ISSN, and the PMID
+/// (and PMCID) kept as CSL's `PMID` and `PMCID`. A summary that holds no
+/// record for `pmid`, or says it has none, is [`LookupError::NotFound`].
+pub fn reference_from_pubmed(pmid: &str, body: &str) -> Result<Reference, LookupError> {
+    let bad = |detail: String| LookupError::BadResponse {
+        service: PUBMED_SERVICE,
+        detail,
+    };
+    let value: Value = serde_json::from_str(body).map_err(|e| bad(format!("not JSON ({e})")))?;
+    if let Some(e) = value.get("error").and_then(Value::as_str) {
+        return Err(bad(crate::text::plain_title(e).chars().take(200).collect()));
+    }
+    let not_found = || LookupError::NotFound {
+        service: PUBMED_SERVICE,
+        what: format!("PMID {pmid}"),
+    };
+    let record = value
+        .get("result")
+        .and_then(|r| r.get(pmid))
+        .filter(|r| r.get("error").is_none())
+        .ok_or_else(not_found)?;
+    let text = |k: &str| {
+        record
+            .get(k)
+            .and_then(Value::as_str)
+            .map(crate::text::plain_title)
+            .and_then(|s| non_empty(&s))
+    };
+    let mut r = Reference::new("", "article-journal");
+    r.title = text("title").map(|t| {
+        let t = t.trim_end();
+        t.strip_suffix('.').unwrap_or(t).to_owned()
+    });
+    if r.title.is_none() {
+        return Err(not_found());
+    }
+    r.author = record
+        .get("authors")
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| {
+                    let name = x.get("name").and_then(Value::as_str).and_then(non_empty)?;
+                    let group = x.get("authtype").and_then(Value::as_str) == Some("CollectiveName");
+                    Some(pubmed_name(&name, group))
+                })
+                .take(MAX_PUBMED_AUTHORS)
+                .collect()
+        })
+        .unwrap_or_default();
+    let source = text("source");
+    r.container_title = text("fulljournalname").or_else(|| source.clone());
+    r.container_title_short = source.filter(|s| Some(s) != r.container_title.as_ref());
+    r.volume = text("volume");
+    r.issue = text("issue");
+    r.page = text("pages");
+    r.issued = text("sortpubdate")
+        .and_then(|d| {
+            let date = d.split_whitespace().next()?.replace('/', "-");
+            CslDate::parse(&date).filter(|d| !d.date_parts.is_empty())
+        })
+        .or_else(|| text("pubdate").and_then(|d| parse_loose_date(&d)));
+    r.issn = text("issn").or_else(|| text("essn"));
+    let ids: Vec<(String, String)> = record
+        .get("articleids")
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| {
+                    Some((
+                        x.get("idtype")?.as_str()?.to_owned(),
+                        x.get("value")?.as_str()?.trim().to_owned(),
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let id = |kind: &str| {
+        ids.iter()
+            .find(|(k, v)| k == kind && !v.is_empty())
+            .map(|(_, v)| v.clone())
+    };
+    r.doi = id("doi").and_then(|d| normalize_doi(&d));
+    r.extra
+        .insert("PMID".into(), Value::String(pmid.to_owned()));
+    if let Some(pmc) = id("pmc") {
+        r.extra.insert("PMCID".into(), Value::String(pmc));
     }
     Ok(r)
 }

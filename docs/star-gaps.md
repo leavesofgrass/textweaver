@@ -9,7 +9,7 @@ Each item has a status:
 - **missing**: not done yet. See the [roadmap](roadmap.md) for what is planned next.
 - **dropped**: out of scope on purpose.
 
-Of the 45 items below that carry a status, 34 are done, 6 are partly done, none is missing and 5 are dropped.
+Of the 46 items below that carry a status, 35 are done, 6 are partly done, none is missing and 5 are dropped.
 
 This page is kept current as features land; see [CHANGELOG.md](../CHANGELOG.md) for when each one shipped.
 
@@ -34,6 +34,7 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Better PDF reading order:** removing running headers, footers, and page numbers, and marking captions. Status: done. Captions are marked by pattern ("Figure 3.", "Table 2:"), in English, Spanish, French, German, Portuguese, and Arabic ([ADR-0010](adr/0010-pdf-loader.md), [ADR-0048](adr/0048-pdf-annotations-links-and-forms.md)).
 - **Archives:** ZIP and TAR, with 7z. Opening one lists its readable files, and `book.zip!inner.pdf` opens a file inside. Status: done. RAR is not planned.
 - **Opening a web page by URL.** Status: done.
+- **Caption files as transcripts** (SRT and WebVTT). star did not read them either, but a lecture's captions are often a student's only transcript. Status: done. The cues are read as paragraphs, with the speakers' names, a heading every five minutes, and no times or cue numbers ([Captions as transcripts](reading.md#captions-as-transcripts)).
 - **PPTX:** slide titles become headings, speaker notes follow each slide, and images get descriptions. Status: done.
 - **Offline dictionary:** WordNet definitions, synonyms, and pronunciation, plus a custom glossary. Status: done: your glossary, then Open English WordNet through morphy, with CMUdict pronunciations respelled for reading aloud, all offline (Ctrl+Shift+D or Alt+E, and `tw define`; see [reading.md](reading.md#define-a-word-ctrlshiftd-or-alte)).
 - **Spell check in edit mode.** Status: done, on the built-in SCOWL list with a personal word list: next and previous misspelling, spelled aloud, suggestions, and a count on save. See [editing.md](editing.md#spelling).
@@ -66,7 +67,7 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 
 - **Knowledge graph and concept extraction.** Typed links between notes; exports to SVG, DOT, PlantUML, and JSON. Status: partly. Typed links between notes are added, changed, removed, filtered by type, and followed from the notes list, with "What links here" across the library and `tw notes links` ([notes guide](notes.md#links-between-notes)); vault import and export keep them. The whole graph exports as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or a CSV edge list ([Export the knowledge graph](notes.md#export-the-knowledge-graph)); textweaver never draws it, and SVG is not written. Concept extraction is dropped.
 - **Karaoke video export.** Status: done. An `.mp4` file name writes the document read aloud, with the current sentence on screen and the current word in bold and underlined; it needs ffmpeg ([Make a video with captions](audio-export.md#make-a-video-with-captions)).
-- **Feeds, Wikipedia, and PubMed** quick open. Status: dropped.
+- **Feeds, Wikipedia, and PubMed** quick open. Status: dropped. A PubMed ID can still be looked up and added to the reference library with `tw cite add PMID 12345678` ([Citations](citations.md#add-an-article-by-pubmed-id)).
 - **More engines:** Coqui, Festival, Qt speech, and cloud voices. Status: dropped. speech-dispatcher, which can drive Festival, and DECtalk were added instead.
 - **SSML pauses.** Status: done. Reading leaves a short silence after each heading, paragraph, and list item, which you can set ([Pauses at headings, paragraphs and list items](speech.md#pauses-at-headings-paragraphs-and-list-items)), and pause markup in the text itself, such as `<break time="1s"/>`, is read as a pause ([Pauses written in the text](speech.md#pauses-written-in-the-text)). Full SSML is not read.
 - **Audio export to OGG and AAC,** and an M4B cover image. Status: partly. M4B audiobooks are AAC, and Ogg Opus and Ogg Vorbis files are written ([audio-export.md](audio-export.md)); a separate AAC file and the cover image are dropped.

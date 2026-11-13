@@ -76,7 +76,7 @@ The reader opens these formats itself:
 - Markdown: `.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`, `.mdwn`, `.mdtxt`, `.rmd`. Obsidian notes are Markdown, and their highlights, comments, task statuses, embeds, and properties are read too ([Obsidian vaults](vault.md)).
 - Obsidian canvases: `.canvas`, a board of cards read as a document ([Canvases](vault.md#canvases)).
 - HTML: `.html`, `.htm`, `.xhtml`, `.xht`.
-- EPUB: `.epub`.
+- EPUB: `.epub`, with the book's own accessibility information in the [document overview](#document-overview).
 - Word: `.docx`, `.docm`, with comments as notes.
 - RTF: `.rtf`.
 - OpenDocument text: `.odt`, `.ott`, `.fodt`, with comments as notes.
@@ -91,6 +91,7 @@ The reader opens these formats itself:
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
 - Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.
+- Captions: `.srt` and `.vtt`, read as a transcript ([Captions as transcripts](#captions-as-transcripts)).
 
 The [converting guide](converting.md#formats-textweaver-reads) says what is read from each format. A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an audio file, or an old Word `.doc`. The message says what the file looks like, for example: "report.bin is not a text file; it looks like a program. textweaver cannot read it as text."
 
@@ -122,6 +123,17 @@ The layout rules are heuristics, so poetry, tables and forms may come out with l
 **Without liblouis**, the file opens as braille: the same headings, paragraphs and pages, but each cell shown as a Unicode braille pattern, which a Braille display renders as dots. textweaver says so when the file opens, and how to fix it. On Windows it offers to fetch liblouis for you (it asks first; see [Optional components](components.md)). On Linux and macOS, install your distribution's `liblouis` package, which provides `lou_translate`. Then open the file again.
 
 Only braille files that are distributed in the clear are read. Protected talking books, such as the audio books of NLS BARD, are not opened: textweaver does not touch any library's protection or terms.
+
+### Captions as transcripts
+
+A lecture's captions are often the only transcript a student has. A SubRip (`.srt`) or WebVTT (`.vtt`) caption file opens as a transcript: the words of the captions, joined into paragraphs, with no cue numbers, times, or markup read aloud.
+
+- **Paragraphs.** A new paragraph starts where the speaker changes, after a pause of more than four seconds between captions, and at the end of a sentence once a paragraph is about 120 words long, so a talk with no pauses still has paragraphs to move by.
+- **Speakers.** When the captions name who is speaking, with WebVTT voice tags, the name is read once where that speaker starts: "Ada Example: Good morning." The `>>` that broadcast captions put before a new speaker starts a new paragraph and is not read.
+- **Time.** Every five minutes of the recording there is a heading, "Minute 5", "Minute 10", and so on, so the heading keys move through the talk by time, and the outline (**Alt+O**) lists the minutes. A long silence goes straight to the heading of the minute where the talk starts again.
+- **What is left out.** Italics, bold, colors, positions, the WebVTT header and its notes and style blocks, and caption numbers. Captions that repeat the line before, as automatic captions often do while they scroll, are read once.
+
+A caption file with a damaged time is still read, in its place. A file with no caption times at all is read as plain text, and the document says so. Caption files open from the file browser and the open dialog, and `tw text lecture.vtt` prints the transcript. The headings' words are English for now.
 
 ## What the screen shows
 
@@ -589,6 +601,19 @@ The history keeps the last 50 places. Change that with `[reading] nav_history_si
 ## Document overview
 
 Choose **Document overview** in the Say menu (under Reading) or the command palette. You hear the title, then how many headings, tables, pictures, and footnotes the document has, then about how long reading the rest takes at your current rate: "Cells. Headings: 12, tables: 3, pictures: 4, footnotes: 21. About 38 minutes left." The time counts from the cursor.
+
+### An EPUB's accessibility information
+
+An EPUB can say how accessible it is, in the accessibility metadata of its package document (EPUB Accessibility 1.0 and 1.1). For an EPUB, the overview goes on with what the book says, one fact a sentence, the verdict first:
+
+- "Accessibility: screen reader friendly, per the publisher." when the publisher says the text alone is enough to read all of it (a sufficient access mode of text);
+- "Accessibility: not all of it reads as text, per the publisher." when every sufficient access mode it names needs more than text, such as text and images;
+- "Accessibility: described by the publisher." when it gives other details but no sufficient access mode;
+- "No accessibility information given." when it gives none.
+
+The details follow, each only when the book gives it: "Summary:" and the publisher's own words, "Access modes: text, images.", "Readable with: text, or text and images.", "Features: table of contents, alternative text.", "Hazards: none.", "Conforms to: EPUB Accessibility 1.1, WCAG 2.1 Level AA.", and "Certified by:" and the certifier's name. The terms are said in words, not as the metadata writes them (`tableOfContents` is "table of contents"). `tw info` prints the same lines after the title and author ([Command line](command-line.md#tw-info)).
+
+This is what the publisher claims, not a check textweaver makes. A long value is cut at 1,000 characters, a list at 32 entries, and control characters are left out. EPUBs that textweaver writes carry this metadata too ([Converting](converting.md)).
 
 ## Where am I: Shift+W or Alt+Shift+Y
 

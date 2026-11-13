@@ -49,6 +49,7 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `update`: what the update check reads from the network. The bytes are read as GitHub's release list and as a checksum file, searched for each listed file's name. Nothing may panic, and a checksum that is found is 64 hexadecimal digits.
 - `dib`: a device-independent bitmap from the Windows clipboard, which any other program may have put there, read for Join from a QR image. Nothing may panic, and a bitmap that reads has four bytes for every pixel, within the size limit, all opaque. This target links the app, like `rpc`, so it builds only with `--features app` (on Linux with the ALSA headers).
 - `canvas`: Obsidian canvas files (JSON Canvas 1.0), read as a document by the canvas loader. A canvas may be refused with an error, but nothing may panic, and every marker lies inside the text.
+- `captions`: caption files, the same bytes read as SubRip (`.srt`) and as WebVTT (`.vtt`) by the caption loader: cues, voice tags, markup, character references, and the minute headings. Nothing may panic, and every marker lies inside the text.
 
 The loaders are built with the formats crate's `images` feature instead of `ocr`: the picture and scanned-page loaders are fuzzed with OCR off, so the in-process OCR engine, which took 45 minutes to compile under the sanitizer, is left out. The `rpc` target links the app, which still brings it.
 

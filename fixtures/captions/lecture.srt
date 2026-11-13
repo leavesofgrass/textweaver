@@ -1,0 +1,28 @@
+1
+00:00:01,000 --> 00:00:03,500
+<i>Good morning.</i> Today we look at cells.
+
+2
+00:00:03,600 --> 00:00:06,000
+{\an8}A cell is the smallest unit
+of life.
+
+3
+00:00:12,000 --> 00:00:14,000
+>> Is that true for viruses?
+
+4
+00:00:14,100 --> 00:00:16,000
+>> Good question. No.
+
+5
+00:05:02,000 --> 00:05:04,000
+After the break, membranes.
+
+6
+bad time --> worse
+This cue has a damaged time.
+
+7
+00:10:30,000 --> 00:10:32,000
+<font color="yellow">That is all.</font>

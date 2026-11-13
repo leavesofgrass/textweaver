@@ -30,6 +30,16 @@
 //!   default.
 //! - A book whose content documents are encrypted (DRM) is refused with a
 //!   clear error rather than read as noise; obfuscated fonts are fine.
+//! - The package document's accessibility metadata (EPUB Accessibility 1.0
+//!   and 1.1) is kept as an [`Accessibility`] under
+//!   [`ACCESSIBILITY_PROPERTY`]: the summary, access modes, sufficient
+//!   access modes, features, hazards, conformance claim
+//!   (`dcterms:conformsTo` as a `meta` or the older `link`) and certifier
+//!   (`a11y:certifiedBy`). EPUB 2's `<meta name content>` form is read too.
+//!   A book without any has the property with nothing in it, so readers
+//!   can say "No accessibility information given."; [`accessibility`]
+//!   reads it back. Values are cut at [`MAX_ACCESS_CHARS`], lists at
+//!   [`MAX_ACCESS_ITEMS`], and control characters are dropped.
 
 use std::collections::{HashMap, HashSet};
 
@@ -65,6 +75,10 @@ impl Loader for EpubLoader {
         meta.title = book.title.clone();
         meta.author = book.author.clone();
         meta.language = book.language.clone();
+        if let Ok(json) = serde_json::to_string(&book.access) {
+            meta.properties
+                .insert(ACCESSIBILITY_PROPERTY.to_owned(), json);
+        }
         if meta.title.is_none() {
             meta.title = title_from_path(source);
         }
@@ -97,6 +111,206 @@ struct Book {
     toc: Vec<TocEntry>,
     /// The page list: each entry's title is a printed page number.
     pages: Vec<TocEntry>,
+    /// The accessibility metadata.
+    access: Accessibility,
+}
+
+/// The `DocumentMeta::properties` key holding an EPUB's accessibility
+/// metadata, as JSON (see [`accessibility`]).
+pub const ACCESSIBILITY_PROPERTY: &str = "textweaver.accessibility";
+
+/// Most characters kept from one accessibility value (the summary, a
+/// conformance claim, a certifier); the rest is cut, ending "...".
+pub const MAX_ACCESS_CHARS: usize = 1_000;
+
+/// Most entries kept in one accessibility list (features, hazards).
+pub const MAX_ACCESS_ITEMS: usize = 32;
+
+/// Most characters in one listed term ("structuralNavigation").
+const MAX_TERM_CHARS: usize = 64;
+
+/// What an EPUB's package document says about its accessibility (EPUB
+/// Accessibility 1.0 and 1.1, schema.org terms). The terms are kept as
+/// written; [`term_words`] says one in words.
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct Accessibility {
+    /// The publisher's summary (`schema:accessibilitySummary`).
+    pub summary: Option<String>,
+    /// How the content can be perceived (`schema:accessMode`: `textual`,
+    /// `visual`, `auditory`).
+    pub access_modes: Vec<String>,
+    /// Sets of access modes that are enough to read it all
+    /// (`schema:accessModeSufficient`), each a list such as
+    /// `["textual", "visual"]`.
+    pub sufficient: Vec<Vec<String>>,
+    /// Features (`schema:accessibilityFeature`: `tableOfContents`).
+    pub features: Vec<String>,
+    /// Hazards (`schema:accessibilityHazard`: `none`, `flashing`).
+    pub hazards: Vec<String>,
+    /// Conformance claims (`dcterms:conformsTo`), in words: "EPUB
+    /// Accessibility 1.1, WCAG 2.1 Level AA".
+    pub conformance: Vec<String>,
+    /// Who certified the claim (`a11y:certifiedBy`).
+    pub certifier: Option<String>,
+}
+
+impl Accessibility {
+    /// True when the book gives no accessibility metadata at all.
+    pub fn is_empty(&self) -> bool {
+        *self == Accessibility::default()
+    }
+
+    /// Whether the publisher says the text alone is enough to read it all
+    /// (a sufficient access mode of `textual` only), so it suits a screen
+    /// reader: `None` when no sufficient access mode is given.
+    pub fn reads_as_text(&self) -> Option<bool> {
+        if self.sufficient.is_empty() {
+            return None;
+        }
+        Some(
+            self.sufficient
+                .iter()
+                .any(|set| set.len() == 1 && set[0].eq_ignore_ascii_case("textual")),
+        )
+    }
+}
+
+/// The accessibility metadata an EPUB loader left on `meta`: `None` for a
+/// document that is not an EPUB (or was loaded before this was read), and
+/// an empty [`Accessibility`] for an EPUB that gives none.
+pub fn accessibility(meta: &DocumentMeta) -> Option<Accessibility> {
+    meta.properties
+        .get(ACCESSIBILITY_PROPERTY)
+        .and_then(|s| serde_json::from_str(s).ok())
+}
+
+/// A schema.org accessibility term in words: `tableOfContents` is "table
+/// of contents", `textual` is "text", `visual` is "images", `auditory` is
+/// "audio", and `MathML` stays as it is.
+pub fn term_words(term: &str) -> String {
+    match term {
+        "textual" => return "text".into(),
+        "visual" => return "images".into(),
+        "auditory" => return "audio".into(),
+        "tactile" => return "touch".into(),
+        "MathML" | "ARIA" | "MathML-chemistry" => return term.into(),
+        "ttsMarkup" => return "text-to-speech markup".into(),
+        _ => {}
+    }
+    let mut out = String::with_capacity(term.len() + 4);
+    let mut prev_lower = false;
+    for c in term.chars() {
+        if c.is_uppercase() && prev_lower {
+            out.push(' ');
+        }
+        prev_lower = c.is_lowercase() || c.is_ascii_digit();
+        out.extend(c.to_lowercase());
+    }
+    out
+}
+
+/// Whitespace collapsed, control characters dropped, cut at `max`
+/// characters (ending "...").
+fn clean_value(s: &str, max: usize) -> String {
+    let joined = s
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .replace(char::is_control, "");
+    if joined.chars().count() <= max {
+        return joined;
+    }
+    let mut cut: String = joined.chars().take(max).collect();
+    cut.push_str("...");
+    cut
+}
+
+/// A conformance claim in words: EPUB Accessibility 1.0's link form
+/// (`http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa`)
+/// becomes "EPUB Accessibility 1.0, WCAG 2.0 Level AA"; 1.1's text
+/// ("EPUB Accessibility 1.1 - WCAG 2.1 Level AA") reads its dash as a comma.
+fn conformance_words(claim: &str) -> String {
+    let claim = clean_value(claim, MAX_ACCESS_CHARS);
+    let lower = claim.to_ascii_lowercase();
+    if lower.contains("idpf.org/epub/a11y/accessibility") {
+        let level = match lower.rsplit_once('#').map(|(_, f)| f) {
+            Some("wcag-a") => ", WCAG 2.0 Level A",
+            Some("wcag-aa") => ", WCAG 2.0 Level AA",
+            Some("wcag-aaa") => ", WCAG 2.0 Level AAA",
+            _ => "",
+        };
+        return format!("EPUB Accessibility 1.0{level}");
+    }
+    claim.replace(" - ", ", ")
+}
+
+/// Reads the accessibility metadata from the package document's
+/// `<metadata>`.
+fn read_accessibility(opf: &roxmltree::Document<'_>) -> Accessibility {
+    let mut a = Accessibility::default();
+    let Some(metadata) = opf
+        .descendants()
+        .find(|n| n.is_element() && n.tag_name().name() == "metadata")
+    else {
+        return a;
+    };
+    fn push(list: &mut Vec<String>, value: String) {
+        if !value.is_empty() && list.len() < MAX_ACCESS_ITEMS && !list.contains(&value) {
+            list.push(value);
+        }
+    }
+    for n in metadata.descendants().filter(|n| n.is_element()) {
+        let (property, value) = match n.tag_name().name() {
+            "meta" => match (n.attribute("property"), n.attribute("name")) {
+                (Some(p), _) => (p, text_of(n)),
+                (None, Some(name)) => (name, n.attribute("content").unwrap_or("").to_owned()),
+                (None, None) => continue,
+            },
+            // EPUB Accessibility 1.0 claims conformance with a link.
+            "link" => {
+                let rel = n.attribute("rel").unwrap_or("");
+                if rel.split_whitespace().any(|r| r.ends_with("conformsTo"))
+                    && let Some(href) = n.attribute("href")
+                {
+                    push(&mut a.conformance, conformance_words(href));
+                }
+                continue;
+            }
+            "conformsTo" => ("dcterms:conformsTo", text_of(n)),
+            _ => continue,
+        };
+        let local = property.rsplit(':').next().unwrap_or(property);
+        let terms = || {
+            value
+                .split(',')
+                .map(|t| clean_value(t, MAX_TERM_CHARS))
+                .filter(|t| !t.is_empty())
+        };
+        match local {
+            "accessibilitySummary" if a.summary.is_none() => {
+                a.summary = Some(clean_value(&value, MAX_ACCESS_CHARS)).filter(|s| !s.is_empty());
+            }
+            "accessMode" => terms().for_each(|t| push(&mut a.access_modes, t)),
+            "accessModeSufficient" => {
+                let set: Vec<String> = terms().take(MAX_ACCESS_ITEMS).collect();
+                if !set.is_empty()
+                    && a.sufficient.len() < MAX_ACCESS_ITEMS
+                    && !a.sufficient.contains(&set)
+                {
+                    a.sufficient.push(set);
+                }
+            }
+            "accessibilityFeature" => terms().for_each(|t| push(&mut a.features, t)),
+            "accessibilityHazard" => terms().for_each(|t| push(&mut a.hazards, t)),
+            "conformsTo" => push(&mut a.conformance, conformance_words(&value)),
+            "certifiedBy" if a.certifier.is_none() => {
+                a.certifier = Some(clean_value(&value, MAX_ACCESS_CHARS)).filter(|s| !s.is_empty());
+            }
+            _ => {}
+        }
+    }
+    a
 }
 
 fn text_of(node: roxmltree::Node<'_, '_>) -> String {
@@ -125,7 +339,10 @@ fn read_book(pkg: &mut Package) -> Result<Book, LoadError> {
         .ok_or_else(|| LoadError::Parse(format!("EPUB package {opf_path} is missing")))?;
     let opf = parse_xml(&opf_text)?;
     let base = dir_of(&opf_path).to_owned();
-    let mut book = Book::default();
+    let mut book = Book {
+        access: read_accessibility(&opf),
+        ..Book::default()
+    };
 
     let mut authors: Vec<String> = Vec::new();
     for n in opf.descendants().filter(|n| n.is_element()) {

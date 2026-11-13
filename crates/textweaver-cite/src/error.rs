@@ -71,7 +71,7 @@ pub enum CiteError {
         /// The key.
         key: String,
     },
-    /// A DOI or ISBN lookup failed.
+    /// A DOI, ISBN, or PubMed ID lookup failed.
     #[error(transparent)]
     Lookup(#[from] LookupError),
 }
@@ -83,8 +83,9 @@ fn location_suffix(line: &Option<usize>) -> String {
     }
 }
 
-/// Why a DOI or ISBN lookup failed. Nothing is added to a library when a
-/// lookup fails, and every message says so where it matters.
+/// Why a DOI, ISBN, or PubMed ID lookup failed. Nothing is added to a
+/// library when a lookup fails, and every message says so where it
+/// matters.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LookupError {
     /// The text is not a DOI.
@@ -103,20 +104,34 @@ pub enum LookupError {
         /// What was typed.
         input: String,
     },
-    /// The text is neither a DOI nor an ISBN.
+    /// The text is not a valid PubMed ID.
+    #[error("{input} is not a PubMed ID. A PubMed ID is 1 to 8 digits; write it as PMID 12345678.")]
+    InvalidPmid {
+        /// What was typed.
+        input: String,
+    },
+    /// A bare number too short for an ISBN, which may be a PubMed ID.
+    #[error("{input} is too short for an ISBN. If it is a PubMed ID, write PMID {input}.")]
+    ShortNumber {
+        /// What was typed.
+        input: String,
+    },
+    /// The text is not a DOI, an ISBN, or a PubMed ID.
     #[error(
-        "{input} is neither a DOI nor an ISBN. Give a DOI such as 10.1038/nature12373, or a 10 or 13 digit ISBN."
+        "{input} is not a DOI, ISBN or PubMed ID. Give a DOI such as 10.1038/nature12373, a 10 or 13 digit ISBN, or PMID and its number."
     )]
     UnknownIdentifier {
         /// What was typed.
         input: String,
     },
     /// The service has no record for the identifier.
-    #[error("{service} has no record for {what}. Nothing was added.")]
+    #[error(
+        "{service} has no record for {what}. Nothing was added; check it for a typing mistake."
+    )]
     NotFound {
-        /// "doi.org" or "Open Library".
+        /// "doi.org", "Open Library", or "PubMed".
         service: &'static str,
-        /// "DOI 10.1/x" or "ISBN 9780306406157".
+        /// "DOI 10.1/x", "ISBN 9780306406157", or "PMID 12345678".
         what: String,
     },
     /// The computer could not reach the service.

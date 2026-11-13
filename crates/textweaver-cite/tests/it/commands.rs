@@ -24,6 +24,33 @@ fn ctx<'a>(dir: &Path, client: &'a RecordedClient) -> Context<'a> {
 }
 
 #[test]
+fn add_a_pubmed_id_typed_or_given_with_the_flag() {
+    let dir = tempfile::tempdir().unwrap();
+    let body =
+        std::fs::read_to_string(fixtures().join("recorded/pubmed-esummary-12345678.json")).unwrap();
+    let client = RecordedClient::new().with(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id=12345678",
+        200,
+        &body,
+    );
+    let ctx = ctx(dir.path(), &client);
+    let added = commands::add(&ctx, "PMID 12345678").unwrap();
+    assert_eq!(
+        added,
+        "Added reference example2024. Example and others, 2024. Reading by ear: text-to-speech in medical school. Key example2024."
+    );
+    let id = textweaver_cite::Identifier::parse_pmid("12345678").unwrap();
+    let again = commands::add_identifier(&ctx, &id).unwrap();
+    assert!(
+        again.starts_with("Updated reference example2024, which was already in the library."),
+        "{again}"
+    );
+    // A bare number without the flag is refused, with the way to give it.
+    let err = commands::add(&ctx, "12345678").unwrap_err().to_string();
+    assert!(err.ends_with("write PMID 12345678."), "{err}");
+}
+
+#[test]
 fn add_list_format_export_remove() {
     let dir = tempfile::tempdir().unwrap();
     let client = client();

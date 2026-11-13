@@ -1,11 +1,11 @@
 # Citations and references
 
-`tw cite` maintains a reference library: the books and articles you cite. A reference can be added from its DOI or ISBN, imported from other programs, formatted in a citation style such as APA or MLA, and checked against a manuscript to confirm that every citation resolves to a reference in the library. The command is intended for students and writers who work by keyboard and speech, and every message is a complete sentence, so that it reads well with a screen reader or with textweaver's own voice. Citations in your writing use Pandoc's Markdown syntax, such as `[@doe2020, p. 12]`, so the same files work with Pandoc and other academic tools.
+`tw cite` maintains a reference library: the books and articles you cite. A reference can be added from its DOI, ISBN, or PubMed ID, imported from other programs, formatted in a citation style such as APA or MLA, and checked against a manuscript to confirm that every citation resolves to a reference in the library. The command is intended for students and writers who work by keyboard and speech, and every message is a complete sentence, so that it reads well with a screen reader or with textweaver's own voice. Citations in your writing use Pandoc's Markdown syntax, such as `[@doe2020, p. 12]`, so the same files work with Pandoc and other academic tools.
 
 ## Prerequisites
 
 - `tw`, which is included with textweaver. See [the install guide](install.md).
-- An internet connection the first time you add a reference by DOI or ISBN; everything else works offline.
+- An internet connection the first time you add a reference by DOI, ISBN, or PubMed ID; everything else works offline.
 - No other software: neither Pandoc nor Zotero is needed.
 
 ## What a reference library is
@@ -105,9 +105,26 @@ Books are looked up in Open Library (`openlibrary.org`). textweaver requests the
 Added reference clark1981. Clark, 1981. Error-correction coding for digital communications. Key clark1981.
 ```
 
+## Add an article by PubMed ID
+
+```bash
+tw cite add PMID 12345678
+tw cite add 12345678 --pmid
+```
+
+A PubMed ID (PMID) is the number PubMed gives each article in MEDLINE and the life sciences journals it indexes, 1 to 8 digits. Write `PMID` before it, with or without a colon or a space: `PMID:12345678`, `pmid 12345678`, and `PMID12345678` all work. A bare number is never taken for a PubMed ID, because it may as well be an ISBN with a digit missing; textweaver says so and how to give it: "12345678 is too short for an ISBN. If it is a PubMed ID, write PMID 12345678." With `--pmid`, the identifier is a PubMed ID, so a bare number is looked up as one.
+
+The article is looked up in PubMed through NCBI's E-utilities, which gives its title, authors, journal, volume, issue, pages, date, and DOI. The reference keeps the PMID, and the PubMed Central ID when there is one, as the CSL-JSON fields `PMID` and `PMCID`. Group authors, such as a study group, are kept as one name. For an article with three authors you hear, for example:
+
+```text
+Added reference example2024. Example and others, 2024. Reading by ear: text-to-speech in medical school. Key example2024.
+```
+
+Only the PubMed ID is sent, in one secure (HTTPS) request to `eutils.ncbi.nlm.nih.gov`, with textweaver's neutral User-Agent and no API key, tool name, or email address. NCBI asks programs to make at most three requests a second without a key, which one lookup at a time never reaches.
+
 ## Lookups, the cache, and working offline
 
-Every answer from doi.org or Open Library is saved in a cache folder. When you add the same DOI or ISBN again, the answer comes from the cache without any network use, so a reference you have looked up once can be added again offline, for example to a folder library.
+Every answer from doi.org, Open Library, or PubMed is saved in a cache folder. When you add the same DOI, ISBN, or PubMed ID again, the answer comes from the cache without any network use, so a reference you have looked up once can be added again offline, for example to a folder library.
 
 The cache is the `citations` folder inside textweaver's cache folder:
 
@@ -118,18 +135,20 @@ The cache is the `citations` folder inside textweaver's cache folder:
 
 The cache keeps the newest 500 answers and discards older ones; the folder can be deleted at any time without harm.
 
-When a lookup fails, nothing is added to the library, and the message says so. The messages are as follows, with your DOI or ISBN in place of the examples:
+When a lookup fails, nothing is added to the library, and the message says so. The messages are as follows, with your DOI, ISBN, or PubMed ID in place of the examples:
 
 - Not connected: "Could not reach doi.org. You may be offline; nothing was added. Try again when you are connected." Technical details follow the word "Details".
 - Too slow: "doi.org did not answer within 15 seconds. Nothing was added; try again later."
-- Unknown to the service: "doi.org has no record for DOI 10.9999/example. Nothing was added."
+- Unknown to the service: "doi.org has no record for DOI 10.9999/example. Nothing was added; check it for a typing mistake."
 - The service had a problem: "Open Library answered with an error, status 503. Nothing was added; try again later."
 - An unreadable answer: "Open Library sent an answer textweaver could not read:" then the reason, then "Nothing was added."
 - Not a DOI: "10.abc is not a DOI. A DOI starts with 10, then a dot, and contains a slash, for example 10.1038/nature12373."
 - An invalid ISBN: "978-0-306-40615-8 is not a valid ISBN. An ISBN has 10 or 13 digits, and the last one is a check digit; check for a mistyped digit."
-- Neither: "hello is neither a DOI nor an ISBN. Give a DOI such as 10.1038/nature12373, or a 10 or 13 digit ISBN."
+- Not a PubMed ID: "PMID 123456789 is not a PubMed ID. A PubMed ID is 1 to 8 digits; write it as PMID 12345678."
+- A bare short number: "12345678 is too short for an ISBN. If it is a PubMed ID, write PMID 12345678."
+- None of them: "hello is not a DOI, ISBN or PubMed ID. Give a DOI such as 10.1038/nature12373, a 10 or 13 digit ISBN, or PMID and its number."
 
-Each message names the service: doi.org for DOIs, Open Library for ISBNs.
+Each message names the service: doi.org for DOIs, Open Library for ISBNs, PubMed for PubMed IDs.
 
 ## Import references from another program
 
@@ -441,7 +460,7 @@ The citation is inserted at the cursor, for example `[@doe2020, p. 12]`, with a 
 
 ### Add a reference by DOI or ISBN: Alt+B
 
-Press **Alt+B** in the terminal, or **Alt+Shift+D** in the app (Windows Terminal keeps **Alt+Shift+D** for splitting its window, so the terminal key moved; see [the screen reader guide](screen-readers.md#windows-terminal-keys-that-clash)), or run `add reference` from the command palette, and type a DOI (`10.1038/nature12373`, or its doi.org address) or an ISBN. You hear "Looking up" and the identifier, and you can continue reading or writing meanwhile. When the answer arrives you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, and otherwise into your own library. Lookups share the cache used by `tw cite add`, so an identifier looked up before works offline.
+Press **Alt+B** in the terminal, or **Alt+Shift+D** in the app (Windows Terminal keeps **Alt+Shift+D** for splitting its window, so the terminal key moved; see [the screen reader guide](screen-readers.md#windows-terminal-keys-that-clash)), or run `add reference` from the command palette, and type a DOI (`10.1038/nature12373`, or its doi.org address), an ISBN, or a PubMed ID written as `PMID 12345678`. You hear "Looking up" and the identifier, and you can continue reading or writing meanwhile. When the answer arrives you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, and otherwise into your own library. Lookups share the cache used by `tw cite add`, so an identifier looked up before works offline.
 
 ### Commands from the palette
 
@@ -479,9 +498,9 @@ A note can name a source with a citation key, taken from the `cite` field in a n
 
 ## If something goes wrong
 
-- **"You may be offline; nothing was added."** Check your internet connection and try again. A DOI or ISBN you looked up before still works offline, from the cache.
+- **"You may be offline; nothing was added."** Check your internet connection and try again. A DOI, ISBN, or PubMed ID you looked up before still works offline, from the cache.
 - **"did not answer within 15 seconds."** The service is slow. Try again later, or wait longer with `--timeout 30`.
-- **"has no record for".** Check the DOI or ISBN for a typing mistake. Some books are not in Open Library; in that case export the reference from your library catalog as RIS or BibTeX and use `tw cite import`.
+- **"has no record for".** Check the DOI, ISBN, or PubMed ID for a typing mistake. Some books are not in Open Library; in that case export the reference from your library catalog as RIS or BibTeX and use `tw cite import`.
 - **"is not a valid ISBN".** A digit is mistyped; the last digit is a check digit, which is how textweaver can tell. Read the number again from the book.
 - **Continuous reading says the brackets and the `@`.** None of the citation's keys is in a library, so textweaver treats it as ordinary text, as `tw convert` does. Add the reference, or check the key's spelling.
 - **"The citation key doe2020 is not in the reference library."** Run `tw cite list` to find the right key. If you use a folder library, remember `--folder`.

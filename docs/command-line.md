@@ -74,6 +74,22 @@ tw cite export --to ris -o references.ris
 
 Every command that prints facts takes `--json`, either on the command or on the subcommand that prints them: `tw info --json`, `tw text --json` (the same as `--to json`), `tw cite list --json` (and `check`, `styles`, `add`, `import`, `remove`, and `export` with `--out`), `tw settings path --json`, `tw components list --json`, `tw ocr status --json`, `tw broker account list --json`, `tw broker pin --json`. The keys are English in every language.
 
+## tw info
+
+`tw info FILE` prints facts about a document, one to a line, label first: the file, format, title, author and language, then counts of characters, words, sentences, lines and paragraphs, the structure ("Structure: 12 headings, 3 tables"), and the reading time. For an EPUB, the book's own accessibility information follows the title, author and language, the verdict first, as the document overview says it ([An EPUB's accessibility information](reading.md#an-epubs-accessibility-information)):
+
+```text
+Title: Cells
+Author: Ada Example
+Accessibility: screen reader friendly, per the publisher.
+Summary: Every picture has a description.
+Readable with: text.
+Features: table of contents, alternative text.
+Hazards: none.
+```
+
+An EPUB that gives none prints "No accessibility information given." With `--json`, the `accessibility` key holds the metadata as the book gives it (`summary`, `access_modes`, `sufficient`, `features`, `hazards`, `conformance`, `certifier`), and is `null` for a document that is not an EPUB. `--exact` counts words and sentences with the reader's full segmentation, at any size.
+
 ## The data folder
 
 textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw` and `tw open` (the reader), `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `notes`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `summarize`, `changes`, `sync`, `serve`, `components` and `broker`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.

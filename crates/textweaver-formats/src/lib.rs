@@ -31,6 +31,7 @@
 //! | [`CanvasLoader`]: Obsidian canvases (JSON Canvas 1.0), card by card, groups as sections, then the connections | `canvas` | [`NATIVE_PRIORITY`] (10) |
 //! | [`SvgLoader`]: a drawing's title, description, titled parts, and text | `svg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`MathMlLoader`]: one formula, presentation or content MathML | `mml`, `mathml` | [`NATIVE_PRIORITY`] (10) |
+//! | [`CaptionLoader`]: SubRip and WebVTT captions read as a transcript, with a heading every few minutes | `srt`, `vtt` | [`NATIVE_PRIORITY`] (10) |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
 //! Two kinds of path are not plain files:
@@ -84,6 +85,7 @@ mod builder;
 pub mod cache;
 pub mod callout;
 pub mod canvas;
+pub mod captions;
 #[cfg(feature = "carta")]
 pub mod carta;
 mod counter;
@@ -131,6 +133,7 @@ pub use book_audio::{AudioClip, AudioPar, BookAudio, book_audio};
 pub use brf::{BrfCode, BrfLoader};
 pub use cache::{CacheKey, DocumentCache};
 pub use canvas::CanvasLoader;
+pub use captions::CaptionLoader;
 #[cfg(feature = "carta")]
 pub use carta::CartaLoader;
 pub use daisy::DaisyLoader;
@@ -214,7 +217,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 11;
+pub const CANONICAL_VERSION: u32 = 12;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -355,6 +358,11 @@ pub struct LoadOptions {
     pub keep_comments: bool,
     /// The braille code BRF files are read in (`[braille] brf_code`).
     pub brf_code: BrfCode,
+    /// The words of the headings a caption file gets every few minutes,
+    /// with `{n}` for the minute ("Minute {n}"), so a caller can give them
+    /// in the reader's language. Empty: English,
+    /// [`captions::DEFAULT_MINUTE_HEADING`].
+    pub minute_heading: String,
     /// Progress reports and cancelling (not part of the cache key).
     #[serde(skip)]
     pub progress: Progress,
@@ -499,6 +507,7 @@ impl Registry {
         r.register(Box::new(CanvasLoader));
         r.register(Box::new(SvgLoader));
         r.register(Box::new(MathMlLoader));
+        r.register(Box::new(CaptionLoader));
         #[cfg(feature = "carta")]
         r.register(Box::new(CartaLoader));
         r
@@ -781,7 +790,7 @@ mod tests {
         }
         ids.extend([
             "daisy", "brf", "pptx", "sheet", "archive", "json", "notebook", "canvas", "svg",
-            "mathml",
+            "mathml", "captions",
         ]);
         if cfg!(feature = "carta") {
             ids.push("carta");

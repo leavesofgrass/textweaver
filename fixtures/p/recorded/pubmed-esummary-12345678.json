@@ -1,0 +1,70 @@
+{
+  "header": {
+    "type": "esummary",
+    "version": "0.3"
+  },
+  "result": {
+    "uids": [
+      "12345678"
+    ],
+    "12345678": {
+      "uid": "12345678",
+      "pubdate": "2024 Mar 5",
+      "epubdate": "2024 Feb 20",
+      "source": "J Example Med Educ",
+      "authors": [
+        {
+          "name": "Example A",
+          "authtype": "Author",
+          "clusterid": ""
+        },
+        {
+          "name": "van Example BC",
+          "authtype": "Author",
+          "clusterid": ""
+        },
+        {
+          "name": "Example Study Group",
+          "authtype": "CollectiveName",
+          "clusterid": ""
+        }
+      ],
+      "lastauthor": "Example Study Group",
+      "title": "Reading by ear: <i>text-to-speech</i> in medical school.",
+      "sorttitle": "reading by ear text to speech in medical school",
+      "volume": "12",
+      "issue": "3",
+      "pages": "101-109",
+      "lang": [
+        "eng"
+      ],
+      "nlmuniqueid": "000000000",
+      "issn": "",
+      "essn": "0000-0000",
+      "pubtype": [
+        "Journal Article"
+      ],
+      "recordstatus": "PubMed",
+      "pubstatus": "4",
+      "articleids": [
+        {
+          "idtype": "pubmed",
+          "idtypen": 1,
+          "value": "12345678"
+        },
+        {
+          "idtype": "doi",
+          "idtypen": 3,
+          "value": "10.5555/example.2024.0003"
+        },
+        {
+          "idtype": "pmc",
+          "idtypen": 8,
+          "value": "PMC0000001"
+        }
+      ],
+      "fulljournalname": "Journal of example medical education",
+      "sortpubdate": "2024/03/05 00:00"
+    }
+  }
+}
