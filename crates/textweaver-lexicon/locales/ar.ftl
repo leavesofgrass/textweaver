@@ -6083,6 +6083,7 @@ live-qr-unreadable = عُثر على رمز QR لكن تعذرت قراءته. �
 live-qr-too-large = ملف الصورة كبير جدًا.
 live-qr-too-long = رابط الانضمام لا يتسع في رمز QR.
 live-qr-image-error = تعذرت قراءة الصورة: { $error } جرّب ملف PNG أو JPEG.
+live-qr-reading = جارٍ قراءة صورة QR.
 prompt-save-join-qr = حفظ رمز QR في ملف (.png أو .svg)
 prompt-join-qr-image = ملف صورة فيه رمز QR
 chooser-qr-files = صور PNG وSVG

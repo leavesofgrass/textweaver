@@ -151,6 +151,10 @@ pub(crate) struct LiveWire {
     /// Publishes waiting on helper threads.
     #[cfg(feature = "mqtt")]
     pub(crate) jobs: Vec<super::broker::SendJob>,
+    /// The QR image being read on a helper thread (crate::live::qr):
+    /// replacing or clearing it cancels it.
+    #[cfg(feature = "mqtt")]
+    pub(crate) qr_job: Option<super::qr::QrJob>,
     /// Stands in for the MQTT client (tests).
     #[cfg(feature = "mqtt")]
     connector: Option<Connector>,

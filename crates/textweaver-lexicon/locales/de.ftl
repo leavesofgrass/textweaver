@@ -5700,6 +5700,7 @@ live-qr-unreadable = Ein QR-Code wurde gefunden, ist aber nicht lesbar. Versuche
 live-qr-too-large = Die Bilddatei ist zu groß.
 live-qr-too-long = Der Beitrittslink passt nicht in einen QR-Code.
 live-qr-image-error = Das Bild ist nicht lesbar: { $error } Versuchen Sie eine PNG- oder JPEG-Datei.
+live-qr-reading = Das QR-Bild wird gelesen.
 prompt-save-join-qr = QR-Code in Datei speichern (.png oder .svg)
 prompt-join-qr-image = Bilddatei mit dem QR-Code
 chooser-qr-files = PNG- und SVG-Bilder
