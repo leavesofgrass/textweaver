@@ -11,7 +11,7 @@ fn languages_map_to_mathcat_or_english() {
     assert_eq!(language_for(Some("es_MX")), "es");
     assert_eq!(language_for(Some("DE")), "de");
     assert_eq!(language_for(Some("no")), "nb");
-    assert_eq!(language_for(Some("pt-BR")), "en");
+    assert_eq!(language_for(Some("pt-BR")), "pt");
     assert_eq!(language_for(Some("x-klingon")), "en");
 }
 

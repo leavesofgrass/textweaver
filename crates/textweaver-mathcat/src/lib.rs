@@ -30,17 +30,19 @@
 //! thread, logged once, and answered with [`Error::Crashed`]; the thread
 //! keeps serving, and the caller falls back to textweaver's own speech.
 //!
-//! Braille and navigation use MathCAT 0.7.6-rc.3 as vendored under
-//! `third_party/mathcat`, with the fix for MathCAT issue #827: the
-//! navigation braille panicked in builds without unsafe code, which is how
-//! this workspace builds it (ADR-0036).
+//! MathCAT is 0.7.7, vendored under `third_party/mathcat`. The copy was
+//! made for the fix for MathCAT issue #827 (the navigation braille panicked
+//! in builds without unsafe code, which is how this workspace builds it;
+//! ADR-0036); 0.7.7 fixes the issue upstream, so the copy now differs from
+//! the release only in its manifest.
 //!
 //! # Rules
 //!
-//! MathCAT's rules (about 9.4 MB of YAML, all languages and braille codes)
-//! are embedded in the binary through MathCAT's `include-zip` feature,
-//! zipped at build time from the crate's own `Rules` folder. Nothing is
-//! downloaded, and no rule file is read from disk.
+//! MathCAT's rules (about 9.9 MB of YAML in 0.7.7, all languages and
+//! braille codes) are embedded in the binary through MathCAT's
+//! `include-zip` feature, zipped at build time from the crate's own
+//! `Rules` folder. Nothing is downloaded, and no rule file is read from
+//! disk.
 //!
 //! ```no_run
 //! use textweaver_mathcat::{Options, speak_mathml};
@@ -57,7 +59,7 @@ use std::fmt;
 use textweaver_core::{OffsetMap, Verbosity};
 use textweaver_math::{AltText, MathMlOptions, TextOptions, to_mathml};
 
-/// MathCAT's version, as its crate reports it (`0.7.6-rc.3`).
+/// MathCAT's version, as its crate reports it (`0.7.7`).
 pub fn version() -> String {
     libmathcat::get_version()
 }
@@ -100,10 +102,10 @@ pub fn mathcat_verbosity(v: Verbosity) -> &'static str {
     }
 }
 
-/// Languages MathCAT 0.7.6 has speech rules for (its `Rules/Languages`
-/// folders, less the `zz` test language).
-pub const LANGUAGES: [&str; 14] = [
-    "de", "el", "en", "es", "fi", "fr", "hu", "id", "nb", "pl", "ru", "sv", "vi", "zh",
+/// Languages MathCAT 0.7.7 has speech rules for (its `Rules/Languages`
+/// folders, less the `zz` test language). Portuguese (`pt`) is new in 0.7.7.
+pub const LANGUAGES: [&str; 15] = [
+    "de", "el", "en", "es", "fi", "fr", "hu", "id", "nb", "pl", "pt", "ru", "sv", "vi", "zh",
 ];
 
 /// The MathCAT language for a document's language tag (`fr`, `fr-CA`,
