@@ -391,7 +391,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Add a row to the table at the cursor | `Alt+W` (edit) | `Ctrl+Shift+Enter` (edit) | `Cmd+Shift+Enter` (edit) | `add_table_row` |
 | Insert a wiki link to a note in the vault, or to a heading or block in it | palette | palette | palette | `insert_wiki_link` |
 | Check or uncheck the task on the current line, or make the line a task | `Ctrl+L` (edit) | `Ctrl+Enter` (edit) | `Cmd+Option+Enter` (edit) | `toggle_task` |
-| Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | palette | palette | palette | `cycle_task_status` |
+| Move the task on the current line to its next status: in progress, done, canceled, forwarded, important, question | palette | palette | palette | `cycle_task_status` |
 | Insert a callout of a type you choose; selected lines become its text | palette | palette | palette | `insert_callout` |
 | Insert an image | `Alt+G` (edit) | `Ctrl+Shift+I` (edit) | `Cmd+Shift+I` (edit) | `insert_image` |
 | Find and replace | `Alt+F` (edit) | `Ctrl+Shift+F` (edit) | `Cmd+Shift+F` (edit) | `replace` |
@@ -694,7 +694,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Stop publishing the document live; readers keep the last revision | `stop_sharing` |
 | Publish a check-in: a form with the live source's fields, or callsign, name and notes; Enter publishes the entry | `send_check_in` |
 | Insert a wiki link to a note in the vault, or to a heading or block in it | `insert_wiki_link` |
-| Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question | `cycle_task_status` |
+| Move the task on the current line to its next status: in progress, done, canceled, forwarded, important, question | `cycle_task_status` |
 | Insert a callout of a type you choose; selected lines become its text | `insert_callout` |
 | Insert the bibliography of the works cited, at the cursor | `insert_bibliography` |
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |

@@ -23,7 +23,7 @@
 //! |---|---|
 //! | Insert wiki link ([`wiki_link`]) | `[[Note]]`, `[[Note#Heading]]`, or `[[Note#^block]]` at the caret; a selection becomes the shown text, `[[Note\|selection]]`; the caret ends after the link |
 //! | Toggle task | on each selected line: `[ ]` becomes `[x]`, `[x]` becomes `[ ]`, and any other status becomes `[x]`; a list item gains `[ ] `, and a plain line becomes `- [ ] ` |
-//! | Cycle task status | on each selected line, the status after the one there, in the order `[ ]`, `[/]` in progress, `[x]`, `[-]` cancelled, `[>]` forwarded, `[!]` important, `[?]` question, then `[ ]` again ([`TASK_CYCLE`]); a line that is not a task becomes one, as with Toggle task |
+//! | Cycle task status | on each selected line, the status after the one there, in the order `[ ]`, `[/]` in progress, `[x]`, `[-]` canceled, `[>]` forwarded, `[!]` important, `[?]` question, then `[ ]` again ([`TASK_CYCLE`]); a line that is not a task becomes one, as with Toggle task |
 //! | Insert callout ([`insert_callout`]) | `> [!type]` and a body line `> ` at the start of the caret's line (the line's text becomes the body) or after it; selected lines become the body, quoted |
 
 use std::path::{Component, Path, PathBuf};
@@ -80,7 +80,7 @@ pub enum MarkdownOp {
 }
 
 /// The task statuses Cycle Task Status steps through, in order: not
-/// done, in progress, done, cancelled, forwarded, important, question.
+/// done, in progress, done, canceled, forwarded, important, question.
 /// The statuses of Obsidian's Tasks plugin and popular themes, which the
 /// reader names in words.
 pub const TASK_CYCLE: [char; 7] = [' ', '/', 'x', '-', '>', '!', '?'];
