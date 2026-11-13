@@ -393,7 +393,7 @@ Reading aids for the page. See [Reading aids](reading-aids.md). Text spacing is 
 - `reading_aids.ruler.rows_above` and `reading_aids.ruler.rows_below`, default `1`: the size of the band.
 - `reading_aids.ruler.mask_outside`, default `false`: dim everything outside the band.
 
-`fetch_missing` was removed in 0.1.0-alpha.5: textweaver downloads a reading font (Lexend) only when you choose it and agree, so the setting did nothing. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save.
+`fetch_missing` was removed in 0.1.0-alpha.5: textweaver downloads a reading font (Lexend) only when you choose it and agree, so the setting did nothing. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save. <!-- history -->
 
 ### Word aids
 

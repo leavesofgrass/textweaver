@@ -54,7 +54,7 @@ The scripts are part of the repository; to obtain a copy, clone it:
 git clone https://github.com/leavesofgrass/textweaver
 ```
 
-The app is always installed, since it is the program itself. On Windows the script offers two Start menu shortcuts: "textweaver app", which starts `textweaver.exe`, and "textweaver terminal", which opens the terminal reader, `tw.exe`, in Windows Terminal. On Linux it adds two menu entries, "textweaver" for the app and "textweaver terminal reader". An install made by an earlier release is upgraded in place: the scripts remove the old app, `textweaver-gui`, and the shortcuts, links, and menu entries they made for it, and only those. The `--gui` option is no longer needed; it still installs the separate app of a release up to beta 2 when you ask for one with `--release`.
+The app is always installed, since it is the program itself. On Windows the script offers two Start menu shortcuts: "textweaver app", which starts `textweaver.exe`, and "textweaver terminal", which opens the terminal reader, `tw.exe`, in Windows Terminal. On Linux it adds two menu entries, "textweaver" for the app and "textweaver terminal reader". An install made by an earlier release is upgraded in place: the scripts remove the old app, `textweaver-gui`, and the shortcuts, links, and menu entries they made for it, and only those. The `--gui` option is no longer needed; it still installs the separate app of a release up to beta 2 when you ask for one with `--release`. <!-- history -->
 
 Each script also accepts `--uninstall`, which removes textweaver, its links, and its shortcuts or menu entries.
 
@@ -186,7 +186,7 @@ To install by hand:
    ./textweaver-*-linux-x86_64.AppImage --install
    ```
 
-   A link named `textweaver` starts the app, and a link named `tw` runs the terminal program. The links point at the AppImage where it currently is, so move it into place before running `--install`. It removes the `textweaver-gui` link and menu entry that `--install` made before beta 3. `--uninstall` removes the links, the menu entries, and the icon.
+   A link named `textweaver` starts the app, and a link named `tw` runs the terminal program. The links point at the AppImage where it currently is, so move it into place before running `--install`. It removes the `textweaver-gui` link and menu entry that `--install` made before beta 3. `--uninstall` removes the links, the menu entries, and the icon. <!-- history -->
 
 **Without FUSE.** An AppImage mounts itself with FUSE, which most desktops provide. Where FUSE is missing (some containers and minimal systems), the AppImage reports it. You can then either set `APPIMAGE_EXTRACT_AND_RUN=1`, which makes the AppImage unpack itself to a temporary folder on each run, or use the tarball: extract it anywhere and run `textweaver` or `tw` from the folder. The install script chooses the tarball automatically when FUSE is missing, and `--tarball` requests it explicitly.
 

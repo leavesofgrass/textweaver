@@ -137,7 +137,7 @@ Once downloaded, Lexend works everywhere textweaver uses a font: the app, PDF fi
 
 When there is no data folder (a session that keeps no files), textweaver says "No data folder to keep Lexend in." The lean reader, built without the `publish` feature, has no downloads and says "Font downloads are not in this version."; install Lexend yourself from its home page there, and textweaver finds it the next time it starts.
 
-(The `[reading_aids.font] fetch_missing` setting, which never did anything, was removed in 0.1.0-alpha.5. Asking first is how downloads are turned off: say n.)
+(The `[reading_aids.font] fetch_missing` setting, which never did anything, was removed in 0.1.0-alpha.5. Asking first is how downloads are turned off: say n.) <!-- history -->
 
 Font size is in points. The default is 14. `settings.toml` takes 6 to 144; the Settings dialog and the size keys go up to 72.
 
