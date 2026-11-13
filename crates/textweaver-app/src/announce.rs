@@ -8,8 +8,8 @@
 //! test reads the sources to keep it so, so no announcement can escape the
 //! setting. The familiar helpers keep their meaning: `tell` answers the
 //! user, `error` reports a failure, `ask` asks, `note` confirms a routine
-//! change; `say_result`, `say_dialog`, `say_progress`, `say_tip`, and
-//! `say_hint` name the rest.
+//! change; `say_result`, `say_dialog` and `say_progress` name the rest,
+//! and [`App::announce_as`] takes any [`Importance`].
 //!
 //! **Staleness.** A message meant for a list or dialog can be held (while
 //! the speech engine starts, or by a frontend that delivers later). Each
@@ -127,18 +127,6 @@ impl App {
         self.say_kind(text, Verbosity::Low, Priority::Polite, Importance::Progress);
     }
 
-    /// A tip or a welcome. Heard from `normal` up.
-    #[allow(dead_code)]
-    pub(crate) fn say_tip(&mut self, text: &str) {
-        self.say_kind(text, Verbosity::Low, Priority::Polite, Importance::Tip);
-    }
-
-    /// A hint about keys. Heard only at `full`.
-    #[allow(dead_code)]
-    pub(crate) fn say_hint(&mut self, text: &str) {
-        self.say_kind(text, Verbosity::Low, Priority::Polite, Importance::Hint);
-    }
-
     /// Ctrl+F9: the next interface announcement level, saved. The change
     /// is always said: it answers the key.
     pub(crate) fn cycle_interface_announcements(&mut self) {
@@ -202,7 +190,7 @@ mod tests {
         app.say_result("Bionic reading on.");
         assert_eq!(app.status_text(), "");
         app.say_dialog("Menus closed.");
-        app.say_hint("Tab completes.");
+        app.announce_as("Tab completes.", Priority::Polite, Importance::Hint);
         assert_eq!(app.status_text(), "");
         app.tell("Line 3, 12 percent.");
         assert_eq!(app.status_text(), "Line 3, 12 percent.");

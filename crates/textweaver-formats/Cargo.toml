@@ -31,9 +31,6 @@ spreadsheets = ["dep:calamine"]
 # it brings an HTTP client (ureq with rustls), which the reader keeps out
 # (`cargo xtask deps`); `tw` turns it on.
 url = ["dep:ureq"]
-# Reserved: paperback-core (pdfium, mathcat) is not on crates.io, so this
-# feature enables nothing (ADR-0010).
-paperback = []
 # Pandoc subprocess loader for the long tail (odt, rtf, rst, org, latex, ...).
 pandoc = []
 # carta (pure Rust, MIT or Apache-2.0): reads Org, reStructuredText,

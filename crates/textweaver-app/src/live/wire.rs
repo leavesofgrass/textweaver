@@ -44,28 +44,6 @@ use super::announce::EntryThrottle;
 use crate::app::{App, ListKind};
 use crate::command::{Effect, PromptPurpose};
 
-/// The commands that need the MQTT client: hidden without the `mqtt`
-/// feature.
-pub const NEEDS_MQTT: &[ActionId] = &[
-    ActionId::OpenLiveSource,
-    ActionId::SetUpLiveSource,
-    ActionId::EditLiveSource,
-    ActionId::SaveLiveSourceFile,
-    ActionId::CloseLiveSource,
-    ActionId::ForgetLiveSourcePassword,
-    ActionId::StartBroker,
-    ActionId::StopBroker,
-    ActionId::ShowJoinCode,
-    ActionId::CopyJoinCode,
-    ActionId::CopyJoinLink,
-    ActionId::OpenJoinLink,
-    ActionId::ShowJoinQr,
-    ActionId::JoinFromQrImage,
-    ActionId::ShareDocumentLive,
-    ActionId::StopSharing,
-    ActionId::SendCheckIn,
-];
-
 /// Every live source command.
 pub const COMMANDS: &[ActionId] = &[
     ActionId::OpenLiveSource,
@@ -212,23 +190,6 @@ impl App {
     /// Runs a live source command.
     pub(crate) fn live_action(&mut self, a: ActionId) -> Vec<Effect> {
         match a {
-            ActionId::OpenLiveSource
-            | ActionId::SetUpLiveSource
-            | ActionId::EditLiveSource
-            | ActionId::SaveLiveSourceFile
-            | ActionId::CloseLiveSource
-            | ActionId::ForgetLiveSourcePassword
-            | ActionId::StartBroker
-            | ActionId::StopBroker
-            | ActionId::ShowJoinCode
-            | ActionId::CopyJoinCode
-            | ActionId::CopyJoinLink
-            | ActionId::OpenJoinLink
-            | ActionId::ShowJoinQr
-            | ActionId::JoinFromQrImage
-            | ActionId::ShareDocumentLive
-            | ActionId::StopSharing
-            | ActionId::SendCheckIn => self.run_registered(a),
             ActionId::LiveSwitchView => self.live_toggle_view(),
             ActionId::LiveJumpNewest => self.live_jump_newest(),
             ActionId::LiveTogglePause => self.live_toggle_pause(),
@@ -588,36 +549,48 @@ impl App {
 }
 
 /// Gives the commands that need the MQTT client their handlers (with the
-/// `mqtt` feature); without it they stay hidden ([`NEEDS_MQTT`]).
+/// `mqtt` feature). Without it each is registered as not in this build
+/// ([`Availability::NotInThisBuild`](crate::menu::Availability)): hidden
+/// from the menus and the palette, and run by a key it says in words that
+/// live sources are not in this build.
 pub(crate) fn register(app: &mut App) {
-    #[cfg(feature = "mqtt")]
-    {
-        app.register_handler(ActionId::OpenLiveSource, |app| app.live_open_list());
-        app.register_handler(ActionId::SetUpLiveSource, |app| app.live_setup());
-        app.register_handler(ActionId::EditLiveSource, |app| app.live_edit_command());
-        app.register_handler(ActionId::SaveLiveSourceFile, |app| {
-            app.live_save_file_command()
-        });
-        app.register_handler(ActionId::CloseLiveSource, |app| app.live_close_command());
-        app.register_handler(ActionId::ForgetLiveSourcePassword, |app| {
-            app.live_forget_command()
-        });
-        app.register_handler(ActionId::StartBroker, |app| app.live_start_broker());
-        app.register_handler(ActionId::StopBroker, |app| app.live_stop_broker());
-        app.register_handler(ActionId::ShowJoinCode, |app| app.live_show_join_code());
-        app.register_handler(ActionId::CopyJoinCode, |app| app.live_copy_join_code());
-        app.register_handler(ActionId::CopyJoinLink, |app| app.live_copy_join_link());
-        app.register_handler(ActionId::OpenJoinLink, |app| app.live_open_join_link());
-        app.register_handler(ActionId::ShowJoinQr, |app| app.live_show_join_qr());
-        app.register_handler(ActionId::JoinFromQrImage, |app| {
-            app.live_join_from_qr_image()
-        });
-        app.register_handler(ActionId::ShareDocumentLive, |app| app.live_share_command());
-        app.register_handler(ActionId::StopSharing, |app| app.live_stop_sharing());
-        app.register_handler(ActionId::SendCheckIn, |app| app.live_checkin_command());
+    /// Registers each command with its handler, or, without the `mqtt`
+    /// feature, as not in this build (the handlers are not compiled).
+    macro_rules! needs_mqtt {
+        ($($action:ident => $handler:expr),* $(,)?) => {
+            #[cfg(feature = "mqtt")]
+            {
+                $(app.register_handler(ActionId::$action, $handler);)*
+            }
+            #[cfg(not(feature = "mqtt"))]
+            {
+                $(app.register_command(
+                    ActionId::$action,
+                    crate::menu::Availability::NotInThisBuild,
+                    App::live_not_in_build,
+                );)*
+            }
+        };
     }
-    #[cfg(not(feature = "mqtt"))]
-    let _ = app;
+    needs_mqtt! {
+        OpenLiveSource => |app| app.live_open_list(),
+        SetUpLiveSource => |app| app.live_setup(),
+        EditLiveSource => |app| app.live_edit_command(),
+        SaveLiveSourceFile => |app| app.live_save_file_command(),
+        CloseLiveSource => |app| app.live_close_command(),
+        ForgetLiveSourcePassword => |app| app.live_forget_command(),
+        StartBroker => |app| app.live_start_broker(),
+        StopBroker => |app| app.live_stop_broker(),
+        ShowJoinCode => |app| app.live_show_join_code(),
+        CopyJoinCode => |app| app.live_copy_join_code(),
+        CopyJoinLink => |app| app.live_copy_join_link(),
+        OpenJoinLink => |app| app.live_open_join_link(),
+        ShowJoinQr => |app| app.live_show_join_qr(),
+        JoinFromQrImage => |app| app.live_join_from_qr_image(),
+        ShareDocumentLive => |app| app.live_share_command(),
+        StopSharing => |app| app.live_stop_sharing(),
+        SendCheckIn => |app| app.live_checkin_command(),
+    }
 }
 
 /// Without the `mqtt` feature there is no broker and nothing is sent.

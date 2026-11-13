@@ -34,8 +34,6 @@ omnivox = []
 # speech-dispatcher through its SSIP socket, with SSML index marks for word
 # events (pure Rust; no libspeechd).
 speechd = []
-# Wave 2: the `tts` crate (WinRT, AVSpeech, speech-dispatcher).
-tts-crate = []
 # Math spoken by MathCAT (ClearSpeak and SimpleSpeak) when the math engine
 # setting asks for it (ADR-0029). Off, that setting reads math with
 # textweaver-math, as always.
