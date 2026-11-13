@@ -34,6 +34,7 @@ mod language;
 mod list_contract;
 mod live;
 mod live_by_entry;
+mod live_resend;
 mod live_values;
 mod markup_pauses;
 mod obsidian_editing;

@@ -148,16 +148,20 @@ fn midi_map(settings: &Settings) -> MidiMap {
 }
 
 /// The keying thread: contacts in, the keyer and the decoder on the
-/// clock, the sidetone set at each tone edge, decoded characters out
-/// (with the waker rung).
+/// clock from `origin`, the sidetone set at each tone edge, decoded
+/// characters out (with the waker rung).
+///
+/// `origin` is when keying turned on, not when the thread started: a
+/// thread started late on a busy machine still times a contact made
+/// before it ran from where it was made.
 fn run(
+    origin: Instant,
     rx: Receiver<ToKeyer>,
     out: Sender<FromKeyer>,
     wake: crate::wake::WakeSlot,
     options: KeyerOptions,
     sidetone: Option<Sidetone>,
 ) {
-    let origin = Instant::now();
     let ms = |t: Instant| t.saturating_duration_since(origin).as_secs_f64() * 1000.0;
     let mut keyer = Keyer::new(options);
     let wpm = (1200.0 / options.unit_ms).round();
@@ -278,11 +282,12 @@ impl App {
         let (to_keyer, rx) = channel();
         let (out, from_keyer) = channel();
         let wake = self.wake.clone();
+        let origin = Instant::now();
         let thread = {
             let out = out.clone();
             std::thread::Builder::new()
                 .name("cw-keying".into())
-                .spawn(move || run(rx, out, wake, options, sidetone))
+                .spawn(move || run(origin, rx, out, wake, options, sidetone))
                 .map_err(|e| log::warn!("cannot start CW keying: {e}"))
                 .ok()
         };
