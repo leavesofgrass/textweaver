@@ -56,7 +56,7 @@ The generated pages (`keyboard.md` and `settings-reference.md`) list every key a
 - Reading settings dialog: gui.md. Pass.
 - Colors dialog and high contrast: gui.md. Pass.
 - First run and Ask again: gui.md. Pass.
-- Size and place kept, text scale, caret blink, low-power graphics, log, save after failure: gui.md. Pass, after fix.
+- Size and place kept, text scale, caret blink, the integrated graphics adapter, log, save after failure: gui.md. Pass, after fix.
 - Graphics choice (`--graphics`): gui.md and troubleshooting.md. Pass.
 - Announcement levels: gui.md and screen-readers.md. Pass.
 
@@ -155,7 +155,7 @@ Each change merged in wave 2 of beta 6, and the guide that should cover it, open
 - Graphics is a setting (Toolbars and panels, kept on this computer): settings.md, gui.md. Pass.
 - Live documents commands "Open a live source", "Close the live source" and "Save the live log now": live-documents.md, keyboard.md (generated). Pass.
 - The status bar says "Connected, Tailscale range": gui.md. Pass.
-- Why a live source is down is said in the reader's language, with the system's own words in English: live-documents.md, troubleshooting.md, known-limits.md. Pass.
+- Why a live source is down is said in the reader's language, with the system's own words in English: known-limits.md (what is and is not translated). Pass. The "Connection messages" section of live-documents.md quotes the English messages and does not say they follow the language, which is enough, since the catalog does the translating.
 - Join link errors are said in the reader's language: known-limits.md (what is and is not translated), live-documents.md. Pass. The two small wording changes ("1 character", no "Join code error:" lead-in) are in the changelog only, which is enough.
 - Find and replace keeps its matches while it steps: whats-new.md ("Faster in large documents"). Pass. editing.md describes the steps, which are unchanged.
 - A live log stays quick as it grows: whats-new.md. Pass.
@@ -182,6 +182,20 @@ Each change merged in wave 3 of beta 6, and the guide that should cover it, open
 - The conversion matrix has a fixture for every built-in loader, and the caption loader's: nothing a reader does. dev/testing.md, dev/architecture.md. Pass.
 - The `captions` fuzz target, the caption loader and how a format registers, the vendored MathCAT 0.7.7 and its trimmed patch, the Xilem patches' status lines, the vendored Windows adapter's annotation answer and its tests, the app's document view gap, and the frames probe's `--frames-marks`: dev/architecture.md, dev/third-party-data.md, dev/testing.md, fuzz/README.md. Pass.
 - What is new: whats-new.md has entries for wave 3 (captions, EPUB accessibility information, PubMed IDs, spelling errors for NVDA, scrolling to the end of a long document). Pass.
+
+## Beta 6, the rest of the Unreleased section, checked on Friday, November 13, 2026
+
+The changelog's Unreleased section was read again line by line after the three waves, for entries that had no line above.
+
+- Next heading, next list and next table, and the item counts said with them, find their marker directly: whats-new.md ("Faster in large documents"). Pass.
+- Typing in a very long line costs the same as in a short one: the changelog only. No guide needs it: nothing a reader does or hears changes.
+- A Piper voice falls short of the rate asked for from about 300 words a minute up: known-limits.md. Pass.
+- A MIDI input is closed when CW keying stops, and the app's tests no longer open the computer's MIDI inputs: the changelog only. cw.md describes keying and nothing a reader does changes.
+- The task status "Canceled." and the help of Cycle task status spell the word the US way: editing.md. Pass.
+- `cargo xtask release` runs every step of a full `scripts/dev-check` in a target folder of its own: dev/releasing.md. Pass.
+- The message count in English only (140, the length of `locales/untranslated.txt`): known-limits.md. Pass. README.md and the accessibility statement name no number.
+- Typed live errors (`DisconnectReason` and `JoinLinkError` in `textweaver-mqtt`): dev/architecture.md, dev/testing.md. Pass.
+- The dev-check script's steps, its fast mode, `cargo xtask tools --check`, the workflows' triggers, and the `docs --check` rules (US English, no internal waves in the user guides, the "Not yet released" check): CONTRIBUTING.md, dev/testing.md, dev/releasing.md, dev/docker.md, dev/building.md. Pass, after fix.
 
 ## Still open
 
