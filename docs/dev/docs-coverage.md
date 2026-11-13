@@ -1,6 +1,6 @@
 # Documentation coverage
 
-This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, again for beta 4 on Friday, October 23, 2026, for beta 5 on Thursday, October 29, 2026, for wave 1 of beta 6 on Thursday, November 12, 2026, for wave 2 and wave 3 on Friday, November 13, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
+This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, again for beta 4 on Friday, October 23, 2026, for beta 5 on Thursday, October 29, 2026, for wave 1 of beta 6 on Thursday, November 12, 2026, for wave 2 and wave 3 on Friday, November 13, 2026, and for the release the same day, when every guide was read line by line against the code, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
 
 The generated pages (`keyboard.md` and `settings-reference.md`) list every key and setting, so this page tracks the guides that explain them.
 
