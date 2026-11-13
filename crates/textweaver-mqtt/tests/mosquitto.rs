@@ -106,7 +106,9 @@ fn reason(seen: &[MqttEvent]) -> (String, bool) {
     seen.iter()
         .rev()
         .find_map(|e| match e {
-            MqttEvent::Disconnected { reason, retrying } => Some((reason.clone(), *retrying)),
+            MqttEvent::Disconnected {
+                reason, retrying, ..
+            } => Some((reason.clone(), *retrying)),
             _ => None,
         })
         .unwrap_or_else(|| panic!("no Disconnected event in {seen:#?}"))
@@ -254,7 +256,10 @@ fn mosquitto_in_docker() {
         t.elapsed().as_millis()
     );
     for e in &seen {
-        if let MqttEvent::Disconnected { reason, retrying } = e {
+        if let MqttEvent::Disconnected {
+            reason, retrying, ..
+        } = e
+        {
             eprintln!("MEASURE during restart: {reason} (retrying: {retrying})");
         }
     }

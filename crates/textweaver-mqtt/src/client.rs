@@ -17,6 +17,7 @@ use rumqttc::mqttbytes::v4::{
 use rumqttc::mqttbytes::{Error as CodecError, QoS, check};
 
 use crate::error::{Failure, Kind, Stage};
+use crate::reason::DisconnectReason;
 use crate::sanitize::{KeyOrder, clean_text, decode_payload_ordered};
 use crate::{MqttConfig, MqttEvent, Payload, new_client_id, tls, topic};
 
@@ -63,10 +64,11 @@ impl MqttSource {
         {
             Ok(t) => Some(t),
             Err(e) => {
-                let _ = tx.try_send(MqttEvent::Disconnected {
-                    reason: format!("Failed: cannot start the connection thread: {e}."),
-                    retrying: false,
-                });
+                let why = DisconnectReason::ThreadFailed {
+                    error: e.to_string(),
+                }
+                .cleaned();
+                let _ = tx.try_send(MqttEvent::disconnected(why, false));
                 None
             }
         };
@@ -115,7 +117,7 @@ enum Status {
     Idle,
     Connecting,
     Connected,
-    Down(String),
+    Down(DisconnectReason),
 }
 
 struct Worker {
@@ -197,28 +199,26 @@ impl Worker {
     /// Settings that cannot work, found before any connection is tried.
     fn check_settings(&self) -> Option<Failure> {
         let cfg = &self.config;
-        let bad = |why: String| {
-            Some(Failure::new(
-                Kind::Config,
-                format!("Settings error: {why}."),
-            ))
-        };
+        let bad = |why: DisconnectReason| Some(Failure::new(Kind::Config, why));
         if cfg.host.trim().is_empty() {
-            return bad("no host is set".into());
+            return bad(DisconnectReason::NoHost);
         }
         if cfg.port == 0 {
-            return bad("the port is 0".into());
+            return bad(DisconnectReason::PortZero);
         }
         if cfg.topics.is_empty() {
-            return bad("no topic is set".into());
+            return bad(DisconnectReason::NoTopic);
         }
         for t in &cfg.topics {
-            if let Some(why) = topic::filter_problem(t) {
-                return bad(format!("{why}: {}", clean_text(t, 200)));
+            if let Some(problem) = topic::TopicProblem::of_filter(t) {
+                return bad(DisconnectReason::BadTopic {
+                    problem,
+                    topic: clean_text(t, 200),
+                });
             }
         }
         if cfg.password.is_some() && cfg.username.is_none() {
-            return bad("a password needs a user name".into());
+            return bad(DisconnectReason::PasswordWithoutUser);
         }
         if cfg.tls.is_on() {
             if let Err(f) = tls::client_config(&cfg.tls) {
@@ -237,15 +237,12 @@ impl Worker {
 
     /// Reports a failure, unless the same reason is already reported.
     fn down(&mut self, failure: &Failure, retrying: bool) {
-        let text = clean_text(&failure.text, 2000);
-        if self.status == Status::Down(text.clone()) && retrying {
+        let why = failure.reason.clone().cleaned();
+        if self.status == Status::Down(why.clone()) && retrying {
             return;
         }
-        self.status = Status::Down(text.clone());
-        self.emit(MqttEvent::Disconnected {
-            reason: text,
-            retrying,
-        });
+        self.status = Status::Down(why.clone());
+        self.emit(MqttEvent::disconnected(why, retrying));
     }
 
     /// Queues an event without blocking on messages: a message that finds
@@ -360,10 +357,7 @@ impl Worker {
                     Packet::Publish(p) => {
                         if p.qos == QoS::ExactlyOnce {
                             return End::Failed(
-                                Failure::new(
-                                    Kind::Protocol,
-                                    "Protocol error: the broker sent QoS 2, which was not asked for.",
-                                ),
+                                Failure::new(Kind::Protocol, DisconnectReason::UnaskedQos2),
                                 true,
                             );
                         }
@@ -403,7 +397,7 @@ impl Worker {
                             return End::Failed(
                                 Failure::new(
                                     Kind::SubscriptionRefused,
-                                    "Not authorized: the broker refused every topic this source asked for.",
+                                    DisconnectReason::EveryTopicRefused,
                                 ),
                                 true,
                             );
@@ -414,9 +408,9 @@ impl Worker {
                         return End::Failed(
                             Failure::new(
                                 Kind::Lost,
-                                format!(
-                                    "Connection lost to {target}: the broker ended the session."
-                                ),
+                                DisconnectReason::SessionEnded {
+                                    target: target.clone(),
+                                },
                             ),
                             true,
                         );
@@ -425,10 +419,9 @@ impl Worker {
                         return End::Failed(
                             Failure::new(
                                 Kind::Protocol,
-                                format!(
-                                    "Protocol error: unexpected {} packet from the broker.",
-                                    kind(&other)
-                                ),
+                                DisconnectReason::UnexpectedPacket {
+                                    packet: kind(&other).to_string(),
+                                },
                             ),
                             true,
                         );
@@ -465,9 +458,9 @@ impl Worker {
                         return End::Failed(
                             Failure::new(
                                 Kind::Lost,
-                                format!(
-                                    "Connection lost to {target}: the broker stopped answering."
-                                ),
+                                DisconnectReason::StoppedAnswering {
+                                    target: target.clone(),
+                                },
                             ),
                             true,
                         );
@@ -570,18 +563,15 @@ pub(crate) fn open_link(
         match read_packet(&mut stream, &mut buf, max_packet) {
             Ok(Some(Frame::Packet(Packet::ConnAck(a)))) => break a,
             Ok(Some(_)) => {
-                return Err(Failure::new(
-                    Kind::Protocol,
-                    "Protocol error: the broker did not answer the login with CONNACK.",
-                ));
+                return Err(Failure::new(Kind::Protocol, DisconnectReason::NoConnack));
             }
             Ok(None) if Instant::now() < deadline => {}
             Ok(None) => {
                 return Err(Failure::new(
                     Kind::Unreachable,
-                    format!(
-                        "Unreachable: {target} accepted the connection but did not answer the login in time."
-                    ),
+                    DisconnectReason::LoginTimeout {
+                        target: target.clone(),
+                    },
                 ));
             }
             Err(e) => {
@@ -598,8 +588,9 @@ pub(crate) fn open_link(
                             | io::ErrorKind::ConnectionAborted
                     )
                 {
-                    f.text
-                        .push_str(" If this port expects TLS, turn TLS on for this source.");
+                    if let DisconnectReason::LostLoggingIn { tls_hint, .. } = &mut f.reason {
+                        *tls_hint = true;
+                    }
                 }
                 return Err(f);
             }

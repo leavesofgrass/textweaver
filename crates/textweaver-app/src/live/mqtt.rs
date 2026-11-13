@@ -13,11 +13,14 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use textweaver_components::credentials::Password;
-use textweaver_mqtt::{MqttConfig, MqttEvent, MqttSource, Payload, Pin, Secret, Tls};
+use textweaver_lexicon::i18n::{Arg, Catalog};
+use textweaver_mqtt::{
+    DisconnectReason, MessageArg, MqttConfig, MqttEvent, MqttSource, Payload, Pin, Secret, Tls,
+};
 use textweaver_store::{LiveSettings, LiveSourceSettings, LiveTls};
 
 use super::KeyOrder;
-use super::source::{LiveEvent, LivePayload, LiveSource};
+use super::source::{LiveEvent, LivePayload, LiveReason, LiveSource};
 
 /// What an MQTT live source reads from: the running client, or a test's
 /// scripted stand-in.
@@ -103,17 +106,48 @@ pub fn live_event(event: MqttEvent) -> LiveEvent {
             retained,
         },
         MqttEvent::Disconnected {
-            reason,
+            why,
             retrying: true,
-        } => LiveEvent::Disconnected { reason },
+            ..
+        } => LiveEvent::Disconnected {
+            reason: LiveReason::Mqtt(why),
+        },
         MqttEvent::Disconnected {
-            reason,
+            why,
             retrying: false,
-        } => LiveEvent::Failed { reason },
+            ..
+        } => LiveEvent::Failed {
+            reason: LiveReason::Mqtt(why),
+        },
         MqttEvent::Quiet { topic, seconds } => LiveEvent::Quiet { topic, seconds },
         MqttEvent::TopicRefused { topic } => LiveEvent::TopicRefused { topic },
         MqttEvent::Skipped { count } => LiveEvent::Skipped { count },
     }
+}
+
+/// Why a live source is down, as a sentence in the language of
+/// `catalog`. In English it is the reason's own sentence, word for word.
+pub fn reason_text(catalog: &Catalog, why: &DisconnectReason) -> String {
+    message_text(catalog, why.message_id(), &why.args())
+}
+
+/// The message `id` from `catalog`, with `args`; a value that is a
+/// message of its own is said first, in the same language.
+pub(crate) fn message_text(catalog: &Catalog, id: &str, args: &[(&str, MessageArg)]) -> String {
+    let args: Vec<(&str, Arg)> = args
+        .iter()
+        .map(|(name, value)| {
+            let value = match value {
+                MessageArg::Text(t) => Arg::from(t.as_str()),
+                MessageArg::Number(n) => Arg::Num(*n),
+                MessageArg::Message(inner, inner_args) => {
+                    Arg::Str(message_text(catalog, inner, inner_args))
+                }
+            };
+            (*name, value)
+        })
+        .collect();
+    catalog.fmt(id, &args)
 }
 
 /// The client's configuration for source `source`: host, port (the one
@@ -198,6 +232,23 @@ mod tests {
     use super::fake::Script;
     use super::*;
 
+    fn lost() -> DisconnectReason {
+        DisconnectReason::Lost {
+            target: "logger:1883".into(),
+            cause: textweaver_mqtt::IoCause::Closed,
+        }
+    }
+
+    /// In English, the app says each reason word for word as the client's
+    /// own sentence, which `tw` and the logs show.
+    #[test]
+    fn every_reason_reads_the_same_from_the_english_catalog() {
+        let en = Catalog::english();
+        for why in DisconnectReason::examples() {
+            assert_eq!(reason_text(&en, &why), why.to_string(), "{why:?}");
+        }
+    }
+
     #[test]
     fn every_client_event_has_its_live_event() {
         let script = Script::default();
@@ -224,14 +275,8 @@ mod tests {
                 retained: false,
                 key_order: Default::default(),
             },
-            MqttEvent::Disconnected {
-                reason: "Connection lost to logger:1883.".into(),
-                retrying: true,
-            },
-            MqttEvent::Disconnected {
-                reason: "Not authorized: check the user name and password.".into(),
-                retrying: false,
-            },
+            MqttEvent::disconnected(lost(), true),
+            MqttEvent::disconnected(DisconnectReason::LoginRefused, false),
             MqttEvent::Quiet {
                 topic: "log/checkins".into(),
                 seconds: 60,
@@ -263,10 +308,10 @@ mod tests {
                     retained: false
                 },
                 LiveEvent::Disconnected {
-                    reason: "Connection lost to logger:1883.".into()
+                    reason: LiveReason::Mqtt(lost())
                 },
                 LiveEvent::Failed {
-                    reason: "Not authorized: check the user name and password.".into()
+                    reason: LiveReason::Mqtt(DisconnectReason::LoginRefused)
                 },
                 LiveEvent::Quiet {
                     topic: "log/checkins".into(),

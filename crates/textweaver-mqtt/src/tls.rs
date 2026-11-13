@@ -15,6 +15,7 @@ use rustls::{ClientConfig, DigitallySignedStruct, RootCertStore, SignatureScheme
 use crate::Tls;
 use crate::error::{Failure, Kind};
 use crate::pin::{Pin, spki_of_certificate};
+use crate::reason::DisconnectReason;
 
 /// Builds the rustls client configuration. Uses the ring provider
 /// directly, so it never depends on a process-wide default provider.
@@ -22,19 +23,19 @@ pub(crate) fn client_config(tls: &Tls) -> Result<Arc<ClientConfig>, Failure> {
     let mut roots = RootCertStore::empty();
     match tls {
         Tls::Off => {
-            return Err(Failure::new(
-                Kind::Config,
-                "Settings error: TLS was asked for on a plain connection.",
-            ));
+            return Err(Failure::new(Kind::Config, DisconnectReason::TlsOnPlain));
         }
         Tls::System => roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned()),
         Tls::Pinned(pin) => return pinned_config(pin),
         Tls::CaFile(path) => {
-            let shown = path.display();
+            let shown = || path.display().to_string();
             let iter = CertificateDer::pem_file_iter(path).map_err(|e| {
                 Failure::new(
                     Kind::Config,
-                    format!("Settings error: cannot read the CA file {shown}: {e}."),
+                    DisconnectReason::CaUnreadable {
+                        path: shown(),
+                        error: e.to_string(),
+                    },
                 )
             })?;
             let mut found = 0;
@@ -42,13 +43,19 @@ pub(crate) fn client_config(tls: &Tls) -> Result<Arc<ClientConfig>, Failure> {
                 let cert = cert.map_err(|e| {
                     Failure::new(
                         Kind::Config,
-                        format!("Settings error: the CA file {shown} is not valid PEM: {e}."),
+                        DisconnectReason::CaNotPem {
+                            path: shown(),
+                            error: e.to_string(),
+                        },
                     )
                 })?;
                 roots.add(cert).map_err(|e| {
                     Failure::new(
                         Kind::Config,
-                        format!("Settings error: a certificate in {shown} was refused: {e}."),
+                        DisconnectReason::CaCertificateRefused {
+                            path: shown(),
+                            error: e.to_string(),
+                        },
                     )
                 })?;
                 found += 1;
@@ -56,7 +63,7 @@ pub(crate) fn client_config(tls: &Tls) -> Result<Arc<ClientConfig>, Failure> {
             if found == 0 {
                 return Err(Failure::new(
                     Kind::Config,
-                    format!("Settings error: the CA file {shown} holds no certificate."),
+                    DisconnectReason::CaEmpty { path: shown() },
                 ));
             }
         }
@@ -64,10 +71,20 @@ pub(crate) fn client_config(tls: &Tls) -> Result<Arc<ClientConfig>, Failure> {
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let config = ClientConfig::builder_with_provider(provider)
         .with_safe_default_protocol_versions()
-        .map_err(|e| Failure::new(Kind::Tls, format!("TLS failure: {e}.")))?
+        .map_err(tls_setup_failure)?
         .with_root_certificates(roots)
         .with_no_client_auth();
     Ok(Arc::new(config))
+}
+
+/// A TLS library error while setting up.
+fn tls_setup_failure(e: rustls::Error) -> Failure {
+    Failure::new(
+        Kind::Tls,
+        DisconnectReason::Tls {
+            error: e.to_string(),
+        },
+    )
 }
 
 /// A configuration that trusts exactly the key with this pin, whatever
@@ -81,7 +98,7 @@ fn pinned_config(pin: &Pin) -> Result<Arc<ClientConfig>, Failure> {
     });
     let config = ClientConfig::builder_with_provider(provider)
         .with_safe_default_protocol_versions()
-        .map_err(|e| Failure::new(Kind::Tls, format!("TLS failure: {e}.")))?
+        .map_err(tls_setup_failure)?
         .dangerous()
         .with_custom_certificate_verifier(verifier)
         .with_no_client_auth();
@@ -146,30 +163,47 @@ pub(crate) fn server_name(host: &str) -> Result<ServerName<'static>, Failure> {
     ServerName::try_from(host.to_string()).map_err(|_| {
         Failure::new(
             Kind::Config,
-            format!("Settings error: {host} is not a valid host name for TLS."),
+            DisconnectReason::BadTlsHost {
+                host: host.to_owned(),
+            },
         )
     })
 }
 
-/// Words for a rustls error, meaning first.
-pub(crate) fn describe(err: &rustls::Error) -> String {
+/// Why, for a rustls error, meaning first.
+pub(crate) fn describe(err: &rustls::Error) -> DisconnectReason {
+    use DisconnectReason as R;
     use rustls::{CertificateError, Error};
     match err {
         Error::InvalidCertificate(c) => match c {
-            CertificateError::UnknownIssuer => "TLS failure: the broker's certificate is not trusted. Its issuer is unknown; set a CA file if the broker uses a private certificate.".into(),
-            CertificateError::NotValidForName | CertificateError::NotValidForNameContext { .. } => "TLS failure: the broker's certificate is for a different host name.".into(),
-            CertificateError::Expired | CertificateError::ExpiredContext { .. } => "TLS failure: the broker's certificate has expired.".into(),
-            CertificateError::NotValidYet | CertificateError::NotValidYetContext { .. } => "TLS failure: the broker's certificate is not valid yet. Check this computer's clock.".into(),
-            CertificateError::Revoked => "TLS failure: the broker's certificate was revoked.".into(),
+            CertificateError::UnknownIssuer => R::UnknownIssuer,
+            CertificateError::NotValidForName | CertificateError::NotValidForNameContext { .. } => {
+                R::WrongHostName
+            }
+            CertificateError::Expired | CertificateError::ExpiredContext { .. } => R::Expired,
+            CertificateError::NotValidYet | CertificateError::NotValidYetContext { .. } => {
+                R::NotValidYet
+            }
+            CertificateError::Revoked => R::Revoked,
             // Only the pinned verifier gives this.
-            CertificateError::ApplicationVerificationFailure => "TLS failure: the broker's key does not match the pin. Check the pin or join code; this may not be the broker you meant.".into(),
-            other => format!("TLS failure: the broker's certificate was refused ({other:?})."),
+            CertificateError::ApplicationVerificationFailure => R::PinMismatch,
+            other => R::CertificateRefused {
+                detail: format!("{other:?}"),
+            },
         },
-        Error::AlertReceived(alert) => format!("TLS failure: the broker ended the handshake ({alert:?})."),
-        Error::NoCertificatesPresented => "TLS failure: the broker sent no certificate.".into(),
-        Error::PeerIncompatible(p) => format!("TLS failure: the broker's TLS settings are not compatible ({p:?})."),
-        Error::InvalidMessage(m) => format!("TLS failure: the broker did not answer with TLS ({m:?}). Is this a plain port?"),
-        other => format!("TLS failure: {other}."),
+        Error::AlertReceived(alert) => R::HandshakeAlert {
+            detail: format!("{alert:?}"),
+        },
+        Error::NoCertificatesPresented => R::NoCertificate,
+        Error::PeerIncompatible(p) => R::Incompatible {
+            detail: format!("{p:?}"),
+        },
+        Error::InvalidMessage(m) => R::NotTls {
+            detail: format!("{m:?}"),
+        },
+        other => R::Tls {
+            error: other.to_string(),
+        },
     }
 }
 
@@ -235,7 +269,8 @@ mod tests {
         let err = client_config(&Tls::CaFile("no-such-ca.pem".into())).unwrap_err();
         assert_eq!(err.kind, Kind::Config);
         assert!(
-            err.text
+            err.reason
+                .to_string()
                 .starts_with("Settings error: cannot read the CA file")
         );
     }

@@ -34,7 +34,9 @@ fn reason(events: &[MqttEvent]) -> (String, bool) {
         .iter()
         .rev()
         .find_map(|e| match e {
-            MqttEvent::Disconnected { reason, retrying } => Some((reason.clone(), *retrying)),
+            MqttEvent::Disconnected {
+                reason, retrying, ..
+            } => Some((reason.clone(), *retrying)),
             _ => None,
         })
         .unwrap_or_else(|| panic!("no Disconnected event in {events:#?}"))

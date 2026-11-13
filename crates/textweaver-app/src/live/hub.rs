@@ -924,17 +924,16 @@ impl App {
                 self.tell(&m);
             }
             LiveEvent::Disconnected { reason } => {
+                let reason = reason.text(&self.study.catalog);
                 let m = self.msg_args(
                     "live-disconnected",
-                    &args!["name" => name, "reason" => reason.as_str()],
+                    &args!["name" => name, "reason" => reason],
                 );
                 self.warn(&m);
             }
             LiveEvent::Failed { reason } => {
-                let m = self.msg_args(
-                    "live-failed",
-                    &args!["name" => name, "reason" => reason.as_str()],
-                );
+                let reason = reason.text(&self.study.catalog);
+                let m = self.msg_args("live-failed", &args!["name" => name, "reason" => reason]);
                 self.warn(&m);
             }
             LiveEvent::Quiet { topic, .. } => {

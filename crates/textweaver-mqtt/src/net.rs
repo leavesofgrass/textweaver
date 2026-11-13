@@ -13,6 +13,7 @@ use std::sync::mpsc::{RecvTimeoutError, channel};
 use std::time::{Duration, Instant};
 
 use crate::error::{Failure, Kind, Stage};
+use crate::reason::{DisconnectReason, IoCause};
 
 /// The most addresses tried at once.
 const MAX_PARALLEL: usize = 8;
@@ -38,7 +39,9 @@ pub(crate) fn connect(
     if addrs.is_empty() {
         return Err(Failure::new(
             Kind::Unreachable,
-            format!("Unreachable: the host {host} has no address."),
+            DisconnectReason::NoAddress {
+                host: host.to_owned(),
+            },
         ));
     }
     let addrs: Vec<SocketAddr> = addrs.into_iter().take(MAX_PARALLEL).collect();
@@ -74,7 +77,7 @@ pub(crate) fn connect(
         Some(e) => Failure::from_io(&e, Stage::Connect, &target),
         None => Failure::new(
             Kind::Unreachable,
-            format!("Unreachable: cannot connect to {target}."),
+            DisconnectReason::ConnectFailed { target },
         ),
     })
 }
@@ -91,10 +94,13 @@ fn resolve(
     if let Ok(ip) = bare.parse::<IpAddr>() {
         return Ok(Some(vec![SocketAddr::new(ip, port)]));
     }
-    let not_found = |why: String| {
+    let not_found = |cause: IoCause| {
         Failure::new(
             Kind::Unreachable,
-            format!("Unreachable: cannot find the host {host}: {why}."),
+            DisconnectReason::HostNotFound {
+                host: host.to_owned(),
+                cause,
+            },
         )
     };
     let (tx, rx) = channel();
@@ -107,24 +113,30 @@ fn resolve(
                 .map(|it| it.collect::<Vec<_>>());
             let _ = tx.send(r);
         })
-        .map_err(|e| not_found(e.to_string()))?;
+        .map_err(|e| {
+            not_found(IoCause::Other {
+                error: e.to_string(),
+            })
+        })?;
     let deadline = Instant::now() + timeout;
     loop {
         match rx.recv_timeout(TICK) {
             Ok(Ok(addrs)) => return Ok(Some(addrs)),
             Ok(Err(e)) => {
-                return Err(not_found(crate::sanitize::clean_text(&e.to_string(), 300)));
+                return Err(not_found(IoCause::Other {
+                    error: crate::sanitize::clean_text(&e.to_string(), 300),
+                }));
             }
             Err(RecvTimeoutError::Timeout) => {
                 if stop.load(Ordering::SeqCst) {
                     return Ok(None);
                 }
                 if Instant::now() >= deadline {
-                    return Err(not_found("no answer in time".into()));
+                    return Err(not_found(IoCause::NoAnswer));
                 }
             }
             Err(RecvTimeoutError::Disconnected) => {
-                return Err(not_found("the lookup failed".into()));
+                return Err(not_found(IoCause::LookupFailed));
             }
         }
     }

@@ -5,27 +5,89 @@
 
 /// Why a filter cannot be subscribed to, in words, or `None` when it is
 /// valid: not empty, `#` only as the whole last level, `+` only as a whole
-/// level, no NUL, at most 65535 bytes.
+/// level, no NUL, at most 65535 bytes. The words are
+/// [`TopicProblem::text`]; the app says them from its catalog with
+/// [`TopicProblem::message_id`].
 pub fn filter_problem(filter: &str) -> Option<&'static str> {
-    if filter.is_empty() {
-        return Some("a topic is empty");
-    }
-    if filter.len() > usize::from(u16::MAX) {
-        return Some("a topic is longer than 65535 bytes");
-    }
-    if filter.contains('\0') {
-        return Some("a topic holds a NUL character");
-    }
-    let levels: Vec<&str> = filter.split('/').collect();
-    for (i, level) in levels.iter().enumerate() {
-        if level.contains('#') && (*level != "#" || i + 1 != levels.len()) {
-            return Some("# may only be a whole last level of a topic");
+    TopicProblem::of_filter(filter).map(TopicProblem::text)
+}
+
+/// Why a topic filter cannot be subscribed to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TopicProblem {
+    /// The filter is empty.
+    Empty,
+    /// The filter is longer than 65535 bytes.
+    TooLong,
+    /// The filter holds a NUL character.
+    Nul,
+    /// `#` is not the whole last level.
+    HashNotLast,
+    /// `+` is not a whole level.
+    PlusNotWhole,
+}
+
+impl TopicProblem {
+    /// What is wrong with `filter`, or `None` when it is valid.
+    pub fn of_filter(filter: &str) -> Option<TopicProblem> {
+        if filter.is_empty() {
+            return Some(TopicProblem::Empty);
         }
-        if level.contains('+') && *level != "+" {
-            return Some("+ may only be a whole level of a topic");
+        if filter.len() > usize::from(u16::MAX) {
+            return Some(TopicProblem::TooLong);
+        }
+        if filter.contains('\0') {
+            return Some(TopicProblem::Nul);
+        }
+        let levels: Vec<&str> = filter.split('/').collect();
+        for (i, level) in levels.iter().enumerate() {
+            if level.contains('#') && (*level != "#" || i + 1 != levels.len()) {
+                return Some(TopicProblem::HashNotLast);
+            }
+            if level.contains('+') && *level != "+" {
+                return Some(TopicProblem::PlusNotWhole);
+            }
+        }
+        None
+    }
+
+    /// The problem in English words, lower case, to follow a lead-in:
+    /// for logs and the command line.
+    pub fn text(self) -> &'static str {
+        match self {
+            TopicProblem::Empty => "a topic is empty",
+            TopicProblem::TooLong => "a topic is longer than 65535 bytes",
+            TopicProblem::Nul => "a topic holds a NUL character",
+            TopicProblem::HashNotLast => "# may only be a whole last level of a topic",
+            TopicProblem::PlusNotWhole => "+ may only be a whole level of a topic",
         }
     }
-    None
+
+    /// The id of the same words in the app's message catalog.
+    pub fn message_id(self) -> &'static str {
+        match self {
+            TopicProblem::Empty => "live-topic-problem-empty",
+            TopicProblem::TooLong => "live-topic-problem-too-long",
+            TopicProblem::Nul => "live-topic-problem-nul",
+            TopicProblem::HashNotLast => "live-topic-problem-hash",
+            TopicProblem::PlusNotWhole => "live-topic-problem-plus",
+        }
+    }
+
+    /// Every problem, for tests.
+    pub const ALL: [TopicProblem; 5] = [
+        TopicProblem::Empty,
+        TopicProblem::TooLong,
+        TopicProblem::Nul,
+        TopicProblem::HashNotLast,
+        TopicProblem::PlusNotWhole,
+    ];
+}
+
+impl std::fmt::Display for TopicProblem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.text())
+    }
 }
 
 /// Whether `topic` matches `filter`, with `+` for one level and `#` for

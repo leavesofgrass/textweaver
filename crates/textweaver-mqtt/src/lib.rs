@@ -25,8 +25,10 @@
 //!   [`MqttEvent::Connecting`] when the source starts,
 //!   [`MqttEvent::Connected`] on each successful login, and
 //!   [`MqttEvent::Disconnected`] when the link is lost or a new reason
-//!   keeps it down. Every reason is a sentence in words, meaning first, so
-//!   the first cells of a Braille line say what happened.
+//!   keeps it down. Every reason is a [`DisconnectReason`]: data the app
+//!   says from its catalog in the reader's language, and in English a
+//!   sentence in words, meaning first, so the first cells of a Braille
+//!   line say what happened.
 //! - **Quiet topics.** Mosquitto grants a subscription its ACL denies and
 //!   then sends nothing, so textweaver cannot tell "not allowed" from
 //!   "nothing published yet". After [`MqttConfig::quiet_after`] with no
@@ -63,6 +65,7 @@ mod link;
 mod net;
 mod pin;
 mod publish;
+mod reason;
 mod sanitize;
 mod tls;
 pub mod topic;
@@ -79,6 +82,7 @@ pub use pin::{
     ct_eq,
 };
 pub use publish::{PublishError, Publisher, publish_once};
+pub use reason::{DisconnectReason, IoCause, MessageArg};
 pub use sanitize::{
     KeyOrder, Limits, clean_document_text, clean_text, decode_payload, decode_payload_ordered,
 };
@@ -263,10 +267,12 @@ pub enum MqttEvent {
     /// The link was lost or could not be made, or the reason it stays down
     /// changed. Reported once per change, not once per retry.
     Disconnected {
-        /// Why, as a sentence in words, meaning first ("Unreachable:",
-        /// "Not authorized:", "TLS failure:", "Connection lost", "Settings
-        /// error:").
+        /// Why, in English: `why` as a sentence in words, meaning first
+        /// ("Unreachable:", "Not authorized:", "TLS failure:", "Connection
+        /// lost", "Settings error:"), for logs and the command line.
         reason: String,
+        /// Why, as data, for the app to say in the reader's language.
+        why: DisconnectReason,
         /// The client keeps retrying with backoff. False when only the user
         /// can fix it (credentials, certificate, settings): the thread has
         /// stopped.
@@ -294,6 +300,18 @@ pub enum MqttEvent {
         /// How many.
         count: u64,
     },
+}
+
+impl MqttEvent {
+    /// A [`MqttEvent::Disconnected`] for `why`, with its English sentence
+    /// as `reason`.
+    pub fn disconnected(why: DisconnectReason, retrying: bool) -> MqttEvent {
+        MqttEvent::Disconnected {
+            reason: why.to_string(),
+            why,
+            retrying,
+        }
+    }
 }
 
 /// A message's payload, decoded inside the crate.

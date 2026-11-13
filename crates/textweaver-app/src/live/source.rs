@@ -64,10 +64,10 @@ pub enum LiveEvent {
         /// message): typically the whole log so far.
         retained: bool,
     },
-    /// The connection was lost; `reason` is a sentence in words.
+    /// The connection was lost.
     Disconnected {
-        /// Why, in words.
-        reason: String,
+        /// Why.
+        reason: LiveReason,
     },
     /// Nothing has arrived on `topic` for `seconds` since subscribing.
     Quiet {
@@ -78,11 +78,10 @@ pub enum LiveEvent {
     },
     /// The connection could not be made or was lost, and the source
     /// stopped trying: only the user can fix it (a wrong password, an
-    /// untrusted certificate, a settings error). `reason` is a sentence in
-    /// words.
+    /// untrusted certificate, a settings error).
     Failed {
-        /// Why, in words.
-        reason: String,
+        /// Why.
+        reason: LiveReason,
     },
     /// The broker refused the subscription to `topic`: it may not let
     /// this account read it.
@@ -96,6 +95,44 @@ pub enum LiveEvent {
         /// How many.
         count: u64,
     },
+}
+
+/// Why a live source is down.
+#[derive(Clone, Debug, PartialEq)]
+pub enum LiveReason {
+    /// A sentence in words, said as it is: from a source that has no
+    /// reason of its own kind, such as a test's feed.
+    Words(String),
+    /// The MQTT client's reason, which the app says from its catalog in
+    /// the reader's language.
+    #[cfg(feature = "mqtt")]
+    Mqtt(textweaver_mqtt::DisconnectReason),
+}
+
+impl LiveReason {
+    /// Why, as a sentence in the language of `catalog`.
+    pub fn text(&self, catalog: &textweaver_lexicon::i18n::Catalog) -> String {
+        match self {
+            LiveReason::Words(words) => {
+                let _ = catalog;
+                words.clone()
+            }
+            #[cfg(feature = "mqtt")]
+            LiveReason::Mqtt(why) => super::mqtt::reason_text(catalog, why),
+        }
+    }
+}
+
+impl From<&str> for LiveReason {
+    fn from(words: &str) -> Self {
+        LiveReason::Words(words.to_owned())
+    }
+}
+
+impl From<String> for LiveReason {
+    fn from(words: String) -> Self {
+        LiveReason::Words(words)
+    }
 }
 
 /// A live source. Implementations run their own threads; the app only
