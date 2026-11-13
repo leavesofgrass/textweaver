@@ -30,12 +30,10 @@ access-hybrid-chosen = Modo híbrido. textweaver lee los documentos en voz alta;
 # No to the first-run question; $key names the keys that change the mode.
 access-hybrid-declined = Se mantiene el modo de voz propia. { $key } cambia el modo.
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
-access-hybrid-question = { $reader } se está ejecutando. ¿Usar el modo híbrido, donde textweaver lee los documentos en voz alta y su lector de pantalla dice los mensajes y lo que escribe? y o n
 access-a-screen-reader = Un lector de pantalla
 # On the first run with a screen reader and no mode chosen: hybrid mode is
 # used, not asked. $reader is the screen reader found (NVDA, JAWS), or
 # access-a-screen-reader; $key names the keys that change the mode.
-access-hybrid-inferred = { $reader } está en marcha: textweaver lee los documentos en voz alta y deja los mensajes a su lector de pantalla. { $key } lo cambia.
 # The window's two modes, when the mode changes; $key changes it again.
 access-window-choice-reads-aloud = textweaver lee en voz alta
 access-window-choice-screen-reader = mi lector de pantalla lee

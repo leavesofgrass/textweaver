@@ -39,13 +39,9 @@ live-paused = Aktualisierungen angehalten. Neue Einträge warten, bis Sie fortse
 live-paused-status = Aktualisierungen angehalten
 live-stopped = { $name } beendet. Das Protokoll bleibt schreibgeschützt geöffnet.
 live-log-saved = Protokoll gespeichert als { $name } in { $folder }.
-live-log-save-failed = Das Live-Protokoll { $path } kann nicht gespeichert werden: { $error } Prüfen Sie, ob in den Protokollordner geschrieben werden kann; textweaver versucht es in 10 Sekunden erneut.
 live-log-empty-not-saved = Das Protokoll hat noch keine Einträge, daher wurde nichts gespeichert.
 live-log-nowhere = Es gibt keinen Ordner, in dem das Live-Protokoll gespeichert werden kann.
 live-log-saved-already = Dieses Protokoll wurde aus { $path } geöffnet; es ist bereits gespeichert.
-live-binary = Eine Nachricht auf { $topic } wurde ausgelassen: Sie ist kein Text ({ $len } Bytes).
-live-too-large = Eine Nachricht auf { $topic } wurde ausgelassen: Sie ist zu groß ({ $len } Bytes).
-live-full = Das Protokoll ist mit { $max } Einträgen voll; neuere Einträge werden ausgelassen.
 live-connecting = Verbindung zu { $name } wird hergestellt.
 live-reconnecting = Neue Verbindung zu { $name }, Versuch { $attempt }.
 live-connected = Verbunden mit { $name }, verschlüsselt.
@@ -69,7 +65,6 @@ live-resumed =
         [one] Aktualisierungen fortgesetzt, 1 Aktualisierung übernommen.
        *[other] Aktualisierungen fortgesetzt, { $count } Aktualisierungen übernommen.
     }
-live-resumed-dropped = Aktualisierungen fortgesetzt, { $count } Aktualisierungen übernommen. { $dropped } ältere Aktualisierungen wurden während der Pause ausgelassen.
 
 ## Beta 5: live sources' commands, the set-up steps, and new entries said.
 ## $name is a source's name, $topic an MQTT topic, $line an entry as one
@@ -82,12 +77,6 @@ menu-live-publish = Veröffentlichen
 prompt-live-setup = Live-Quelle einrichten
 prompt-save-live-source-file = Quelle als Datei speichern
 live-failed = Keine Verbindung zu { $name }: { $reason } Keine weiteren Versuche; beheben Sie das und öffnen Sie die Quelle erneut.
-live-topic-refused = Der Broker hat das Topic { $topic } abgelehnt; vielleicht darf dieses Konto es nicht lesen.
-live-skipped =
-    { $count ->
-        [one] 1 Nachricht wurde ausgelassen: sie kamen schneller, als sie gezeigt werden konnten.
-       *[other] { $count } Nachrichten wurden ausgelassen: sie kamen schneller, als sie gezeigt werden konnten.
-    }
 live-new-entries = { $line } { $count } neue Einträge.
 live-unread-newest = { $count }. Neuester: { $line }
 live-not-in-build = Live-Quellen gibt es in dieser Version von { -brand } nicht.
@@ -180,7 +169,6 @@ live-field-speak-off = Änderungen von { $field } werden nicht mehr gesprochen.
 live-state-connecting = Verbindung wird hergestellt
 live-state-reconnecting = Erneute Verbindung
 live-state-encrypted = Verbunden, verschlüsselt
-live-state-tailscale = Verbunden über Tailscale
 live-state-plain = Verbunden, nicht verschlüsselt
 live-state-lost = Verbindung verloren
 
@@ -221,7 +209,6 @@ live-broker-started-local = Broker an: { $addresses }, TLS, nur dieser Computer.
 live-broker-started = Broker an: { $addresses }, TLS.
 live-broker-started-plain-local = Broker an: { $addresses }, unverschlüsselt, nur dieser Computer.
 live-broker-started-plain = Broker an: { $addresses }, unverschlüsselt.
-live-broker-plain-warning = Warnung: Der Broker ist unverschlüsselt, in einem Netz, das nicht nur dieser Computer oder Tailscale ist. Jeder dort kann die Nachrichten und Passwörter lesen.
 live-broker-join-code = Beitrittscode: { $code }.
 live-broker-pin = Zertifikat-Pin: { $pin }.
 live-broker-not-running = Kein Broker läuft. „Ihren Broker starten“ startet einen.

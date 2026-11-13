@@ -1245,6 +1245,21 @@ impl App {
         );
     }
 
+    /// A list, prompt, or dialog closed: its closing message ("Settings
+    /// closed.", "Canceled.") is said as `importance` at verbosity `min`.
+    /// When the verbosity or the interface announcements keep it quiet, it
+    /// still replaces the status line, without speech or the announcer, so
+    /// a Braille display never keeps the closed list's last row.
+    pub(crate) fn say_closed(&mut self, text: &str, min: Verbosity, importance: Importance) {
+        let before = self.status.seq;
+        self.say_kind(text, min, Priority::Polite, importance);
+        if self.status.seq == before && !text.is_empty() {
+            let written = crate::help::written_text(text);
+            let shown = self.screen_text(&written);
+            self.status.announce(&shown, Priority::Polite);
+        }
+    }
+
     /// Shows `text` on the status line only (used while reading, when the
     /// reading itself is the audible feedback).
     pub(crate) fn show(&mut self, text: &str) {
@@ -1833,7 +1848,7 @@ impl App {
                         Some(ListKind::Browse) => self.browse_cancelled(),
                         _ => {
                             let msg = self.msg("common-cancelled");
-                            self.note(&msg);
+                            self.say_closed(&msg, Verbosity::Normal, Importance::Routine);
                         }
                     }
                 }

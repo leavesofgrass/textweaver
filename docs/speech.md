@@ -130,7 +130,7 @@ Press **Space** on a voice to add it to, or remove it from, your favorites. You 
 
 Each engine lists its voices once, when it starts, and keeps the list, so the manager opens at once. Windows voices are enumerated in the background (a helper program reads each registry); if you press **Alt+V** before that finishes, you hear "The voices are still loading. The list opens when they are ready.", and it opens by itself when they arrive.
 
-When a voice changes what the engine can do, textweaver says so. For example: "This voice does not report words, so the word highlight is estimated." or "Pitch cannot be changed with this voice."
+When a voice changes what the engine can do, textweaver says so. For example: "Word highlight estimated: this voice reports no words." or "Pitch cannot be changed with this voice."
 
 ### Piper voices
 
@@ -458,7 +458,7 @@ How closely the highlight follows the voice depends on what the engine reports t
 - **CW (Morse code).** Exact, and not reported by an engine: textweaver works out where every word starts in the tones it plays before it plays them, and shows each word at that time on the audio clock (plus `[speech] latency_offset_ms`, as for SAPI), so the highlight stops when the audio pauses.
 - **Omnivox, and any voice that reports no words.** textweaver estimates: it moves the highlight one word at a time at the speaking rate. `[highlight] speed` (0.5 to 1.5) speeds the estimate up or slows it down. Word-level highlighting with Omnivox is not promised.
 
-Some SAPI voices, such as Code Factory's, report no word times. textweaver tells you when you choose one: "This voice does not report words, so the word highlight is estimated."
+Some SAPI voices, such as Code Factory's, report no word times. textweaver tells you when you choose one: "Word highlight estimated: this voice reports no words."
 
 ## Engine hosts: how the engines run
 

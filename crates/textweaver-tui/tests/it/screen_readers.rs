@@ -8,7 +8,6 @@ use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::Position;
 use textweaver_app::a11y::AccessMode;
-use textweaver_app::a11y::detect::Detected;
 use textweaver_app::core::CharPos;
 use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{AccessMode as ModeSetting, CursorPlacement};
@@ -80,28 +79,6 @@ impl Harness {
     fn cursor(&mut self) -> Position {
         self.term.get_cursor_position().unwrap()
     }
-}
-
-#[test]
-fn the_first_run_question_stays_on_the_status_line() {
-    let mut h = launch(Settings::default(), 5);
-    assert!(h.tui.app_mut().offer_hybrid(&Detected {
-        name: Some("JAWS".into())
-    }));
-    h.tui.app_mut().announce(
-        "Something else happened.",
-        textweaver_app::a11y::Priority::Polite,
-    );
-    h.draw();
-    let line = h.tui.status_line();
-    assert!(
-        line.starts_with("JAWS is running. Use hybrid mode"),
-        "{line}"
-    );
-    assert!(h.tui.hints(WIDTH).contains("y yes"));
-    h.press(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE));
-    assert_eq!(h.tui.app().access_mode(), AccessMode::Hybrid);
-    assert!(h.title().contains("hybrid"), "{}", h.title());
 }
 
 #[test]

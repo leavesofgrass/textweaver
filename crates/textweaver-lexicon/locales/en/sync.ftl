@@ -61,8 +61,8 @@ sync-place-arrived = { $device }'s place: { $pct } percent.
 sync-place-question = { $device } at { $pct } percent. Go there? y or n
 sync-suggestion-question =
     { $n ->
-        [one] This may be { $title } from { $device }, with 1 note. Use the note from { $device }? y or n
-       *[other] This may be { $title } from { $device }, with { $n } notes. Use the notes from { $device }? y or n
+        [one] Use the note from { $device } here? y or n. This may be { $title }, with 1 note.
+       *[other] Use the notes from { $device } here? y or n. This may be { $title }, with { $n } notes.
     }
 sync-went-to-place = { $device }'s place, { $pct } percent.
 sync-kept-place = Kept this place.

@@ -27,15 +27,15 @@ Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1
           - ListBoxOption "Library and study tools, 6 settings"
           - ListBoxOption "Dictation, 3 settings"
           - ListBoxOption "Keyboard and language, 3 settings"
-          - ListBoxOption "Toolbars and panels, 7 settings"
+          - ListBoxOption "Toolbars and panels, 8 settings"
           - ListBoxOption "Export, 6 settings"
           - ListBoxOption "Live documents, 13 settings"
           - ListBoxOption "Sync, 15 settings"
           - ListBoxOption "Updates and components, 3 settings"
-          - ListBoxOption "All settings, 230 settings"
+          - ListBoxOption "All settings, 231 settings"
       - Group "Display settings" description="Up and Down move between settings. Left and Right change one. Enter types a new value. Delete puts the default back. Ctrl+PageDown and Ctrl+PageUp change the section. Type to filter. F1 says the help." [focused, active item "Theme"]
         - ComboBox "Theme" value="Galaxy, meets AA" description="The color theme." [selected]
-        - CheckBox "Follow the system theme" description="At startup, use a light, dark, or high-contrast theme like the system, unless you picked one." [checked]
+        - CheckBox "Follow the system theme" description="Use a theme like the system's, light, dark, or high contrast, unless you picked one." [checked]
         - CheckBox "Line numbers" description="Show line numbers." [not checked]
         - Slider "Line length" value="66 characters" description="How many characters a line holds in the window, from 25 to 90."
     - GenericContainer

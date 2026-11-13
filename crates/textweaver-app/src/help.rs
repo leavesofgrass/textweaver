@@ -929,12 +929,13 @@ mod tests {
         let plain = welcome_text(&c, &map);
         assert_eq!(
             written_text(&with),
-            "Welcome to textweaver. Ctrl+O opens a document. Space plays and pauses, Escape stops. F2 lists every command, Alt or F10 the menus. F1 opens the help."
+            "Welcome to textweaver. Ctrl+O opens a document, F1 the help. Space plays and pauses, Escape stops, F2 lists every command. Alt or F10 shows the menus."
         );
-        assert!(spoken_text(&with).contains("Alt or F10 the menus"));
+        assert!(spoken_text(&with).contains("Alt or F10 shows the menus"));
         assert!(!plain.contains("menus"));
+        // Only the menus sentence is added.
         assert!(
-            written_text(&with).len() <= written_text(&plain).len() + 10,
+            written_text(&with).len() <= written_text(&plain).len() + 30,
             "{with}"
         );
     }

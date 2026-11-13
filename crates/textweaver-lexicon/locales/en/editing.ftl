@@ -208,7 +208,7 @@ edit-replace-with =
 common-recovery-write-failed = Could not write the recovery copy: { $error }. Save soon; { -brand } will keep trying.
 common-recovery-writing-again = The recovery copy is being written again.
 # $title is the document; $when is how long ago its work was saved.
-edit-recovery-offer = { -brand } closed with unsaved changes to { $title }, saved { $when }. Recover them now? Up and Down choose, Enter confirms.
+edit-recovery-offer = Recover unsaved edits to { $title }? Saved { $when }. Up and Down choose, Enter confirms.
 edit-recovery-title = Recover unsaved work in { $title }?
 edit-recovery-yes = Yes, recover { $title } and keep editing
 edit-recovery-no = No, discard the unsaved changes

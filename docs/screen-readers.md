@@ -52,7 +52,7 @@ The title line shows `hybrid` or `screen reader mode` when one of those is in ef
 
 ### The first run with a screen reader
 
-textweaver does not ask about hybrid mode. When it starts, the mode has never been chosen, and a screen reader is running, it starts in hybrid mode, saves that, and says so once, in one sentence: "NVDA is running: textweaver reads documents aloud and leaves messages to your screen reader. Alt+Shift+A changes this." The sentence names your screen reader and the key that changes the mode; Alt+Shift+A cycles the three modes. It is not repeated on later starts, until you choose Tools, Ask again about first-run choices (or set `hybrid_offered = false` under `[accessibility]`); the sentence then comes again at the next start.
+textweaver does not ask about hybrid mode. When it starts, the mode has never been chosen, and a screen reader is running, it starts in hybrid mode, saves that, and says so once, in one sentence: "Hybrid mode: NVDA speaks messages, textweaver reads documents. Alt+Shift+A changes it." The sentence names your screen reader and the key that changes the mode; Alt+Shift+A cycles the three modes. It is not repeated on later starts, until you choose Tools, Ask again about first-run choices (or set `hybrid_offered = false` under `[accessibility]`); the sentence then comes again at the next start.
 
 The list of interface languages is a separate step of the first run (see [Language](#language)). It comes only when your system's language is not one of the six built in.
 
@@ -305,7 +305,7 @@ Run through this once with NVDA and once with JAWS, in Windows Terminal and, if 
 ### First run
 
 1. Delete the folder `%TEMP%\tw-check` if it exists. With your screen reader running, start `tw --home %TEMP%\tw-check fixtures/sample.md`.
-2. Expected: no yes-or-no question. One sentence says "NVDA is running: textweaver reads documents aloud and leaves messages to your screen reader. Alt+Shift+A changes this." (JAWS: "JAWS is running."). Your screen reader reads it from the status line. The title line shows `hybrid`.
+2. Expected: no yes-or-no question. One sentence says "Hybrid mode: NVDA speaks messages, textweaver reads documents. Alt+Shift+A changes it." (with JAWS: "Hybrid mode: JAWS speaks messages, ..."). Your screen reader reads it from the status line. The title line shows `hybrid`.
 3. Quit with **Ctrl+Q**, then **y**, and start again. Expected: the sentence does not come again, and the title line still shows `hybrid`.
 
 ### Hybrid (`--mode hybrid`)

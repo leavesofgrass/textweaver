@@ -5,18 +5,18 @@
 # $wanted is the speech backend asked for, $backend the one used instead.
 tui-setup-backend-unavailable = Speech engine { $wanted } is not available; using { $backend }.
 tui-setup-speech-failed = Speech could not start ({ $error }); running silently.
-speech-engine-fallback = { $failed } could not start; { $engine } is speaking instead.
-speech-engine-fallback-silent = { $failed } could not start, and no other speech engine is available; { -brand } stays silent.
+speech-engine-fallback = Speaking with { $engine }: { $failed } could not start.
+speech-engine-fallback-silent = No speech: { $failed } could not start, and no other engine is available.
 tui-setup-cannot-save = Cannot save settings or positions: { $error } Reading works. Changes are lost on exit.
 tui-setup-keymap-ignored = Keymap file ignored: { $error } The default keys are used. Fix the file, then restart.
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
-tui-setup-welcome = Welcome to { -brand }. { $open } opens a document. { $play } starts and pauses reading, and { $stop } stops. { $palette } lists every command. { $help } opens the help.
+tui-setup-welcome = Welcome to { -brand }. { $open } opens a document, { $help } the help. { $play } plays and pauses, { $stop } stops, { $palette } lists every command.
 # The window's first-run welcome on Windows, where the menu bar is
 # hidden until Alt or $menu (F10) shows it: the keys of
 # tui-setup-welcome, and the menus.
-gui-setup-welcome-menus = Welcome to { -brand }. { $open } opens a document. { $play } plays and pauses, { $stop } stops. { $palette } lists every command, Alt or { $menu } the menus. { $help } opens the help.
+gui-setup-welcome-menus = Welcome to { -brand }. { $open } opens a document, { $help } the help. { $play } plays and pauses, { $stop } stops, { $palette } lists every command. Alt or { $menu } shows the menus.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = No document is open. Press { $open } to open one, { $new } for a new one, or { $help } for help.

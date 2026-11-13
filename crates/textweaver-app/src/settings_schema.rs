@@ -180,6 +180,7 @@ pub const WINDOW_ONLY: &[&str] = &[
     "gui.focus_mode",
     "gui.speak_messages",
     "gui.sidebar",
+    "gui.graphics",
 ];
 
 /// Every setting, section by section, in the order the settings screens
@@ -461,28 +462,28 @@ pub const INFO: &[Info] = &[
     open_choice(
         "speech.eci.dictionaries",
         "Eloquence dictionaries",
-        "The community pronunciation dictionaries for Eloquence: on, off, or a folder of your own.",
+        "The community pronunciation dictionaries for Eloquence: on, off, or a folder of your own. Restart speech to use a change.",
         &[("true", "on"), ("false", "off")],
     ),
     optional(
         "speech.eci.library",
         "Eloquence library",
-        "The ECI library to load; not set searches the usual places.",
+        "The ECI library to load; not set searches the usual places. Restart speech to use a change.",
     ),
     toggle(
         "speech.eci.code_factory",
         "Search Code Factory's Eloquence",
-        "Also look for Code Factory's Eloquence for Windows. Its license may not cover other programs.",
+        "Also look for Code Factory's Eloquence for Windows. Its license may not cover other programs. Restart speech to use a change.",
     ),
     toggle(
         "speech.sapi.onecore",
         "OneCore voices",
-        "Also list the Windows OneCore voices through SAPI 5.",
+        "Also list the Windows OneCore voices through SAPI 5. Restart speech to use a change.",
     ),
     choice(
         "speech.apple.backend",
         "Apple speech engine",
-        "Which of Apple's speech engines to use on macOS.",
+        "Which of Apple's speech engines to use on macOS. Restart speech to use a change.",
         &[
             ("auto", "automatic"),
             ("nsspeech", "NSSpeechSynthesizer"),
@@ -492,12 +493,12 @@ pub const INFO: &[Info] = &[
     optional(
         "speech.dectalk.library",
         "DECtalk library",
-        "The DECtalk library to load; not set searches the usual places.",
+        "The DECtalk library to load; not set searches the usual places. Restart speech to use a change.",
     ),
     choice(
         "speech.espeak.helper",
         "eSpeak NG helper program",
-        "Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere.",
+        "Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere. Restart speech to use a change.",
         &[
             ("auto", "automatic"),
             ("always", "always the helper"),
@@ -507,17 +508,17 @@ pub const INFO: &[Info] = &[
     optional(
         "speech.piper.voices",
         "Piper voices folder",
-        "The folder of Piper voices; not set uses the piper folder in textweaver's data folder.",
+        "The folder of Piper voices; not set uses the piper folder in textweaver's data folder. Restart speech to use a change.",
     ),
     optional(
         "speech.piper.voice",
         "Piper voice",
-        "The Piper voice to start with, by id; not set takes the first installed.",
+        "The Piper voice to start with, by id; not set takes the first installed. Restart speech to use a change.",
     ),
     choice(
         "speech.piper.phonemizer",
         "Piper phonemizer",
-        "How Piper turns text into sounds. The espeak-ng library when installed, that library, or textweaver's own.",
+        "How Piper turns text into sounds. The espeak-ng library when installed, that library, or textweaver's own. Restart speech to use a change.",
         &[
             ("auto", "automatic"),
             ("library", "espeak-ng library"),
@@ -924,7 +925,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "display.follow_os_theme",
         "Follow the system theme",
-        "At startup, use a light, dark, or high-contrast theme like the system, unless you picked one.",
+        "Use a theme like the system's, light, dark, or high contrast, unless you picked one. Used from the next start.",
     ),
     internal(
         "display.theme_explicit",
@@ -1052,7 +1053,7 @@ pub const INFO: &[Info] = &[
     choice(
         "keyboard.digit_row",
         "Digit row",
-        "How the terminal recognizes the digit keys for heading levels. Auto, or a French AZERTY keyboard.",
+        "How the terminal recognizes the digit keys for heading levels. Auto, or a French AZERTY keyboard. Used from the next start.",
         &[("auto", "automatic"), ("azerty", "AZERTY")],
     ),
     // [accessibility]
@@ -1596,6 +1597,18 @@ pub const INFO: &[Info] = &[
         "gui.last_version",
         "Version last run",
         "The version of the textweaver app last run on this computer, so it says Updated to once after an update. Never synced.",
+    ),
+    choice(
+        "gui.graphics",
+        "Graphics",
+        "The graphics API the textweaver app draws with, from the next start. Automatic lets the graphics library choose; --graphics on the command line wins for one run.",
+        &[
+            ("auto", "automatic"),
+            ("vulkan", "Vulkan"),
+            ("dx12", "Direct3D 12, Windows only"),
+            ("metal", "Metal, macOS only"),
+            ("gl", "OpenGL"),
+        ],
     ),
     choice(
         "gui.announce",
@@ -3176,7 +3189,11 @@ impl App {
     pub(crate) fn close_settings_screen(&mut self) {
         self.settings_screen = None;
         let msg = self.msg("settings-closed");
-        self.say_dialog(&msg);
+        self.say_closed(
+            &msg,
+            textweaver_a11y::Verbosity::Low,
+            textweaver_a11y::Importance::Dialog,
+        );
     }
 
     /// The filter of the settings screen, when it is showing.
@@ -3473,13 +3490,34 @@ fn restart_note(path: &str) -> Option<&'static str> {
         | "speech.piper.voices"
         | "speech.piper.voice"
         | "speech.piper.phonemizer" => Some("settings-restart-speech"),
-        "keyboard.preset" | "keyboard.digit_row" => Some("settings-next-start"),
+        "keyboard.preset"
+        | "keyboard.digit_row"
+        | "gui.announce"
+        | "gui.graphics"
+        | "display.follow_os_theme" => Some("settings-next-start"),
         _ => None,
     }
 }
 
 #[cfg(test)]
 mod tests {
+    /// A setting whose help says a change waits for the next start or a
+    /// restart says so when it is changed, and a setting that says so when
+    /// changed has a help that says it too.
+    #[test]
+    fn restart_notes_match_the_helps() {
+        let mut bad = Vec::new();
+        for info in super::INFO {
+            let help = info.help.to_lowercase();
+            let says = help.contains("next start") || help.contains("restart");
+            let noted = super::restart_note(info.path).is_some();
+            if says != noted {
+                bad.push(format!("{}: help {says}, note {noted}", info.path));
+            }
+        }
+        assert!(bad.is_empty(), "restart notes and helps differ: {bad:?}");
+    }
+
     #[test]
     fn the_short_help_is_the_first_sentence() {
         assert_eq!(first_sentence("One. Two."), "One.");

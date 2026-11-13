@@ -265,8 +265,6 @@ nav-position-mode = Mode { $mode }.
 
 ## Reading aloud.
 
-playback-caps-no-words = Cette voix ne signale pas les mots ; le surlignage du mot est donc estimé.
-playback-caps-words = Cette voix signale chaque mot ; le surlignage le suit donc exactement.
 playback-caps-no-pitch = La hauteur ne peut pas être changée avec cette voix.
 playback-caps-no-volume = Le volume ne peut pas être changé avec cette voix.
 # The reading state on the title line, one word.

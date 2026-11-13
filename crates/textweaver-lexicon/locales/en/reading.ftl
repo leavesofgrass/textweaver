@@ -250,8 +250,8 @@ nav-position-mode = { $mode } mode.
 
 ## Reading aloud.
 
-playback-caps-no-words = This voice does not report words, so the word highlight is estimated.
-playback-caps-words = This voice reports each word, so the highlight follows it exactly.
+playback-caps-no-words = Word highlight estimated: this voice reports no words.
+playback-caps-words = Word highlight exact: this voice reports each word.
 playback-caps-no-pitch = Pitch cannot be changed with this voice.
 playback-caps-no-volume = Volume cannot be changed with this voice.
 # The reading state on the title line, one word.

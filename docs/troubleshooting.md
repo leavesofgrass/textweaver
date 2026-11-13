@@ -87,7 +87,7 @@ scripts/speech-check.sh
 ### No speech at all
 
 1. Look at the title line, whose last part names the speech engine. If it says `silent`, textweaver was started with `--no-speech`, or no engine could start.
-2. Read the status line when textweaver starts. "Speech engine X is not available; using Y." means the engine you asked for was not found. "X could not start; Y is speaking instead." means an engine was found but failed and textweaver moved to the next one; the log gives the reason. textweaver is silent only when every engine on the computer has failed, and it then says which ones.
+2. Read the status line when textweaver starts. "Speech engine X is not available; using Y." means the engine you asked for was not found. "Speaking with Y: X could not start." means an engine was found but failed and textweaver moved to the next one; the log gives the reason. textweaver is silent only when every engine on the computer has failed, and it then says which ones.
 3. Run `tw backends`, which lists the engines that can run on your system; an engine marked "Not installed" was not found, and if only `null` is available, textweaver found no engine. On Windows, check that `textweaver-host-x86.exe` is next to the programs (see [A voice or engine is missing](#a-voice-or-engine-is-missing)). On Linux, install espeak-ng or Speech Dispatcher, or use the install script, which does.
 4. Check the volume: press **F7** a few times, and "Full volume." confirms it is at the maximum. Check the system volume as well.
 5. Run `tw speak "Hello"`. If that speaks but the reader does not, check `[speech] backend` in `settings.toml`, or start with `--backend` and an engine id.
@@ -96,7 +96,7 @@ scripts/speech-check.sh
 ### The app does not open, or it is blank
 
 1. Start it from a terminal, so that any error appears there, and write a log: `textweaver --log-file gui.log`. Started from a shortcut or File Explorer, a startup error is shown in a message box instead.
-2. Try another graphics interface for one run: `textweaver --graphics vulkan`. The alternatives are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, set `graphics = "vulkan"` under `[gui]` in `settings.toml`.
+2. Try another graphics interface for one run: `textweaver --graphics vulkan`. The alternatives are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, set Graphics in Settings, Toolbars and panels, or `graphics = "vulkan"` under `[gui]` in `settings.toml`.
 3. Attach `gui.log` to a bug report; see [Report a bug](#report-a-bug).
 
 ### Your screen reader does not read the app's messages
@@ -136,7 +136,7 @@ On its first run with a screen reader, textweaver offers hybrid mode once. [Usin
    latency_offset_ms = 180
    ```
 
-3. If textweaver said "This voice does not report words, so the word highlight is estimated.", the highlight is an estimate based on the rate. Adjust it with `[highlight] speed`, from 0.5 (slower) to 1.5 (faster).
+3. If textweaver said "Word highlight estimated: this voice reports no words.", the highlight is an estimate based on the rate. Adjust it with `[highlight] speed`, from 0.5 (slower) to 1.5 (faster).
 4. `[highlight] lead_words` shifts the drawn highlight by whole words. The default, 1, is the word you hear.
 
 The [speech guide](speech.md) explains how each engine is highlighted.
@@ -225,7 +225,7 @@ The [themes guide](themes.md) explains themes and how to make your own.
 textweaver refuses a file that is not text, such as a program, an audio file, or an old Word `.doc`, and the message says what the file appears to be. RTF, OpenDocument text, LaTeX, email, and saved web pages open directly, and PNG and JPEG pictures are read by recognizing their text.
 
 1. Check that you opened the file you meant.
-2. For an old Word `.doc`, Excel `.xls`, or PowerPoint `.ppt` file, you hear "it is an old Microsoft Office file". Open it in Word or LibreOffice, save it in a newer format such as `.docx`, and open that.
+2. For an old Word `.doc`, Excel `.xls`, or PowerPoint `.ppt` file, you hear "old Office format; save it as .docx, then open that." Open it in Word or LibreOffice, save it in a newer format such as `.docx`, and open that.
 3. For a RAR archive, you hear "it is a RAR archive, which does not open". Extract it first, or repack it as ZIP or 7z, which open directly.
 4. For a Textile, DocBook, or similar file, convert it to Markdown with Pandoc and open the result. LaTeX, Org, and reStructuredText open directly.
 

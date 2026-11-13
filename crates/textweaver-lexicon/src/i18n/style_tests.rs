@@ -221,8 +221,7 @@ fn no_new_duplicate_sentences() {
 /// still start with a longer sentence and may only become fewer.
 #[test]
 fn setting_helps_start_with_a_short_sentence() {
-    const LONG_FIRST_SENTENCE: [&str; 6] = [
-        "setting-display-follow-os-theme-help",
+    const LONG_FIRST_SENTENCE: [&str; 5] = [
         "setting-gui-speak-messages-help",
         "setting-highlight-lead-words-help",
         "setting-reading-aids-difficult-definitions-help",
@@ -276,4 +275,503 @@ fn button_hints_are_short_in_every_language() {
             }
         }
     }
+}
+
+/// Messages heard or read as a status or an announcement: everything but
+/// names and labels (menus, settings and their helps, choices, sections,
+/// units, kinds, languages), command descriptions, key names, help-topic
+/// fragments and the button hints, which have tests of their own. The
+/// accessibility audit after beta 5 chose these the same way.
+fn is_status(id: &str) -> bool {
+    const NOT_STATUS: [&str; 15] = [
+        "action-",
+        "category-",
+        "choice-",
+        "gui-hint-",
+        "help-",
+        "keyname-",
+        "kind-",
+        "lang-",
+        "menu-",
+        "name-",
+        "pos-",
+        "section-",
+        "setting-",
+        "settings-unit-",
+        "unit-",
+    ];
+    !NOT_STATUS.iter().any(|p| id.starts_with(p))
+}
+
+/// Message `id` with sample values: numbers as four digits, other text as
+/// eight letters, and each select at its default variant.
+fn rendered(c: &super::Catalog, id: &str) -> String {
+    const NUMBERS: [&str; 24] = [
+        "attempt", "col", "cols", "count", "days", "dropped", "i", "k", "kb", "len", "level",
+        "line", "lines", "max", "minutes", "n", "page", "pages", "pct", "percent", "row", "rows",
+        "total", "words",
+    ];
+    let vars = c.variables(id);
+    let args: Vec<(&str, super::Arg)> = vars
+        .iter()
+        .map(|v| {
+            let sample = if NUMBERS.contains(&v.as_str()) {
+                "1234"
+            } else {
+                "abcdefgh"
+            };
+            (v.as_str(), super::Arg::Str(sample.to_owned()))
+        })
+        .collect();
+    c.fmt(id, &args)
+}
+
+/// The text up to the first end of a clause: a period, colon, semicolon,
+/// question mark or exclamation mark followed by a space or the end, or a
+/// line break.
+fn first_clause(s: &str) -> &str {
+    let line = s.trim_start().lines().next().unwrap_or("");
+    let chars: Vec<(usize, char)> = line.char_indices().collect();
+    for (k, &(i, ch)) in chars.iter().enumerate() {
+        let next_is_space = chars.get(k + 1).is_none_or(|&(_, n)| n == ' ');
+        if matches!(ch, '.' | ':' | ';' | '?' | '!') && next_is_space {
+            return &line[..i + ch.len_utf8()];
+        }
+    }
+    line
+}
+
+/// Checks a "may only shrink" list against the ids that break a rule now:
+/// a new offender fails, and so does a listed id that no longer breaks it.
+fn ratchet(rule: &str, list_name: &str, listed: &[&str], offenders: &BTreeMap<String, String>) {
+    let listed: BTreeSet<&str> = listed.iter().copied().collect();
+    let new: Vec<String> = offenders
+        .iter()
+        .filter(|(id, _)| !listed.contains(id.as_str()))
+        .map(|(id, why)| format!("{id}: {why}"))
+        .collect();
+    let fixed: Vec<&str> = listed
+        .iter()
+        .copied()
+        .filter(|id| !offenders.contains_key(*id))
+        .collect();
+    assert!(new.is_empty(), "{rule}: {new:#?}");
+    assert!(
+        fixed.is_empty(),
+        "these now pass, or are gone: take them off {list_name}: {fixed:?}"
+    );
+}
+
+/// Rule 3: a message that asks "? y or n" asks it in its first sentence,
+/// before what the question is about. These still ask later and may only
+/// become fewer.
+#[test]
+fn questions_come_first() {
+    const QUESTION_LATE: [&str; 19] = [
+        "about-docs-question",
+        "about-quick-start-online",
+        "about-report-question",
+        "dictation-model-question",
+        "dictation-needs-edit",
+        "disk-overwrite-question",
+        "disk-reload-question",
+        "disk-replace-question",
+        "docs-not-found",
+        "edit-file-exists-question",
+        "graph-export-saved",
+        "helper-question",
+        "notes-collect-saved",
+        "notes-study-sheet-saved-both",
+        "notes-study-sheet-saved-highlights",
+        "notes-study-sheet-saved-notes",
+        "publish-exported",
+        "sync-place-question",
+        "update-found",
+    ];
+    let c = super::Catalog::parse("en", ENGLISH).expect("English parses");
+    let end = regex::Regex::new(r"[.?!](\s|$)").unwrap();
+    let mut late = BTreeMap::new();
+    for (id, raw) in messages() {
+        if !raw.contains("? y or n") {
+            continue;
+        }
+        let text = rendered(&c, &id);
+        let first = end.find(&text).map(|m| m.as_str().chars().next());
+        if first != Some(Some('?')) {
+            late.insert(id, text);
+        }
+    }
+    ratchet(
+        "a question after other text (messages.md, rule 3)",
+        "QUESTION_LATE",
+        &QUESTION_LATE,
+        &late,
+    );
+}
+
+/// Rule 5: no arrows, check marks, box drawing, bullets, geometric shapes,
+/// dingbats or emoji in any language's messages. A speech engine skips or
+/// spells them out, and a Braille display shows them as noise. The
+/// ellipsis on chooser names ("Open…") is punctuation and is allowed.
+/// The messages listed still hold one, by language, and may only become
+/// fewer; the translation pass words them.
+#[test]
+fn no_symbols_in_any_language() {
+    // The Arabic table size example uses the multiplication sign.
+    const KNOWN_SYMBOLS: [&str; 1] = ["ar: prompt-table-size"];
+    fn symbol(ch: char) -> bool {
+        matches!(ch as u32,
+            0x00A6 | 0x00A9 | 0x00AE | 0x00B0 | 0x00B1 | 0x00D7 | 0x00F7
+            | 0x2022 | 0x2023 | 0x2043 | 0x204C | 0x204D
+            | 0x2190..=0x23FF
+            | 0x2500..=0x27BF
+            | 0x2900..=0x2BFF
+            | 0x1F000..=0x1FAFF)
+    }
+    let mut bad = BTreeMap::new();
+    for (tag, text) in std::iter::once(("en", ENGLISH)).chain(super::BUILTIN.iter().copied()) {
+        for (id, v) in messages_in(text) {
+            let found: String = v.chars().filter(|&ch| symbol(ch)).collect();
+            if !found.is_empty() {
+                bad.insert(format!("{tag}: {id}"), found.escape_unicode().to_string());
+            }
+        }
+    }
+    ratchet(
+        "symbols in messages (messages.md, rule 5)",
+        "KNOWN_SYMBOLS",
+        &KNOWN_SYMBOLS,
+        &bad,
+    );
+}
+
+/// Rule 11: the first clause of a status or announcement message, with
+/// sample values, fits one 40-cell Braille line. The owner reads computer
+/// Braille, one cell per character, so this counts characters. These
+/// still start with a longer clause and may only become fewer.
+#[test]
+fn status_messages_lead_within_forty_characters() {
+    const LONG_FIRST_CLAUSE: [&str; 200] = [
+        "aids-difficult-no-list",
+        "aids-reading-level-too-short",
+        "app-terminal-only",
+        "app-window-only",
+        "audio-confirm",
+        "audio-no-engine",
+        "audio-no-ffmpeg",
+        "batch-busy",
+        "batch-choose-output",
+        "batch-confirm",
+        "batch-confirm-beside",
+        "batch-inaccessible",
+        "batch-progress",
+        "book-audio-rate",
+        "braille-view-not-in-build",
+        "browse-archive-too-deep",
+        "browse-archive-unreadable",
+        "browse-cannot-read",
+        "browse-keys",
+        "browse-no-archive-folder",
+        "browse-preview-archive-folder",
+        "browse-read-only",
+        "buttons-added",
+        "buttons-no-name",
+        "cards-anki-skipped-media",
+        "cards-anki-skipped-other",
+        "cards-nothing-to-make",
+        "changes-none",
+        "changes-save-not-in-build",
+        "changes-written-accepted",
+        "changes-written-rejected",
+        "citations-bibliography-inserted",
+        "citations-nothing-to-list",
+        "colors-palette-value",
+        "common-recovery-writing-again",
+        "component-feature-braille",
+        "component-question",
+        "components-token-kept",
+        "continue-item",
+        "cw-keying-midi-not-in-build",
+        "cw-practice-koch-start",
+        "cw-practice-not-yet",
+        "cw-practice-progress",
+        "cw-practice-unavailable",
+        "cw-speed",
+        "define-glossary-skipped",
+        "define-no-dictionary",
+        "define-title",
+        "details-no-file",
+        "dictation-lost",
+        "dictation-model-question",
+        "dictation-no-model",
+        "dictation-not-typed",
+        "disk-overwrite-question",
+        "docs-not-found",
+        "docs-read-only",
+        "edit-not-editing",
+        "edit-range-out-of-text",
+        "edit-recovery-discarded",
+        "edit-wikilink-anchor-intro",
+        "edit-wikilink-no-notes",
+        "font-download-question",
+        "gui-braille-caption-fell-back",
+        "gui-colors-help",
+        "gui-colors-help-system",
+        "gui-colors-reset-all-help",
+        "gui-colors-value",
+        "gui-crashed",
+        "gui-find-replace-all-help",
+        "gui-find-replace-help",
+        "gui-folder-no-dialog",
+        "gui-prompt-hint",
+        "gui-prompt-path-hint",
+        "gui-prompt-show-hint",
+        "gui-question-hint",
+        "gui-reading-form-help",
+        "gui-reading-wcag-help",
+        "gui-setting-value-hint",
+        "gui-settings-press-enter",
+        "gui-settings-saved-hint",
+        "gui-uia-unavailable",
+        "gui-voices-engine-help",
+        "gui-voices-favorite-help",
+        "gui-voices-fetch-help",
+        "gui-voices-hint",
+        "gui-voices-language-help",
+        "gui-voices-preview-help",
+        "gui-voices-remove-help",
+        "gui-voices-use-help",
+        "helper-question",
+        "language-voice-kept",
+        "language-voices-loading",
+        "lean-citations-not-in-build",
+        "lean-publish-not-in-build",
+        "links-back-to-footnote-reference",
+        "links-file-not-found",
+        "links-footnote-unreferenced",
+        "links-no-heading",
+        "lint-link-reference",
+        "lint-not-markdown",
+        "lists-citations-title-filtered",
+        "lists-templates-title",
+        "live-broker-no-folder",
+        "live-broker-nobody",
+        "live-checkin-through-title",
+        "live-connected-tailscale",
+        "live-document-shown",
+        "live-field-speak-off",
+        "live-file-not-read",
+        "live-file-note-join-code",
+        "live-file-note-password",
+        "live-forget-title",
+        "live-form-choice-label",
+        "live-form-saved-beside",
+        "live-log-empty-not-saved",
+        "live-log-nowhere",
+        "live-no-passwords",
+        "live-not-in-build",
+        "live-password-kept",
+        "live-qr-unreadable",
+        "live-save-file-done",
+        "live-setup-ca-file-needed",
+        "live-setup-host-needed",
+        "live-share-live-document",
+        "live-values-full",
+        "notes-bookmark-name-taken",
+        "notes-choose-bookmark-rename",
+        "notes-collect-saved",
+        "notes-palette-row",
+        "notes-study-sheet-saved-both",
+        "notes-study-sheet-saved-highlights",
+        "notes-study-sheet-saved-notes",
+        "opening-damaged-odt",
+        "opening-no-file-in",
+        "opening-rar",
+        "opening-still",
+        "playback-caps-no-volume",
+        "playback-repeat-slower",
+        "profile-dropped",
+        "profile-replaced",
+        "profiles-read-failed",
+        "profiles-save-new",
+        "prompt-citation-locator",
+        "prompt-export-settings",
+        "prompt-github-token",
+        "prompt-go-to-pages",
+        "prompt-live-password-any",
+        "prompt-profiles-export",
+        "prompt-table-size",
+        "publish-server-failed",
+        "publish-still-exporting",
+        "publish-still-previewing",
+        "queue-no-file",
+        "queue-read-failed",
+        "reading-form-spacing-generous-done",
+        "relations-no-other-documents",
+        "relocate-lost",
+        "reveal-no-dictation",
+        "review-intro",
+        "review-stats-off",
+        "settings-all-opened",
+        "settings-applies-engine",
+        "settings-applies-engines",
+        "settings-applies-not-engine",
+        "settings-clamped",
+        "settings-outside-kept",
+        "settingsio-backend-next-start",
+        "settingsio-import-question",
+        "settingsio-import-question-names",
+        "settingsio-no-persistence",
+        "spell-added-for-session",
+        "stats-clear-question",
+        "stats-current-none",
+        "stats-total",
+        "status-cw-rate-farnsworth-spoken",
+        "summary-intro-sampled",
+        "tables-position",
+        "tasks-launch-off",
+        "tasks-lookup-stopped",
+        "templates-intro",
+        "text-summary-range",
+        "tui-clip-failed",
+        "tui-clip-system",
+        "update-automatic-question",
+        "update-error-no-package",
+        "vault-no-file",
+        "vault-unresolved-intro",
+        "voice-catalog-fetched",
+        "voice-chosen-rate",
+        "voice-fetch-catalog-question",
+        "voice-more-ready",
+        "voice-no-data-folder",
+        "voice-not-in-list",
+        "voice-only-piper-removable",
+        "voice-preview-engine-failed",
+        "voice-preview-unavailable",
+        "voice-sample",
+        "voices-fetch-row",
+        "writes-bookmark-not-saved",
+        "writes-not-written-in-time",
+    ];
+    let c = super::Catalog::parse("en", ENGLISH).expect("English parses");
+    let mut long = BTreeMap::new();
+    for id in c.ids() {
+        if !is_status(id) {
+            continue;
+        }
+        let text = rendered(&c, id);
+        let first = first_clause(&text);
+        let n = first.chars().count();
+        if n > 40 {
+            long.insert(id.to_owned(), format!("{n}: {first}"));
+        }
+    }
+    ratchet(
+        "a first clause over 40 characters (messages.md, rule 11)",
+        "LONG_FIRST_CLAUSE",
+        &LONG_FIRST_CLAUSE,
+        &long,
+    );
+}
+
+/// Rule 1: a status or announcement message starts with the fact, not a
+/// lead-in: not "The", "This", "Your", "A message on", or the brand. These
+/// still start with one and may only become fewer.
+#[test]
+fn status_messages_start_with_the_fact() {
+    const LEAD_IN: [&str; 75] = [
+        "access-window-choice-reads-aloud",
+        "access-window-mode-changed",
+        "app-terminal-only",
+        "app-window-only",
+        "batch-report-failed",
+        "braille-view-not-in-build",
+        "browse-read-only",
+        "cards-from-anki",
+        "changes-not-a-change",
+        "changes-not-a-comment",
+        "changes-original-kept",
+        "citations-library-empty",
+        "citations-none-yet",
+        "common-link-no-address",
+        "common-recovery-writing-again",
+        "components-token-gh-still",
+        "cw-practice-unavailable",
+        "define-dictionary-damaged",
+        "define-glossary-problem",
+        "define-no-dictionary",
+        "details-no-file",
+        "dictation-cannot-pause",
+        "docs-read-only",
+        "edit-wikilink-whole",
+        "gui-chooser-no-dialog",
+        "gui-colors-help-system",
+        "gui-crashed",
+        "gui-folder-no-dialog",
+        "gui-open-no-dialog",
+        "language-voice-changed",
+        "language-voices-loading",
+        "library-empty",
+        "library-scan-stopped",
+        "links-file-not-found",
+        "lists-no-filter",
+        "lists-no-headings",
+        "live-broker-already",
+        "live-document-one-view",
+        "live-field-empty",
+        "live-log-empty-not-saved",
+        "live-log-saved-already",
+        "live-newest-none",
+        "live-qr-image-error",
+        "live-qr-other-text",
+        "live-qr-too-large",
+        "live-qr-too-long",
+        "live-read-only",
+        "live-setup-port-bad",
+        "live-values-full",
+        "live-values-no-log",
+        "live-values-no-table",
+        "nav-no-chapters",
+        "pages-none",
+        "preview-being-written",
+        "profiles-read-failed",
+        "publish-report-failed",
+        "queue-empty",
+        "relocate-changed",
+        "restart-silent-now",
+        "restart-silent-use-key",
+        "review-stats-off",
+        "settingsio-backed-up",
+        "settingsio-backend-next-start",
+        "stats-current",
+        "stats-current-none",
+        "sync-status-this-computer",
+        "tui-title",
+        "vault-no-file",
+        "vault-no-note-tags",
+        "vault-no-properties",
+        "voice-catalog-fetched",
+        "voice-download-stopped",
+        "voice-ready",
+        "voice-sample",
+        "voice-still-loading",
+    ];
+    let lead = regex::Regex::new(r"^(The|This|Your|A message on|textweaver)\b").unwrap();
+    let c = super::Catalog::parse("en", ENGLISH).expect("English parses");
+    let mut found = BTreeMap::new();
+    for id in c.ids() {
+        if !is_status(id) {
+            continue;
+        }
+        let text = rendered(&c, id);
+        if let Some(m) = lead.find(text.trim_start()) {
+            found.insert(id.to_owned(), m.as_str().to_owned());
+        }
+    }
+    ratchet(
+        "a lead-in before the fact (messages.md, rule 1)",
+        "LEAD_IN",
+        &LEAD_IN,
+        &found,
+    );
 }

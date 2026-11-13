@@ -203,7 +203,6 @@ edit-replace-with =
 common-recovery-write-failed = Die Wiederherstellungskopie konnte nicht geschrieben werden: { $error }. Speichern Sie bald; { -brand } versucht es weiter.
 common-recovery-writing-again = Die Wiederherstellungskopie wird erneut geschrieben.
 # $title is the document; $when is how long ago its work was saved.
-edit-recovery-offer = { -brand } wurde mit ungespeicherten Änderungen an { $title } geschlossen, gespeichert { $when }. Jetzt wiederherstellen? Auf und Ab wählen, Eingabetaste bestätigt.
 edit-recovery-title = Ungespeicherte Arbeit in { $title } wiederherstellen?
 edit-recovery-yes = Ja, { $title } wiederherstellen und weiter bearbeiten
 edit-recovery-no = Nein, die ungespeicherten Änderungen verwerfen

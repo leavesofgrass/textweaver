@@ -2,9 +2,10 @@
 //!
 //! wgpu opens every backend it finds by default, so on Windows both the
 //! Direct3D 12 and the Vulkan drivers load. Choosing one is an opt-in:
-//! `--graphics vulkan` for one run, or `graphics = "vulkan"` in the
-//! `[gui]` table of `settings.toml`. With Vulkan the window used about 26
-//! MB less memory on the development machine (ADR-0028's status update),
+//! `--graphics vulkan` for one run, or the Graphics setting
+//! (`graphics = "vulkan"` in the `[gui]` table of `settings.toml`). With
+//! Vulkan the window used about 26 MB less memory on the development
+//! machine (ADR-0028's status update),
 //! but that depends on the graphics driver, so the default stays "auto"
 //! (wgpu's own choice) until other machines are measured.
 //!
@@ -60,16 +61,6 @@ impl GraphicsBackend {
     }
 }
 
-/// The `graphics` key of a `[gui]` table (unknown to the store for now, so
-/// it is kept with the table's other keys): `None` when absent or not one
-/// of [`GraphicsBackend::NAMES`].
-pub fn from_gui_table(extra: &toml::Table) -> Option<GraphicsBackend> {
-    extra
-        .get("graphics")
-        .and_then(toml::Value::as_str)
-        .and_then(GraphicsBackend::parse)
-}
-
 /// The backend asked for: `--graphics` first, then the setting in the
 /// settings file under `home` (or the platform's folder).
 pub fn wanted(cli: Option<GraphicsBackend>, home: Option<&Path>) -> GraphicsBackend {
@@ -84,7 +75,7 @@ pub fn wanted(cli: Option<GraphicsBackend>, home: Option<&Path>) -> GraphicsBack
         },
     };
     let (settings, _warnings) = SettingsStore::new(paths).load();
-    from_gui_table(&settings.gui.extra).unwrap_or_default()
+    GraphicsBackend::parse(&settings.gui.graphics).unwrap_or_default()
 }
 
 /// Makes wgpu use `backend`, unless `WGPU_BACKEND` is already set.
@@ -157,18 +148,6 @@ mod tests {
         );
         assert_eq!(GraphicsBackend::parse("d3d12"), Some(GraphicsBackend::Dx12));
         assert_eq!(GraphicsBackend::parse("glide"), None);
-    }
-
-    #[test]
-    fn the_gui_table_names_the_backend() {
-        let t = |s: &str| -> toml::Table { s.parse().expect("toml") };
-        assert_eq!(from_gui_table(&t("")), None);
-        assert_eq!(
-            from_gui_table(&t("graphics = \"vulkan\"")),
-            Some(GraphicsBackend::Vulkan)
-        );
-        assert_eq!(from_gui_table(&t("graphics = \"fast\"")), None);
-        assert_eq!(from_gui_table(&t("graphics = 3")), None);
     }
 
     #[test]

@@ -34,7 +34,7 @@ Useful options:
 - `--select-spoken`: while reading, select the spoken word instead of only moving the cursor to it (see [The spoken word](#the-spoken-word)).
 - `--home FOLDER`: keep settings and reading positions in this folder, as `TEXTWEAVER_HOME` does.
 - `--list-menus`: show the menus as a list inside the app (F10), as on Linux, instead of the system's menu bar.
-- `--graphics API`: draw with a single graphics API: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`. The default, `auto`, lets the graphics library use every API it finds. On the development machine `vulkan` used about 26 MB less memory, though the result depends on your graphics driver. To keep a choice, set `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
+- `--graphics API`: draw with a single graphics API: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`. The default, `auto`, lets the graphics library use every API it finds. On the development machine `vulkan` used about 26 MB less memory, though the result depends on your graphics driver. To keep a choice, set Graphics in Settings, Toolbars and panels (`graphics = "vulkan"` in the `[gui]` section of `settings.toml`); it applies from the next start.
 - `--log` or `--log-file PATH`: record what the app announces and does, for a bug report. Every 200 frames it also writes a "frame times" line giving the median, the 95th percentile, and the worst time to draw a frame, so that a change to drawing can be measured in a real window. While a prompt for a secret is open (the GitHub token for a private components source), the log is paused: it records "log paused: a secret prompt is open" and then nothing until the prompt closes, so that no keystroke, no resulting command, and not the answer itself can reach the file.
 - `--version`: the version, then textweaver's copyright line.
 
@@ -72,7 +72,7 @@ The choice is kept in the settings `gui.header_buttons` and `gui.toolbar_buttons
 
 ### A live document's buttons and status bar
 
-While a live document is open (a live source's log or values, opened with Tools, Live documents, Open live source), its buttons join the toolbar after Edit and before Slower and Faster, or the header when the toolbar is hidden. They are not saved with your button choice, and they go when the live document closes. In the log view, in this order:
+While a live document is open (a live source's log or values, opened with Tools, Live documents, Open a live source), its buttons join the toolbar after Edit and before Slower and Faster, or the header when the toolbar is hidden. They are not saved with your button choice, and they go when the live document closes. In the log view, in this order:
 
 - **Pause updates** (Alt+Shift+F1), named **Resume updates** while updates are paused; new entries wait while paused.
 - **Jump to newest** (Alt+Shift+F6).
@@ -82,7 +82,7 @@ While a live document is open (a live source's log or values, opened with Tools,
 
 In the values view, Show changes and Speak changes take the place of the view switch and Save log. Each names its state for the field on the cursor's line, in words: "Show changes: on", "Speak changes: off". On a line with no field (a heading) each reads "unavailable" and says why, and stays in the Tab order. Pause updates and Close source are there only while the source is receiving; a log that has stopped, or one opened from a saved file, keeps Jump to newest, the view switch and Save log. A button that changes its name keeps the focus, and a button that goes (Close source after a press) leaves the focus on the document. A shared document (a live source showing a document, not a log) has only Pause updates and Close source: it has no entries, views or log to save. A version of textweaver built without live sources shows none of these buttons. While the app runs a broker, or shares a document, the status bar says so in words after the reading state: "Broker on, 2 clients", "Publishing, revision 3".
 
-The status bar shows the unread count where the line and percentage would be ("3 unread"), so the position does not change with every entry; then the connection in words: "Connecting", "Connected, encrypted", "Connected over Tailscale", "Connected, not encrypted", "Reconnecting", or "Connection lost". The connection is never shown by color. A log that has stopped shows its number of entries instead, and the values view its number of fields. The window's title carries the unread count too: "Practice log, 3 unread - textweaver".
+The status bar shows the unread count where the line and percentage would be ("3 unread"), so the position does not change with every entry; then the connection in words: "Connecting", "Connected, encrypted", "Connected, Tailscale range", "Connected, not encrypted", "Reconnecting", or "Connection lost". The connection is never shown by color. A log that has stopped shows its number of entries instead, and the values view its number of fields. The window's title carries the unread count too: "Practice log, 3 unread - textweaver".
 
 ### Inviting, joining and secret fields
 

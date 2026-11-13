@@ -317,6 +317,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // The version this computer's window last ran, for its "Updated to"
     // notice.
     ("gui.last_version", Machine),
+    // The graphics API this computer's window draws with: drivers differ.
+    ("gui.graphics", Machine),
     // [colors]
     ("colors.ruler", Portable),
     ("colors.difficult_words", Portable),

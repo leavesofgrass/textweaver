@@ -210,7 +210,7 @@ mod tests {
         assert_eq!(a.mode, textweaver_store::AccessMode::Hybrid);
         let all = said.all().join("\n");
         assert!(
-            all.contains("NVDA is running: textweaver reads documents aloud"),
+            all.contains("Hybrid mode: NVDA speaks messages, textweaver reads documents."),
             "{all}"
         );
         // The mode is not a dialog: still only the components list.

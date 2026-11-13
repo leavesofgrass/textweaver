@@ -253,8 +253,6 @@ nav-position-mode = Modo { $mode }.
 
 ## Reading aloud.
 
-playback-caps-no-words = Esta voz não informa as palavras, então o realce de palavra é estimado.
-playback-caps-words = Esta voz informa cada palavra, então o realce a acompanha exatamente.
 playback-caps-no-pitch = O tom não pode ser alterado com esta voz.
 playback-caps-no-volume = O volume não pode ser alterado com esta voz.
 # The reading state on the title line, one word.

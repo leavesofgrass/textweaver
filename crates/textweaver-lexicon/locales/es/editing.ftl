@@ -203,7 +203,6 @@ edit-replace-with =
 common-recovery-write-failed = No se pudo escribir la copia de recuperación: { $error }. Guarde pronto; { -brand } lo seguirá intentando.
 common-recovery-writing-again = La copia de recuperación se está escribiendo de nuevo.
 # $title is the document; $when is how long ago its work was saved.
-edit-recovery-offer = { -brand } se cerró con cambios sin guardar en { $title }, guardados { $when }. ¿Recuperarlos ahora? Arriba y Abajo eligen, Intro confirma.
 edit-recovery-title = ¿Recuperar el trabajo sin guardar en { $title }?
 edit-recovery-yes = Sí, recuperar { $title } y seguir editando
 edit-recovery-no = No, descartar los cambios sin guardar

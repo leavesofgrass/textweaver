@@ -19,8 +19,8 @@
 //!
 //! `quiet_screen` keeps the text being read aloud off the status line, and
 //! the TUI freezes the title line's position while reading continuously.
-//! On a run with a screen reader and no mode chosen, [`App::offer_hybrid`]
-//! asks once whether to use hybrid mode.
+//! On a run with a screen reader and no mode chosen, [`App::infer_hybrid`]
+//! starts hybrid mode and says so once.
 
 use std::time::{Duration, Instant};
 
@@ -30,7 +30,6 @@ use textweaver_a11y::{
 };
 use textweaver_core::{CharPos, CharRange, Direction, Unit};
 use textweaver_lexicon::args;
-use textweaver_lexicon::i18n::Catalog;
 use textweaver_speech::normalize::{Math, Transform};
 use textweaver_text::units::unit_at;
 use textweaver_text::{NavOptions, navigate};
@@ -385,20 +384,6 @@ impl App {
             && self.pending_hybrid.is_none()
     }
 
-    /// Asks once, when a screen reader was found and the mode was never
-    /// chosen, whether to use hybrid mode. Returns true when it asked; the
-    /// frontend then sends key presses as [`Confirm`] answers
-    /// ([`App::confirmation_pending`]).
-    pub fn offer_hybrid(&mut self, found: &Detected) -> bool {
-        if !self.hybrid_offer_due() {
-            return false;
-        }
-        self.pending_hybrid = Some(hybrid_question(self.cat(), found));
-        let q = self.pending_hybrid.clone().unwrap_or_default();
-        self.ask(&q);
-        true
-    }
-
     /// The question waiting for a yes or no, if any: the first-run question
     /// or an action's confirmation ("Quit textweaver? y or n"). The TUI keeps
     /// it on the status line.
@@ -578,15 +563,6 @@ impl App {
     }
 }
 
-/// The first-run question, worded to be read aloud.
-fn hybrid_question(c: &Catalog, found: &Detected) -> String {
-    let reader = found
-        .name
-        .clone()
-        .unwrap_or_else(|| c.tr("access-a-screen-reader"));
-    c.fmt("access-hybrid-question", &args!["reader" => reader])
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -600,17 +576,5 @@ mod tests {
         );
         assert_eq!(sentence_duration("Hi.", 900), Duration::from_secs(1));
         assert_eq!(sentence_duration("", 0), Duration::from_secs(1));
-    }
-
-    #[test]
-    fn the_question_names_the_screen_reader() {
-        let q = hybrid_question(
-            &Catalog::english(),
-            &Detected {
-                name: Some("NVDA".into()),
-            },
-        );
-        assert!(q.starts_with("NVDA is running. Use hybrid mode"), "{q}");
-        assert!(q.ends_with("y or n"));
     }
 }

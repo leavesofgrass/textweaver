@@ -11,8 +11,8 @@ restart-already = Speech is already restarting.
 # $error is the system's reason, in its own words.
 restart-failed = Could not restart speech: { $error } Wait a moment, then try again.
 restart-start-failed = Could not restart speech: starting it failed.
-restart-no-engine = No speech engine is available; { -brand } stays silent. Troubleshooting, No speech at all, has the checks.
-restart-done-silent = Speech restarted, but no speech engine is available; { -brand } stays silent.
+restart-no-engine = No speech engine available; staying silent. Troubleshooting, No speech at all, has the checks.
+restart-done-silent = Speech restarted, but silent: no engine is available.
 restart-done = Speech restarted.
 
 ## The voice manager's list.

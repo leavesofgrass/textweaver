@@ -1633,7 +1633,7 @@ impl App {
                 return self.restore_prompt(saved, None);
             }
             let msg = self.msg("browse-closed");
-            self.say_dialog(&msg);
+            self.say_closed(&msg, textweaver_a11y::Verbosity::Low, Importance::Dialog);
         }
         vec![Effect::Redraw]
     }

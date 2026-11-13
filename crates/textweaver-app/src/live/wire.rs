@@ -909,13 +909,11 @@ mod tests {
             polite
         );
         assert_eq!(
-            r.priority_of(
-                "The broker refused the topic log/secret; it may not let this account read it."
-            ),
+            r.priority_of("Topic refused: log/secret. This account may not read it."),
             polite
         );
         assert_eq!(r.priority_of("No messages yet on log/checkins."), polite);
-        assert_eq!(r.priority_of("3 messages were left out"), polite);
+        assert_eq!(r.priority_of("Left out 3 messages"), polite);
         assert_eq!(
             r.priority_of("Disconnected from Practice log: Connection lost"),
             assertive

@@ -337,7 +337,11 @@ impl App {
             AuthoringList::Replace => self.replace_stopped(),
             _ => {
                 let msg = self.msg("common-cancelled");
-                self.note(&msg);
+                self.say_closed(
+                    &msg,
+                    textweaver_a11y::Verbosity::Normal,
+                    textweaver_a11y::Importance::Routine,
+                );
             }
         }
     }

@@ -302,19 +302,6 @@ pub fn run_mode(opts: &Options) -> Option<AccessMode> {
         .or_else(|| opts.no_speech.then_some(AccessMode::ScreenReader))
 }
 
-/// On a run where the mode was never chosen, checks for a screen reader
-/// and, when one is running, asks once whether to use hybrid mode
-/// ([`App::offer_hybrid`]). Returns true when it asked.
-pub fn offer_hybrid_if_screen_reader(app: &mut App, opts: &Options) -> bool {
-    if run_mode(opts).is_some() || !app.hybrid_offer_due() {
-        return false;
-    }
-    match textweaver_app::a11y::detect::detect() {
-        Some(found) => app.offer_hybrid(&found),
-        None => false,
-    }
-}
-
 /// The screen reader running, when the mode was never chosen and no
 /// `--mode` was given for this run: the first run (and a start after "Ask
 /// again about first-run choices") then uses hybrid mode and says so
@@ -414,7 +401,7 @@ mod tests {
             Some(ActionId::ScrollUp)
         );
         // A mode given on the command line asks nothing at startup.
-        assert!(!offer_hybrid_if_screen_reader(&mut app, &opts));
+        assert!(screen_reader_to_infer(&app, &opts).is_none());
         app.shutdown();
         assert_eq!(
             store.load().0.accessibility.mode,
@@ -471,11 +458,11 @@ mod tests {
         let written = textweaver_app::written_text;
         assert_eq!(
             spoken(&welcome),
-            "Welcome to textweaver. Control O opens a document. Space starts and pauses reading, and Escape stops. F2 lists every command. F1 opens the help."
+            "Welcome to textweaver. Control O opens a document, F1 the help. Space plays and pauses, Escape stops, F2 lists every command."
         );
         assert_eq!(
             written(&welcome),
-            "Welcome to textweaver. Ctrl+O opens a document. Space starts and pauses reading, and Escape stops. F2 lists every command. F1 opens the help."
+            "Welcome to textweaver. Ctrl+O opens a document, F1 the help. Space plays and pauses, Escape stops, F2 lists every command."
         );
         let none = no_document_text(&app.catalog(), app.keymap());
         assert_eq!(

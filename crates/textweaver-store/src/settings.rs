@@ -1969,6 +1969,11 @@ pub struct GuiSettings {
     /// (B1-g2c): when it starts as a newer one, it says "Updated to" once
     /// and writes the new version here. A machine setting.
     pub last_version: Option<String>,
+    /// The graphics API the window draws with (ADR-0028, "Memory"):
+    /// `auto` (wgpu's own choice, the default), `vulkan`, `dx12`, `metal`
+    /// or `gl`. Read at startup; `--graphics` wins for one run. A machine
+    /// setting: graphics drivers differ.
+    pub graphics: String,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1994,6 +1999,7 @@ impl Default for GuiSettings {
             sidebar: GuiSidebar::default(),
             window: None,
             last_version: None,
+            graphics: "auto".to_owned(),
             extra: toml::Table::new(),
         }
     }
