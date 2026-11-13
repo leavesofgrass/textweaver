@@ -288,7 +288,7 @@ How the content of a document is read: citations, tracked changes, Obsidian comm
 The highlight that follows the reading, and its timing.
 
 - `highlight.enabled`, default `true`: show the reading highlight at all.
-- `highlight.granularity`, default `"word"`: `"word"`, `"sentence"`, or `"both"` (the sentence, and the word inside it).
+- `highlight.granularity`, default `"both"`: `"word"`, `"sentence"`, or `"both"` (the sentence, and the word inside it).
 - `highlight.lead_words`, default `1`: move the drawn highlight ahead (a positive number) or behind (a negative number) by this many words, from -5 to 5. The default of 1 is the word being heard.
 - `highlight.speed`, default `1.0`: for engines without word events, a multiplier on the estimated speed of the highlight, from 0.5 to 1.5.
 - `speech.latency_offset_ms`, default `120`: for engines whose word events carry audio times, how many milliseconds to wait before moving the highlight, so it matches what you hear.
@@ -489,7 +489,7 @@ The textweaver app's bars, buttons, and panel. The terminal reader uses only the
 Audio export and subtitles. See [Audio export](audio-export.md).
 
 - `export.audio_format`, default `"flac"`: the format Export audio lists first, and the one `tw export-audio` writes when the `--out` name has no extension. `"flac"`, `"mp3"`, `"opus"`, `"ogg"`, `"wav"`, `"m4b"` (an audiobook), or `"mp4"` (a video with captions). M4B and MP4 need ffmpeg; without it they are not listed, and the list keeps its usual order.
-- `export.subtitle_format`, default `"srt"`: `"srt"` or `"vtt"`, used when subtitles are written without a file name.
+- `export.subtitle_format`, default `"srt"`: `"srt"`, `"vtt"`, or `"ass"` (ASS karaoke), used when subtitles are written without a file name.
 - `export.subtitle_karaoke`, default `"off"`: how subtitle lines show the word being read. `"off"`, `"tags"` (underlined as it is spoken, in WebVTT) or `"lines"` (one cue per word, in bold and underline).
 - `export.subtitle_chapters`, default `false`: also write a WebVTT chapters file beside the subtitles or the audio.
 - `export.subtitle_word_level`, default `false`: one subtitle cue per word instead of caption lines.

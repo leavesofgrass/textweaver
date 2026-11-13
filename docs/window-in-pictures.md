@@ -2,7 +2,7 @@
 
 These eight pictures show the textweaver app (`textweaver`) as a new user first sees it. They are drawn without a window on screen, by Vello's CPU renderer, from the same widgets the app uses, with the sample document `fixtures/sample.md` and fresh settings. Unless a description says otherwise, the window is 1100 by 780 pixels at 100 percent scale.
 
-The reading position is on the word "Jones" in the first paragraph: the spoken word has a solid band, and its sentence ("Dr. Jones arrived at 3:30 p.m.") a paler band and an underline, so the sentence never depends on its band color alone. For the pictures, `[highlight] granularity` is "both"; the default, "word", draws the word only.
+The reading position is on the word "Jones" in the first paragraph: the spoken word has a solid band, and its sentence ("Dr. Jones arrived at 3:30 p.m.") a paler band and an underline, so the sentence never depends on its band color alone. `[highlight] granularity` is "both", the default; "word" draws the word only and "sentence" the sentence only.
 
 To draw the full review set (every theme at 100 and 200 percent, every dialog, the reading aids and the small window sizes), run the review harness with a folder outside `docs/`, for example under the build's target folder:
 
@@ -36,7 +36,7 @@ Description: the reading view in Lamplight, the soft dark theme: dark brown pane
 
 ## A narrow window
 
-![The window at 780 by 540 pixels: one folded bar with two rows of buttons above the document](images/gui-narrow-780x540.png)
+![The window at 780 by 540 pixels: one folded bar with three rows of buttons above the document](images/gui-narrow-780x540.png)
 
 Description: the window at 780 by 540 pixels, just under the folding width. Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. The bar holds three rows of buttons: Open, Font, Settings and Commands; then Play, Stop, Previous paragraph, Next paragraph and Edit; then Slower and Faster. The document shows the title, the first paragraph and the start of the list, and the status bar fits on one line.
 
@@ -48,9 +48,9 @@ Description: the Settings dialog over the dimmed window, with "voice" typed as a
 
 ## The Reading settings dialog
 
-![The Reading settings dialog: nine reading settings, three buttons and Close](images/gui-reading-settings.png)
+![The Reading settings dialog: the first nine of seventeen reading settings, three buttons and Close](images/gui-reading-settings.png)
 
-Description: a dialog titled "Reading settings" with one list: Rate (selected, "265 words per minute"), Font ("sans serif"), Font size ("14 points"), Font weight ("400"), Line height ("1.5"), Paragraph spacing ("1"), Word spacing ("0"), Letter spacing ("0") and Line length ("66 characters"), each between two arrows. Under the list is the selected setting's description, "How fast textweaver speaks." Then come the buttons Voices, WCAG spacing and Generous spacing, the line "Changes take effect and are saved at once.", and "Close (Escape)".
+Description: a dialog titled "Reading settings" with one scrolling list of seventeen settings. The first nine are in view: Rate (selected, "265 words per minute"), Font ("sans serif"), Font size ("14 points"), Font weight ("400"), Line height ("1.5"), Paragraph spacing ("1"), Word spacing ("0"), Letter spacing ("0") and Line length ("66 characters"), each between two arrows; Theme, the highlight, the ruler, bionic reading and syllables follow below. Under the list is the selected setting's description, "How fast textweaver speaks." Then come the buttons Voices, WCAG spacing and Generous spacing, the line "Changes take effect and are saved at once.", and "Close (Escape)".
 
 ## Edit mode
 
