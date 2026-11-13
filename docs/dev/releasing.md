@@ -17,7 +17,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 1. **Listen, if you want to (optional).** A release does not wait for a listening check (the owner's decision, Wednesday, September 30, 2026). Tests that fake the engine cannot hear a silent one, so a listen on real hardware is still worth doing when speech has changed a lot. When you do one, go through [the listening checklist](#listening-checklist) below and record it:
 
    ```bash
-   cargo xtask release 0.1.0-beta.5 --listened
+   cargo xtask release 0.1.0-beta.6 --listened
    ```
 
    This writes today's date and the version on the "Last listening check" line of this guide, and changes nothing else. The release prints a note when that line is old or for another version, and goes on.
@@ -32,23 +32,23 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    Then, on `main`, with a clean tree and CI green, try the release without changing anything:
 
    ```bash
-   cargo xtask release 0.1.0-beta.5 --dry-run
+   cargo xtask release 0.1.0-beta.6 --dry-run
    ```
 
    It prints the date it will use, the files it will change, and the checks it will run. Right after a release, `[Unreleased]` in `CHANGELOG.md` is empty; a dry run lists that as a problem, the same way it lists the other things a real release would stop for, instead of stopping itself. Then run it for real:
 
    ```bash
-   cargo xtask release 0.1.0-beta.5
+   cargo xtask release 0.1.0-beta.6
    ```
 
    This:
 
    - stops unless the tree is clean and on `main` and the changelog is grouped by area (below), and notes an old or missing listening check without stopping;
    - sets `version` in `[workspace.package]` in the root `Cargo.toml` and runs `cargo update -w`;
-   - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-beta.5] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
+   - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-beta.6] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
    - updates the version examples in this guide, `docs/install.md`, the README, the crate map (`docs/site/architecture.html`), and the workflows, and lists every other line that still names the old version, so a file that should follow the release is seen in the dry run. In the files it updates, a line that records history keeps its version: a line that ends with the comment `<!-- history -->`, which Markdown does not show, and the "Last listening check" line, which only `--listened` writes. When you write a line that names a past release as history, such as "the sizes recorded for 0.1.0-beta.1 are the first", put it on a line of its own and end it with that comment;
    - runs every check that `scripts/dev-check` runs in a full run (`dev-check.ps1` on Windows, `dev-check.sh` elsewhere), from fmt and clippy to the generated files, the links and the 32-bit hosts, in a target folder of its own (`target/release-check`). The script is the one list of steps, so a release is checked as a batch is; the dry run prints them, from the script's own `--dry-run`. `--no-checks` skips them, for a rerun after a failure you have fixed;
-   - commits "Release 0.1.0-beta.5" and makes the annotated tag `v0.1.0-beta.5`. It pushes nothing.
+   - commits "Release 0.1.0-beta.6" and makes the annotated tag `v0.1.0-beta.6`. It pushes nothing.
 
    Before a release, also run `cargo xtask notices` (it needs `cargo install --locked --features cli cargo-about@0.9.3`, the version CI pins) and commit `THIRD-PARTY-NOTICES.md` if it changed. CI fails when it is out of date.
 
@@ -69,7 +69,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    ```
 
    ```bash
-   git push origin v0.1.0-beta.5
+   git push origin v0.1.0-beta.6
    ```
 
    Pushing the tag starts the `Release` workflow. The jobs, in order:
@@ -85,16 +85,16 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 5. **Check.** Read the release page. It should have every package and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
 
    ```bash
-   gh attestation verify textweaver-0.1.0-beta.5-windows-x86_64.zip --repo leavesofgrass/textweaver
+   gh attestation verify textweaver-0.1.0-beta.6-windows-x86_64.zip --repo leavesofgrass/textweaver
    ```
 
 6. **Record the package sizes.** Once every package is on the release:
 
    ```bash
-   cargo xtask release 0.1.0-beta.5 --sizes
+   cargo xtask release 0.1.0-beta.6 --sizes
    ```
 
-   It reads each package's size from the release (`gh release view`, read only), rewrites `xtask/package-sizes.toml` with them and clears its notes, adds a "Package sizes" list to the version's section of `CHANGELOG.md`, and writes that section to `target/release-notes-0.1.0-beta.5.md`. Commit the two files. To show the sizes on the release page too, run the `gh release edit` command it prints. `--sizes-from DIR` reads the package files in a folder instead, such as a dry run's downloaded artifacts. See [Package sizes](#package-sizes).
+   It reads each package's size from the release (`gh release view`, read only), rewrites `xtask/package-sizes.toml` with them and clears its notes, adds a "Package sizes" list to the version's section of `CHANGELOG.md`, and writes that section to `target/release-notes-0.1.0-beta.6.md`. Commit the two files. To show the sizes on the release page too, run the `gh release edit` command it prints. `--sizes-from DIR` reads the package files in a folder instead, such as a dry run's downloaded artifacts. See [Package sizes](#package-sizes).
 
 ## Listening checklist
 
@@ -221,7 +221,7 @@ cargo xtask dist --universal
 Then upload it and refresh the checksums. `tools/release-upload.sh` does both (it needs `gh`, logged in):
 
 ```bash
-tools/release-upload.sh v0.1.0-beta.5 target/dist/textweaver-0.1.0-beta.5-windows-x86_64.zip
+tools/release-upload.sh v0.1.0-beta.6 target/dist/textweaver-0.1.0-beta.6-windows-x86_64.zip
 ```
 
 If the release does not exist yet, the script creates it. A package uploaded this way has no provenance attestation.

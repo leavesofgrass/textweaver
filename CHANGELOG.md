@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-beta.6] - 2026-11-13
+
 In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own broker now limits guessing and connections, the browser preview no longer runs a document's scripts unless its folder is trusted, and a link to a file on another computer or a large QR image is checked before anything is followed or decoded. Several dependencies move to fixed releases. Joining from a QR image no longer holds up the interface. The second wave makes the words clearer and the app quicker: twenty often-heard messages lead with the key fact, closing a list says so on the status line, why a live source is down and why a join link does not read are said in the reader's language, and find and replace, a growing live log and the recovery snapshot are faster. The third wave reads more kinds of document and says more of what it finds: caption files open as transcripts, an EPUB's accessibility information is said in words, `tw cite add` takes a PubMed ID, and in the textweaver app spelling and grammar errors reach NVDA through UI Automation, the app scrolls to the ends of a very long document, and math uses MathCAT 0.7.7, with Portuguese math speech. ammonia moves to a fixed release. The fourth wave finishes the release: every message new in beta 6 is translated into all six languages, the Braille view's print line is exact under contracted braille when liblouis's library is found, a whole live log sent again keeps the reader's place and says only what is new, Morse keying times its first element correctly on a busy computer, and every guide was read line by line against the code. For contributors, there is a faster local check, pinned tool versions, changelog fragments, five more fuzz targets (one for captions), a status line for each vendored Xilem patch and notes on the vendored MathCAT and Windows adapter, message catalogs split by area with English first and a translation pass before each release, checks that read the status line and the dialogs in words, and a release workflow that builds with a read-only token.
 
 ### Reading and speech
@@ -1432,6 +1434,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-beta.6]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.6
 [0.1.0-beta.5]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.3
