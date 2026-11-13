@@ -257,7 +257,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 76,
+  "done": 79,
   "not yet": 0,
   "partial": 3
  },
@@ -411,6 +411,26 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
+     "description": "An EPUB's own accessibility metadata is read when you open it, and the document overview and tw info say it in words, the verdict first.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "EPUB accessibility information",
+     "note": "Alt+Shift+O says the overview; tw info --json has it as accessibility.",
+     "status": "done"
+    },
+    {
+     "description": "SubRip (.srt) and WebVTT (.vtt) caption files open as paragraphs by speaker and pause, with a heading every five minutes, and no cue numbers or times read aloud.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Captions as transcripts",
+     "note": "Built in; the minute headings follow the interface language.",
+     "status": "done"
+    },
+    {
      "description": "RTF and ODT open directly, and comments in Word and ODT files become notes; tracked changes read as the final text or are said in place.",
      "guide": {
       "href": "../converting.md",
@@ -486,6 +506,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
+     "description": "In the app's edit mode, each misspelled word and Markdown lint problem is marked in the accessibility tree, and on Windows it reaches UI Automation as a spelling or grammar error, which NVDA reports as you read.",
+     "guide": {
+      "href": "../screen-readers.md",
+      "title": "Screen reader guide"
+     },
+     "name": "Spelling errors reported to screen readers",
+     "note": "Turn on spelling errors in NVDA's Document Formatting settings; Alt+M and Ctrl+F8 still find them.",
+     "status": "done"
+    },
+    {
      "description": "Unsaved work is recovered after a crash, and you are warned when a file changed on disk.",
      "guide": {
       "href": "../editing.md",
@@ -502,7 +532,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       "title": "Citations guide"
      },
      "name": "Citations in the editor",
-     "note": "Alt+C picks a reference; Alt+B (GUI Alt+Shift+D) adds one by DOI or ISBN; Alt+Shift+Q says citations while reading.",
+     "note": "Alt+C picks a reference; Alt+B (GUI Alt+Shift+D) adds one by DOI, ISBN, or PubMed ID; Alt+Shift+Q says citations while reading.",
      "status": "done"
     },
     {
@@ -736,7 +766,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "Look up references by DOI and ISBN, import and export BibTeX, RIS, and CSL-JSON, and format with CSL styles.",
+     "description": "Look up references by DOI, ISBN, and PubMed ID, import and export BibTeX, RIS, and CSL-JSON, and format with CSL styles.",
      "guide": {
       "href": "../citations.md",
       "title": "Citations guide"
@@ -1130,7 +1160,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 79
+ "total": 82
 }
 </script>
 <!-- END generated: site-data -->
