@@ -61,7 +61,7 @@ Digits for numbers. Text that is spoken spells its units: "3 percent", "265 word
 - A command is named by its name in the menus and the palette: "The Voices command lists them."
 - US spelling: color, center, license, favorite. `cargo xtask docs --check` checks the English catalog.
 - One sentence, one id: never put the same sentence under two ids; reuse the id that has it.
-- Tested: `english_catalog_uses_one_word_for_each_thing`, which fails on "backend", "caret" (except the key's own name), "GUI", "this build", "Choose Voice", "words a minute", "centre" and "e-mail" in a message, and `no_new_duplicate_sentences`, which fails when two ids say the same sentence (menu, setting, choice and other label ids may share their text). The rest of this rule, such as "the window" for the program, is for the reviewer.
+- Tested: `english_catalog_uses_one_word_for_each_thing`, which fails on "backend", "caret" (except the key's own name), "GUI", "this build", "Choose Voice", "words a minute", the British spelling of center, and "e-mail" in a message, and `no_new_duplicate_sentences`, which fails when two ids say the same sentence (menu, setting, choice and other label ids may share their text). The rest of this rule, such as "the window" for the program, is for the reviewer.
 
 ### 8. Keys come from the keymap
 
