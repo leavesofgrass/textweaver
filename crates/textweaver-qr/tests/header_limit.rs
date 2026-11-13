@@ -61,6 +61,6 @@ fn a_20000_by_20000_jpeg_is_refused_before_any_large_allocation() {
 
     // Clipboard pixels over the limit are refused before conversion.
     let err = decode_rgba(8_000, 6_000, &[]).unwrap_err();
-    assert!(8_000 * 6_000 > MAX_QR_PIXELS);
+    const _: () = assert!(8_000 * 6_000 > MAX_QR_PIXELS);
     assert!(err.to_string().contains("8000 by 6000"), "{err}");
 }
