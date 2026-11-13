@@ -270,6 +270,8 @@ nav-position = Zeile { $line } von { $lines }, { $pct } Prozent.
 nav-position-word = Wort { $word } von { $words }.
 nav-position-heading = Unter Überschrift { $heading }.
 nav-position-mode = Modus { $mode }.
+playback-caps-no-words = Wortmarkierung geschätzt: diese Stimme meldet keine Wörter.
+playback-caps-words = Wortmarkierung genau: diese Stimme meldet jedes Wort.
 
 ## Reading aloud.
 
