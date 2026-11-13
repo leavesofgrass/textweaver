@@ -4,7 +4,7 @@ How to write the words textweaver says and shows: status messages, questions, er
 
 Every message lives in the message catalog, `crates/textweaver-lexicon/locales/`, with the same id in all six languages (`en.ftl`, `ar.ftl`, `de.ftl`, `es.ftl`, `fr.ftl`, `pt.ftl`). English is the source. A setting's label and help also live in `INFO` in `crates/textweaver-app/src/settings_schema.rs`, and a command's help in `crates/textweaver-keymap/src/action.rs`; tests keep each pair equal, so change both, then run `cargo xtask regen` for the generated references.
 
-The style tests are in `crates/textweaver-lexicon/src/i18n/style_tests.rs`. Where English still breaks a rule, the test lists the ids that do; those lists may only shrink. When you fix a message, take its id off the list. A new message that breaks a rule fails the test, which names the rule's number below.
+The style tests are in `crates/textweaver-lexicon/src/i18n/style_tests.rs`. A new message that breaks a rule the tests check fails the test, which names the rule's number below. Two lists of exceptions remain in the file: the setting helps whose first sentence is still longer than fifteen words (`LONG_FIRST_SENTENCE`, which may only shrink; when you fix a help, take its id off the list, and the test fails if you forget), and the three "Could not open" messages whose reason is the next step. The list of messages allowed to repeat a sentence is empty.
 
 ## The rules
 
@@ -61,7 +61,7 @@ Digits for numbers. Text that is spoken spells its units: "3 percent", "265 word
 - A command is named by its name in the menus and the palette: "The Voices command lists them."
 - US spelling: color, center, license, favorite. `cargo xtask docs --check` checks the English catalog.
 - One sentence, one id: never put the same sentence under two ids; reuse the id that has it.
-- Tested: `english_catalog_uses_one_word_for_each_thing` and `no_new_duplicate_sentences`.
+- Tested: `english_catalog_uses_one_word_for_each_thing`, which fails on "backend", "caret" (except the key's own name), "GUI", "this build", "Choose Voice", "words a minute", the British spelling of center, and "e-mail" in a message, and `no_new_duplicate_sentences`, which fails when two ids say the same sentence (menu, setting, choice and other label ids may share their text). The rest of this rule, such as "the window" for the program, is for the reviewer.
 
 ### 8. Keys come from the keymap
 
@@ -90,10 +90,10 @@ Checked:
 - Every id the code uses is in `en.ftl`, every id in `en.ftl` is used, and every translation has exactly English's ids, only English's variables, and plural keys its language uses (`crates/textweaver-lexicon/src/i18n/tests.rs`).
 - The pseudo-locale run fails on any English left outside the catalog (`crates/textweaver-app/tests/it/pseudo_locale.rs`).
 - Settings labels and helps equal `INFO`; command helps equal the keymap's.
-- The style rules above, on the English catalog (`style_tests.rs`).
+- Of the style rules above, on the English catalog (`style_tests.rs`): stacked verbs (rule 1), the next step of an error (rule 2, in all six languages), the end of a question (rule 3), hex color codes (rule 6), the one-word list and duplicate sentences (rule 7), and the short first sentence of a setting help and the short button hints (rule 11, the hints in all six languages).
 - 40 cells: about thirty terminal lines, every prompt and menu name in six languages, some sync and font messages, and the app's button descriptions.
 
-Not checked yet, so a reviewer reads for them: meaning first, casing, and units in spoken text.
+Not checked yet, so a reviewer reads for them: meaning first, casing, punctuation (a period, no em dash), units in spoken text, positions, and counts.
 
 ## Translations
 

@@ -4,41 +4,37 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own broker now limits guessing and connections, the browser preview no longer runs a document's scripts unless its folder is trusted, and a link to a file on another computer or a large QR image is checked before anything is followed or decoded. Several dependencies move to fixed releases. Joining from a QR image no longer holds up the interface. For contributors, there is a faster local check, pinned tool versions, changelog fragments, four more fuzz targets, and a release workflow that builds with a read-only token.
+
+### Live documents
+
+- Join from a QR image reads the image on a helper thread, so a large or unusual image no longer holds up the interface. After a second it says "Reading the QR image." once; opening another dialog, or asking again, cancels the reading without a word.
+- A live source at a Tailscale-range address now says "Connected to NAME at a Tailscale-range address. If this is Tailscale, the link is encrypted." That range is also used by carriers, so textweaver no longer claims encryption it cannot confirm.
+
 ### Security and privacy
 
 - textweaver's broker counts a login before checking its password, so a burst of wrong logins from one address gets no more answers than the five-failure lockout allows.
 - The broker caps connections per address: 8 still logging in and 16 logged in. At most 50 readers may join with a join code, and a join reader can no longer push another off by reusing its client id.
 - The failed-login limit keys IPv6 addresses by their /64 prefix, and keeps counting in a shared overflow bucket when its table is full, so a flood of addresses cannot switch it off.
 - After 200 wrong join codes in one session, the join code turns off and the broker says so: "Join code off: too many wrong codes. Start the broker again for a new code." Accounts keep working.
-- A plain listener on a 100.64.0.0/10 address is called Tailscale only when a Tailscale network interface is found (Linux); otherwise the broker warns that the link may not be encrypted, since carriers use the same range.
+- A plain listener on a 100.64.0.0/10 address is called Tailscale only when a Tailscale network interface is found (Linux only); otherwise the broker warns that the link may not be encrypted, since carriers use the same range.
 - On Linux and macOS, the broker's key and accounts file are set to owner-only after opening, so a stale file with wider permissions is narrowed.
 - The join code documentation says what the code resists: its secret is one of about a million values, and the lockout, the caps and the session budget limit guessing.
-- pulldown-cmark 0.13.5 to 0.13.6, for RUSTSEC-2026-0433: a Markdown file with deeply nested image wikilinks (`![[`) took time in the depth times the body, so it could hang a load. A hostile-input test loads 10,000 levels over a 1 MB body within 5 seconds.
-- calamine 0.36.1 to 0.38.0, for RUSTSEC-2026-0436 (a panic and an unbounded allocation in its compound-file reader). Spreadsheets load as before. zip 8 stays in the tree through harper-core and MathCAT, neither of which calls the affected extraction code.
-- AccessKit's October 25, 2026 patch releases: accesskit 0.25.2, accesskit_consumer 0.39.2, accesskit_windows 0.35.2 (vendored again, with textweaver's shortcut-key change applied unchanged), accesskit_unix 0.24.1, accesskit_macos 0.27.2 and accesskit_winit 0.34.2. They keep the content of password fields from screen readers. tokio moves to 1.54.1, which accesskit_unix 0.24.1 requires.
-- async-executor 1.14.0, which was yanked, to 1.14.1 (Linux builds, through the keyring's D-Bus library).
+- The browser preview leaves out a document's scripts and unsafe HTML (event handlers, `javascript:` addresses, frames), and says once for each document: "Raw HTML left out of the preview. Trusted folders are in Settings." Documents in a folder listed in the new Trusted preview folders setting (`[preview] trusted_folders`, empty by default, never synced) keep their raw HTML.
+- A served preview carries a content security policy: only textweaver's reload script runs, with a new nonce for each page, and the page loads and connects only to textweaver's own server. The server gives a page only images, style sheets, and fonts from the document's folder, never another file or a dotfile.
+- The browser preview server's secret address and the nonce of its reload script come from the system's random source (the `ring` library, an optional dependency of the app that the `publish` feature brings). If the system gives none, it falls back to the random keys the standard library seeds each process with.
+- A link to a file on another computer (a UNC path, a `\\?\` or `\\.\` path, or a `file:` address with a host) asks "Open a file on another computer? y or n." before anything looks for the file, because on Windows even that check sends the computer your sign-in. Opening such a path with the system's default program is refused.
+- Copy the join code and Copy the join link mark the copied text as private: on Windows it stays out of clipboard history and the cloud clipboard, on macOS it is marked concealed, and on Linux it is marked for clipboard managers to skip.
 - `tw text`, `tw search` and `tw info` leave out control characters other than tab and line feed when standard output is a terminal, so a document cannot set the terminal's title or write the clipboard through an escape sequence; error lines on a terminal follow the same rule. Piped output is unchanged.
-- Web pages and reference lookups now send the same neutral User-Agent as every other request, `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, without textweaver's version. A workspace test fails on any other User-Agent in the sources.
 - The hot folder writes only plain names: a name taken in `processed` or `failed` gets `stem.STAMP-2.ext` instead of a space and parentheses, and outside names have spaces, dollar signs and other special characters replaced with `_` before anything is written.
 - The hot folder no longer follows symbolic links or junctions; each one is skipped and named in the watch log.
 - Images for OCR and QR codes are checked against the size limits from their headers before decoding, and an image of more than 40 million pixels is refused for a QR code before it is read.
-- The browser preview leaves out a document's scripts and unsafe HTML (event handlers, `javascript:` addresses, frames), and says once for each document: "Raw HTML left out of the preview. Trusted folders are in Settings." Documents in a folder listed in the new Trusted preview folders setting (`[preview] trusted_folders`, empty by default, never synced) keep their raw HTML.
-- A served preview carries a content security policy: only textweaver's reload script runs, with a new nonce for each page, and the page loads and connects only to textweaver's own server. The server gives a page only images, style sheets, and fonts from the document's folder, never another file or a dotfile.
-- A link to a file on another computer (a UNC path, a `\\?\` or `\\.\` path, or a `file:` address with a host) asks "Open a file on another computer? y or n." before anything looks for the file, because on Windows even that check sends the computer your sign-in. Opening such a path with the system's default program is refused.
-- Copy the join code and Copy the join link mark the copied text as private: on Windows it stays out of clipboard history and the cloud clipboard, on macOS it is marked concealed, and on Linux it is marked for clipboard managers to skip.
+- Web pages and reference lookups now send the same neutral User-Agent as every other request, `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, without textweaver's version. A workspace test fails on any other User-Agent in the sources.
+- pulldown-cmark 0.13.5 to 0.13.6, for RUSTSEC-2026-0433: a Markdown file with deeply nested image wikilinks (`![[`) took time in the depth times the body, so it could hang a load. A hostile-input test loads 10,000 levels over a 1 MB body within 5 seconds.
+- calamine 0.36.1 to 0.38.0, for RUSTSEC-2026-0436 (a panic and an unbounded allocation in its compound-file reader). Spreadsheets load as before. zip 8 stays in the tree through harper-core and MathCAT, neither of which calls the affected extraction code.
 - rusqlite 0.37.0 to 0.41.1, for RUSTSEC-2026-0459: the SQLite that rusqlite builds in (now 3.54.1, through libsqlite3-sys 0.39.1) could return stale bytes from memory when it opened a database together with a crafted write-ahead log whose page size differed. textweaver uses SQLite only to read and write Anki packages, entirely in memory, so the exposure was small; Anki import and export work as before. The 0.40 line still bundled an affected SQLite, so 0.41 is the lowest fixed release.
-
-### For contributors
-
-- **The local check matches CI more closely.** `scripts/dev-check.ps1` and `scripts/dev-check.sh` gain the lean terminal reader build, `cargo xtask deps --check`, `cargo xtask parity`, `cargo deny check` (skipped, in words, when cargo-deny is missing), and the real-folder sentinel around the tests. Every cargo call has `--locked`, the tests have `--no-fail-fast`, and `RUSTFLAGS` is `-D warnings`, as in CI. The help says that a green Windows run does not cover CI's Linux `--all-features` leg.
-- **New: a fast check.** `cargo xtask affected --base main` prints the crates a branch changed and every crate that depends on them; `dev-check -Fast` (`--fast`) runs fmt, clippy, the tests (with cargo-nextest when installed) and the doc tests on that set only, plus the lean build and the generated checks when the change calls for them.
-- **New: tool versions in one place.** `tools.toml` pins cargo-about, cargo-deny, cargo-nextest, cargo-fuzz, actionlint and shellcheck; `cargo xtask tools --check` fails in words when an installed tool differs.
-- **New: changelog fragments.** Branches add `changelog.d/<branch>.md` instead of editing `CHANGELOG.md`; `cargo xtask changelog` folds them into `[Unreleased]` by area and removes them with `git rm`.
-- **Four new fuzz targets:** `join_link` (join links and pasted join codes), `update` (the update check's release list and checksums), `dib` (clipboard bitmaps) and `canvas` (Obsidian canvases), in the nightly matrix.
-- The release guide adds three steps before a tag: the fuzz job, a CI run on a `ci/<name>` branch, and `cargo xtask tools --check`.
-- CI and the GUI workflow now run on a pushed branch named `ci/<name>`, and CI can be started by hand (`gh workflow run ci.yml --ref ci/<name>`), so a merge result can be checked on real Linux, macOS and Windows before it reaches `main`.
-- The release workflow starts with no permissions. The build jobs hold a read-only token and no `GH_TOKEN`; separate publish jobs attest and upload the packages, and the checksums job is the only other writer.
-- Every action in every workflow is pinned to a full commit SHA, with its tag in a comment.
+- AccessKit's October 25, 2026 patch releases: accesskit 0.25.2, accesskit_consumer 0.39.2, accesskit_windows 0.35.2 (vendored again, with textweaver's shortcut-key change applied unchanged), accesskit_unix 0.24.1, accesskit_macos 0.27.2 and accesskit_winit 0.34.2. They keep the content of password fields from screen readers. tokio moves to 1.54.1, which accesskit_unix 0.24.1 requires.
+- async-executor 1.14.0, which was yanked, to 1.14.1 (Linux builds, through the keyring's D-Bus library).
 
 ### Documentation
 
@@ -50,13 +46,22 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - The building guide explains the Visual Studio 2026 and cmake failure of the Opus encoder.
 - Known limits add the 40 million pixel limit for Join from a QR image and the English reason inside a translated connection error.
 - The good first issues page is checked again against the code.
-
-### Live documents
-
-- Join from a QR image reads the image on a helper thread, so a large or unusual image no longer holds up the interface. After a second it says "Reading the QR image." once; opening another dialog, or asking again, cancels the reading without a word.
-- A live source at a Tailscale-range address now says "Connected to NAME at a Tailscale-range address. If this is Tailscale, the link is encrypted." That range is also used by carriers, so textweaver no longer claims encryption it cannot confirm.
 - The keyboard reference no longer says the textweaver app lists the keyboard shortcuts with F3: F3 is Find next in both frontends, and shows or hides the text in a secret field.
 - The reading guide says that following a link to a file on another computer asks first, because Windows may send your sign-in to that computer.
+- The developer guides match the beta 6 tooling: testing (the check tiers, the fast check, CI on a `ci/` branch, the new hostile-input tests), releasing (the workflow's jobs in order, the dry run's hand-off test, the pre-tag steps), Docker (the distro check's Arch step), building, architecture (`ring` in the app, the QR helper thread, the broker's new limits), the message style guide (what its tests really check), CONTRIBUTING, the scripts and fuzz pages, the fragments page and the documentation coverage page.
+
+### For contributors
+
+- **The local check matches CI more closely.** `scripts/dev-check.ps1` and `scripts/dev-check.sh` gain the lean terminal reader build, `cargo xtask deps --check`, `cargo xtask parity`, `cargo deny check` (skipped, in words, when cargo-deny is missing), and the real-folder sentinel around the tests. Every cargo call has `--locked`, the tests have `--no-fail-fast`, and `RUSTFLAGS` is `-D warnings`, as in CI. The help says that a green Windows run does not cover CI's Linux `--all-features` leg.
+- **New: a fast check.** `cargo xtask affected --base main` prints the crates a branch changed and every crate that depends on them; `dev-check -Fast` (`--fast`) runs fmt, clippy, the tests (with cargo-nextest when installed) and the doc tests on that set only, plus the lean build and the generated checks when the change calls for them.
+- **New: tool versions in one place.** `tools.toml` pins cargo-about, cargo-deny, cargo-nextest, cargo-fuzz, actionlint and shellcheck; `cargo xtask tools --check` fails in words when an installed tool differs.
+- **New: changelog fragments.** Branches add `changelog.d/<branch>.md` instead of editing `CHANGELOG.md`; `cargo xtask changelog` folds them into `[Unreleased]` by area and removes them with `git rm`.
+- **Four new fuzz targets:** `join_link` (join links and pasted join codes), `update` (the update check's release list and checksums), `dib` (clipboard bitmaps) and `canvas` (Obsidian canvases), in the nightly matrix.
+- The release guide adds three steps before a tag: the fuzz job, a CI run on a `ci/<name>` branch, and `cargo xtask tools --check`.
+- CI and the GUI workflow now run on a pushed branch named `ci/<name>`, and CI can be started by hand (`gh workflow run ci.yml --ref ci/<name>`), so a merge result can be checked on real Linux, macOS and Windows before it reaches `main`.
+- The release workflow starts with no permissions. The build jobs hold a read-only token and no `GH_TOKEN`; separate publish jobs attest and upload the packages; only those, the job that creates the release and the checksums job can write.
+- Every action in every workflow is pinned to a full commit SHA, with its tag in a comment.
+- The release workflow's dry run also tests the hand-off to the publish jobs, and keeps the packages for them. The macOS jobs run on `macos-15`, since GitHub withdrew the `macos-14` runners, and the distro check does a full upgrade on Arch before it installs anything, printing the package manager's last lines when an install fails.
 - `cargo xtask docs --check` fails when the What is new page still calls a tagged release "Not yet released".
 
 ## [0.1.0-beta.5] - 2026-10-29

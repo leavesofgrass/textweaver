@@ -536,7 +536,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "Export the document you are writing to PDF, Word, EPUB, braille, or a web page, and preview it in the browser.",
+     "description": "Export the document you are writing to PDF, Word, EPUB, braille, or a web page, and preview it in the browser, which leaves out a document's scripts and unsafe HTML unless its folder is trusted.",
      "guide": {
       "href": "../converting.md",
       "title": "Converting documents guide"
@@ -1026,7 +1026,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "A small MQTT broker with named accounts, readers that can never publish, TLS with a pinned key, and join codes, run by tw broker or inside the app.",
+     "description": "A small MQTT broker with named accounts, readers that can never publish, TLS with a pinned key, join codes, and limits on connections and wrong guesses, run by tw broker or inside the app.",
      "guide": {
       "href": "../live-broker.md",
       "title": "Running the broker for a live log"
@@ -1046,7 +1046,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "Copy and paste a join code or link, or show and read a QR code, to join a broker quickly.",
+     "description": "Copy and paste a join code or link, or show and read a QR code, to join a broker quickly. A QR image is read in the background, and the copied code stays out of clipboard history.",
      "guide": {
       "href": "../live-documents.md",
       "title": "Live documents guide"

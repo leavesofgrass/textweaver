@@ -78,7 +78,9 @@ On Windows:
 powershell -ExecutionPolicy Bypass -File scripts\dev-check.ps1
 ```
 
-It runs formatting, clippy with warnings as errors, the lean terminal reader build, the tests, rustdoc, the check that every generated file is current (`cargo xtask regen --check`), the dependency, parity and cargo-deny checks, the link checker, and the site accessibility checks, and ends with a summary that says, in words, which steps passed and which failed. `--only fmt,clippy` runs some of the steps, `--fast` checks only the crates your branch changed and the crates that depend on them, and `--docker` runs everything in the Linux container. A green run on Windows does not cover CI's Linux `--all-features` leg. [Testing](docs/dev/testing.md) describes each check and the few that CI runs but the script does not.
+It runs formatting, clippy with warnings as errors, the lean terminal reader build, the tests (with the sentinel that checks no test touched your real data folders), rustdoc, the pseudo-locale check, the check that every generated file is current (`cargo xtask regen --check`), the dependency, parity and cargo-deny checks, the link checker, and the site accessibility checks, and ends with a summary that says, in words, which steps passed and which failed. `--only fmt,clippy` runs some of the steps, `--fast` checks only the crates your branch changed and the crates that depend on them (the quick check to run while you work and before you hand a branch back; the full check is for the end of a batch), and `--docker` runs everything in the Linux container. A green run on Windows does not cover CI's Linux `--all-features` leg.
+
+The versions of the tools the checks use (cargo-about, cargo-deny, cargo-nextest, cargo-fuzz, actionlint, shellcheck) are pinned in `tools.toml`. `cargo xtask tools --check` says, in words, which installed tool differs from its pin; install the pinned version rather than the newest. [Testing](docs/dev/testing.md) describes each check and the few that CI runs but the script does not.
 
 If a check fails and you cannot see why, open the pull request anyway and say so. We would rather help than have you stuck.
 
@@ -102,7 +104,7 @@ Every change must work for people who do not look at the screen.
 - Every third-party crate is declared once, in `[workspace.dependencies]` in the root `Cargo.toml`, and used with `name.workspace = true`. A new dependency is a decision for the maintainers; propose it in the issue or pull request, with its license.
 - No async runtime in the speech path. Speech engines have thread affinity ([ADR-0003](docs/adr/0003-speech-threading-and-event-timing.md)).
 - Every state change is announced through the app's announcer, filtered by verbosity, and routed by the accessibility mode with `textweaver_a11y::route`, so a screen reader never hears it twice.
-- Anything that arrives from a network, or in a file someone else sends (a broker's messages, a `.twlive` file, a join link, a QR code), is hostile data: cap its size, clean it of control, escape and direction characters, say a refusal in words, and give the reader a fuzz target (`fuzz/README.md`). A password, join code, join link or QR image is never logged, said, written to settings or a file, or kept in a prompt's history. The MQTT client and the broker use std threads and no async runtime, and their tests reach 127.0.0.1 only.
+- Anything that arrives from a network, or in a file someone else sends (a broker's messages, a `.twlive` file, a join link, a QR code, a document's HTML or links, a file name in a watched folder), is hostile data: cap its size (an image's from its header, before decoding), clean it of control, escape and direction characters (output to a terminal too), say a refusal in words, and give the reader a fuzz target (`fuzz/README.md`). A password, join code, join link or QR image is never logged, said, written to settings or a file, or kept in a prompt's history, and when one is copied to the clipboard it is marked private. Requests carry only the one neutral User-Agent, never anything about the user or the computer; a workspace test fails on any other. The MQTT client and the broker use std threads and no async runtime, and their tests reach 127.0.0.1 only.
 - Every file the app writes while it runs goes through the writer thread (`crates/textweaver-app/src/writer.rs`), never from the input thread.
 - Tests never play audio aloud. Write audio to a temporary file, or use a silent output.
 - Integration tests go in one test program per crate, `tests/it/main.rs`. A new integration test is a module there (`tests/it/<name>.rs`, with `mod <name>;` in `main.rs`), never a new file directly in `tests/`: every file there is a program of its own, which links the crate again and slows every test build. [Testing](docs/dev/testing.md#where-tests-go) has the details.
@@ -117,7 +119,7 @@ The [architecture decision records](docs/adr/README.md) (ADRs) explain why the c
 2. Fork the repository and make a branch for your change.
 3. Make the change, with a test that fails without it.
 4. If you changed a key, a setting, a dependency, or a crate, run `cargo xtask regen` to rebuild the generated files, and commit what changed. Then run the checks.
-5. For anything a user would notice, add a changelog fragment instead of editing `CHANGELOG.md`: a new file `changelog.d/<your-branch-name>.md` holding one area heading line, such as `### Reading and speech`, and plain bullets ([changelog.d/README.md](changelog.d/README.md)). The fragments are folded into "Unreleased" with `cargo xtask changelog` after merging ([Releasing](docs/dev/releasing.md#steps)).
+5. For anything a user would notice, add a changelog fragment instead of editing `CHANGELOG.md`: a new file `changelog.d/<your-branch-name>.md` holding one area heading line, such as `### Reading and speech`, and plain bullets ([changelog.d/README.md](changelog.d/README.md)). A fragment with no heading or no bullets fails the folding, so check it with `cargo xtask changelog --check`. The maintainers fold the fragments into "Unreleased" with `cargo xtask changelog` after merging ([Releasing](docs/dev/releasing.md#steps)).
 6. Open a pull request. The template asks what changed, why, and how you checked it.
 
 A maintainer will review it. Reviews may ask for changes; that is normal, and not a judgment of you.
@@ -180,8 +182,8 @@ If you use an AI coding assistant, keep its settings and rules files out of your
 
 The workflows in `.github/workflows/`:
 
-- `ci.yml`: formatting; the docs job (links and site data); and clippy, tests, and rustdoc on Ubuntu (all features), macOS, and Windows (Omnivox), with the Apple voice tests on macOS and the 32-bit hosts on Windows. It also has the real-engine jobs, marked "Real engine" in their names: espeak-ng on Linux and Microsoft's SAPI5 voices on Windows, silent (WAV files and a silent output).
-- `gui-xilem.yml`: the Xilem GUI on Windows, macOS, and Linux: build, clippy, tests, and the accessibility checks (the UI Automation report on Windows, an AT-SPI check on Linux, a silent smoke run on macOS, and on all three the accessibility tree compared with main's; see [ADR-0039](docs/adr/0039-automated-screen-reader-checks.md)).
+- `ci.yml`: formatting; the docs job (links and site data); and clippy, tests, and rustdoc on Ubuntu (all features), macOS, and Windows (Omnivox), with the Apple voice tests on macOS and the 32-bit hosts on Windows. It also has the real-engine jobs, marked "Real engine" in their names: espeak-ng on Linux and Microsoft's SAPI5 voices on Windows, silent (WAV files and a silent output). It runs on pull requests, on `main`, on a pushed branch named `ci/<name>` (to check a merge result on every system before it reaches `main`), and by hand.
+- `gui-xilem.yml`: the Xilem GUI, also on `ci/<name>` branches, on Windows, macOS, and Linux: build, clippy, tests, and the accessibility checks (the UI Automation report on Windows, an AT-SPI check on Linux, a silent smoke run on macOS, and on all three the accessibility tree compared with main's; see [ADR-0039](docs/adr/0039-automated-screen-reader-checks.md)).
 - `a11y-tests.yml`: screen-reader sessions on CI runners, started by hand: NVDA through Guidepup on Windows, an AT-SPI session with Orca under Xvfb, and VoiceOver on macOS (see [Testing](docs/dev/testing.md#automated-screen-reader-checks)).
 - `scripts.yml`: lints and dry runs of the scripts in `scripts/`.
 - `apple.yml`: extra macOS voice measurements.
@@ -190,7 +192,9 @@ The workflows in `.github/workflows/`:
 - `second-tool.yml`: checks the writers' EPUB and PDF output with epubcheck and veraPDF.
 - `pages.yml`: builds the documentation site with Zensical and deploys it to GitHub Pages (see [Documentation site](docs/dev/building.md#documentation-site)).
 - `nightly.yml`: run by hand (it has no schedule), the fuzz targets for 10 minutes each (`fuzz/README.md`), Miri on core, text, and the engine-host protocol, AddressSanitizer on the FFI crates, the tests in release mode, an MSRV check, the Docker image and its tests, and the soak test; on Mondays, `cargo hack --each-feature` on the speech, formats, and writers crates. Nightly Rust is used only for fuzzing, Miri, and the sanitizer.
-- `release.yml`: the release job, started by pushing a tag. It builds one package for each system and processor, each holding the app and `tw`: the Windows zip, the macOS zip, and the Linux AppImage and tarball (the AppImage in `docker/appimage`).
+- `release.yml`: the release job, started by pushing a tag (or by hand with no tag, as a dry run that creates nothing). It starts with no permissions. Build jobs with a read-only token make one package for each system and processor, each holding the app and `tw`: the Windows zip, the macOS zip (on `macos-15`), and the Linux AppImage and tarball (the AppImage in `docker/appimage`). Separate publish jobs attest and upload them; only those, the job that creates the release and the checksums job can write ([Releasing](docs/dev/releasing.md#steps)).
+
+Every action in every workflow is pinned to a full commit SHA, with its tag in a comment; pin a new one the same way.
 
 ## License
 

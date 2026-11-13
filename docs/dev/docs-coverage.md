@@ -1,6 +1,6 @@
 # Documentation coverage
 
-This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, again for beta 4 on Friday, October 23, 2026, and for beta 5 on Thursday, October 29, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
+This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, again for beta 4 on Friday, October 23, 2026, for beta 5 on Thursday, October 29, 2026, and for wave 1 of beta 6 on Thursday, November 12, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
 
 The generated pages (`keyboard.md` and `settings-reference.md`) list every key and setting, so this page tracks the guides that explain them.
 
@@ -121,6 +121,29 @@ The release sweep read every guide against the beta 5 entries of the changelog. 
 - Join links, Copy the join code and link, pasting to fill the form, the masked join code field and Show (`F3`), QR codes (`tw join-qr`, `--qr`, Show the join QR code, Join from a QR image, clipboard images), and the context menus: live-documents.md, live-broker.md, command-line.md, keyboard.md, json-rpc.md, known-limits.md, screen-readers.md. Pass.
 - The live keys and settings reference: keyboard.md and settings-reference.md, generated. Pass.
 - The crates `textweaver-mqtt`, `textweaver-broker` and `textweaver-qr`, the live document route through the app, the `mqtt` feature, the four fuzz targets (`mqtt`, `twlive`, `broker`, `qr`), and the Docker test with Mosquitto: dev/architecture.md, dev/building.md, dev/testing.md, fuzz/README.md, site/architecture.html, CONTRIBUTING.md. Pass, after fix.
+
+## Beta 6, wave 1, checked on Thursday, November 12, 2026
+
+Each change merged in wave 1 of beta 6, and the guide that should cover it, opened and read against the changelog's Unreleased section and the code. "Not found" means the guide was opened and does not say it; the gap is open.
+
+- The broker counts a login before checking it, caps connections per address and join readers, keys IPv6 by the /64 prefix, and stops a join reader taking another's client id: live-broker.md. Pass.
+- The join code turns off after 200 wrong codes, with its message: live-broker.md, known-limits.md. Pass.
+- What the join code resists (about a million secret values, limited by the lockout, the caps and the session budget): live-broker.md. Pass.
+- A plain listener on a Tailscale-range address is called Tailscale only when a Tailscale interface is found, otherwise the broker warns: live-broker.md. Pass.
+- The broker's key and accounts file narrowed to the owner on Linux and macOS, and not on Windows: live-broker.md, known-limits.md. Pass.
+- The connected message for a Tailscale-range address ("If this is Tailscale, the link is encrypted"): live-documents.md, live-broker.md. Pass.
+- Copy the join code and link marked as private clipboard text: privacy.md. Pass.
+- Join from a QR image read on a helper thread, "Reading the QR image." after a second, cancelled by another dialog: live-documents.md. Not found. The guide describes the join but not the wait or the cancel; the code's own comments do.
+- A QR image over 40 million pixels refused: known-limits.md. Pass.
+- OCR and QR images checked against their size limits from the header before decoding: known-limits.md names the QR limit only. Not found for OCR images.
+- `tw text`, `tw search` and `tw info` leave out control characters on a terminal: command-line.md. Pass.
+- One neutral User-Agent for web pages and reference lookups: components.md, updates.md, privacy.md. Pass for components.md and updates.md. privacy.md does not name the User-Agent, and Not found there.
+- The hot folder's plain names and its refusal to follow links: converting.md. Pass.
+- The browser preview without raw HTML or scripts, the one-time message, Trusted preview folders, the served page's content security policy and its file rules: editing.md, privacy.md, settings.md, settings-reference.md. Pass.
+- A link to a file on another computer asks first: reading.md, privacy.md. Pass.
+- F3 is Find next in both frontends and shows or hides a secret field: keyboard.md, gui.md, reading.md, editing.md. Pass.
+- Dependency security updates (pulldown-cmark 0.13.6, calamine 0.38, rusqlite 0.41.1, async-executor 1.14.1, the AccessKit patch releases): THIRD-PARTY-NOTICES.md lists the new versions. No guide needs to say more. Pass.
+- Contributor tooling (the fast check, affected crates, tool pins, changelog fragments, four new fuzz targets, CI on `ci/` branches, the narrower release workflow, pinned actions, macOS 15 runners, the Arch full upgrade, the "Not yet released" docs check, `ring` in the app): dev/testing.md, dev/releasing.md, dev/architecture.md, dev/docker.md, dev/building.md, CONTRIBUTING.md, scripts/README.md, fuzz/README.md, changelog.d/README.md. Pass, after fix.
 
 ## Still open
 
