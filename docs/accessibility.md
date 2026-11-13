@@ -26,7 +26,7 @@ textweaver is in beta. This statement describes release 0.1.0-beta.5, the newest
 
 ## Translations
 
-Some messages new in beta 6 are written in English first and translated in a later pass. Until then the five other interface languages say them in English, so a Braille display or screen reader in those languages may show an English message. Known limits says which areas are affected.
+Messages new in beta 6 were written in English first and translated into the five other interface languages in one pass before the release. No native speaker has checked those translations yet; Known limits says which areas they cover.
 
 ## What has been tested
 
