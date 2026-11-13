@@ -70,13 +70,41 @@ pub fn write_atomic_with_permissions(
     bytes: &[u8],
     permissions: Option<std::fs::Permissions>,
 ) -> std::io::Result<()> {
+    write_atomic_inner(path, permissions, |f| f.write_all(bytes))
+}
+
+/// The buffer of [`write_atomic_streamed`], in bytes.
+const STREAM_BUFFER: usize = 256 * 1024;
+
+/// [`write_atomic`], with the contents written by `write` straight into
+/// the temporary file through a buffer, so a large file is never held in
+/// memory whole (the recovery snapshot of a long document). An error from
+/// `write` leaves the target unchanged, as any other error does.
+pub fn write_atomic_streamed(
+    path: &Path,
+    write: impl FnOnce(&mut dyn std::io::Write) -> std::io::Result<()>,
+) -> std::io::Result<()> {
+    // A large buffer: few writes to the file, which a scanner may inspect
+    // one by one, at a small fixed cost in memory.
+    write_atomic_inner(path, None, |f| {
+        let mut w = std::io::BufWriter::with_capacity(STREAM_BUFFER, f);
+        write(&mut w)?;
+        w.flush()
+    })
+}
+
+fn write_atomic_inner(
+    path: &Path,
+    permissions: Option<std::fs::Permissions>,
+    write: impl FnOnce(&mut std::fs::File) -> std::io::Result<()>,
+) -> std::io::Result<()> {
     let tmp = temp_path(path);
     if let Some(dir) = tmp.parent() {
         std::fs::create_dir_all(dir)?;
     }
     let result = (|| {
         let mut f = std::fs::File::create(&tmp)?;
-        f.write_all(bytes)?;
+        write(&mut f)?;
         f.sync_all()?;
         drop(f);
         if let Some(p) = permissions {
@@ -129,6 +157,27 @@ mod tests {
         write_atomic(&p, b"two").unwrap();
         assert_eq!(std::fs::read(&p).unwrap(), b"two");
         assert_eq!(entries(&dir.join("a")), ["f.txt"]);
+    }
+
+    #[test]
+    fn a_streamed_write_is_atomic_too() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        let p = dir.join("s.json");
+        write_atomic_streamed(&p, |w| {
+            w.write_all(b"one ")?;
+            w.write_all(b"two")
+        })
+        .unwrap();
+        assert_eq!(std::fs::read(&p).unwrap(), b"one two");
+        // A failed write leaves the target as it was, and no temp file.
+        let e = write_atomic_streamed(&p, |w| {
+            w.write_all(b"half")?;
+            Err(std::io::Error::other("stopped"))
+        });
+        assert!(e.is_err());
+        assert_eq!(std::fs::read(&p).unwrap(), b"one two");
+        assert_eq!(entries(dir), ["s.json"]);
     }
 
     #[test]

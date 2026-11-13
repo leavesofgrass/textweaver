@@ -253,11 +253,16 @@ pub fn probe() -> OsScheme {
             run("reg", &["query", key, "/v", value], limit)
                 .and_then(|o| parse_reg_number(&o, value))
         };
-        let hc = q(r"HKCU\Control Panel\Accessibility\HighContrast", "Flags");
-        let light = q(
-            r"HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-            "AppsUseLightTheme",
-        );
+        // The two queries run at once, each with its own limit: the
+        // probe waits for the slower one, not for both in turn.
+        let (light, hc) = std::thread::scope(|s| {
+            let hc = s.spawn(|| q(r"HKCU\Control Panel\Accessibility\HighContrast", "Flags"));
+            let light = q(
+                r"HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "AppsUseLightTheme",
+            );
+            (light, hc.join().ok().flatten())
+        });
         parse_windows(light, hc)
     } else if cfg!(target_os = "macos") {
         let style = run("defaults", &["read", "-g", "AppleInterfaceStyle"], limit);
@@ -417,8 +422,14 @@ mod tests {
 
     #[test]
     fn probe_never_panics() {
-        // Whatever this machine says, the answer is one of the four.
+        // Whatever this machine says, the answer is one of the four. Each
+        // query has a 500 ms limit and on Windows the two run at once, so
+        // the probe ends well within two seconds even on a busy machine.
+        let started = std::time::Instant::now();
         let s = probe();
+        let took = started.elapsed();
+        eprintln!("theme probe took {took:?}");
+        assert!(took < Duration::from_secs(2), "{took:?}");
         assert!(matches!(
             s,
             OsScheme::Dark | OsScheme::Light | OsScheme::HighContrast | OsScheme::Unknown

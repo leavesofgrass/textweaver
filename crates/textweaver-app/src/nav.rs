@@ -274,7 +274,10 @@ impl App {
         kind: MarkerKind,
         range: CharRange,
     ) -> Option<&textweaver_text::Marker> {
-        doc.markers()
+        // Markers are sorted by start: a binary search finds those
+        // starting there (no per-kind tables needed).
+        textweaver_text::MarkerIndex::new(doc.markers())
+            .starting_at(range.start)
             .iter()
             .find(|m| m.kind == kind && m.range == range)
     }
@@ -309,8 +312,10 @@ impl App {
                 } else {
                     MarkerKind::TableRow
                 };
-                let n = doc
-                    .markers()
+                // Only markers starting inside the range (or empty at its
+                // end) can be inside it.
+                let n = textweaver_text::MarkerIndex::new(doc.markers())
+                    .starting_in(CharRange::new(range.start, range.end.0 + 1))
                     .iter()
                     .filter(|m| m.kind == inner && range.contains_range(m.range))
                     .count();

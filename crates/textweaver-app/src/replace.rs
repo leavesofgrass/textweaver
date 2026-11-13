@@ -51,6 +51,21 @@ pub(crate) struct ReplaceSession {
     /// The current match's number and the total, from the one search each
     /// step makes (Agent P2a: no search per announcement).
     pub(crate) position: Option<(usize, usize)>,
+    /// Every match, kept while stepping: found once, then moved by each
+    /// replacement, so a step is a binary search, not a search of the
+    /// whole text.
+    pub(crate) found: Option<FoundMatches>,
+}
+
+/// The matches of a replace loop, sorted, with the text and options they
+/// were found for: a different text revision or length, or different
+/// options, searches again.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct FoundMatches {
+    /// The session's text revision and length when these were found.
+    key: (u64, usize),
+    opts: SearchOptions,
+    hits: Vec<CharRange>,
 }
 
 /// A step of the replace loop, for a frontend's own buttons
@@ -222,6 +237,7 @@ impl App {
             replaced: 0,
             skipped: 0,
             position: None,
+            found: None,
         });
         self.next_replace_match(origin)
     }
@@ -253,8 +269,45 @@ impl App {
         })
     }
 
+    /// What the kept matches were found for: the session's text revision
+    /// and the edited text's length.
+    fn replace_key(&self) -> Option<(u64, usize)> {
+        let s = self.session.as_ref()?;
+        let ed = self.edit.as_ref()?.session.editor()?;
+        Some((s.revision, ed.text().len_chars()))
+    }
+
+    /// The kept matches, when they are still those of the text and the
+    /// options.
+    fn kept_hits(&self) -> Option<&[CharRange]> {
+        let f = self.authoring.replace.as_ref()?.found.as_ref()?;
+        (Some(f.key) == self.replace_key() && f.opts == self.search).then_some(f.hits.as_slice())
+    }
+
+    /// Searches the whole text again unless the kept matches are current.
+    fn refresh_replace_hits(&mut self) {
+        if self.kept_hits().is_some() {
+            return;
+        }
+        let Some(key) = self.replace_key() else {
+            return;
+        };
+        let opts = self.search;
+        let (Some(r), Some(ed)) = (
+            self.authoring.replace.as_mut(),
+            self.edit.as_ref().and_then(|e| e.session.editor()),
+        ) else {
+            return;
+        };
+        let hits = so::all_matches(ed.text(), &r.query, opts);
+        r.found = Some(FoundMatches { key, opts, hits });
+    }
+
     /// Every match with the session's options.
     fn replace_hits(&self) -> Vec<CharRange> {
+        if let Some(hits) = self.kept_hits() {
+            return hits.to_vec();
+        }
         let (Some(r), Some(ed)) = (
             self.authoring.replace.as_ref(),
             self.edit.as_ref().and_then(|e| e.session.editor()),
@@ -264,50 +317,61 @@ impl App {
         so::all_matches(ed.text(), &r.query, self.search)
     }
 
-    /// How many matches there are, counted without keeping them.
-    fn replace_count(&self) -> usize {
+    /// Moves the kept matches across the replacement `o`, made in the text
+    /// they were found for (`key_before`); forgets them when they cannot
+    /// be moved exactly, so the next step searches again.
+    fn shift_replace_hits(&mut self, key_before: Option<(u64, usize)>, o: &EditOutcome) {
+        let key = self.replace_key();
+        let opts = self.search;
         let (Some(r), Some(ed)) = (
-            self.authoring.replace.as_ref(),
+            self.authoring.replace.as_mut(),
             self.edit.as_ref().and_then(|e| e.session.editor()),
         ) else {
-            return 0;
+            return;
         };
-        so::count(ed.text(), &r.query, self.search)
+        let Some(f) = r.found.take() else {
+            return;
+        };
+        if Some(f.key) != key_before || f.opts != opts {
+            return;
+        }
+        let (Some(key), Some(hits)) = (key, shifted_hits(ed.text(), &r.query, opts, &f.hits, o))
+        else {
+            return;
+        };
+        r.found = Some(FoundMatches { key, opts, hits });
     }
 
     /// The next match at or after `from` (wrapping once, stopping at the
     /// origin), selected and asked about; the summary when none is left.
     fn next_replace_match(&mut self, from: CharPos) -> Vec<Effect> {
-        // One streamed search: the match to ask about (and the first one
-        // before the origin, for wrapping), with its number and the total.
-        let (Some(r), Some(ed)) = (
-            self.authoring.replace.as_ref(),
-            self.edit.as_ref().and_then(|e| e.session.editor()),
-        ) else {
+        if self.authoring.replace.is_none()
+            || self
+                .edit
+                .as_ref()
+                .and_then(|e| e.session.editor())
+                .is_none()
+        {
             return vec![Effect::Redraw];
-        };
-        let (wrapped, origin) = (r.wrapped, r.origin);
-        let mut total = 0usize;
-        let mut ahead: Option<(CharRange, usize)> = None;
-        let mut wrap_to: Option<(CharRange, usize)> = None;
-        so::each_match(ed.text(), &r.query, self.search, |h| {
-            total += 1;
-            let next = if wrapped {
-                h.start >= from && h.start < origin
-            } else {
-                h.start >= from
-            };
-            if next && ahead.is_none() {
-                ahead = Some((h, total));
-            }
-            if h.start < origin && wrap_to.is_none() {
-                wrap_to = Some((h, total));
-            }
-            std::ops::ControlFlow::Continue(())
-        });
+        }
+        // The kept matches (one search when the text or the options
+        // changed): the match to ask about (and the first one before the
+        // origin, for wrapping), with its number and the total.
+        self.refresh_replace_hits();
         let Some(r) = self.authoring.replace.as_mut() else {
             return vec![Effect::Redraw];
         };
+        let hits: &[CharRange] = r.found.as_ref().map_or(&[], |f| f.hits.as_slice());
+        let total = hits.len();
+        let (wrapped, origin) = (r.wrapped, r.origin);
+        // Sorted by start: the first at or after `from` is the next one;
+        // after wrapping it must also be before the origin.
+        let i = hits.partition_point(|h| h.start < from);
+        let ahead = hits
+            .get(i)
+            .filter(|h| !wrapped || h.start < origin)
+            .map(|h| (*h, i + 1));
+        let wrap_to = hits.first().filter(|h| h.start < origin).map(|h| (*h, 1));
         let mut found = ahead;
         if found.is_none() && !r.wrapped {
             r.wrapped = true;
@@ -435,11 +499,16 @@ impl App {
                 };
                 let before = ed.text().clone();
                 let with = so::replacement(&before, m, &r.query, &r.with, self.search);
+                let key_before = self.replace_key();
+                let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
+                    return vec![Effect::Redraw];
+                };
                 match ed.apply(Edit::replace(m, with.as_str())) {
                     Ok(o) => {
                         let end = o.inserted.end;
                         self.shift_replace_origin(&[o]);
                         self.after_edit(&before, &[o]);
+                        self.shift_replace_hits(key_before, &o);
                         if let Some(r) = self.authoring.replace.as_mut() {
                             r.replaced += 1;
                         }
@@ -484,7 +553,8 @@ impl App {
             return self.show_authoring_list(AuthoringList::Replace);
         }
         self.search = next;
-        let hits = self.replace_count();
+        self.refresh_replace_hits();
+        let hits = self.kept_hits().map_or(0, <[CharRange]>::len);
         let state = crate::words::on_off(self.cat(), o.get(next));
         let msg = self.msg_args(o.now_id(), &args!["state" => state, "n" => hits]);
         self.tell(&msg);
@@ -514,6 +584,7 @@ impl App {
 
     /// `a`: says how many would be replaced, and asks once.
     fn ask_replace_rest(&mut self) -> Vec<Effect> {
+        self.refresh_replace_hits();
         let n = self.replace_targets().len();
         let question = self.msg_args("replace-all-question", &args!["n" => n]);
         self.authoring.question = Some(Question::ReplaceAll(question.clone()));
@@ -562,6 +633,7 @@ impl App {
         if r.current.is_none() {
             return self.replace_done();
         }
+        self.refresh_replace_hits();
         let mut targets = self.replace_targets();
         let opts = self.search;
         let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
@@ -641,5 +713,168 @@ impl App {
         // The focus stays on the option switched, also by its letter.
         self.pending_list_focus = Some(n);
         self.show_authoring_list(AuthoringList::SearchOptions)
+    }
+}
+
+/// The matches after the replacement `o`, from `old`, the matches of the
+/// text before it, without searching the whole text: matches well before
+/// the edit stay, the text from the last of them is searched again until
+/// a match there is one of the old matches past the edit, and the old
+/// matches after that one move by the change in length. A plain search
+/// decides each match from its own chars and one char either side, after
+/// where the previous match ended, so from a match both searches find the
+/// rest is the same. `None` for a regular expression (it may look further
+/// than its match) or when the searches do not meet in the window: the
+/// caller searches everything again.
+fn shifted_hits(
+    text: &ropey::Rope,
+    query: &str,
+    opts: SearchOptions,
+    old: &[CharRange],
+    o: &EditOutcome,
+) -> Option<Vec<CharRange>> {
+    if opts.regex || query.is_empty() {
+        return None;
+    }
+    // More chars than one match can span (a folded char is at least one
+    // byte of the folded query, and folding grows a char at most fourfold),
+    // with a char either side for whole words.
+    let reach = query.len() * 4 + 2;
+    let (removed, inserted) = (o.removed, o.inserted);
+    let len = text.len_chars();
+    let moved = |h: &CharRange| -> Option<CharRange> {
+        Some(CharRange::new(
+            (h.start.0 + inserted.end.0).checked_sub(removed.end.0)?,
+            (h.end.0 + inserted.end.0).checked_sub(removed.end.0)?,
+        ))
+    };
+    // Matches ending this far before the edit cannot change: a new match
+    // overlapping the edit would have to start before them.
+    let kept = old.partition_point(|h| h.end.0 + reach <= removed.start.0);
+    let restart = kept.checked_sub(1).map_or(0, |i| old[i].end.0);
+    // The old matches past the edit (in old coordinates): search up to a
+    // little past the second of them, for room to meet.
+    let after = old.partition_point(|h| h.start.0 < removed.end.0 + reach);
+    let window_end = match old.get(after + 1).or(old.get(after)) {
+        Some(h) => moved(h).map_or(len, |m| (m.end.0 + reach).min(len)),
+        None => len,
+    };
+    if window_end <= restart {
+        return None;
+    }
+    let window = ropey::Rope::from(text.slice(restart..window_end));
+    let found: Vec<CharRange> = so::all_matches(&window, query, opts)
+        .into_iter()
+        .map(|h| CharRange::new(h.start.0 + restart, h.end.0 + restart))
+        .collect();
+    // The window's first char has no left neighbor in it: a whole-word
+    // match there may not be one in the text.
+    if opts.whole_words && restart > 0 && found.first().is_some_and(|h| h.start.0 == restart) {
+        return None;
+    }
+    let mut out: Vec<CharRange> = old[..kept].to_vec();
+    if window_end >= len {
+        out.extend(found);
+        return Some(out);
+    }
+    for (i, h) in found.iter().enumerate() {
+        // Past the edit, with its neighbors in the window and unchanged.
+        if h.start.0 <= inserted.end.0 || h.end.0 + reach > window_end {
+            continue;
+        }
+        let j = old[after.min(old.len())..]
+            .iter()
+            .position(|m| moved(m) == Some(*h))
+            .map(|k| k + after);
+        if let Some(j) = j {
+            out.extend_from_slice(&found[..=i]);
+            out.extend(old[j + 1..].iter().filter_map(moved));
+            return Some(out);
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A small deterministic random source.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn below(&mut self, n: usize) -> usize {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            usize::try_from(self.0 >> 33).unwrap_or(0) % n.max(1)
+        }
+
+        fn text(&mut self, alphabet: &[char], n: usize) -> String {
+            (0..n)
+                .map(|_| alphabet[self.below(alphabet.len())])
+                .collect()
+        }
+    }
+
+    /// After a random replacement of a random match, the moved matches are
+    /// exactly what a search of the whole new text finds.
+    #[test]
+    fn moved_matches_equal_a_full_search() {
+        let mut r = Lcg(7);
+        let alphabet = ['a', 'b', 'A', ' ', 'x', '\n', 'é'];
+        let (mut moved, mut fell_back) = (0, 0);
+        for _ in 0..4_000 {
+            let n = 20 + r.below(400);
+            let text = r.text(&alphabet, n);
+            let q = 1 + r.below(3);
+            let query = r.text(&alphabet[..5], q);
+            let opts = SearchOptions {
+                match_case: r.below(2) == 0,
+                whole_words: r.below(3) == 0,
+                ..SearchOptions::default()
+            };
+            let rope = ropey::Rope::from_str(&text);
+            let old = so::all_matches(&rope, &query, opts);
+            if old.is_empty() {
+                continue;
+            }
+            let m = old[r.below(old.len())];
+            let with = if r.below(4) == 0 {
+                query.repeat(2)
+            } else {
+                let w = r.below(6);
+                r.text(&alphabet, w)
+            };
+            let mut after = rope.clone();
+            after.remove(m.start.0..m.end.0);
+            after.insert(m.start.0, &with);
+            let o = Edit::replace(m, with.as_str()).outcome();
+            let full = so::all_matches(&after, &query, opts);
+            match shifted_hits(&after, &query, opts, &old, &o) {
+                Some(got) => {
+                    moved += 1;
+                    assert_eq!(got, full, "{text:?} {query:?} {opts:?} {m:?} {with:?}");
+                }
+                None => fell_back += 1,
+            }
+        }
+        assert!(
+            moved > fell_back * 4,
+            "moved {moved}, searched again {fell_back}"
+        );
+    }
+
+    #[test]
+    fn a_regular_expression_searches_again() {
+        let rope = ropey::Rope::from_str("ab ab");
+        let opts = SearchOptions {
+            regex: true,
+            ..SearchOptions::default()
+        };
+        let o = Edit::replace(CharRange::new(0, 2), "x").outcome();
+        let old = [CharRange::new(0, 2), CharRange::new(3, 5)];
+        assert!(shifted_hits(&rope, "ab", opts, &old, &o).is_none());
     }
 }

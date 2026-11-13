@@ -19,6 +19,9 @@
 //! ([`FIELD_GROUPS`]); fields not recognized are kept and shown after the
 //! known ones, so nothing is dropped.
 
+use std::cell::{RefCell, RefMut};
+use std::ops::Range;
+
 use serde_json::{Map, Value};
 use textweaver_core::{CharPos, CharRange, MarkerKind};
 use textweaver_text::Document;
@@ -372,12 +375,56 @@ pub struct LiveLog {
     /// order.
     head: Fields,
     head_order: KeyOrder,
+    /// Each entry's rendered parts, kept until the entry changes.
+    cache: RefCell<RenderCache>,
 }
 
 /// An entry's fields sorted for showing.
+#[derive(Clone, Debug)]
 struct Shown {
     known: Vec<(Field, String)>,
     unknown: Vec<(String, String)>,
+}
+
+/// One entry, rendered: its line, the line as Markdown text, and its
+/// fields sorted for a table row.
+#[derive(Clone, Debug)]
+struct Rendered {
+    line: String,
+    escaped: String,
+    shown: Shown,
+}
+
+/// The entries' rendered parts, so a message re-renders only the entries
+/// it changed: a slot per entry (`None` until rendered, and again when the
+/// entry changes), and the labels and id field they were rendered with
+/// (other words, as after a language change, render them all again).
+#[derive(Clone, Debug, Default)]
+struct RenderCache {
+    with: Option<(LogLabels, Option<String>)>,
+    slots: Vec<Option<Rendered>>,
+    /// Each entry's matching key ([`LiveLog::key`]), `None` until worked
+    /// out, and the id field they were worked out with.
+    keys_for: Option<Option<String>>,
+    keys: Vec<Option<Option<String>>>,
+}
+
+impl RenderCache {
+    /// Forgets entry `i`'s parts and key.
+    fn forget(&mut self, i: usize) {
+        if let Some(slot) = self.slots.get_mut(i) {
+            *slot = None;
+        }
+        if let Some(key) = self.keys.get_mut(i) {
+            *key = None;
+        }
+    }
+
+    /// Keeps the parts and keys of the first `n` entries only.
+    fn truncate(&mut self, n: usize) {
+        self.slots.truncate(n);
+        self.keys.truncate(n);
+    }
 }
 
 impl LiveLog {
@@ -389,6 +436,7 @@ impl LiveLog {
             dropped: 0,
             head: Fields::new(),
             head_order: KeyOrder::default(),
+            cache: RefCell::default(),
         }
     }
 
@@ -400,6 +448,7 @@ impl LiveLog {
             dropped: 0,
             head: Fields::new(),
             head_order: KeyOrder::default(),
+            cache: RefCell::default(),
         }
     }
 
@@ -493,9 +542,20 @@ impl LiveLog {
 
     /// The index of the entry with key `key`.
     pub fn find_key(&self, key: &str) -> Option<usize> {
-        self.entries
-            .iter()
-            .position(|e| self.key(&e.fields).as_deref() == Some(key))
+        // Each entry's key is worked out once, not on every message.
+        let mut cache = self.cache.borrow_mut();
+        if cache.keys_for.as_ref() != Some(&self.options.id_field) {
+            cache.keys_for = Some(self.options.id_field.clone());
+            cache.keys.clear();
+        }
+        cache.keys.resize(self.entries.len(), None);
+        for (i, e) in self.entries.iter().enumerate() {
+            let k = cache.keys[i].get_or_insert_with(|| self.key(&e.fields));
+            if k.as_deref() == Some(key) {
+                return Some(i);
+            }
+        }
+        None
     }
 
     /// Applies a message: one entry added or updated, or the whole log
@@ -566,6 +626,7 @@ impl LiveLog {
                 e.fields = fields;
                 e.order = order;
                 e.updated = Some(now.to_owned());
+                self.cache.get_mut().forget(i);
                 Some(i)
             }
             None if self.entries.len() >= MAX_ENTRIES => {
@@ -644,6 +705,12 @@ impl LiveLog {
             next.push(entry);
         }
         let shrank = next.len() < self.entries.len();
+        // Entries unchanged at their place keep their rendered parts.
+        let cache = self.cache.get_mut();
+        cache.truncate(next.len());
+        for &i in &changed {
+            cache.forget(i);
+        }
         self.entries = next;
         self.dropped = dropped;
         if changed.is_empty() && shrank {
@@ -698,10 +765,47 @@ impl LiveLog {
     /// location, status, traffic, notes and time, then any other fields
     /// as "key: value".
     pub fn line(&self, i: usize, labels: &LogLabels) -> String {
-        let Some(e) = self.entries.get(i) else {
+        if i >= self.entries.len() {
             return String::new();
-        };
-        let shown = self.shown(e, labels);
+        }
+        self.rendered(labels, i..i + 1).slots[i]
+            .as_ref()
+            .map(|r| r.line.clone())
+            .unwrap_or_default()
+    }
+
+    /// The cache with entries `range` rendered, after forgetting every
+    /// entry's parts when the labels or the id field changed.
+    fn rendered(&self, labels: &LogLabels, range: Range<usize>) -> RefMut<'_, RenderCache> {
+        let mut cache = self.cache.borrow_mut();
+        let current = cache
+            .with
+            .as_ref()
+            .is_some_and(|(l, f)| l == labels && *f == self.options.id_field);
+        if !current {
+            cache.with = Some((labels.clone(), self.options.id_field.clone()));
+            cache.slots.clear();
+        }
+        if cache.slots.len() < self.entries.len() {
+            cache.slots.resize(self.entries.len(), None);
+        }
+        for i in range {
+            if cache.slots[i].is_none() {
+                let shown = self.shown(&self.entries[i], labels);
+                let line = Self::line_of(&shown, labels);
+                cache.slots[i] = Some(Rendered {
+                    escaped: escape(&line),
+                    line,
+                    shown,
+                });
+            }
+        }
+        cache
+    }
+
+    /// An entry's line from its sorted fields (see [`line`](Self::line)).
+    fn line_of(shown: &Shown, labels: &LogLabels) -> String {
+        let shown = shown.clone();
         let mut head = Vec::new();
         let mut rest = Vec::new();
         for (f, v) in shown.known {
@@ -744,29 +848,71 @@ impl LiveLog {
             md.push('\n');
             return md;
         }
+        let cache = self.rendered(labels, 0..self.entries.len());
+        let parts = cache.slots.iter().flatten();
         match view {
             LogView::List => {
-                for i in 0..self.entries.len() {
+                for r in parts {
                     md.push_str("- ");
-                    md.push_str(&escape(&self.line(i, labels)));
+                    md.push_str(&r.escaped);
                     md.push('\n');
                 }
             }
-            LogView::Table => self.render_table(&mut md, labels),
+            LogView::Table => {
+                let rows: Vec<&Shown> = parts.map(|r| &r.shown).collect();
+                Self::render_table(&mut md, &rows, &rows, labels);
+            }
         }
         md
     }
 
-    fn render_table(&self, md: &mut String, labels: &LogLabels) {
-        let rows: Vec<Shown> = self.entries.iter().map(|e| self.shown(e, labels)).collect();
+    /// Entries `entries` alone as Markdown in `view`, as [`render`]
+    /// shows them in the whole log: list items, or a table with the whole
+    /// log's headers and only these rows. A live document changed by one
+    /// entry parses this, not the whole log (crate::live::hub).
+    ///
+    /// [`render`]: Self::render
+    pub(crate) fn render_entries(
+        &self,
+        view: LogView,
+        labels: &LogLabels,
+        entries: &[usize],
+    ) -> String {
+        let mut md = String::new();
+        let cache = self.rendered(labels, 0..self.entries.len());
+        let part = |i: usize| cache.slots.get(i).and_then(Option::as_ref);
+        match view {
+            LogView::List => {
+                for r in entries.iter().filter_map(|&i| part(i)) {
+                    md.push_str("- ");
+                    md.push_str(&r.escaped);
+                    md.push('\n');
+                }
+            }
+            LogView::Table => {
+                let all: Vec<&Shown> = cache.slots.iter().flatten().map(|r| &r.shown).collect();
+                let body: Vec<&Shown> = entries
+                    .iter()
+                    .filter_map(|&i| part(i))
+                    .map(|r| &r.shown)
+                    .collect();
+                Self::render_table(&mut md, &all, &body, labels);
+            }
+        }
+        md
+    }
+
+    /// A table: headers for the fields `all` the rows have, and a row for
+    /// each of `rows`.
+    fn render_table(md: &mut String, all: &[&Shown], rows: &[&Shown], labels: &LogLabels) {
         let mut fields: Vec<Field> = Vec::new();
         for (f, _) in FIELD_GROUPS {
-            if rows.iter().any(|r| r.known.iter().any(|(g, _)| g == f)) {
+            if all.iter().any(|r| r.known.iter().any(|(g, _)| g == f)) {
                 fields.push(*f);
             }
         }
         let mut others: Vec<String> = Vec::new();
-        for r in &rows {
+        for r in all {
             for (k, _) in &r.unknown {
                 if !others.contains(k) {
                     others.push(k.clone());
@@ -793,7 +939,7 @@ impl LiveLog {
         md.push_str(" |\n|");
         md.push_str(&"---|".repeat(headers.len()));
         md.push('\n');
-        for r in &rows {
+        for r in rows {
             let cells = fields
                 .iter()
                 .map(|f| {

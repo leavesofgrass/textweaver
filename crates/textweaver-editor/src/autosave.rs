@@ -109,7 +109,9 @@ pub use textweaver_core::fs::RENAME_RETRY_DELAYS_MS;
 /// in use.
 pub use textweaver_core::fs::rename_with_retry;
 
-use textweaver_core::fs::{retry_while_in_use, write_atomic_with_permissions};
+use textweaver_core::fs::{
+    retry_while_in_use, write_atomic_streamed, write_atomic_with_permissions,
+};
 
 /// `<dir>/<doc_key>.json`.
 pub fn snapshot_file(dir: &Path, doc_key: &str) -> PathBuf {
@@ -117,11 +119,58 @@ pub fn snapshot_file(dir: &Path, doc_key: &str) -> PathBuf {
 }
 
 /// Writes a snapshot to `<dir>/<doc_key>.json` atomically. Returns its path.
+/// The JSON goes straight to the temporary file, never into memory whole.
 pub fn write_snapshot(dir: &Path, snapshot: &RecoverySnapshot) -> std::io::Result<PathBuf> {
     let path = snapshot_file(dir, &snapshot.doc_key);
-    let text = serde_json::to_string(snapshot).map_err(std::io::Error::other)?;
-    write_atomic(&path, text.as_bytes())?;
+    write_atomic_streamed(&path, |w| {
+        serde_json::to_writer(w, snapshot).map_err(std::io::Error::other)
+    })?;
     Ok(path)
+}
+
+/// Writes a snapshot whose text is still a rope to `<dir>/<doc_key>.json`
+/// atomically, a chunk of the rope at a time: neither the whole text nor
+/// its JSON is ever built in memory. The file is byte for byte what
+/// [`write_snapshot`] writes for
+/// [`PendingSnapshot::to_snapshot`](crate::PendingSnapshot::to_snapshot).
+/// Returns its path.
+pub fn write_pending_snapshot(
+    dir: &Path,
+    snapshot: &crate::PendingSnapshot,
+) -> std::io::Result<PathBuf> {
+    let path = snapshot_file(dir, &snapshot.doc_key);
+    write_atomic_streamed(&path, |w| write_snapshot_json(w, snapshot))?;
+    Ok(path)
+}
+
+/// The JSON of [`RecoverySnapshot`], its fields in their declared order,
+/// with the text escaped one rope chunk at a time. A chunk ends on a whole
+/// char and JSON escapes each char on its own, so the escaped chunks
+/// joined are the escaped text.
+fn write_snapshot_json(
+    w: &mut dyn std::io::Write,
+    s: &crate::PendingSnapshot,
+) -> std::io::Result<()> {
+    fn json<T: Serialize + ?Sized>(w: &mut dyn std::io::Write, v: &T) -> std::io::Result<()> {
+        serde_json::to_writer(w, v).map_err(std::io::Error::other)
+    }
+    w.write_all(b"{\"doc_key\":")?;
+    json(w, &s.doc_key)?;
+    w.write_all(b",\"path\":")?;
+    json(w, &s.path)?;
+    w.write_all(b",\"text\":\"")?;
+    let mut buf = Vec::new();
+    for chunk in s.text.chunks() {
+        buf.clear();
+        serde_json::to_writer(&mut buf, chunk).map_err(std::io::Error::other)?;
+        // Without the quotes around the chunk.
+        w.write_all(&buf[1..buf.len() - 1])?;
+    }
+    w.write_all(b"\",\"ts\":")?;
+    json(w, &s.ts)?;
+    w.write_all(b",\"title\":")?;
+    json(w, &s.title)?;
+    w.write_all(b"}")
 }
 
 /// `<dir>/<doc_key>.lock`, the lock file guarding a snapshot.
@@ -698,6 +747,46 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&real).unwrap(), "new");
         let mode = std::fs::metadata(&real).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600);
+    }
+
+    /// The streamed snapshot of a rope is byte for byte the JSON of the
+    /// same snapshot built in memory, with text that needs escaping in
+    /// every chunk and chars of every width across chunk ends.
+    #[test]
+    fn a_streamed_snapshot_is_byte_for_byte_the_same() {
+        let dir = tempfile::tempdir().unwrap();
+        let line =
+            "Quote \" and back\\slash, tab\t, bell\u{7}, caf\u{e9}, \u{1F99D}, \u{2028}.\r\n";
+        let text = line.repeat(3_000);
+        for (path, title) in [
+            (None, None),
+            (
+                Some(PathBuf::from("notes").join("d\u{e9}j\u{e0} \"vu\".md")),
+                Some("A \"title\"\n".to_owned()),
+            ),
+        ] {
+            let pending = crate::PendingSnapshot {
+                doc_key: "doc-\u{e9}".into(),
+                path,
+                title,
+                ts: 1_767_225_600,
+                text: ropey::Rope::from_str(&text),
+            };
+            assert!(pending.text.chunks().count() > 10);
+            let a = write_pending_snapshot(dir.path(), &pending).unwrap();
+            let streamed = std::fs::read(&a).unwrap();
+            let b = write_snapshot(dir.path(), &pending.to_snapshot()).unwrap();
+            assert_eq!(a, b);
+            let built = std::fs::read(&b).unwrap();
+            assert_eq!(streamed, built);
+            assert_eq!(
+                built,
+                serde_json::to_vec(&pending.to_snapshot()).unwrap(),
+                "the file is what serde_json writes"
+            );
+            let back: RecoverySnapshot = serde_json::from_slice(&streamed).unwrap();
+            assert_eq!(back, pending.to_snapshot());
+        }
     }
 
     #[test]
