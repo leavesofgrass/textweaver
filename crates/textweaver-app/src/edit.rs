@@ -34,7 +34,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use ropey::Rope;
+use ropey::{Rope, RopeSlice};
 use textweaver_a11y::{Priority, Verbosity};
 use textweaver_core::{CharPos, CharRange, Direction, Edit, EditOutcome, Unit};
 use textweaver_editor::autosave::{self, AutosavePolicy, RecoverySnapshot};
@@ -1171,12 +1171,53 @@ impl App {
         Some((text, head - start, r))
     }
 
+    /// The rope line holding the editor's caret, without its line ending,
+    /// and the caret's char offset in it (at most the line's length). The
+    /// line is read in place: nothing is copied, however long it is.
+    fn editor_caret_rope_line(&self) -> Option<(RopeSlice<'_>, usize)> {
+        let ed = self.edit.as_ref()?.session.editor()?;
+        let rope = ed.text();
+        let head = ed.selection().head.0.min(rope.len_chars());
+        let n = rope.char_to_line(head);
+        let line = rope.line(n);
+        let ending = line
+            .chars_at(line.len_chars())
+            .reversed()
+            .take_while(|c| matches!(c, '\n' | '\r'))
+            .count();
+        let line = line.slice(..line.len_chars() - ending);
+        let col = (head - rope.line_to_char(n)).min(line.len_chars());
+        Some((line, col))
+    }
+
     /// What Markdown typed just before the caret means ("heading level 2",
     /// "bullet", "numbered item 3"), when a character completed it.
+    ///
+    /// Only the few characters a marker can span are read, so typing in a
+    /// very long line costs no more than in a short one.
     fn markdown_echo(&self) -> Option<String> {
-        let (text, col, _) = self.editor_caret_line()?;
-        let before: String = text.chars().take(col).collect();
-        let said = crate::mdline::markdown_echo(self.cat(), &before)?;
+        // The longest marker `mdline::markdown_echo` knows is `123456789.`.
+        // It sits between the leading spaces and the whitespace that ends
+        // the text before the caret.
+        const MARKER_MAX: usize = 10;
+        let (line, col) = self.editor_caret_rope_line()?;
+        let before = line.slice(..col);
+        // A marker is said only once the space after it is typed.
+        if before.chars_at(col).prev() != Some(' ') {
+            return None;
+        }
+        let lead = before.chars().take_while(|&c| c == ' ').count();
+        if col - lead > MARKER_MAX {
+            let trail = before
+                .chars_at(col)
+                .reversed()
+                .take_while(|c| c.is_whitespace())
+                .count();
+            if (col - lead).saturating_sub(trail) > MARKER_MAX {
+                return None;
+            }
+        }
+        let said = crate::mdline::markdown_echo(self.cat(), &before.to_string())?;
         let mut chars = said.chars();
         chars
             .next()
@@ -1185,26 +1226,43 @@ impl App {
 
     /// The first word completed on a heading line is said with the heading:
     /// `## Methods` as "Heading level 2, Methods".
+    ///
+    /// Reads only the heading marker and the first word before the caret,
+    /// and nothing when no word was completed.
     fn heading_word_echo(&self, mut events: Vec<EchoEvent>) -> Vec<EchoEvent> {
-        let Some((text, col, _)) = self.editor_caret_line() else {
+        if !events
+            .iter()
+            .any(|e| matches!(e, EchoEvent::WordCompleted(_)))
+        {
+            return events;
+        }
+        let Some((line, col)) = self.editor_caret_rope_line() else {
             return events;
         };
-        let level = crate::mdline::heading_level(&text);
+        // The marker after the leading spaces is at most six `#` and a
+        // space (`heading_level` skips leading spaces itself).
+        let lead = line.chars().take_while(|&c| c == ' ').count();
+        let marker: String = line.slice(lead..).chars().take(8).collect();
+        let level = crate::mdline::heading_level(&marker);
         if level == 0 {
             return events;
         }
-        let before: String = text.chars().take(col).collect();
-        let content = before.trim_start().trim_start_matches('#');
+        // The first word of the heading's text before the caret.
+        let word: String = line
+            .slice(..col)
+            .chars()
+            .skip_while(|c| c.is_whitespace())
+            .skip_while(|&c| c == '#')
+            .skip_while(|c| c.is_whitespace())
+            .take_while(|c| !c.is_whitespace())
+            .collect();
+        let first = (!word.is_empty()).then(|| word.trim_matches(|c: char| !c.is_alphanumeric()));
         let heading = self.msg_args("nav-label-heading-level", &args!["level" => level]);
         for e in &mut events {
-            if let EchoEvent::WordCompleted(w) = e {
-                let first = content
-                    .split_whitespace()
-                    .next()
-                    .is_some_and(|f| f.trim_matches(|c: char| !c.is_alphanumeric()) == w.as_str());
-                if first {
-                    *w = format!("{heading}, {w}");
-                }
+            if let EchoEvent::WordCompleted(w) = e
+                && first == Some(w.as_str())
+            {
+                *w = format!("{heading}, {w}");
             }
         }
         events
@@ -2099,5 +2157,225 @@ mod tests {
         span.apply_to_rope(&mut check).unwrap();
         assert_eq!(check, after);
         assert_eq!(span.range, CharRange::new(0, 8));
+    }
+
+    /// Counting the bytes this thread allocates, for the typing bound.
+    #[allow(unsafe_code)]
+    mod counting {
+        use std::alloc::{GlobalAlloc, Layout, System};
+        use std::cell::Cell;
+
+        /// The system allocator, counting each thread's allocated bytes.
+        struct Counting;
+
+        thread_local! {
+            // A const `Cell` never allocates, so the allocator may touch it.
+            static BYTES: Cell<usize> = const { Cell::new(0) };
+        }
+
+        fn counted(n: usize) {
+            let _ = BYTES.try_with(|b| b.set(b.get().saturating_add(n)));
+        }
+
+        // SAFETY: every call forwards to the system allocator with the same
+        // arguments; the counter never affects the returned pointers.
+        unsafe impl GlobalAlloc for Counting {
+            unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+                counted(layout.size());
+                // SAFETY: forwarded unchanged.
+                unsafe { System.alloc(layout) }
+            }
+            unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+                counted(layout.size());
+                // SAFETY: forwarded unchanged.
+                unsafe { System.alloc_zeroed(layout) }
+            }
+            unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+                // SAFETY: forwarded unchanged; `ptr` came from this allocator.
+                unsafe { System.dealloc(ptr, layout) }
+            }
+            unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+                counted(new_size);
+                // SAFETY: forwarded unchanged; `ptr` came from this allocator.
+                unsafe { System.realloc(ptr, layout, new_size) }
+            }
+        }
+
+        #[global_allocator]
+        static ALLOC: Counting = Counting;
+
+        /// The bytes this thread allocates while `f` runs.
+        pub(super) fn bytes<T>(f: impl FnOnce() -> T) -> (T, usize) {
+            let at = BYTES.with(Cell::get);
+            let out = f();
+            (out, BYTES.with(Cell::get).saturating_sub(at))
+        }
+    }
+
+    /// The Markdown echo as it was read before beta 6, from a copy of the
+    /// whole caret line: the answers the bounded reads must keep.
+    fn markdown_echo_reference(app: &App) -> Option<String> {
+        let (text, col, _) = app.editor_caret_line()?;
+        let before: String = text.chars().take(col).collect();
+        let said = crate::mdline::markdown_echo(app.cat(), &before)?;
+        let mut chars = said.chars();
+        chars
+            .next()
+            .map(|f| f.to_uppercase().chain(chars).collect::<String>())
+    }
+
+    /// The heading word echo as it was read before beta 6.
+    fn heading_word_echo_reference(app: &App, mut events: Vec<EchoEvent>) -> Vec<EchoEvent> {
+        let Some((text, col, _)) = app.editor_caret_line() else {
+            return events;
+        };
+        let level = crate::mdline::heading_level(&text);
+        if level == 0 {
+            return events;
+        }
+        let before: String = text.chars().take(col).collect();
+        let content = before.trim_start().trim_start_matches('#');
+        let heading = app.msg_args("nav-label-heading-level", &args!["level" => level]);
+        for e in &mut events {
+            if let EchoEvent::WordCompleted(w) = e {
+                let first = content
+                    .split_whitespace()
+                    .next()
+                    .is_some_and(|f| f.trim_matches(|c: char| !c.is_alphanumeric()) == w.as_str());
+                if first {
+                    *w = format!("{heading}, {w}");
+                }
+            }
+        }
+        events
+    }
+
+    /// A silent app editing `text`, with the caret at char `at`.
+    fn editing(text: &str, at: usize) -> App {
+        let mut app = App::new(crate::AppConfig::for_tests());
+        app.open_document(
+            Document::from_plain_text(text),
+            DocKey::untitled(1),
+            "T".into(),
+        );
+        app.dispatch(crate::command::Command::Action(ActionId::ToggleEditMode));
+        caret_to(&mut app, at);
+        app
+    }
+
+    fn caret_to(app: &mut App, at: usize) {
+        let ed = app
+            .edit
+            .as_mut()
+            .and_then(|e| e.session.editor_mut())
+            .expect("edit mode");
+        ed.set_selection(Selection::new(at, at));
+    }
+
+    /// Both echoes, as now and as before, with the words given as just
+    /// completed.
+    fn assert_echoes_match(app: &App, words: &[&str]) {
+        let events: Vec<EchoEvent> = words
+            .iter()
+            .map(|w| EchoEvent::WordCompleted((*w).to_owned()))
+            .chain([EchoEvent::Typed(' ')])
+            .collect();
+        assert_eq!(app.markdown_echo(), markdown_echo_reference(app));
+        assert_eq!(
+            app.heading_word_echo(events.clone()),
+            heading_word_echo_reference(app, events)
+        );
+    }
+
+    /// A 200,000-character single line of words.
+    fn long_line(prefix: &str) -> String {
+        let mut s = prefix.to_owned();
+        while s.chars().count() < 200_000 {
+            s.push_str("lorem ");
+        }
+        s
+    }
+
+    /// Typing in the middle of a very long line echoes what it echoed when
+    /// the whole line was copied, on a plain line and on a heading.
+    #[test]
+    fn typing_in_a_long_line_echoes_as_before() {
+        for prefix in ["", "## Methods ", "- ", "    "] {
+            let text = long_line(prefix);
+            let mid = 100_000;
+            let mut app = editing(&text, mid);
+            for typed in ["x", "y", " "] {
+                app.insert(typed);
+                assert_echoes_match(&app, &["xy", "lorem", "Methods"]);
+            }
+        }
+    }
+
+    /// Markers after many leading spaces, and the edge cases of the bounded
+    /// reads, are said as before.
+    #[test]
+    fn markers_after_leading_spaces_are_said_as_before() {
+        let pad = " ".repeat(40);
+        let mut app = editing("", 0);
+        app.insert(&format!("{pad}## "));
+        assert_eq!(app.markdown_echo().as_deref(), Some("Heading level 2"));
+        let mut app = editing("", 0);
+        app.insert(&format!("{pad}- "));
+        assert_eq!(app.markdown_echo().as_deref(), Some("Bullet"));
+        let tabs = "\t".repeat(20);
+        let cases = [
+            format!("{pad}## "),
+            format!("{pad}- "),
+            format!("{pad}- [ ] "),
+            format!("{pad}123456789. "),
+            format!("{pad}1234567890. "),
+            format!("{pad}>{} ", " ".repeat(30)),
+            format!("##{tabs} "),
+            format!("{pad}{tabs} "),
+            format!("{pad}#######"),
+            format!("{pad}# Methods "),
+            "# !Wow! next ".to_owned(),
+            "#\t### Deep ".to_owned(),
+            "## \r\n".to_owned(),
+            "- \r\nnext".to_owned(),
+            "## \n".to_owned(),
+        ];
+        for text in &cases {
+            for at in 0..=text.chars().count() {
+                let app = editing(text, at);
+                assert_echoes_match(&app, &["Methods", "Wow", "!Wow!", "Deep", "next", ""]);
+            }
+        }
+    }
+
+    /// Typing one character in a 200,000-character line allocates a small,
+    /// fixed amount: the echoes no longer copy the line.
+    #[test]
+    fn typing_in_a_long_line_allocates_little() {
+        let text = long_line("## Methods ");
+        let mut app = editing(&text, 100_000);
+        // The first key sets up what any first key does.
+        app.insert("x");
+        let words = vec![EchoEvent::WordCompleted("x".into())];
+        let (_, now) =
+            counting::bytes(|| (app.markdown_echo(), app.heading_word_echo(words.clone())));
+        let (_, then) = counting::bytes(|| {
+            (
+                markdown_echo_reference(&app),
+                heading_word_echo_reference(&app, words.clone()),
+            )
+        });
+        assert!(
+            then > 400_000,
+            "the old reads copied the line: {then} bytes"
+        );
+        assert!(now < 1_024, "the echoes allocated {now} bytes");
+        let ((), typed) = counting::bytes(|| {
+            app.insert("y");
+        });
+        assert!(
+            typed < 64 * 1024,
+            "typing one character allocated {typed} bytes"
+        );
     }
 }
