@@ -1,9 +1,10 @@
 //! `cargo xtask release X.Y.Z [--dry-run] [--no-checks]`: prepare a release
 //! commit and tag (docs/dev/releasing.md).
 //!
-//! 1. Checks that the working tree is clean and on `main`, and that the
+//! 1. Checks that the working tree is clean and on `main`, that the
 //!    changelog's `[Unreleased]` section is grouped by area, with no
-//!    agent's heading left in it. A listening check is optional: when the
+//!    agent's heading left in it, and that no message waits for the
+//!    translation pass (`locales/untranslated.txt` holds no id). A listening check is optional: when the
 //!    release guide's listening line is missing, old, or for another
 //!    version, the release says so as a note and goes on.
 //! 2. Sets `version` in `[workspace.package]` and runs `cargo update -w`.
@@ -62,6 +63,10 @@ const HISTORY_MARK: &str = "<!-- history -->";
 
 /// The repository, for the changelog link.
 const REPO_URL: &str = "https://github.com/leavesofgrass/textweaver";
+
+/// The messages in English only until the translation pass, relative to
+/// the root: one id per line, `#` starting a comment.
+const UNTRANSLATED: &str = "crates/textweaver-lexicon/locales/untranslated.txt";
 
 /// The release guide, which holds the listening checklist.
 const GUIDE: &str = "docs/dev/releasing.md";
@@ -223,6 +228,12 @@ pub fn run() -> anyhow::Result<()> {
             "the [Unreleased] section of CHANGELOG.md still has agents' headings; group their lines by area first: {}",
             headings.join("; ")
         ));
+    }
+    // English first, then a translation pass before each release (the
+    // owner's decision, Thursday, November 12, 2026).
+    match fs::read_to_string(root.join(UNTRANSLATED)) {
+        Ok(list) => problems.extend(untranslated_problem(&list)),
+        Err(e) => problems.push(format!("could not read {UNTRANSLATED}: {e}")),
     }
     let twice = duplicate_headings(&changelog);
     if !twice.is_empty() {
@@ -711,6 +722,25 @@ fn agent_headings(changelog: &str) -> Vec<String> {
         .collect()
 }
 
+/// The stop for messages not translated yet: `None` when the untranslated
+/// list holds no id (comments and blank lines aside).
+fn untranslated_problem(list: &str) -> Option<String> {
+    let n = list
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .count();
+    match n {
+        0 => None,
+        1 => Some(format!(
+            "1 message is not translated yet ({UNTRANSLATED}). Run the translation pass first."
+        )),
+        n => Some(format!(
+            "{n} messages are not translated yet ({UNTRANSLATED}). Run the translation pass first."
+        )),
+    }
+}
+
 /// Headings that appear twice: a version's `## [x.y.z]` anywhere in the
 /// changelog, or an area's `### ...` within one version's section (two
 /// agents each starting "### Fixed" under `[Unreleased]`). Compared
@@ -901,6 +931,25 @@ fn cargo(root: &Path, args: &[&str]) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn untranslated_messages_stop_the_release() {
+        assert_eq!(untranslated_problem("# The list.\n#\n\n"), None);
+        assert_eq!(
+            untranslated_problem("# The list.\nabout-title\n"),
+            Some(format!(
+                "1 message is not translated yet ({UNTRANSLATED}). Run the translation pass first."
+            ))
+        );
+        let p = untranslated_problem("# The list.\nabout-title\n\nhelp-key\n").unwrap();
+        assert!(p.starts_with("2 messages are not translated yet"), "{p}");
+    }
+
+    #[test]
+    fn the_real_untranslated_list_reads() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        assert!(fs::read_to_string(root.join(UNTRANSLATED)).is_ok());
+    }
 
     #[test]
     fn headings_twice_are_refused_per_version_section() {
