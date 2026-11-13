@@ -14,10 +14,14 @@
 //!   UEB through liblouis with the BRF writer's table, uncontracted when
 //!   liblouis is missing ([`BrailleView::fell_back`]).
 //! - **The print line.** Each run of cells is paired with the print it
-//!   stands for. liblouis says nothing of that, so for contracted braille
-//!   each word's prefixes are contracted too: a prefix whose braille starts
-//!   the word's braille has settled, and the print between two settled
-//!   prefixes owns the cells between them ([`word_groups`]).
+//!   stands for. For contracted braille, liblouis's library says which
+//!   print char each cell's rule starts at, and a run of cells with the
+//!   same start owns the print up to the next run's ([`position_groups`]).
+//!   When the library cannot be loaded or fails, the `lou_translate`
+//!   program, which says nothing of that, contracts each word's prefixes
+//!   too: a prefix whose braille starts the word's braille has settled,
+//!   and the print between two settled prefixes owns the cells between
+//!   them ([`word_groups`]).
 //! - **Every space is a cell.** Two spaces in print are two blank cells, so
 //!   spacing shows exactly.
 //! - **Visual only.** Nothing here is announced; screen readers drive real
@@ -292,6 +296,68 @@ pub fn contracted(text: &str, contract: &Contract<'_>) -> Result<BrailleLine, St
         groups,
         fell_back: false,
     })
+}
+
+/// A positioned contractor: the cells of a whole line and, for each, the
+/// print char (a char index into the line) its rule starts at (liblouis's
+/// library, or a stand-in in tests).
+pub type Position<'a> = dyn Fn(&str) -> Result<(Vec<u8>, Vec<usize>), String> + 'a;
+
+/// Contracted braille of `text` with each run's print, through
+/// `positions`: exact, since each cell says where its rule's print starts
+/// ([`position_groups`]).
+///
+/// # Errors
+///
+/// When `positions` fails, or its positions do not fit the line.
+pub fn contracted_exact(text: &str, positions: &Position<'_>) -> Result<BrailleLine, String> {
+    let text = spaced(text);
+    let (cells, starts) = positions(&text)?;
+    let groups = (starts.len() == cells.len())
+        .then(|| position_groups(&starts, text.chars().count()))
+        .flatten()
+        .ok_or_else(|| "the positions do not fit the line".to_owned())?;
+    Ok(BrailleLine {
+        cells,
+        groups,
+        fell_back: false,
+    })
+}
+
+/// The runs of cells and their print, from each cell's `starts` value (the
+/// print char its rule starts at) in a line of `chars` chars. Cells with
+/// equal values are one rule's: they own the print from that char up to
+/// the next run's (the last run, to the line's end; the first, from its
+/// start). `None` when the values go back or past the line, so the caller
+/// can pair another way.
+pub fn position_groups(starts: &[usize], chars: usize) -> Option<Vec<Group>> {
+    if starts.windows(2).any(|w| w[1] < w[0]) || starts.last().is_some_and(|&s| s >= chars) {
+        return None;
+    }
+    let mut groups: Vec<Group> = Vec::new();
+    for (i, &s) in starts.iter().enumerate() {
+        match groups.last_mut() {
+            Some(g) if g.chars.start == s => g.cells.end = i + 1,
+            Some(g) => {
+                g.chars.end = s;
+                groups.push(Group {
+                    cells: i..i + 1,
+                    chars: s..s + 1,
+                });
+            }
+            None => groups.push(Group {
+                cells: i..i + 1,
+                chars: s..s + 1,
+            }),
+        }
+    }
+    if let Some(first) = groups.first_mut() {
+        first.chars.start = 0;
+    }
+    if let Some(last) = groups.last_mut() {
+        last.chars.end = chars;
+    }
+    Some(groups)
 }
 
 /// The groups of blank cells `cells` for the spaces `chars`: one each when
@@ -579,12 +645,45 @@ fn braille_source(s: &crate::app::Session) -> (CharRange, CharPos) {
 
 /// `text` in the grade asked for; contracted falls back to uncontracted.
 fn translate(text: &str, contracted_asked: bool) -> BrailleLine {
-    if contracted_asked && let Ok(line) = contracted(text, &louis) {
-        return line;
+    translate_with(text, contracted_asked, &louis_positions, &louis)
+}
+
+/// [`translate`] with its contractors given. Contracted braille comes from
+/// `positions` with the exact print line, else from `contract` with the
+/// prefix pairing, else uncontracted; no fallback says a word.
+fn translate_with(
+    text: &str,
+    contracted_asked: bool,
+    positions: &Position<'_>,
+    contract: &Contract<'_>,
+) -> BrailleLine {
+    if contracted_asked {
+        if let Ok(line) = contracted_exact(text, positions) {
+            return line;
+        }
+        if let Ok(line) = contracted(text, contract) {
+            return line;
+        }
     }
     let mut line = uncontracted(text);
     line.fell_back = contracted_asked;
     line
+}
+
+/// liblouis's library with the BRF writer's grade 2 table: cells and the
+/// print char each cell's rule starts at.
+#[cfg(feature = "publish")]
+fn louis_positions(text: &str) -> Result<(Vec<u8>, Vec<usize>), String> {
+    let table = textweaver_writers::BrailleOptions::default().table;
+    let p = textweaver_writers::louis::translate_positions(text, &table)?;
+    let cells = p.braille.chars().map(|c| dots_of(c).unwrap_or(0)).collect();
+    Ok((cells, p.input_pos))
+}
+
+/// No liblouis without the BRF writer.
+#[cfg(not(feature = "publish"))]
+fn louis_positions(_text: &str) -> Result<(Vec<u8>, Vec<usize>), String> {
+    Err("this build has no braille translator".to_owned())
 }
 
 /// liblouis with the BRF writer's grade 2 table.
