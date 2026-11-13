@@ -108,7 +108,12 @@ fuzz_target!(|data: &[u8]| {
     for c in comments(&doc.meta) {
         assert!(c.range.start <= c.range.end, "{c:?} runs backwards");
         assert!(c.range.end.0 <= len, "{c:?} past the end ({len})");
-        assert!(!c.text.is_empty(), "{c:?} says nothing");
+        // A note with nothing typed is kept when it has a reply: the reply
+        // is what it says (`annots.rs` drops only notes with neither).
+        assert!(
+            !c.text.is_empty() || !c.replies.is_empty(),
+            "{c:?} says nothing"
+        );
     }
     for m in doc.marker_index().iter(MarkerKind::Link, None) {
         let r = m.reference.as_deref().unwrap_or_default();
