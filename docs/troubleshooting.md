@@ -360,6 +360,14 @@ If you hear "Speech stopped working", textweaver restarts speech once on its own
 
 The Braille view is in the textweaver app, and in the terminal reader only in self-voicing mode; with a screen reader running in the terminal there is no row, by design. Contracted braille needs liblouis; without it the view shows uncontracted braille, and its caption says so. See [The Braille view](reading-aids.md#the-braille-view).
 
+### The browser preview leaves something out
+
+When you preview a document in your browser, textweaver leaves out its scripts and unsafe HTML, and says once for that document: "Raw HTML left out of the preview. Trusted folders are in Settings." This is on purpose: a script in a document someone else wrote could otherwise read the files beside it from the page served by your computer. Ordinary HTML such as `<b>` and `<details>` stays. For your own documents, add the folder to Trusted preview folders in Settings (`trusted_folders` in `[preview]`); folders inside it are trusted too. In a preview that follows your saves, a remote image does not load either, by design. Exports and `tw convert` are not affected. See [Privacy](privacy.md#the-browser-preview).
+
+### A link to a file on another computer asks first
+
+Following a link to a network share, such as `\\server\share\notes.md` or a `file://server/` address, asks "Open a file on another computer? y or n." and tells you your sign-in may be sent. On Windows even checking that the file exists sends the computer your sign-in, so textweaver asks before it looks. Answer **y** only for a computer you trust; anything else leaves the link alone. Opening such a path with the system's default program is refused with "Not opened: the file is on another computer."
+
 ### A live source or the broker does not work
 
 Live documents have their own messages, and each one says what to do. [Connection messages](live-documents.md#connection-messages) lists them. The common cases:
@@ -370,8 +378,10 @@ Live documents have their own messages, and each one says what to do. [Connectio
 4. **"Broker not started".** Start your broker (or `tw broker`) says why. "The port is in use by another program" means another broker or a second textweaver has the port: stop it, or set `live.broker.port`. With no accounts and no join code, nobody could sign in; add an account with `tw broker account add`, or turn the join code on.
 5. **Readers cannot reach the broker.** By default it listens on this computer only. Set `live.broker.listen` (or `tw broker --listen`) to the Tailscale or network address, and allow textweaver when the firewall asks. On Windows, canceling that question blocks the program on every network without saying so; change the rule in Windows Defender Firewall.
 6. **Readers who pinned the broker's key cannot connect.** A join code gives the session a key of its own. Turn `live.broker.join_code` off, or give those readers the new code.
-7. **Join from a QR image finds nothing.** The clipboard must hold the image itself, not a file name; otherwise choose the image file. A blurred or partly hidden code is said in words; try a sharper or larger image. Over SSH the terminal reader reads the clipboard of the computer it runs on, so choose a file.
-8. **Nothing seems to arrive.** A quiet topic and a topic the account may not read look the same to a reader. After `quiet_hint_seconds` textweaver says so once; check the topic and the account's access.
+7. **Join from a QR image finds nothing.** The clipboard must hold the image itself, not a file name; otherwise choose the image file. A blurred or partly hidden code is said in words; try a sharper or larger image. Over SSH the terminal reader reads the clipboard of the computer it runs on, so choose a file. An image of more than 40 million pixels, or a file over 64 MiB, is refused: "the image is too large to read a QR code from", or "The image file is too large." Crop the picture to the code, or save a smaller photo, and try again. A very large image can take a moment: textweaver says "Reading the QR image." once and stays usable.
+8. **"Join code off: too many wrong codes."** After 200 wrong join codes in one broker session, the code turns off for everyone, so a guesser cannot go on; accounts still work. Start the broker again, which makes a new code, and give the new code to your readers. If the code reached anyone it should not have, start again with a fresh one as well.
+9. **"Locked out: ADDRESS for 5 minutes, after too many failed logins."** Five wrong logins from one address (an IPv6 /64) within a minute lock that address out for five minutes. Wait, then sign in with the right password. If a reader on a shared network is locked out by someone else's guesses, the lockout ends by itself. One address may also hold only 8 connections still logging in and 16 logged in, and the broker refuses the rest in words.
+10. **Nothing seems to arrive.** A quiet topic and a topic the account may not read look the same to a reader. After `quiet_hint_seconds` textweaver says so once; check the topic and the account's access.
 
 ## Report a bug
 
