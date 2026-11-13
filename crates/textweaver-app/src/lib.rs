@@ -151,6 +151,7 @@ mod access;
 mod actions;
 pub mod align;
 pub mod anki;
+mod announce;
 mod app;
 mod audio_export;
 mod authoring;
@@ -163,10 +164,8 @@ pub mod browse;
 pub mod buttons;
 mod cards;
 pub mod changes;
-mod overview;
 // In-reader export, preview, and citations: the full modules with the
 // `publish` feature, stand-ins that say "not in this build" without it.
-mod announce;
 #[cfg(feature = "publish")]
 mod citations;
 #[cfg(not(feature = "publish"))]
@@ -217,6 +216,7 @@ mod notes;
 mod obsidian_edit;
 pub mod opener;
 pub mod opening;
+mod overview;
 mod pages;
 pub mod palette;
 pub mod panels;
@@ -318,6 +318,9 @@ pub use panels::{Panel, PanelEntry, current_entry};
 pub use playback::{
     Playback, load_options, narration_policy, plan_with_written_pauses, structural_pauses,
 };
+#[cfg(feature = "publish")]
+pub use publish::page_typography;
+pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use reading_form::{READING_SETTINGS, SpacingPreset, is_reading_setting};
 pub use replace::ReplaceStep;
 pub use restart::SpeechStarter;
@@ -339,9 +342,6 @@ pub use wake::{Waker, channel_waker};
 pub use window::{DocWindow, Units, WINDOW_UNITS, WindowChange};
 pub use words::system_language;
 
-#[cfg(feature = "publish")]
-pub use publish::page_typography;
-pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;
 pub use textweaver_aids as aids;
 #[cfg(feature = "publish")]
@@ -364,3 +364,56 @@ pub use textweaver_summary as summaries;
 pub use textweaver_sync as sync_folder;
 pub use textweaver_text as text;
 pub use textweaver_theme as theme;
+
+#[cfg(test)]
+mod tests {
+    /// The name each top-level `mod` or `pub use` line of this file starts
+    /// with, in groups split by blank lines: `mod` lines when `uses` is
+    /// false, `pub use` lines when it is true.
+    fn names(uses: bool) -> Vec<Vec<String>> {
+        let mut groups = vec![Vec::new()];
+        for line in include_str!("lib.rs").lines() {
+            if line.is_empty() {
+                groups.push(Vec::new());
+                continue;
+            }
+            let rest = if uses {
+                line.strip_prefix("pub use ")
+            } else if line.ends_with(';') {
+                ["mod ", "pub mod ", "pub(crate) mod "]
+                    .iter()
+                    .find_map(|p| line.strip_prefix(p))
+            } else {
+                None
+            };
+            if let Some(rest) = rest {
+                let name: String = rest
+                    .chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect();
+                if let Some(group) = groups.last_mut() {
+                    group.push(name);
+                }
+            }
+        }
+        groups.retain(|g| !g.is_empty());
+        groups
+    }
+
+    /// The `mod` lines and the `pub use` block stay sorted by name (a
+    /// `#[cfg]` or `#[path]` stays on the line above its item), so a new
+    /// module goes in its place instead of at the end, where every change
+    /// would collide.
+    #[test]
+    fn mod_and_pub_use_lines_stay_sorted() {
+        for uses in [false, true] {
+            let groups = names(uses);
+            assert!(!groups.is_empty());
+            for group in groups {
+                let mut sorted = group.clone();
+                sorted.sort();
+                assert_eq!(group, sorted, "keep these lines of lib.rs sorted");
+            }
+        }
+    }
+}
