@@ -27,7 +27,11 @@
 //! # Languages
 //!
 //! - `en`: English, complete: every message the code asks for is in
-//!   `locales/en.ftl` (a test scans the sources).
+//!   one of the files in `locales/en/` (a test scans the sources). Each
+//!   language is a folder of files named by area (`live.ftl`,
+//!   `settings.ftl`), the same names in every language; `build.rs`
+//!   embeds them, joined in sorted order, and a test checks that no id
+//!   is defined in two of them.
 //! - `en-XA`: a pseudo-locale for testing coverage. Every message comes
 //!   out accented, a third longer, and in `⟦ ⟧` brackets, so a string
 //!   shown without brackets was never looked up in a catalog, and layouts
@@ -61,16 +65,20 @@ use parse::Part;
 pub use pseudo::bidi_problems;
 use pseudo::pseudo_text;
 
-/// The English catalog's source.
-const ENGLISH: &str = include_str!("../../locales/en.ftl");
+// `EN_TEXT` and the same for each built-in translation:
+// `build.rs` embeds every file in `locales/<lang>/`, sorted by name.
+include!(concat!(env!("OUT_DIR"), "/catalogs.rs"));
+
+/// The English catalog's source: the files in `locales/en/`, joined.
+const ENGLISH: &str = EN_TEXT;
 
 /// The built-in translations' sources, by language tag.
 const BUILTIN: &[(&str, &str)] = &[
-    ("es", include_str!("../../locales/es.ftl")),
-    ("fr", include_str!("../../locales/fr.ftl")),
-    ("de", include_str!("../../locales/de.ftl")),
-    ("pt", include_str!("../../locales/pt.ftl")),
-    ("ar", include_str!("../../locales/ar.ftl")),
+    ("es", ES_TEXT),
+    ("fr", FR_TEXT),
+    ("de", DE_TEXT),
+    ("pt", PT_TEXT),
+    ("ar", AR_TEXT),
 ];
 
 /// A language the interface is built with.
@@ -263,9 +271,9 @@ impl Catalog {
         static EN: OnceLock<Arc<Catalog>> = OnceLock::new();
         EN.get_or_init(|| {
             Arc::new(Catalog::parse("en", ENGLISH).unwrap_or_else(|errors| {
-                // A test keeps en.ftl valid; never fail at run time.
+                // A test keeps locales/en valid; never fail at run time.
                 for e in &errors {
-                    log::error!("en.ftl: {e}");
+                    log::error!("locales/en: {e}");
                 }
                 Catalog::empty("en")
             }))
@@ -347,7 +355,7 @@ impl Catalog {
             let mut c = Catalog::parse(tag, text).unwrap_or_else(|errors| {
                 // A test keeps every built-in catalog valid.
                 for e in &errors {
-                    log::error!("{tag}.ftl: {e}");
+                    log::error!("locales/{tag}: {e}");
                 }
                 Catalog::empty(tag)
             });
