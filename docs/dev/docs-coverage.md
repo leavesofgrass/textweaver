@@ -167,21 +167,21 @@ Each change merged in wave 2 of beta 6, and the guide that should cover it, open
 
 ## Beta 6, wave 3, checked on Friday, November 13, 2026
 
-Each change merged in wave 3 of beta 6, and the guide that should cover it, opened and read against the changelog's Unreleased section and the code. "Not found" means the guide was opened and does not say it; the gap is open. The user guides were swept at the same time, so these marks are to be checked again once that sweep is merged.
+Each change merged in wave 3 of beta 6, and the guide that should cover it, opened and read against the changelog's Unreleased section and the code. The marks below were checked again after the user guides' sweep, which ran at the same time, was merged.
 
 - SubRip and WebVTT caption files open as transcripts (paragraphs by speaker and pause, voice names, a heading every five minutes, no cue numbers or times, roll-up captions read once, a damaged cue still read): reading.md ("Captions as transcripts"), known-limits.md. Pass.
-- The caption minute headings are said in the interface language ("Minute 5" in the reader's language): reading.md. Not found. The "Time" item gives the English words only.
+- The caption minute headings are said in the interface language ("Minute 5" in the reader's language): reading.md. Pass.
 - An EPUB's accessibility information in the document overview, `tw info` and `tw info --json`: reading.md ("An EPUB's accessibility information"), command-line.md. Pass.
 - `tw cite add PMID 12345678`, `--pmid`, the Alt+B lookup, and the refusal of a bare short number: citations.md ("Add an article by PubMed ID"). Pass.
-- MathCAT 0.7.7 (new and revised language rules, Portuguese math speech): math.md names Portuguese among the languages MathCAT speaks. Pass for Portuguese. Not found for the version, which no guide names; only the changelog and the notices do.
-- UEB math in contracted (grade 2) braille marks grade 1 with symbol and word indicators, so a formula no longer starts with the passage indicator: math.md ("Math in braille files"), converting.md. Not found.
+- MathCAT 0.7.7 (new and revised language rules, Portuguese math speech): math.md names the version and Portuguese. Pass.
+- UEB math in contracted (grade 2) braille marks grade 1 with symbol and word indicators, so a formula no longer starts with the passage indicator: math.md. Pass.
 - Spelling and lint marks reach UI Automation as spelling and grammar error annotations, which NVDA reports with its Document Formatting setting on: screen-readers.md ("Spelling marks and text direction in the app"), editing.md. Pass.
 - Spelling and lint marks and right-to-left runs in the app's accessibility tree: screen-readers.md, editing.md. Pass.
 - Scroll Down and Scroll Up reach the ends of a very long document, keeping the text around the cursor: gui.md ("Scrolling and line numbers"), known-limits.md (the mouse wheel stays within the held text). Pass.
 - ammonia 4.1.9 (RUSTSEC-2026-0533): `THIRD-PARTY-NOTICES.md` lists the version. No guide needs to say more. Pass.
 - The conversion matrix has a fixture for every built-in loader, and the caption loader's: nothing a reader does. dev/testing.md, dev/architecture.md. Pass.
 - The `captions` fuzz target, the caption loader and how a format registers, the vendored MathCAT 0.7.7 and its trimmed patch, the Xilem patches' status lines, the vendored Windows adapter's annotation answer and its tests, the app's document view gap, and the frames probe's `--frames-marks`: dev/architecture.md, dev/third-party-data.md, dev/testing.md, fuzz/README.md. Pass.
-- What is new: whats-new.md has no entry for wave 3 (captions, EPUB accessibility information, PubMed IDs, spelling errors for NVDA, scrolling to the end of a long document). Not found.
+- What is new: whats-new.md has entries for wave 3 (captions, EPUB accessibility information, PubMed IDs, spelling errors for NVDA, scrolling to the end of a long document). Pass.
 
 ## Still open
 
