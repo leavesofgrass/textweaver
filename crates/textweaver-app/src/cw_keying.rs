@@ -288,21 +288,29 @@ impl App {
         };
         let midi_map = Arc::new(Mutex::new(midi_map(&self.settings)));
         let (map, contacts, wake) = (Arc::clone(&midi_map), to_keyer.clone(), self.wake.clone());
-        let (midi, opening) = crate::cw_midi::listen(
-            None,
-            move |_name, bytes| {
-                let at = Instant::now();
-                let m = *map.lock().unwrap_or_else(|e| e.into_inner());
-                if let Some((input, down)) = m.contact(bytes) {
-                    let _ = contacts.send(ToKeyer::Contact(input, down, at));
-                }
-            },
-            move |s| {
-                let _ = out.send(FromKeyer::Midi(s));
-                wake.wake();
-            },
-        )
-        .unwrap_or_else(|e| {
+        // The system's MIDI inputs open only in a session that keeps files,
+        // so tests never open this machine's MIDI devices (the WinRT MIDI
+        // library has crashed a test program opening and closing them
+        // from many threads at once).
+        let listened = if self.paths.is_some() {
+            crate::cw_midi::listen(
+                None,
+                move |_name, bytes| {
+                    let at = Instant::now();
+                    let m = *map.lock().unwrap_or_else(|e| e.into_inner());
+                    if let Some((input, down)) = m.contact(bytes) {
+                        let _ = contacts.send(ToKeyer::Contact(input, down, at));
+                    }
+                },
+                move |s| {
+                    let _ = out.send(FromKeyer::Midi(s));
+                    wake.wake();
+                },
+            )
+        } else {
+            Ok((MidiListener::none(), 0))
+        };
+        let (midi, opening) = listened.unwrap_or_else(|e| {
             log::warn!("CW keying: MIDI: {e}");
             (MidiListener::none(), 0)
         });
