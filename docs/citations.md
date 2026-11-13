@@ -108,12 +108,12 @@ Added reference clark1981. Clark, 1981. Error-correction coding for digital comm
 ## Add an article by PubMed ID
 
 ```bash
-tw cite add "PMID 12345678"
+tw cite add PMID 12345678
 tw cite add PMID:12345678
 tw cite add 12345678 --pmid
 ```
 
-A PubMed ID (PMID) is the number PubMed gives each article in MEDLINE and the life sciences journals it indexes, 1 to 8 digits. Write `PMID` before it, with or without a colon or a space: `PMID:12345678`, `pmid 12345678`, and `PMID12345678` all work. On the command line the identifier is one argument, so put a space form in quotes, as in `"PMID 12345678"`. A bare number is never taken for a PubMed ID, because it may as well be an ISBN with a digit missing; textweaver says so and how to give it: "12345678 is too short for an ISBN. If it is a PubMed ID, write PMID 12345678." With `--pmid`, the identifier is a PubMed ID, so a bare number is looked up as one.
+A PubMed ID (PMID) is the number PubMed gives each article in MEDLINE and the life sciences journals it indexes, 1 to 8 digits. Write `PMID` before it, with or without a colon or a space: `PMID:12345678`, `pmid 12345678`, and `PMID12345678` all work. On the command line the words of the identifier are joined with a space, so `tw cite add PMID 12345678` needs no quotes, and `"PMID 12345678"` in quotes works too. A bare number is never taken for a PubMed ID, because it may as well be an ISBN with a digit missing; textweaver says so and how to give it: "12345678 is too short for an ISBN. If it is a PubMed ID, write PMID 12345678." With `--pmid`, the identifier is a PubMed ID, so a bare number is looked up as one.
 
 The article is looked up in PubMed through NCBI's E-utilities, which gives its title, authors, journal, volume, issue, pages, date, and DOI. The reference keeps the PMID, and the PubMed Central ID when there is one, as the CSL-JSON fields `PMID` and `PMCID`. Group authors, such as a study group, are kept as one name. For an article with three authors you hear, for example:
 
