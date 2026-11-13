@@ -4,7 +4,7 @@ How to write the words textweaver says and shows: status messages, questions, er
 
 Every message lives in the message catalog, `crates/textweaver-lexicon/locales/`: one folder per language (`en`, `ar`, `de`, `es`, `fr`, `pt`), each holding the same files, one per area of the interface (`live.ftl`, `reading.ftl`, `settings.ftl`, and so on). A message has the same id, in the same area file, in every language. English is the source; [Translations](#translations) says how the other languages follow it. A setting's label and help also live in `INFO` in `crates/textweaver-app/src/settings_schema.rs`, and a command's help in `crates/textweaver-keymap/src/action.rs`; tests keep each pair equal, so change both, then run `cargo xtask regen` for the generated references.
 
-The style tests are in `crates/textweaver-lexicon/src/i18n/style_tests.rs`. A new message that breaks a rule the tests check fails the test, which names the rule's number below. Two lists of exceptions remain in the file: the setting helps whose first sentence is still longer than fifteen words (`LONG_FIRST_SENTENCE`, which may only shrink; when you fix a help, take its id off the list, and the test fails if you forget), and the three "Could not open" messages whose reason is the next step. The list of messages allowed to repeat a sentence is empty.
+The style tests are in `crates/textweaver-lexicon/src/i18n/style_tests.rs`. A new message that breaks a rule the tests check fails the test, which names the rule's number below. Where messages still break a rule, the file lists their ids, and each list may only shrink: when you fix a message, take its id off the list, and the test fails if you forget. The lists are the setting helps whose first sentence is longer than fifteen words (`LONG_FIRST_SENTENCE`), the questions asked after other text (`QUESTION_LATE`), the status messages whose first clause runs past 40 characters (`LONG_FIRST_CLAUSE`) or that start with a lead-in (`LEAD_IN`), and the translations that still hold a symbol (`KNOWN_SYMBOLS`). The three "Could not open" messages whose reason is the next step are exempt from rule 2. The list of messages allowed to repeat a sentence is empty.
 
 ## The rules
 
@@ -28,11 +28,11 @@ The shape is "Could not VERB OBJECT: CAUSE NEXT STEP." The cause is often the sy
 ### 3. Questions: the question first, naming what yes does, then "y or n"
 
 - Good: "Quit textweaver? y or n", "Download the Lexend font, 206 KB, SIL Open Font License? y or n".
-- Lower case "y or n", never "Y or N". No period after it, unless more text follows ("Exported essay.html. Open it? y or n. Format HTML, in Documents.").
+- Lower case "y or n", never "Y or N". No period after it, unless more text follows ("Use the notes from laptop here? y or n. This may be Cells, with 4 notes.").
 - Name the object: "Use the notes from Ada's laptop? y or n", not "Use them?". When a stray key asks again, ask the whole question again.
 - A question that changes or removes something asks before it acts (Reset all colors asks first).
 - In the app, the dialog's name is the question without "y or n", because its Yes and No buttons show the keys. The status line and the terminal keep "y or n".
-- Tested: `questions_end_with_y_or_n`.
+- Tested: `questions_end_with_y_or_n`, and `questions_come_first`, which fails when the first sentence of a message holding "? y or n" is not the question (`QUESTION_LATE` lists the older ones, such as "Exported essay.html. Open it? y or n.").
 
 ### 4. Casing
 
@@ -40,7 +40,7 @@ Sentences start with a capital. Labels, names, and choices are in sentence case 
 
 ### 5. Punctuation
 
-A sentence ends with a period. Labels, prompts, names, choices, and list items do not. In a status-like message, prefer two short sentences to one joined with a semicolon. No em dashes, quotation marks inside messages, arrows, or symbols a speech engine skips or spells out.
+A sentence ends with a period. Labels, prompts, names, choices, and list items do not. In a status-like message, prefer two short sentences to one joined with a semicolon. No em dashes, quotation marks inside messages, arrows, or symbols a speech engine skips or spells out. Tested in all six languages by `no_symbols_in_any_language`: arrows, check marks, box drawing, bullets, shapes, dingbats, and emoji fail; the ellipsis on a chooser's name ("Open…") is allowed.
 
 ### 6. Numbers and units
 
@@ -77,7 +77,10 @@ Use real plural selects ("1 note", "2 notes"), never "(s)". Zero says "No notes.
 
 ### 11. The 40-cell rule
 
-The key fact is in cells 1 to 40. A prompt label plus eight typed letters fits. A menu name fits. A question comes before what it is about. A status-like result fits whole, or its first 40 cells already carry the outcome. Count Braille cells, not characters: capitals and digits take extra cells in uncontracted braille, and `textweaver_tui::ui::braille_cells` counts them.
+The key fact is in cells 1 to 40. A prompt label plus eight typed letters fits. A menu name fits. A question comes before what it is about. A status-like result fits whole, or its first 40 cells already carry the outcome. The owner reads computer Braille, one cell per character, so the catalog's test counts characters. The terminal reader's tests count cells with `textweaver_tui::ui::braille_cells`, which adds a cell for each capital and number sign as uncontracted braille does, and so is stricter.
+
+- A status or announcement message's first clause (up to the first period, colon, semicolon, or question mark), with sample values (eight letters for text, four digits for a number), fits in 40 characters. Names, labels, setting helps, choices, command descriptions, key names, and button hints are left out. Tested: `status_messages_lead_within_forty_characters`, whose list `LONG_FIRST_CLAUSE` may only shrink.
+- Such a message starts with the fact, not with "The", "This", "Your", "A message on", or the brand. Tested: `status_messages_start_with_the_fact`, whose list `LEAD_IN` may only shrink.
 
 - The app's button descriptions (`gui-hint-*`) fit 40 cells and say what the name does not; Stop, Slower, Faster, and the sentence buttons have none, since their names say it. The full help stays in F1, Shift+F1, and the palette. Tested: `button_hints_are_short_in_every_language`, and in cells by `window_button_hints_fit_a_braille_line` in the terminal's tests.
 - A setting's help starts with one sentence of at most fifteen words. The app shows that sentence under the form and gives it as the row's description; F1 says the whole help, and the settings reference prints it. Tested: `setting_helps_start_with_a_short_sentence`, whose list `LONG_FIRST_SENTENCE` may only shrink.
@@ -90,10 +93,10 @@ Checked:
 - Every id the code uses is in `locales/en`, every id there is used, no id is defined in two files of one language, and every translation has only English's ids (all of them, apart from the untranslated list), only English's variables, and plural keys its language uses (`crates/textweaver-lexicon/src/i18n/tests.rs`).
 - The pseudo-locale run fails on any English left outside the catalog (`crates/textweaver-app/tests/it/pseudo_locale.rs`).
 - Settings labels and helps equal `INFO`; command helps equal the keymap's.
-- Of the style rules above, on the English catalog (`style_tests.rs`): stacked verbs (rule 1), the next step of an error (rule 2, in all six languages), the end of a question (rule 3), hex color codes (rule 6), the one-word list and duplicate sentences (rule 7), and the short first sentence of a setting help and the short button hints (rule 11, the hints in all six languages).
+- Of the style rules above, on the English catalog (`style_tests.rs`): stacked verbs (rule 1), the next step of an error (rule 2, in all six languages), the end of a question and the question first (rule 3), no symbols (rule 5, in all six languages), hex color codes (rule 6), the one-word list and duplicate sentences (rule 7), and the short first sentence of a setting help, the short button hints (in all six languages), and a status message's first clause within 40 characters with no lead-in (rule 11 and rule 1).
 - 40 cells: about thirty terminal lines, every prompt and menu name in six languages, some sync and font messages, and the app's button descriptions.
 
-Not checked yet, so a reviewer reads for them: meaning first, casing, punctuation (a period, no em dash), units in spoken text, positions, and counts.
+Not checked yet, so a reviewer reads for them: meaning first beyond the lead-in words, casing, punctuation (a period, no em dash), units in spoken text, positions, and counts.
 
 ## Translations
 
