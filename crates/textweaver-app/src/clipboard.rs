@@ -23,6 +23,12 @@
 //! ([`App::paste_contents`]).
 //!
 //! [`FakeClipboard`] holds whatever a test puts on it.
+//!
+//! Copying goes the other way: the frontend takes what was copied with
+//! [`App::take_clipboard_text`], a [`ClipboardText`] that says whether the
+//! text is a secret. Copy the join code and Copy the join link mark theirs
+//! (security QW4), and the frontends' clipboard writers then keep it out
+//! of clipboard history and the cloud clipboard where the system can.
 
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::sync::{Arc, Mutex};
@@ -35,6 +41,38 @@ use textweaver_lexicon::i18n::Catalog;
 use crate::app::App;
 use crate::clipboard_image::ClipboardImage;
 use crate::command::Effect;
+
+/// Text copied in textweaver, for the frontend to put on the system
+/// clipboard ([`App::take_clipboard_text`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClipboardText {
+    /// The text.
+    pub text: String,
+    /// A secret (a join code or join link): kept out of clipboard history
+    /// and the cloud clipboard where the system allows it. Text sent with
+    /// OSC 52 cannot be marked.
+    pub secret: bool,
+}
+
+impl App {
+    /// Text copied or cut since the last call, for the frontend's system
+    /// clipboard, and whether it is a secret ([`ClipboardText::secret`]).
+    pub fn take_clipboard_text(&mut self) -> Option<ClipboardText> {
+        let secret = self.clipboard_secret.take();
+        self.take_clipboard().map(|text| ClipboardText {
+            secret: secret.as_deref() == Some(text.as_str()),
+            text,
+        })
+    }
+
+    /// Copies `secret` (a join code or join link) as Copy does, marked so
+    /// the frontend keeps it out of clipboard history.
+    pub(crate) fn copy_secret(&mut self, secret: String) {
+        self.authoring.copied = Some(secret.clone());
+        self.clipboard_secret = Some(secret.clone());
+        self.clipboard = Some(secret);
+    }
+}
 
 /// Formatted text longer than this many bytes is converted on a worker
 /// thread.

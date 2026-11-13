@@ -20,6 +20,13 @@
 //! The first time text goes to the system clipboard, textweaver says so
 //! once: "Copied with the system clipboard, because this terminal cannot
 //! take copied text."
+//!
+//! A secret (the join code, the join link) goes to the system clipboard
+//! marked private (security QW4): on Windows it is kept out of clipboard
+//! history (Windows+V) and the cloud clipboard, on macOS it is marked
+//! concealed for clipboard managers, and on Linux it is marked for
+//! clipboard managers to skip. OSC 52 cannot mark anything, so a secret
+//! sent that way is plain copied text to the terminal.
 
 use textweaver_app::lexicon::i18n::Catalog;
 
@@ -124,12 +131,18 @@ pub fn detect_here() -> Route {
     detect(Os::current(), |name| std::env::var(name).ok())
 }
 
+/// What a recording clipboard was asked to hold: each text, and whether
+/// it was a secret (tests; see [`SystemClipboard::recording`]).
+pub type ClipboardLog = std::sync::Arc<std::sync::Mutex<Vec<(String, bool)>>>;
+
 /// The system clipboard, opened on first use and kept open: on X11 the
 /// copied text lives as long as the clipboard object does.
 #[derive(Default)]
 pub struct SystemClipboard {
     #[cfg(feature = "clipboard")]
     inner: Option<arboard::Clipboard>,
+    /// A recording clipboard writes nothing; it keeps each request.
+    log: Option<ClipboardLog>,
 }
 
 impl std::fmt::Debug for SystemClipboard {
@@ -139,28 +152,82 @@ impl std::fmt::Debug for SystemClipboard {
 }
 
 impl SystemClipboard {
-    /// Puts `text` on the system clipboard.
+    /// A clipboard that never touches the system's: it records what it is
+    /// asked to hold in the returned log (tests).
+    pub fn recording() -> (Self, ClipboardLog) {
+        let log = ClipboardLog::default();
+        let clip = SystemClipboard {
+            log: Some(log.clone()),
+            ..SystemClipboard::default()
+        };
+        (clip, log)
+    }
+
+    /// Puts `text` on the system clipboard; a `secret` is kept out of
+    /// clipboard history and the cloud clipboard where the system allows
+    /// it.
     ///
     /// # Errors
     ///
     /// A message for the listener when the clipboard cannot be opened or
     /// written, or when this build has no system clipboard.
-    pub fn set_text(&mut self, c: &Catalog, text: &str) -> Result<(), String> {
+    pub fn set_text(&mut self, c: &Catalog, text: &str, secret: bool) -> Result<(), String> {
+        if let Some(log) = &self.log {
+            if let Ok(mut l) = log.lock() {
+                l.push((text.to_owned(), secret));
+            }
+            return Ok(());
+        }
         #[cfg(feature = "clipboard")]
         {
             if self.inner.is_none() {
                 self.inner = Some(arboard::Clipboard::new().map_err(|e| e.to_string())?);
             }
             match self.inner.as_mut() {
-                Some(c) => c.set_text(text.to_owned()).map_err(|e| e.to_string()),
+                Some(clip) => {
+                    let set = clip.set();
+                    let set = if secret { private(set) } else { set };
+                    set.text(text.to_owned()).map_err(|e| e.to_string())
+                }
                 None => Err(c.tr("tui-clip-not-available")),
             }
         }
         #[cfg(not(feature = "clipboard"))]
         {
-            let _ = text;
+            let _ = (text, secret);
             Err(c.tr("tui-clip-not-built"))
         }
+    }
+}
+
+/// `set` marked private: out of Windows clipboard history and the cloud
+/// clipboard, concealed on macOS, and skipped by Linux clipboard managers.
+#[cfg(feature = "clipboard")]
+pub(crate) fn private(set: arboard::Set<'_>) -> arboard::Set<'_> {
+    #[cfg(windows)]
+    {
+        use arboard::SetExtWindows;
+        set.exclude_from_history().exclude_from_cloud()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use arboard::SetExtApple;
+        set.exclude_from_history()
+    }
+    #[cfg(all(
+        unix,
+        not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+    ))]
+    {
+        use arboard::SetExtLinux;
+        set.exclude_from_history()
+    }
+    #[cfg(not(any(
+        windows,
+        all(unix, not(any(target_os = "android", target_os = "emscripten")))
+    )))]
+    {
+        set
     }
 }
 

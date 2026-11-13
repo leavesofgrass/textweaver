@@ -266,6 +266,38 @@ fn copy_the_join_link_reaches_the_terminal_clipboard() {
     tui.dispatch(Command::Action(ActionId::StopBroker));
 }
 
+/// Security QW4: on the system clipboard route, Copy the join code and
+/// Copy the join link reach the clipboard writer marked as secrets, so it
+/// keeps them out of clipboard history; an ordinary copy is not marked.
+/// The recording clipboard never touches the system's.
+#[test]
+fn the_join_code_reaches_the_system_clipboard_as_a_secret() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (speech, _log) = recording_service().unwrap();
+    let mut app = App::new(AppConfig {
+        speech,
+        paths: Some(textweaver_app::store::Paths::under(tmp.path())),
+        ..AppConfig::for_tests()
+    });
+    let _ = app.update_settings(|s| s.live.broker.listen = vec!["127.0.0.1:0".into()]);
+    let mut tui = Tui::with_color_support(app, ColorSupport::NoColor);
+    let (clip, log) = textweaver_tui::clipboard::SystemClipboard::recording();
+    tui.set_system_clipboard(clip);
+    tui.set_clipboard_route(textweaver_tui::clipboard::Route::System);
+    tui.dispatch(Command::Action(ActionId::StartBroker));
+    assert!(tui.app().live_broker_running());
+    let code = tui.app().live_broker_join_code().unwrap();
+    tui.dispatch(Command::Action(ActionId::CopyJoinCode));
+    tui.dispatch(Command::Action(ActionId::CopyJoinLink));
+    tui.dispatch(Command::Action(ActionId::StopBroker));
+    let sent = log.lock().unwrap().clone();
+    assert_eq!(sent.len(), 2, "{sent:?}");
+    assert_eq!(sent[0], (code, true));
+    assert!(sent[1].0.starts_with("twjoin://") && sent[1].1, "{sent:?}");
+    // Nothing went to the terminal.
+    assert_eq!(tui.take_clipboard_sequence(), None);
+}
+
 /// Shift+F10 (or the Applications key) on the join code field opens its
 /// context menu: Copy, Paste, and Show the join code. Show opens the field
 /// shown as typed, Escape goes back to it, and its text is kept.

@@ -883,8 +883,7 @@ impl App {
                     let m = self.msg("live-field-empty");
                     self.tell(&m);
                 } else {
-                    self.authoring.copied = Some(code.clone());
-                    self.clipboard = Some(code);
+                    self.copy_secret(code);
                     let m = self.msg("live-join-code-copied");
                     self.tell(&m);
                 }

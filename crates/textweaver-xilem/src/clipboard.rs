@@ -14,8 +14,44 @@
 //! The app is given it with `App::set_clipboard`, so Ctrl+V (Cmd+V), the
 //! context menu's Paste, and Paste as plain text all read it. Without
 //! HTML, the plain text is pasted.
+//!
+//! Copying goes through Masonry's clipboard, except for a secret (the join
+//! code, the join link; security QW4), which [`write_private`] puts on the
+//! clipboard itself, marked private: on Windows out of clipboard history
+//! (Windows+V) and the cloud clipboard, on macOS concealed for clipboard
+//! managers, and on Linux marked for clipboard managers to skip.
 
+use textweaver_app::clipboard::ClipboardText;
 use textweaver_app::{Clipboard, ClipboardContents};
+
+/// How copied text goes on the clipboard ([`write_for`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Write {
+    /// Through Masonry's clipboard, as Copy and Cut go.
+    Plain(String),
+    /// A secret, through [`write_private`].
+    Private(String),
+}
+
+/// How `copied` goes on the clipboard: a secret privately, anything else
+/// as Copy goes.
+pub fn write_for(copied: ClipboardText) -> Write {
+    if copied.secret {
+        Write::Private(copied.text)
+    } else {
+        Write::Plain(copied.text)
+    }
+}
+
+/// Puts `text` on the system clipboard marked private: out of clipboard
+/// history and the cloud clipboard where the system allows it.
+///
+/// # Errors
+///
+/// Why the clipboard could not be opened or written.
+pub fn write_private(text: &str) -> Result<(), String> {
+    imp::write_private(text)
+}
 
 /// The system clipboard, read each time the app pastes.
 #[derive(Debug, Default)]
@@ -69,8 +105,86 @@ mod imp {
     windows_core::link!("kernel32.dll" "system" fn GlobalLock(mem: isize) -> *mut c_void);
     windows_core::link!("kernel32.dll" "system" fn GlobalUnlock(mem: isize) -> i32);
     windows_core::link!("kernel32.dll" "system" fn GlobalSize(mem: isize) -> usize);
+    windows_core::link!("user32.dll" "system" fn EmptyClipboard() -> i32);
+    windows_core::link!("user32.dll" "system" fn SetClipboardData(format: u32, mem: isize) -> isize);
+    windows_core::link!("kernel32.dll" "system" fn GlobalAlloc(flags: u32, bytes: usize) -> isize);
+    windows_core::link!("kernel32.dll" "system" fn GlobalFree(mem: isize) -> isize);
 
     const CF_UNICODETEXT: u32 = 13;
+    /// `GMEM_MOVEABLE`, as the clipboard wants its blocks.
+    const GMEM_MOVEABLE: u32 = 0x0002;
+
+    /// Puts `text` on the clipboard with the two formats Windows reads to
+    /// keep it out of clipboard history and the cloud clipboard
+    /// (`CanIncludeInClipboardHistory` and `CanUploadToCloudClipboard`,
+    /// each a zero DWORD), as arboard's `exclude_from_history` and
+    /// `exclude_from_cloud` do.
+    pub fn write_private(text: &str) -> Result<(), String> {
+        let wide: Vec<u16> = text.encode_utf16().chain([0]).collect();
+        let bytes: Vec<u8> = wide.iter().flat_map(|u| u.to_le_bytes()).collect();
+        let zero = 0u32.to_le_bytes();
+        let marks = ["CanIncludeInClipboardHistory", "CanUploadToCloudClipboard"];
+        // SAFETY: the clipboard is opened with no owner window and closed
+        // before returning; each block is allocated, filled while locked,
+        // and handed to the system, which then owns it (or freed when the
+        // system refuses it).
+        unsafe {
+            let mut opened = false;
+            for _ in 0..5 {
+                if OpenClipboard(0) != 0 {
+                    opened = true;
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            if !opened {
+                return Err("the clipboard is in use by another program".into());
+            }
+            let mut result = if EmptyClipboard() != 0 {
+                put(CF_UNICODETEXT, &bytes)
+            } else {
+                Err("the clipboard could not be emptied".into())
+            };
+            for mark in marks {
+                if result.is_ok() {
+                    result = match format_id(mark) {
+                        Some(f) => put(f, &zero),
+                        None => Err(format!("no clipboard format {mark}")),
+                    };
+                }
+            }
+            CloseClipboard();
+            result
+        }
+    }
+
+    /// Hands the clipboard a copy of `bytes` in `format`.
+    ///
+    /// # Safety
+    ///
+    /// The clipboard must be open and emptied by this program.
+    unsafe fn put(format: u32, bytes: &[u8]) -> Result<(), String> {
+        // SAFETY: the block is `bytes.len()` long, locked while it is
+        // filled, and owned by the system once SetClipboardData succeeds.
+        unsafe {
+            let mem = GlobalAlloc(GMEM_MOVEABLE, bytes.len());
+            if mem == 0 {
+                return Err("out of memory for the clipboard".into());
+            }
+            let ptr = GlobalLock(mem).cast::<u8>();
+            if ptr.is_null() {
+                GlobalFree(mem);
+                return Err("the clipboard block could not be locked".into());
+            }
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr, bytes.len());
+            GlobalUnlock(mem);
+            if SetClipboardData(format, mem) == 0 {
+                GlobalFree(mem);
+                return Err("the clipboard refused the text".into());
+            }
+            Ok(())
+        }
+    }
 
     /// The clipboard's text, HTML, and RTF. Another program may hold the
     /// clipboard for a moment, so opening it is tried a few times.
@@ -150,7 +264,44 @@ mod imp {
 
 #[cfg(not(windows))]
 mod imp {
+    use std::cell::RefCell;
+
     use textweaver_app::ClipboardContents;
+
+    thread_local! {
+        /// The clipboard a private copy went through, kept open: on X11
+        /// the copied text lives as long as the clipboard object does.
+        static KEPT: RefCell<Option<arboard::Clipboard>> = const { RefCell::new(None) };
+    }
+
+    /// Puts `text` on the clipboard through arboard, concealed on macOS
+    /// and marked for Linux clipboard managers to skip.
+    pub fn write_private(text: &str) -> Result<(), String> {
+        KEPT.with(|kept| {
+            let mut kept = kept.borrow_mut();
+            if kept.is_none() {
+                *kept = Some(arboard::Clipboard::new().map_err(|e| e.to_string())?);
+            }
+            let Some(clip) = kept.as_mut() else {
+                return Err("no clipboard".into());
+            };
+            let set = clip.set();
+            #[cfg(target_os = "macos")]
+            let set = {
+                use arboard::SetExtApple;
+                set.exclude_from_history()
+            };
+            #[cfg(all(
+                unix,
+                not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+            ))]
+            let set = {
+                use arboard::SetExtLinux;
+                set.exclude_from_history()
+            };
+            set.text(text.to_owned()).map_err(|e| e.to_string())
+        })
+    }
 
     /// The clipboard's text and HTML through `arboard`. Empty when the
     /// clipboard cannot be opened (with no display, for one).
@@ -176,6 +327,22 @@ mod tests {
         assert_eq!(until_nul(b"<p>Hi</p>\0\0junk"), "<p>Hi</p>");
         assert_eq!(until_nul(b"{\rtf1 Hi}"), "{\rtf1 Hi}");
         assert_eq!(until_nul(b""), "");
+    }
+
+    /// Security QW4: a secret goes the private way, anything else as Copy
+    /// goes. (Neither touches the clipboard here.)
+    #[test]
+    fn a_secret_is_written_privately() {
+        let secret = ClipboardText {
+            text: "ABCD-EFGH".into(),
+            secret: true,
+        };
+        assert_eq!(write_for(secret), Write::Private("ABCD-EFGH".into()));
+        let plain = ClipboardText {
+            text: "words".into(),
+            secret: false,
+        };
+        assert_eq!(write_for(plain), Write::Plain("words".into()));
     }
 
     /// The paste key keeps the clipboard's HTML, and takes the window's
