@@ -6,7 +6,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::time::Instant;
 
-use masonry::accesskit::Role;
+use masonry::accesskit::{Role, TextDirection};
 use masonry::core::keyboard::{Key, NamedKey};
 use masonry::core::{NewWidget, TextEvent, WidgetTag};
 use masonry_testing::{TestHarness, TestHarnessParams};
@@ -82,6 +82,54 @@ fn the_document_is_one_readonly_node_with_its_text() {
         assert_eq!(c.role(), Role::TextRun);
         assert!(c.data().character_lengths().len() <= 255);
     }
+}
+
+/// An Arabic paragraph's runs are right to left in the tree, a Latin
+/// paragraph's left to right, and a Latin word inside the Arabic
+/// paragraph takes the paragraph's direction (the runs follow the
+/// paragraph's base direction; they are not split at each change of
+/// direction). The text, its word starts, and the caret stay in logical
+/// order, the order the text is read in.
+#[test]
+fn right_to_left_paragraphs_have_right_to_left_runs() {
+    // "Hello world" in Arabic with the Latin word "textweaver", then a
+    // Hebrew paragraph and a Latin one.
+    let arabic = "\u{645}\u{631}\u{62d}\u{628}\u{627} \u{628}\u{627}\u{644}\u{639}\u{627}\u{644}\u{645} textweaver.";
+    let hebrew = "\u{5e9}\u{5dc}\u{5d5}\u{5dd} \u{5e2}\u{5d5}\u{5dc}\u{5dd}.";
+    let text = format!("{arabic}\n{hebrew}\nPlain text.");
+    let doc = Document::from_plain_text(&text);
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    assert_eq!(doc_text(&h), text);
+    let node = h.access_node(h.root_id()).unwrap();
+    let dirs: Vec<(String, Option<TextDirection>)> = node
+        .children()
+        .map(|c| (c.value().unwrap_or_default(), c.data().text_direction()))
+        .collect();
+    let rtl = Some(TextDirection::RightToLeft);
+    let ltr = Some(TextDirection::LeftToRight);
+    assert!(dirs.iter().any(|(t, _)| t.contains("textweaver")));
+    for (t, d) in &dirs {
+        let want = if t.contains("Plain") { ltr } else { rtl };
+        assert_eq!(*d, want, "{t:?}");
+    }
+    // The first run starts with the first Arabic word, in logical order.
+    let first = node.children().next().unwrap();
+    assert!(first.value().unwrap_or_default().starts_with('\u{645}'));
+    assert_eq!(&first.data().word_starts()[..3], &[0, 6, 14]);
+    // The caret after the first Arabic word: character 5, logically.
+    h.edit_root_widget(|mut d| {
+        DocumentView::set_state(
+            &mut d,
+            DocState {
+                caret: CharPos(5),
+                ..DocState::default()
+            },
+        )
+    });
+    let _ = h.redraw();
+    let node = h.access_node(h.root_id()).unwrap();
+    let focus = node.text_selection_focus().expect("caret");
+    assert_eq!(focus.to_global_usv_index(), 5);
 }
 
 #[test]

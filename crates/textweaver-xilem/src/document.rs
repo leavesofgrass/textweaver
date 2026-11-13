@@ -33,8 +33,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use masonry::accesskit::{
-    Action, ActionData, Color as AkColor, Node, NodeId, Role, TextDecoration, TextDecorationStyle,
-    TextDirection, TextPosition, TextSelection,
+    Action, ActionData, Color as AkColor, Invalid, Node, NodeId, Role, TextDecoration,
+    TextDecorationStyle, TextDirection, TextPosition, TextSelection,
 };
 use masonry::core::keyboard::{Key, KeyState, NamedKey};
 use masonry::core::{
@@ -657,8 +657,10 @@ pub struct DocumentView {
     focused: bool,
     /// The node's name, in the interface language ("Document").
     label: String,
-    /// Misspelled words (edit mode), drawn with a dotted underline. Paint
-    /// only: the text, its layout, and its runs do not change.
+    /// Misspelled words (edit mode), drawn with a dotted underline, and
+    /// each its own text runs, marked invalid for spelling with
+    /// [`aid_names`](Self::aid_names)' first as their description. The
+    /// text and its layout do not change.
     misspelled: Vec<CharRange>,
     /// Notes, bookmarks, the reader's highlights, and search matches
     /// ([`DocMark`]). Drawn; a highlight with a palette name is also its
@@ -668,8 +670,13 @@ pub struct DocumentView {
     /// ("Highlight, important"), by [`NamedMark::name`].
     mark_names: Vec<String>,
     /// Writing suggestions (edit mode, Markdown lint), drawn with a double
-    /// underline. Paint only.
+    /// underline, and each its own text runs, marked invalid for grammar
+    /// with [`aid_names`](Self::aid_names)' second as their description.
     lint: Vec<CharRange>,
+    /// What a screen reader is told of a misspelled word's runs and a
+    /// writing suggestion's ("Misspelled", "Writing suggestion"), in the
+    /// interface language ([`set_aid_names`](Self::set_aid_names)).
+    aid_names: [String; 2],
     /// What the reading highlight draws when it is not the spoken word and
     /// sentence ([`HighlightShown`]); `None` draws them.
     shown: Option<HighlightShown>,
@@ -795,6 +802,7 @@ impl DocumentView {
             marks: Vec::new(),
             mark_names: Vec::new(),
             lint: Vec::new(),
+            aid_names: ["Misspelled".to_owned(), "Writing suggestion".to_owned()],
             shown: None,
             advance: None,
             painted: Vec::new(),
@@ -1485,12 +1493,40 @@ impl DocumentView {
     }
 
     /// The misspelled words to mark (edit mode; W4a3 left them unmarked).
-    /// Only drawn: a dotted underline, a shape unlike a link's line or a
-    /// difficult word's thick one, so no color carries it.
+    /// Drawn with a dotted underline, a shape unlike a link's line or a
+    /// difficult word's thick one, so no color carries it. Each is also
+    /// its own text runs, which a screen reader can report: AccessKit's
+    /// `invalid` set to spelling, "Misspelled" as the description, and
+    /// the dotted line as an underline style.
     pub fn set_misspelled(this: &mut WidgetMut<'_, Self>, ranges: Vec<CharRange>) {
         if this.widget.misspelled != ranges {
-            this.widget.misspelled = ranges;
+            let w = &mut *this.widget;
+            let old = std::mem::replace(&mut w.misspelled, ranges);
+            let new = w.misspelled.clone();
+            w.marks_moved(&old, &new);
+            this.ctx.request_accessibility_update();
             this.ctx.request_render();
+        }
+    }
+
+    /// What a screen reader is told of a misspelled word's runs and of a
+    /// writing suggestion's, in the interface language (`gui-run-misspelled`,
+    /// `gui-run-lint`); English until then.
+    pub fn with_aid_names(mut self, misspelled: String, lint: String) -> Self {
+        self.aid_names = [misspelled, lint];
+        self
+    }
+
+    /// What a screen reader is told of a misspelled word's runs and of a
+    /// writing suggestion's, in the interface language.
+    pub fn set_aid_names(this: &mut WidgetMut<'_, Self>, misspelled: String, lint: String) {
+        let names = [misspelled, lint];
+        if this.widget.aid_names != names {
+            this.widget.aid_names = names;
+            let w = &mut *this.widget;
+            let marked: Vec<CharRange> = w.misspelled.iter().chain(&w.lint).copied().collect();
+            w.marks_moved(&[], &marked);
+            this.ctx.request_accessibility_update();
         }
     }
 
@@ -1538,11 +1574,16 @@ impl DocumentView {
     }
 
     /// The writing suggestions to mark (edit mode on Markdown): a double
-    /// underline, a shape no other mark has. Only drawn; Ctrl+F8 finds
-    /// them and says them.
+    /// underline, a shape no other mark has, and their own text runs,
+    /// marked invalid for grammar with "Writing suggestion" as the
+    /// description. Ctrl+F8 finds them and says them.
     pub fn set_lint(this: &mut WidgetMut<'_, Self>, ranges: Vec<CharRange>) {
         if this.widget.lint != ranges {
-            this.widget.lint = ranges;
+            let w = &mut *this.widget;
+            let old = std::mem::replace(&mut w.lint, ranges);
+            let new = w.lint.clone();
+            w.marks_moved(&old, &new);
+            this.ctx.request_accessibility_update();
             this.ctx.request_render();
         }
     }
@@ -1609,15 +1650,18 @@ impl DocumentView {
             .sum()
     }
 
-    /// The highlights the text runs carry (the spoken word).
+    /// The marks the text runs carry: writing suggestions, misspelled
+    /// words, the named highlights, and the spoken word.
     fn run_marks(&self) -> Vec<(CharRange, RunMark)> {
-        // The spoken word last: where it is, it wins.
-        self.marks
-            .iter()
-            .filter_map(|(r, m)| match m {
+        // Later entries win where marks overlap: the spoken word last, so
+        // where it is, it wins; a named highlight over a misspelling.
+        let lint = self.lint.iter().map(|r| (*r, RunMark::Lint));
+        let misspelled = self.misspelled.iter().map(|r| (*r, RunMark::Misspelled));
+        lint.chain(misspelled)
+            .chain(self.marks.iter().filter_map(|(r, m)| match m {
                 DocMark::Named(n) => Some((*r, RunMark::Highlight(*n))),
                 _ => None,
-            })
+            }))
             .chain(self.state.spoken.map(|r| (r, RunMark::SpokenWord)))
             .collect()
     }
@@ -1626,22 +1670,49 @@ impl DocumentView {
     /// builds again only the lines of runs that hold it, and sends only
     /// those in the next pass.
     fn mark_dirty(&mut self, r: CharRange) {
+        let marks = self.run_marks();
+        self.mark_dirty_with(r, &marks);
+    }
+
+    /// [`Self::mark_dirty`] with the marks already gathered.
+    fn mark_dirty_with(&mut self, r: CharRange, marks: &[(CharRange, RunMark)]) {
         let paras = &self.model.paragraphs;
         if paras.is_empty() {
             return;
         }
         let a = caret::paragraph_at(paras, r.start);
         let b = caret::paragraph_at(paras, CharPos(r.end.0.saturating_sub(1).max(r.start.0)));
-        let marks = self.run_marks();
         for i in a..=b.min(paras.len() - 1) {
             match self.para_runs[i].as_mut() {
                 Some(pr) => {
                     let lines = pr.lines_touching(r);
-                    pr.rebuild(lines.clone(), &self.model.paragraphs[i].text, &marks);
+                    pr.rebuild(lines.clone(), &self.model.paragraphs[i].text, marks);
                     self.changed_lines.entry(i).or_default().extend(lines);
                 }
                 None => self.dirty_paras[i] = true,
             }
+        }
+    }
+
+    /// A set of marked ranges went from `old` to `new` (the misspellings
+    /// or the writing suggestions): the runs change only where a range
+    /// came or went, so only those lines are built and sent again.
+    fn marks_moved(&mut self, old: &[CharRange], new: &[CharRange]) {
+        let gone_or_new: Vec<CharRange> = {
+            let in_old: std::collections::HashSet<&CharRange> = old.iter().collect();
+            let in_new: std::collections::HashSet<&CharRange> = new.iter().collect();
+            old.iter()
+                .filter(|r| !in_new.contains(r))
+                .chain(new.iter().filter(|r| !in_old.contains(r)))
+                .copied()
+                .collect()
+        };
+        if gone_or_new.is_empty() {
+            return;
+        }
+        let marks = self.run_marks();
+        for r in gone_or_new {
+            self.mark_dirty_with(r, &marks);
         }
     }
 
@@ -2826,7 +2897,14 @@ impl DocumentView {
         node.set_value(run.text.as_str());
         node.set_character_lengths(run.char_lens.clone());
         node.set_word_starts(run.word_starts.clone());
-        node.set_text_direction(TextDirection::LeftToRight);
+        // The paragraph's base direction (runs.rs, `base_rtl`): a
+        // right-to-left paragraph's runs are right to left; the text and
+        // the word starts stay in logical order.
+        node.set_text_direction(if run.rtl {
+            TextDirection::RightToLeft
+        } else {
+            TextDirection::LeftToRight
+        });
         let size = self.font.size * run.heading.map_or(1.0, Self::heading_scale);
         node.set_font_size(size);
         if run.heading.is_some() || self.font.bold {
@@ -2867,6 +2945,36 @@ impl DocumentView {
                         color: ak_color(ink.unwrap_or(fg)),
                     });
                 }
+            }
+            Some(mark @ (RunMark::Misspelled | RunMark::Lint)) => {
+                // AccessKit's `invalid` (spelling or grammar), its name in
+                // words as the description, as a highlight's, and its line
+                // as drawn: dotted under a misspelling, double under a
+                // writing suggestion.
+                let (invalid, name, style, color) = if mark == RunMark::Misspelled {
+                    let c = p.misspelling;
+                    (
+                        Invalid::Spelling,
+                        &self.aid_names[0],
+                        TextDecorationStyle::Dotted,
+                        c,
+                    )
+                } else {
+                    (
+                        Invalid::Grammar,
+                        &self.aid_names[1],
+                        TextDecorationStyle::Double,
+                        p.lint,
+                    )
+                };
+                node.set_invalid(invalid);
+                if !name.is_empty() {
+                    node.set_description(name.as_str());
+                }
+                node.set_underline(TextDecoration {
+                    style,
+                    color: ak_color(color),
+                });
             }
             Some(RunMark::FindHit) | None => {}
         }

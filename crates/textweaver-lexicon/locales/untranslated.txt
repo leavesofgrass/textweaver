@@ -16,6 +16,8 @@ choice-gui-graphics-vulkan
 edit-recovery-offer
 gui-crashed-saved
 gui-graphics-failed
+gui-run-lint
+gui-run-misspelled
 gui-setup-welcome-menus
 live-binary
 live-broker-plain-warning

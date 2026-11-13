@@ -6,7 +6,9 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use masonry::accesskit::{Action, ActionData, ActionRequest, Role, TreeId};
+use masonry::accesskit::{
+    Action, ActionData, ActionRequest, Invalid, Role, TextDecorationStyle, TreeId,
+};
 use masonry::core::keyboard::{Code, Key, KeyState, KeyboardEvent, Modifiers, NamedKey};
 use masonry::core::{TextEvent, WidgetId};
 use masonry_testing::{TestHarness, TestHarnessParams};
@@ -409,7 +411,139 @@ fn misspelled_words_are_marked_in_edit_mode() {
     });
     let _ = h.redraw();
     assert_eq!(h.get_widget(DOC).inner().misspelled(), ranges.as_slice());
-    assert_eq!(doc_node(&h, doc).2, before, "the marks are drawn only");
+    assert_eq!(doc_node(&h, doc).2, before, "the text is unchanged");
+}
+
+/// Each text run of the document: its text, its `invalid` state, and its
+/// description.
+fn run_marks(
+    h: &TestHarness<Root>,
+    doc: WidgetId,
+) -> Vec<(String, Option<Invalid>, Option<String>)> {
+    let node = h.access_node(doc).expect("the document's node");
+    node.children()
+        .map(|c| {
+            (
+                c.value().unwrap_or_default(),
+                c.data().invalid(),
+                c.description(),
+            )
+        })
+        .collect()
+}
+
+/// How many nodes in the whole tree carry `word` in a name, a value, or a
+/// description.
+fn said_in_tree(h: &TestHarness<Root>, word: &str) -> usize {
+    let mut n = 0;
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(node) = stack.pop() {
+        stack.extend(node.children());
+        n += [node.label(), node.value(), node.description()]
+            .into_iter()
+            .flatten()
+            .filter(|t| t.contains(word))
+            .count();
+    }
+    n
+}
+
+/// A screen reader can find the marks of edit mode: a misspelled word and
+/// a writing suggestion are each their own text run, with AccessKit's
+/// `invalid` (spelling, grammar), the mark's name in words as the
+/// description, and its line as drawn. The runs next to them carry
+/// neither, the text is unchanged, and each name is in the tree once, on
+/// its run: not in the document's name, its description, or any text.
+#[test]
+fn misspellings_and_writing_suggestions_are_runs_a_screen_reader_finds() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut app, mut h, mut r, doc) = setup_with(dir.path(), "I recieve the notes.\n");
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let plain = run_marks(&h, doc);
+    let text = doc_node(&h, doc).2;
+    let c = app.catalog();
+    let (misspelled, lint) = (c.tr("gui-run-misspelled"), c.tr("gui-run-lint"));
+    assert_eq!(misspelled, "Misspelled");
+    h.edit_widget(DOC, |mut d| {
+        DocumentView::set_misspelled(&mut d, vec![CharRange::new(2, 9)]);
+        DocumentView::set_lint(&mut d, vec![CharRange::new(14, 19)]);
+    });
+    let _ = h.redraw();
+    let runs = run_marks(&h, doc);
+    assert_eq!(
+        runs,
+        vec![
+            ("I ".to_owned(), None, None),
+            (
+                "recieve".to_owned(),
+                Some(Invalid::Spelling),
+                Some(misspelled.clone())
+            ),
+            (" the ".to_owned(), None, None),
+            (
+                "notes".to_owned(),
+                Some(Invalid::Grammar),
+                Some(lint.clone())
+            ),
+            (".\n".to_owned(), None, None),
+        ]
+    );
+    let node = h.access_node(doc).unwrap();
+    let underline = |i: usize| {
+        node.children()
+            .nth(i)
+            .and_then(|c| c.data().underline())
+            .map(|u| u.style)
+    };
+    assert_eq!(underline(1), Some(TextDecorationStyle::Dotted));
+    assert_eq!(underline(3), Some(TextDecorationStyle::Double));
+    assert_eq!(underline(0), None);
+    assert_eq!(doc_node(&h, doc).2, text, "the text is unchanged");
+    // Said once each, on its run.
+    assert_eq!(said_in_tree(&h, &misspelled), 1);
+    assert_eq!(said_in_tree(&h, &lint), 1);
+    // Leaving the marks: the runs are as they were.
+    h.edit_widget(DOC, |mut d| {
+        DocumentView::set_misspelled(&mut d, Vec::new());
+        DocumentView::set_lint(&mut d, Vec::new());
+    });
+    let _ = h.redraw();
+    assert_eq!(run_marks(&h, doc), plain);
+}
+
+/// The tree's size in edit mode on a document with 200 misspellings: each
+/// mark adds at most two runs (the word, and the rest of its line after
+/// it), and the marks are sent as the lines that hold them.
+#[test]
+fn two_hundred_misspellings_keep_the_tree_small() {
+    let dir = tempfile::tempdir().unwrap();
+    let notes = "I recieve teh notes and wierd thier lists.\n".repeat(50);
+    let (mut app, mut h, mut r, doc) = setup_with(dir.path(), &notes);
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let ranges = app.misspelled_ranges();
+    assert_eq!(ranges.len(), 200);
+    let count = |h: &TestHarness<Root>| h.access_node(doc).unwrap().children().count();
+    let before = count(&h);
+    h.edit_widget(DOC, |mut d| DocumentView::set_misspelled(&mut d, ranges));
+    let _ = h.redraw();
+    let after = count(&h);
+    let sent = h.get_widget(DOC).inner().last_nodes_sent;
+    eprintln!(
+        "text runs in edit mode, 200 misspellings: {before} without the marks, {after} with them; {sent} sent"
+    );
+    assert!(
+        after > before && after <= before + 2 * 200,
+        "{before} to {after}"
+    );
+    let marked = run_marks(&h, doc)
+        .iter()
+        .filter(|(_, i, _)| *i == Some(Invalid::Spelling))
+        .count();
+    assert_eq!(marked, 200);
 }
 
 /// Copy and Cut are the keymap's, as in the terminal: the selection on
