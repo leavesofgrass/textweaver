@@ -389,7 +389,7 @@ In the terminal, the same command shows the settings screen with only these sett
 - **The app requests the integrated graphics adapter** when the computer has one, because it draws text just as fast and saves battery. To use the discrete adapter instead, set the environment variable `WGPU_POWER_PREF` to `high`.
 - **A log file.** The app writes warnings and errors to `textweaver.log` in the state folder, as the terminal reader does. [Troubleshooting](troubleshooting.md#the-log-file) says where it is.
 - **After a failure,** the app saves your unsaved edits as a recovery copy, along with your place and settings, and offers the work back at the next start (see [Recovering unsaved work](editing.md#recovering-unsaved-work)). Signing out, shutting down, or restarting does the same. On Linux and macOS, so does a termination signal: closing the terminal the app was started from, Ctrl+C in that terminal, or the system ending the program (SIGHUP, SIGINT, or SIGTERM). The app saves, then closes.
-- **If graphics cannot start,** the app says so in words, with a message box when it was started from a shortcut. See [The app does not open, or it is blank](troubleshooting.md#the-app-does-not-open-or-it-is-blank).
+- **If graphics cannot start,** the app says so in words, with a message box when it was started from a shortcut: "Could not start the textweaver app: its graphics failed. The terminal reader, tw, needs none." After an internal error it says "textweaver stopped after an internal error.", and then "Place saved. Unsaved edits are offered for recovery next time." when the save after the error worked. See [The app does not open, or it is blank](troubleshooting.md#the-app-does-not-open-or-it-is-blank).
 
 ## Study, marks, and files in the app
 

@@ -81,7 +81,7 @@ textweaver can speak with its own voice or leave speech to your screen reader; A
 
 ## Languages
 
-Menus, messages, and speech are available in English, Spanish, German, French, Portuguese, and Arabic. Native speakers have reviewed the English and Spanish; the others have not been reviewed. If a phrase sounds wrong, choose Help, then Report a problem.
+Menus, messages, and speech are available in English, Spanish, German, French, Portuguese, and Arabic. Native speakers have reviewed the English and Spanish; the others have not been reviewed. Some messages new in beta 6 are in English in the other languages until the translation pass ([Known limits](docs/known-limits.md)). If a phrase sounds wrong, choose Help, then Report a problem.
 
 ## Learn more
 
