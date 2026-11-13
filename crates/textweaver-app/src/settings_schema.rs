@@ -180,6 +180,7 @@ pub const WINDOW_ONLY: &[&str] = &[
     "gui.focus_mode",
     "gui.speak_messages",
     "gui.sidebar",
+    "gui.graphics",
 ];
 
 /// Every setting, section by section, in the order the settings screens
@@ -1596,6 +1597,18 @@ pub const INFO: &[Info] = &[
         "gui.last_version",
         "Version last run",
         "The version of the textweaver app last run on this computer, so it says Updated to once after an update. Never synced.",
+    ),
+    choice(
+        "gui.graphics",
+        "Graphics",
+        "The graphics API the textweaver app draws with, from the next start. Automatic lets the graphics library choose; --graphics on the command line wins for one run.",
+        &[
+            ("auto", "automatic"),
+            ("vulkan", "Vulkan"),
+            ("dx12", "Direct3D 12, Windows only"),
+            ("metal", "Metal, macOS only"),
+            ("gl", "OpenGL"),
+        ],
     ),
     choice(
         "gui.announce",
@@ -3477,9 +3490,11 @@ fn restart_note(path: &str) -> Option<&'static str> {
         | "speech.piper.voices"
         | "speech.piper.voice"
         | "speech.piper.phonemizer" => Some("settings-restart-speech"),
-        "keyboard.preset" | "keyboard.digit_row" | "gui.announce" | "display.follow_os_theme" => {
-            Some("settings-next-start")
-        }
+        "keyboard.preset"
+        | "keyboard.digit_row"
+        | "gui.announce"
+        | "gui.graphics"
+        | "display.follow_os_theme" => Some("settings-next-start"),
         _ => None,
     }
 }

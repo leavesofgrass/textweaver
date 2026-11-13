@@ -482,6 +482,7 @@ The textweaver app's bars, buttons, and panel. The terminal reader uses only the
 - `gui.auto_hide_menu`, default `true`: on Windows, hide the menu bar until Alt, F10, or Alt with a menu's letter shows it; it hides again when the menu closes, and nothing is announced then. It applies at once and stays on this computer. It has no effect on Linux (the menus are the F10 list) or macOS. See [Menus](gui.md#menus).
 - `gui.focus_mode`, default `false`: hide the header, the toolbar, the status bar and the panel once the mouse has rested for three seconds, so the text has the whole window; moving the mouse shows them, and keys never do. Visual only: the controls stay in the accessibility tree and the Tab order, and nothing is announced. Full screen (Alt+Enter) does the same while it lasts. It stays on this computer. See [Focus mode and full screen](gui.md#focus-mode-and-full-screen).
 - `gui.sidebar`, default `"off"`: the panel beside the document: `"off"`, `"contents"` (the headings), or `"notes"`. Ctrl+1 and Ctrl+2 change it, and the app remembers the last one.
+- `gui.graphics`, default `"auto"`: the graphics API the app draws with, from the next start: `"auto"` (the graphics library's own choice), `"vulkan"`, `"dx12"` (Windows), `"metal"` (macOS), or `"gl"`. `--graphics` on the command line wins for one run. It stays on this computer. See [Starting it](gui.md#starting-it).
 
 ### Export
 

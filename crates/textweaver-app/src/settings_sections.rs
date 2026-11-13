@@ -382,6 +382,7 @@ pub const SECTIONS: &[Section] = &[
             "gui.auto_hide_menu",
             "gui.focus_mode",
             "gui.sidebar",
+            "gui.graphics",
         ],
     },
     Section {

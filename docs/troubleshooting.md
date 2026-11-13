@@ -96,7 +96,7 @@ scripts/speech-check.sh
 ### The app does not open, or it is blank
 
 1. Start it from a terminal, so that any error appears there, and write a log: `textweaver --log-file gui.log`. Started from a shortcut or File Explorer, a startup error is shown in a message box instead.
-2. Try another graphics interface for one run: `textweaver --graphics vulkan`. The alternatives are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, set `graphics = "vulkan"` under `[gui]` in `settings.toml`.
+2. Try another graphics interface for one run: `textweaver --graphics vulkan`. The alternatives are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, set Graphics in Settings, Toolbars and panels, or `graphics = "vulkan"` under `[gui]` in `settings.toml`.
 3. Attach `gui.log` to a bug report; see [Report a bug](#report-a-bug).
 
 ### Your screen reader does not read the app's messages

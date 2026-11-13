@@ -298,6 +298,7 @@ Only the speech engine's own settings are listed here: the voice, rate and pitch
 - `gui.auto_hide_menu`: default on (`true`). Hide the menu bar. Windows: hide the window's menu bar until Alt or F10 shows it. It hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS. On or off: `true` or `false`. Stays on this computer.
 - `gui.focus_mode`: default off (`false`). Focus mode. Hide the bars and the panel when the mouse rests a few seconds. The text then has the whole window. Moving the mouse shows them; keys do not. Screen readers still find every control. On or off: `true` or `false`. Stays on this computer.
 - `gui.sidebar`: default none (`"off"`). Panel beside the document. The panel the textweaver app shows beside the document. None, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one. Choices: `"off"` (none), `"contents"` (Contents), `"notes"` (Notes). Stays on this computer.
+- `gui.graphics`: default automatic (`"auto"`). Graphics. The graphics API the textweaver app draws with, from the next start. Automatic lets the graphics library choose; --graphics on the command line wins for one run. Choices: `"auto"` (automatic), `"vulkan"` (Vulkan), `"dx12"` (Direct3D 12, Windows only), `"metal"` (Metal, macOS only), `"gl"` (OpenGL). Stays on this computer.
 
 ## Export
 

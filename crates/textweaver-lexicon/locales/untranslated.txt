@@ -8,6 +8,11 @@
 # least one language, and that every message a language lacks is listed.
 # See docs/dev/messages.md.
 access-hybrid-inferred
+choice-gui-graphics-auto
+choice-gui-graphics-dx12
+choice-gui-graphics-gl
+choice-gui-graphics-metal
+choice-gui-graphics-vulkan
 edit-recovery-offer
 gui-crashed-saved
 gui-graphics-failed
@@ -31,6 +36,8 @@ playback-caps-words
 restart-done-silent
 restart-no-engine
 setting-display-follow-os-theme-help
+setting-gui-graphics
+setting-gui-graphics-help
 setting-keyboard-digit-row-help
 setting-speech-apple-backend-help
 setting-speech-dectalk-library-help
