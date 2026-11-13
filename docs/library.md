@@ -17,7 +17,7 @@ The list contains every document in your library folders, followed by recently o
 
 For example: "Cells, 25 percent, in Readings".
 
-**Up** and **Down** move through the list, **Enter** opens a document, **F2** edits its details (below), **Ctrl+Enter** adds it to the reading queue or removes it (below; **Cmd+Enter** in the Mac app), and **Escape** closes the list. When there is nothing to show you hear: "The library is empty. Add a folder in Settings, under Library and study tools (Library folders), or open a file with Ctrl+O."
+**Up** and **Down** move through the list, **Enter** opens a document, **F2** edits its details (below), **Ctrl+Enter** adds it to the reading queue or removes it (below; **Cmd+Enter** in the Mac app), and **Escape** closes the list. When there is nothing to show you hear: "The library is empty. Add a folder in Settings, under Library folders, or open a file with Ctrl+O."
 
 ### Filter the list as you type
 
@@ -46,7 +46,7 @@ When a document's details are wrong or missing, as with a scan named "scan0042" 
 
 The form opens in either of two ways:
 
-- **For the open document:** choose **Edit details** in the File menu, under Continue reading, or type "edit details" in the command palette (F2). It has no key of its own; you can assign one in `keymap.toml`.
+- **For the open document:** choose **Edit details** in the File menu, or type "edit details" in the command palette (F2). It has no key of its own; you can assign one in `keymap.toml`.
 - **From the library list:** move to a document and press **F2**. When you save or cancel, the list returns to the same document with its row updated.
 
 You hear "Details of", the document's title, then "Tab moves, Enter saves, Escape cancels." The form has four single-line fields: Title, Author, DOI, and ISBN. Each field's label gives its position, such as "Author, 2 of 4", followed by its current value.
@@ -122,7 +122,7 @@ recent_limit = 20
 
 ## Continue reading
 
-**Continue reading** lists the documents on this computer that have a saved reading place, newest first, regardless of which computer read them last. It is in the File menu under Library and in the command palette (F2); it has no key of its own, but you can assign one in `keymap.toml`. You hear the number of documents listed, then each row, meaning first:
+**Continue reading** lists the documents on this computer that have a saved reading place, newest first, regardless of which computer read them last. It is in the File menu and in the command palette (F2); it has no key of its own, but you can assign one in `keymap.toml`. You hear the number of documents listed, then each row, meaning first:
 
 "Cells, 42 percent, laptop, 2 hours ago"
 
@@ -177,7 +177,7 @@ tw library queue next
 
 ## The review list
 
-**The review list** complements Continue reading: it lists the documents you have read aloud before, the one read longest ago first. It is in the File menu under Continue reading and in the command palette (F2). You hear the number of documents listed, then each row, meaning first:
+**The review list** complements Continue reading: it lists the documents you have read aloud before, the one read longest ago first. It is in the File menu and in the command palette (F2). You hear the number of documents listed, then each row, meaning first:
 
 "Pharmacology 2, 21 days, 80 percent, 3 notes"
 
@@ -332,7 +332,7 @@ tw migrate-star
 
 - Settings that have a textweaver equivalent, where you had changed them from star's defaults.
 - Library folders that still exist.
-- Key changes made in star's window, as `keymap.toml` overrides. The new key is added; the single browse keys remain.
+- Key changes made in star's graphical version, as `keymap.toml` overrides. The new key is added; the single browse keys remain.
 - For each document: the reading position, bookmarks, notes, and highlights.
 - Recent files and the bookshelf.
 - Each library folder's star sync file, `.star/progress.json`, converted to `.textweaver/progress.json` and merged with any textweaver one.

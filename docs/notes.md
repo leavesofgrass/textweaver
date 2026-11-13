@@ -164,7 +164,7 @@ tw notes links essay.md
 
 The links of a single note answer a local question: what this idea supports, and what cites it. A literature review or an exam plan raises a global one, about the shape of everything you have connected across the semester. Exporting the knowledge graph writes every link in your library to one file, which you can read as a list or hand to a tool that analyzes or draws networks.
 
-In the reader, press **F2** for the command palette and type `export knowledge graph`, or choose **File**, **Export As**, **Export knowledge graph**. You hear the number of links, then a list of formats. Press **Enter** on one, and textweaver writes `knowledge-graph` with that format's extension next to the open document (or, with no document open, in the folder from which textweaver was started). You hear the file's name, "Open it? y or n.", and the folder; **y** opens the file with the program your computer associates with that kind of file. If no note has a link yet, you hear "No links between notes to export." and nothing is written.
+In the reader, press **F2** for the command palette and type `export knowledge graph`, or choose **File**, **Export as**, **Export knowledge graph**. You hear the number of links, then a list of formats. Press **Enter** on one, and textweaver writes `knowledge-graph` with that format's extension next to the open document (or, with no document open, in the folder from which textweaver was started). You hear the file's name, "Open it? y or n.", and the folder; **y** opens the file with the program your computer associates with that kind of file. If no note has a link yet, you hear "No links between notes to export." and nothing is written.
 
 From the command line:
 

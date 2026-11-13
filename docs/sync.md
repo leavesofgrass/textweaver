@@ -141,7 +141,7 @@ When two library-folder progress files disagree as they are written (the older, 
 
 ## Continue reading
 
-**Continue reading**, in the File menu under Library and in the command palette, lists the documents on this computer with a reading place from any computer, newest first, one row each, meaning first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens the document, which resumes by `position_policy`. Only documents found on this computer are listed: opened here before, in a library folder, or among the recent files. A document read only on the laptop, and not on this computer at all, is left out. With the places group off, only this computer's own places are used. [The library guide](library.md#continue-reading) has the details, and `tw library continue` prints the same list.
+**Continue reading**, in the File menu and in the command palette, lists the documents on this computer with a reading place from any computer, newest first, one row each, meaning first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens the document, which resumes by `position_policy`. Only documents found on this computer are listed: opened here before, in a library folder, or among the recent files. A document read only on the laptop, and not on this computer at all, is left out. With the places group off, only this computer's own places are used. [The library guide](library.md#continue-reading) has the details, and `tw library continue` prints the same list.
 
 ## Library details and search
 
@@ -151,7 +151,7 @@ Details you type yourself ([Edit a document's details](library.md#edit-a-documen
 
 ## Reading statistics from every computer
 
-With the statistics group on, the statistics list (File, Reading statistics) and `tw stats` add every computer's reading of a document together: the time read aloud and the sessions are summed, and the furthest point is the furthest any computer reached. Each computer only ever adds to its own counts, so nothing is counted twice and nothing conflicts.
+With the statistics group on, the statistics list (Tools, Reading statistics) and `tw stats` add every computer's reading of a document together: the time read aloud and the sessions are summed, and the furthest point is the furthest any computer reached. Each computer only ever adds to its own counts, so nothing is counted twice and nothing conflicts.
 
 To see each computer's share, choose "Each computer: hidden. Enter shows it." near the end of the statistics list; under each document read on more than one computer you then hear a line per computer, such as "laptop: 20 minutes and 5 seconds, 2 sessions". On the command line, `tw stats --by-computer` prints the same lines. A document read only on another computer is listed too, by the title that computer knew.
 
