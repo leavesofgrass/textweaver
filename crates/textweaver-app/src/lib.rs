@@ -314,6 +314,7 @@ pub use opener::open_with_system;
 pub use opening::{
     open_failure_message, open_failure_message_in, open_failure_reason, open_failure_reason_in,
 };
+pub use overview::accessibility_lines;
 pub use panels::{Panel, PanelEntry, current_entry};
 pub use playback::{
     Playback, load_options, narration_policy, plan_with_written_pauses, structural_pauses,

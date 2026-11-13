@@ -10,6 +10,7 @@ mod brf;
 mod c3;
 mod c5;
 mod documents;
+mod epub_access;
 mod epub_mathml;
 mod fixtures;
 mod hostile;

@@ -76,7 +76,7 @@ The reader opens these formats itself:
 - Markdown: `.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`, `.mdwn`, `.mdtxt`, `.rmd`. Obsidian notes are Markdown, and their highlights, comments, task statuses, embeds, and properties are read too ([Obsidian vaults](vault.md)).
 - Obsidian canvases: `.canvas`, a board of cards read as a document ([Canvases](vault.md#canvases)).
 - HTML: `.html`, `.htm`, `.xhtml`, `.xht`.
-- EPUB: `.epub`.
+- EPUB: `.epub`, with the book's own accessibility information in the [document overview](#document-overview).
 - Word: `.docx`, `.docm`, with comments as notes.
 - RTF: `.rtf`.
 - OpenDocument text: `.odt`, `.ott`, `.fodt`, with comments as notes.
@@ -589,6 +589,19 @@ The history keeps the last 50 places. Change that with `[reading] nav_history_si
 ## Document overview
 
 Choose **Document overview** in the Say menu (under Reading) or the command palette. You hear the title, then how many headings, tables, pictures, and footnotes the document has, then about how long reading the rest takes at your current rate: "Cells. Headings: 12, tables: 3, pictures: 4, footnotes: 21. About 38 minutes left." The time counts from the cursor.
+
+### An EPUB's accessibility information
+
+An EPUB can say how accessible it is, in the accessibility metadata of its package document (EPUB Accessibility 1.0 and 1.1). For an EPUB, the overview goes on with what the book says, one fact a sentence, the verdict first:
+
+- "Accessibility: screen reader friendly, per the publisher." when the publisher says the text alone is enough to read all of it (a sufficient access mode of text);
+- "Accessibility: not all of it reads as text, per the publisher." when every sufficient access mode it names needs more than text, such as text and images;
+- "Accessibility: described by the publisher." when it gives other details but no sufficient access mode;
+- "No accessibility information given." when it gives none.
+
+The details follow, each only when the book gives it: "Summary:" and the publisher's own words, "Access modes: text, images.", "Readable with: text, or text and images.", "Features: table of contents, alternative text.", "Hazards: none.", "Conforms to: EPUB Accessibility 1.1, WCAG 2.1 Level AA.", and "Certified by:" and the certifier's name. The terms are said in words, not as the metadata writes them (`tableOfContents` is "table of contents"). `tw info` prints the same lines after the title and author ([Command line](command-line.md#tw-info)).
+
+This is what the publisher claims, not a check textweaver makes. A long value is cut at 1,000 characters, a list at 32 entries, and control characters are left out. EPUBs that textweaver writes carry this metadata too ([Converting](converting.md)).
 
 ## Where am I: Shift+W or Alt+Shift+Y
 

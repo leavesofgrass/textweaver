@@ -214,7 +214,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 11;
+pub const CANONICAL_VERSION: u32 = 12;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]

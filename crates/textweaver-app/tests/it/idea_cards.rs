@@ -47,6 +47,36 @@ fn the_overview_says_the_title_and_counts_first() {
     );
 }
 
+#[test]
+fn the_overview_of_an_epub_gives_its_accessibility_information() {
+    let open = |access: &str| {
+        let mut doc = Document::from_plain_text("A cell is small.");
+        doc.meta.format = "epub".into();
+        doc.meta.properties.insert(
+            textweaver_app::formats::epub::ACCESSIBILITY_PROPERTY.into(),
+            access.into(),
+        );
+        let mut app = App::new(AppConfig::for_tests());
+        app.open_document(doc, DocKey::untitled(1), "Cells".into());
+        act(&mut app, ActionId::DocumentOverview);
+        app.status_text().to_owned()
+    };
+    let said =
+        open(r#"{"sufficient":[["textual"]],"features":["tableOfContents"],"hazards":["none"]}"#);
+    assert!(
+        said.ends_with(
+            "Accessibility: screen reader friendly, per the publisher. Readable with: text. Features: table of contents. Hazards: none."
+        ),
+        "{said}"
+    );
+    assert!(said.starts_with("Cells. Headings: 0"), "{said}");
+    let said = open("{}");
+    assert!(
+        said.ends_with("No accessibility information given."),
+        "{said}"
+    );
+}
+
 /// A self-voicing app recording what it says, with `text` open.
 fn voiced_app(text: &str) -> (App, SpeechLog) {
     let (speech, log) = recording_service().unwrap();

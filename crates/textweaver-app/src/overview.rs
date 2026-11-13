@@ -76,6 +76,7 @@ impl App {
         let pictures = count(MarkerKind::Image, None);
         let footnotes = count(MarkerKind::Footnote, Some(1));
         let title = s.title.clone();
+        let access = accessibility_lines(self.cat(), &doc.meta);
         let msg = self.msg_args(
             "overview-line",
             &args![
@@ -87,6 +88,12 @@ impl App {
                 "time" => time,
             ],
         );
+        // An EPUB's own accessibility information follows, one sentence a
+        // fact; other documents have none to give.
+        let msg = match access {
+            Some(lines) => format!("{msg} {}", lines.join(" ")),
+            None => msg,
+        };
         self.tell(&msg);
     }
 
@@ -117,4 +124,86 @@ impl App {
             self.msg_args("reading-pass-changed", &args!["pass" => name])
         })
     }
+}
+
+/// An EPUB's accessibility information in words, one fact a line,
+/// meaning first: "Accessibility: screen reader friendly, per the
+/// publisher." (or the other leads, or "No accessibility information
+/// given."), then the summary, access modes, what is enough to read it,
+/// features, hazards, conformance and certifier the book gives. `None`
+/// for a document that is not an EPUB. Used by the document overview and
+/// `tw info`.
+pub fn accessibility_lines(
+    c: &textweaver_lexicon::i18n::Catalog,
+    meta: &textweaver_text::DocumentMeta,
+) -> Option<Vec<String>> {
+    use textweaver_formats::epub::{accessibility, term_words};
+    let a = accessibility(meta)?;
+    if a.is_empty() {
+        return Some(vec![c.tr("access-info-none")]);
+    }
+    let words = |terms: &[String]| {
+        terms
+            .iter()
+            .map(|t| term_words(t))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let mut lines = vec![c.tr(match a.reads_as_text() {
+        Some(true) => "access-info-friendly",
+        Some(false) => "access-info-not-text",
+        None => "access-info-given",
+    })];
+    if let Some(s) = &a.summary {
+        let text = s.trim_end_matches('.');
+        lines.push(c.fmt("access-info-summary", &args!["text" => text]));
+    }
+    if !a.access_modes.is_empty() {
+        let list = words(&a.access_modes);
+        lines.push(c.fmt("access-info-modes", &args!["list" => list]));
+    }
+    if !a.sufficient.is_empty() {
+        let sets: Vec<String> = a
+            .sufficient
+            .iter()
+            .map(|set| {
+                set.iter()
+                    .map(|t| term_words(t))
+                    .reduce(|first, second| {
+                        c.fmt(
+                            "access-info-and",
+                            &args!["first" => first, "second" => second],
+                        )
+                    })
+                    .unwrap_or_default()
+            })
+            .collect();
+        let list = sets
+            .into_iter()
+            .reduce(|first, second| {
+                c.fmt(
+                    "access-info-or",
+                    &args!["first" => first, "second" => second],
+                )
+            })
+            .unwrap_or_default();
+        lines.push(c.fmt("access-info-sufficient", &args!["list" => list]));
+    }
+    if !a.features.is_empty() {
+        let list = words(&a.features);
+        lines.push(c.fmt("access-info-features", &args!["list" => list]));
+    }
+    if !a.hazards.is_empty() {
+        let list = words(&a.hazards);
+        lines.push(c.fmt("access-info-hazards", &args!["list" => list]));
+    }
+    for claim in &a.conformance {
+        let text = claim.trim_end_matches('.');
+        lines.push(c.fmt("access-info-conformance", &args!["text" => text]));
+    }
+    if let Some(name) = &a.certifier {
+        let name = name.trim_end_matches('.');
+        lines.push(c.fmt("access-info-certifier", &args!["name" => name]));
+    }
+    Some(lines)
 }

@@ -13,12 +13,21 @@
 //! [`SENTENCE_LIMIT`] characters, and for larger ones only with `--exact`,
 //! which also counts words with the full segmentation. On a 10 MB text
 //! file this took `tw info` from about 2.7 seconds to a fraction of one.
+//!
+//! An EPUB also gets its own accessibility information after the title,
+//! author and language, one fact a line in words, through the same
+//! messages as the document overview (`textweaver_app::accessibility_lines`):
+//! "Accessibility: screen reader friendly, per the publisher.", or "No
+//! accessibility information given." In JSON it is the `accessibility`
+//! object, the metadata as the book gives it.
 
 use std::path::PathBuf;
 
 use serde_json::{Value, json};
 use textweaver_app::text::core::{MarkerKind, Unit};
 use textweaver_app::text::{Document, units};
+
+use textweaver_app::formats::epub::{ACCESSIBILITY_PROPERTY, Accessibility};
 
 use super::text::load_document;
 
@@ -238,6 +247,7 @@ pub(crate) fn facts_with(doc: &Document, file: &std::path::Path, exact: bool) ->
         "author": doc.meta.author,
         "language": doc.meta.language,
         "properties": doc.meta.properties,
+        "accessibility": textweaver_app::formats::epub::accessibility(&doc.meta),
         "chars": doc.len_chars(),
         "words": words,
         "sentences": sentences,
@@ -257,9 +267,12 @@ fn plural(n: u64, one: &str, many: &str) -> String {
 /// The facts as readable lines ("Words: 120").
 pub(crate) fn describe(f: &Value) -> String {
     let mut out = String::new();
+    // A line "Label: value", or the value alone when the label is empty.
     let mut line = |label: &str, value: String| {
-        out.push_str(label);
-        out.push_str(": ");
+        if !label.is_empty() {
+            out.push_str(label);
+            out.push_str(": ");
+        }
         out.push_str(&value);
         out.push('\n');
     };
@@ -274,6 +287,18 @@ pub(crate) fn describe(f: &Value) -> String {
     ] {
         if let Some(v) = s(&f[key]) {
             line(label, v);
+        }
+    }
+    if let Ok(Some(a)) = serde_json::from_value::<Option<Accessibility>>(f["accessibility"].clone())
+    {
+        let c = textweaver_app::lexicon::i18n::Catalog::english();
+        let mut meta = textweaver_app::text::DocumentMeta::default();
+        if let Ok(json) = serde_json::to_string(&a) {
+            meta.properties
+                .insert(ACCESSIBILITY_PROPERTY.to_owned(), json);
+        }
+        for l in textweaver_app::accessibility_lines(&c, &meta).unwrap_or_default() {
+            line("", l);
         }
     }
     for (label, key) in [
@@ -391,6 +416,43 @@ mod tests {
         let exact = facts_with(&doc, &path, true);
         assert_eq!(exact["sentences"], json!(SENTENCE_LIMIT / 9 + 10));
         assert_eq!(exact["words"], f["words"]);
+    }
+
+    #[test]
+    fn an_epub_says_its_accessibility_in_words() {
+        let mut f = json!({
+            "file": "cells.epub",
+            "format": "epub",
+            "title": "Cells",
+            "accessibility": {
+                "summary": "Every picture has a description.",
+                "access_modes": ["textual", "visual"],
+                "sufficient": [["textual"], ["textual", "visual"]],
+                "features": ["tableOfContents", "alternativeText"],
+                "hazards": ["none"],
+                "conformance": ["EPUB Accessibility 1.1, WCAG 2.1 Level AA"],
+                "certifier": "Example Access Lab"
+            }
+        });
+        let text = describe(&f);
+        assert!(
+            text.contains(
+                "Title: Cells\n\
+                 Accessibility: screen reader friendly, per the publisher.\n\
+                 Summary: Every picture has a description.\n\
+                 Access modes: text, images.\n\
+                 Readable with: text, or text and images.\n\
+                 Features: table of contents, alternative text.\n\
+                 Hazards: none.\n\
+                 Conforms to: EPUB Accessibility 1.1, WCAG 2.1 Level AA.\n\
+                 Certified by: Example Access Lab.\n"
+            ),
+            "{text}"
+        );
+        f["accessibility"] = json!({});
+        assert!(describe(&f).contains("No accessibility information given.\n"));
+        f["accessibility"] = Value::Null;
+        assert!(!describe(&f).contains("ccessibility"));
     }
 
     #[test]
