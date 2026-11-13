@@ -99,7 +99,9 @@ impl Conn {
     /// The `--join-link` given, read.
     fn link(&self) -> Result<Option<JoinLink>> {
         match &self.join_link {
-            Some(text) => Ok(Some(JoinLink::parse(text).map_err(Plain)?)),
+            Some(text) => Ok(Some(
+                JoinLink::parse(text).map_err(|e| Plain(e.to_string()))?,
+            )),
             None => Ok(None),
         }
     }
@@ -118,7 +120,7 @@ impl Conn {
             (None, None) => return Ok(None),
         };
         Ok(Some(
-            JoinLink::new(&host, port, code, Some(topic)).map_err(Plain)?,
+            JoinLink::new(&host, port, code, Some(topic)).map_err(|e| Plain(e.to_string()))?,
         ))
     }
 }

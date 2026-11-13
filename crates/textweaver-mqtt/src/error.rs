@@ -1,5 +1,6 @@
-//! Failures in words. Each text starts with its meaning ("Refused",
-//! "Not authorized", "Unreachable", "TLS failure", "Connection lost",
+//! Failures, each with its kind and its [`DisconnectReason`]. Each
+//! reason's sentence starts with its meaning ("Refused", "Not
+//! authorized", "Unreachable", "TLS failure", "Connection lost",
 //! "Settings error"), so the first cells of a Braille line say what
 //! happened.
 
@@ -7,6 +8,8 @@ use std::fmt;
 use std::io;
 
 use rumqttc::mqttbytes::v4::ConnectReturnCode;
+
+use crate::reason::{DisconnectReason, IoCause};
 
 /// What kind of failure, which decides whether to retry.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -40,46 +43,30 @@ impl Kind {
     }
 }
 
-/// A failure and its sentence.
+/// A failure and why.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Failure {
     pub(crate) kind: Kind,
-    pub(crate) text: String,
+    pub(crate) reason: DisconnectReason,
 }
 
 impl Failure {
-    pub(crate) fn new(kind: Kind, text: impl Into<String>) -> Self {
-        Failure {
-            kind,
-            text: text.into(),
-        }
+    pub(crate) fn new(kind: Kind, reason: DisconnectReason) -> Self {
+        Failure { kind, reason }
     }
 
     /// A CONNACK refusal in words.
     pub(crate) fn from_connack(code: ConnectReturnCode) -> Self {
         use ConnectReturnCode as C;
+        use DisconnectReason as R;
         match code {
-            C::BadUserNamePassword => Failure::new(
-                Kind::NotAuthorized,
-                "Not authorized: the broker refused the user name or password.",
-            ),
-            C::NotAuthorized => Failure::new(
-                Kind::NotAuthorized,
-                // Mosquitto 2 sends this code (5) for a wrong password too.
-                "Not authorized: the broker refused the login. Check the user name and password.",
-            ),
-            C::RefusedProtocolVersion => Failure::new(
-                Kind::Refused,
-                "Refused: the broker does not accept MQTT 3.1.1.",
-            ),
-            C::BadClientId => {
-                Failure::new(Kind::Refused, "Refused: the broker rejected the client id.")
-            }
-            C::ServiceUnavailable => Failure::new(
-                Kind::Unreachable,
-                "Unreachable: the broker says it is unavailable right now.",
-            ),
-            C::Success => Failure::new(Kind::Protocol, "Protocol error: unexpected success code."),
+            C::BadUserNamePassword => Failure::new(Kind::NotAuthorized, R::BadUserNameOrPassword),
+            // Mosquitto 2 sends this code (5) for a wrong password too.
+            C::NotAuthorized => Failure::new(Kind::NotAuthorized, R::LoginRefused),
+            C::RefusedProtocolVersion => Failure::new(Kind::Refused, R::ProtocolVersion),
+            C::BadClientId => Failure::new(Kind::Refused, R::ClientIdRejected),
+            C::ServiceUnavailable => Failure::new(Kind::Unreachable, R::BrokerUnavailable),
+            C::Success => Failure::new(Kind::Protocol, R::UnexpectedSuccess),
         }
     }
 
@@ -98,37 +85,39 @@ impl Failure {
         {
             return Failure::new(
                 Kind::Tls,
-                format!("TLS needed: {target} answered with TLS. Turn TLS on for this source."),
+                DisconnectReason::TlsNeeded {
+                    target: target.to_owned(),
+                },
             );
         }
-        let why = match err.kind() {
-            io::ErrorKind::ConnectionRefused => "nothing is listening on that port".to_string(),
-            io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock => "no answer in time".to_string(),
-            io::ErrorKind::ConnectionReset | io::ErrorKind::ConnectionAborted => {
-                "the connection was reset".to_string()
-            }
-            io::ErrorKind::UnexpectedEof => "the broker closed the connection".to_string(),
-            io::ErrorKind::HostUnreachable | io::ErrorKind::NetworkUnreachable => {
-                "no route to the host".to_string()
-            }
-            _ => crate::sanitize::clean_text(&err.to_string(), 300),
+        let cause = match err.kind() {
+            io::ErrorKind::ConnectionRefused => IoCause::NothingListening,
+            io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock => IoCause::NoAnswer,
+            io::ErrorKind::ConnectionReset | io::ErrorKind::ConnectionAborted => IoCause::Reset,
+            io::ErrorKind::UnexpectedEof => IoCause::Closed,
+            io::ErrorKind::HostUnreachable | io::ErrorKind::NetworkUnreachable => IoCause::NoRoute,
+            _ => IoCause::Other {
+                error: crate::sanitize::clean_text(&err.to_string(), 300),
+            },
         };
+        let target = target.to_owned();
         match during {
             Stage::Connect => Failure::new(
                 Kind::Unreachable,
-                format!("Unreachable: cannot connect to {target}: {why}."),
+                DisconnectReason::CannotConnect { target, cause },
             ),
-            Stage::Handshake => Failure::new(
-                Kind::Tls,
-                format!("TLS failure: the handshake with {target} did not finish: {why}."),
-            ),
+            Stage::Handshake => {
+                Failure::new(Kind::Tls, DisconnectReason::Handshake { target, cause })
+            }
             Stage::Login => Failure::new(
                 Kind::Lost,
-                format!("Connection lost while logging in to {target}: {why}."),
+                DisconnectReason::LostLoggingIn {
+                    target,
+                    cause,
+                    tls_hint: false,
+                },
             ),
-            Stage::Running => {
-                Failure::new(Kind::Lost, format!("Connection lost to {target}: {why}."))
-            }
+            Stage::Running => Failure::new(Kind::Lost, DisconnectReason::Lost { target, cause }),
         }
     }
 }
@@ -164,7 +153,7 @@ mod tests {
         assert_eq!(f.kind, Kind::NotAuthorized);
         assert!(!f.kind.retry_helps());
         assert_eq!(
-            f.text,
+            f.reason.to_string(),
             "Not authorized: the broker refused the login. Check the user name and password."
         );
     }
@@ -174,13 +163,13 @@ mod tests {
         let e = io::Error::from(io::ErrorKind::ConnectionRefused);
         let f = Failure::from_io(&e, Stage::Connect, "host:1883");
         assert_eq!(
-            f.text,
+            f.reason.to_string(),
             "Unreachable: cannot connect to host:1883: nothing is listening on that port."
         );
         assert!(f.kind.retry_helps());
         let e = io::Error::other(TlsExpected);
         let f = Failure::from_io(&e, Stage::Login, "host:8883");
         assert_eq!(f.kind, Kind::Tls);
-        assert!(f.text.starts_with("TLS needed: host:8883"));
+        assert!(f.reason.to_string().starts_with("TLS needed: host:8883"));
     }
 }

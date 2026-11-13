@@ -13,11 +13,15 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use textweaver_components::credentials::Password;
-use textweaver_mqtt::{MqttConfig, MqttEvent, MqttSource, Payload, Pin, Secret, Tls};
+use textweaver_lexicon::i18n::{Arg, Catalog};
+use textweaver_mqtt::{
+    DisconnectReason, JoinLinkError, MessageArg, MqttConfig, MqttEvent, MqttSource, Payload, Pin,
+    Secret, Tls,
+};
 use textweaver_store::{LiveSettings, LiveSourceSettings, LiveTls};
 
 use super::KeyOrder;
-use super::source::{LiveEvent, LivePayload, LiveSource};
+use super::source::{LiveEvent, LivePayload, LiveReason, LiveSource};
 
 /// What an MQTT live source reads from: the running client, or a test's
 /// scripted stand-in.
@@ -103,17 +107,56 @@ pub fn live_event(event: MqttEvent) -> LiveEvent {
             retained,
         },
         MqttEvent::Disconnected {
-            reason,
+            why,
             retrying: true,
-        } => LiveEvent::Disconnected { reason },
+            ..
+        } => LiveEvent::Disconnected {
+            reason: LiveReason::Mqtt(why),
+        },
         MqttEvent::Disconnected {
-            reason,
+            why,
             retrying: false,
-        } => LiveEvent::Failed { reason },
+            ..
+        } => LiveEvent::Failed {
+            reason: LiveReason::Mqtt(why),
+        },
         MqttEvent::Quiet { topic, seconds } => LiveEvent::Quiet { topic, seconds },
         MqttEvent::TopicRefused { topic } => LiveEvent::TopicRefused { topic },
         MqttEvent::Skipped { count } => LiveEvent::Skipped { count },
     }
+}
+
+/// Why a live source is down, as a sentence in the language of
+/// `catalog`. In English it is the reason's own sentence, word for word.
+pub fn reason_text(catalog: &Catalog, why: &DisconnectReason) -> String {
+    message_text(catalog, why.message_id(), &why.args())
+}
+
+/// Why a join link does not read, in the language of `catalog`: the
+/// words after "Not a join link:", lower case, with no lead-in. In
+/// English they are word for word the error's own, after its "Join link
+/// error:" or "Join code error:".
+pub fn join_link_error_text(catalog: &Catalog, error: &JoinLinkError) -> String {
+    message_text(catalog, error.message_id(), &error.args())
+}
+
+/// The message `id` from `catalog`, with `args`; a value that is a
+/// message of its own is said first, in the same language.
+pub(crate) fn message_text(catalog: &Catalog, id: &str, args: &[(&str, MessageArg)]) -> String {
+    let args: Vec<(&str, Arg)> = args
+        .iter()
+        .map(|(name, value)| {
+            let value = match value {
+                MessageArg::Text(t) => Arg::from(t.as_str()),
+                MessageArg::Number(n) => Arg::Num(*n),
+                MessageArg::Message(inner, inner_args) => {
+                    Arg::Str(message_text(catalog, inner, inner_args))
+                }
+            };
+            (*name, value)
+        })
+        .collect();
+    catalog.fmt(id, &args)
 }
 
 /// The client's configuration for source `source`: host, port (the one
@@ -198,6 +241,103 @@ mod tests {
     use super::fake::Script;
     use super::*;
 
+    fn lost() -> DisconnectReason {
+        DisconnectReason::Lost {
+            target: "logger:1883".into(),
+            cause: textweaver_mqtt::IoCause::Closed,
+        }
+    }
+
+    /// In English, the app says each reason word for word as the client's
+    /// own sentence, which `tw` and the logs show.
+    #[test]
+    fn every_reason_reads_the_same_from_the_english_catalog() {
+        let en = Catalog::english();
+        for why in DisconnectReason::examples() {
+            assert_eq!(reason_text(&en, &why), why.to_string(), "{why:?}");
+        }
+    }
+
+    /// In English, each join link error reads as its own words, after
+    /// the lead-in `tw` prints.
+    #[test]
+    fn every_join_link_error_reads_the_same_from_the_english_catalog() {
+        let en = Catalog::english();
+        for e in JoinLinkError::examples() {
+            let english = e.to_string();
+            let words = english
+                .strip_prefix("Join link error: ")
+                .or_else(|| english.strip_prefix("Join code error: "))
+                .unwrap_or(&english);
+            assert_eq!(join_link_error_text(&en, &e), words, "{e:?}");
+        }
+    }
+
+    /// The pseudo-locale check (tests/it/pseudo_locale.rs) for every
+    /// disconnect reason and join link error: in `en-XA` each comes out
+    /// in brackets, with nothing outside them. A value said from the
+    /// catalog, such as a cause or a topic problem, is accented too, so
+    /// any plain English word left anywhere but the sample values is
+    /// English that bypassed the catalog. In `ar-XB` every message closes
+    /// the direction marks it opens.
+    #[test]
+    fn every_reason_and_link_error_is_in_the_pseudo_locales() {
+        let (xa, _) = Catalog::for_language("en-XA", None);
+        let (xb, _) = Catalog::for_language("ar-XB", None);
+        let mut said: Vec<(String, String, String)> = Vec::new();
+        for why in DisconnectReason::examples() {
+            said.push((
+                format!("{why:?}"),
+                reason_text(&xa, &why),
+                reason_text(&xb, &why),
+            ));
+        }
+        for e in JoinLinkError::examples() {
+            said.push((
+                format!("{e:?}"),
+                join_link_error_text(&xa, &e),
+                join_link_error_text(&xb, &e),
+            ));
+        }
+        let mut problems = Vec::new();
+        for (what, accented, rtl) in &said {
+            if !(accented.starts_with('\u{27e6}') && accented.ends_with('\u{27e7}')) {
+                problems.push(format!("{what}: not bracketed: {accented}"));
+            }
+            let words = plain_english(accented);
+            if !words.is_empty() {
+                problems.push(format!("{what}: {accented}: {}", words.join(" ")));
+            }
+            let marks = textweaver_lexicon::i18n::bidi_problems(rtl);
+            if !marks.is_empty() {
+                problems.push(format!("{what}: {marks:?}"));
+            }
+        }
+        assert!(problems.is_empty(), "{}", problems.join("\n"));
+    }
+
+    /// Plain English words of three letters or more, anywhere in `s`, but
+    /// for the sample values the examples put in: the pseudo-locale
+    /// accents every message's own letters, so such a word is English
+    /// that did not come from the catalog.
+    fn plain_english(s: &str) -> Vec<String> {
+        const VALUES: &[&str] = &[
+            "logger",
+            "example",
+            "error",
+            "pem",
+            "badencoding",
+            "pubrec",
+            "user",
+            "twjoin",
+        ];
+        s.split(|c: char| !c.is_ascii_alphabetic())
+            .filter(|w| w.len() >= 3)
+            .map(str::to_lowercase)
+            .filter(|w| !VALUES.contains(&w.as_str()))
+            .collect()
+    }
+
     #[test]
     fn every_client_event_has_its_live_event() {
         let script = Script::default();
@@ -224,14 +364,8 @@ mod tests {
                 retained: false,
                 key_order: Default::default(),
             },
-            MqttEvent::Disconnected {
-                reason: "Connection lost to logger:1883.".into(),
-                retrying: true,
-            },
-            MqttEvent::Disconnected {
-                reason: "Not authorized: check the user name and password.".into(),
-                retrying: false,
-            },
+            MqttEvent::disconnected(lost(), true),
+            MqttEvent::disconnected(DisconnectReason::LoginRefused, false),
             MqttEvent::Quiet {
                 topic: "log/checkins".into(),
                 seconds: 60,
@@ -263,10 +397,10 @@ mod tests {
                     retained: false
                 },
                 LiveEvent::Disconnected {
-                    reason: "Connection lost to logger:1883.".into()
+                    reason: LiveReason::Mqtt(lost())
                 },
                 LiveEvent::Failed {
-                    reason: "Not authorized: check the user name and password.".into()
+                    reason: LiveReason::Mqtt(DisconnectReason::LoginRefused)
                 },
                 LiveEvent::Quiet {
                     topic: "log/checkins".into(),

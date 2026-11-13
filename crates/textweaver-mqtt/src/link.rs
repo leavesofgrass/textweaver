@@ -9,8 +9,9 @@
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, UdpSocket};
 
-use crate::pin::JoinCode;
-use crate::topic;
+use crate::pin::{JOIN_CODE_CHARS, JoinCode};
+use crate::reason::MessageArg;
+use crate::topic::TopicProblem;
 
 /// The link's scheme, before `://`.
 pub const JOIN_LINK_SCHEME: &str = "twjoin";
@@ -51,8 +52,9 @@ const MAX_LINK: usize = 2048;
 /// Reading a link ([`JoinLink::parse`]) forgives the space around it,
 /// quotes or angle brackets around it, a final period, and a label before
 /// it such as `Join link:`. Anything else that is not this shape is
-/// refused with a sentence that starts with "Join link error", meaning
-/// first. [`JoinLink::find`] finds a link inside longer pasted text.
+/// refused with a [`JoinLinkError`], whose English sentence starts with
+/// "Join link error", meaning first. [`JoinLink::find`] finds a link
+/// inside longer pasted text.
 #[derive(Clone, PartialEq, Eq)]
 pub struct JoinLink {
     host: String,
@@ -70,7 +72,7 @@ impl JoinLink {
         port: u16,
         code: JoinCode,
         topic: Option<&str>,
-    ) -> Result<JoinLink, String> {
+    ) -> Result<JoinLink, JoinLinkError> {
         let host = host
             .trim()
             .trim_start_matches('[')
@@ -78,7 +80,7 @@ impl JoinLink {
             .to_owned();
         check_host(&host)?;
         if port == 0 {
-            return Err(port_error());
+            return Err(JoinLinkError::BadPort);
         }
         let topic = match topic.map(str::trim).filter(|t| !t.is_empty()) {
             Some(t) => Some(check_topic(t)?),
@@ -92,16 +94,13 @@ impl JoinLink {
         })
     }
 
-    /// Reads a link as copied or pasted. Errors are sentences, meaning
-    /// first, that never repeat the code.
-    pub fn parse(text: &str) -> Result<JoinLink, String> {
+    /// Reads a link as copied or pasted. An error never repeats the code.
+    pub fn parse(text: &str) -> Result<JoinLink, JoinLinkError> {
         if text.chars().count() > MAX_LINK {
-            return Err("Join link error: the text is far too long.".into());
+            return Err(JoinLinkError::TooLong);
         }
         let Some(start) = scheme_at(text) else {
-            return Err(format!(
-                "Join link error: a join link starts with {JOIN_LINK_SCHEME}://."
-            ));
+            return Err(JoinLinkError::NoScheme);
         };
         // A label before the link, such as "Join link:", is allowed;
         // anything after it is not.
@@ -115,10 +114,9 @@ impl JoinLink {
     /// "Show the join code" list: `None` when `text` holds no
     /// `twjoin://`, else that link read as [`JoinLink::parse`] reads one,
     /// up to the first space or line break after it.
-    pub fn find(text: &str) -> Option<Result<JoinLink, String>> {
+    pub fn find(text: &str) -> Option<Result<JoinLink, JoinLinkError>> {
         if text.chars().count() > MAX_LINK * 4 {
-            return scheme_at(text)
-                .map(|_| Err("Join link error: the text is far too long.".into()));
+            return scheme_at(text).map(|_| Err(JoinLinkError::TooLong));
         }
         let start = scheme_at(text)?;
         let rest = &text[start..];
@@ -213,6 +211,272 @@ impl fmt::Debug for JoinLink {
     }
 }
 
+/// Why a join link (or the join code inside it) does not read, as data,
+/// so the app can say it in the reader's language. `Display` is the
+/// English sentence, starting "Join link error:" or, for the code,
+/// "Join code error:", meaning first; it never repeats the code.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum JoinLinkError {
+    /// The text is far too long to be a link.
+    TooLong,
+    /// The text holds no `twjoin://`.
+    NoScheme,
+    /// The link holds a space or line break.
+    Spaces,
+    /// No join code after the host and port.
+    NoCode,
+    /// No host.
+    NoHost,
+    /// An IPv6 address without its closing bracket.
+    Ipv6Bracket,
+    /// The address in brackets is not IPv6.
+    NotIpv6,
+    /// The port is not 1 to 65535.
+    BadPort,
+    /// The host name is longer than 253 characters.
+    HostTooLong,
+    /// A character that host names do not use.
+    HostCharacter {
+        /// The character.
+        character: char,
+    },
+    /// A key other than `topic` after the question mark.
+    UnknownKey {
+        /// The key, decoded, without control characters, at most 40
+        /// characters.
+        key: String,
+    },
+    /// `topic` twice.
+    TopicTwice,
+    /// The topic holds a control character.
+    TopicControl,
+    /// The topic cannot be followed.
+    Topic(TopicProblem),
+    /// A percent sign not followed by two hex digits.
+    PercentSign,
+    /// The decoded topic is not UTF-8.
+    NotUtf8,
+    /// The join code is far too long.
+    CodeTooLong,
+    /// No join code.
+    CodeEmpty,
+    /// The join code has the wrong number of characters.
+    CodeLength {
+        /// How many it has.
+        count: usize,
+    },
+    /// A character that join codes do not use.
+    CodeCharacter {
+        /// The character.
+        character: char,
+        /// Its group of four, from 1.
+        group: usize,
+    },
+}
+
+/// How a character is shown in an error: itself when it is printable
+/// ASCII, else its code.
+fn printable(c: char) -> bool {
+    c.is_ascii_graphic()
+}
+
+impl JoinLinkError {
+    /// The error is about the join code inside the link.
+    pub fn is_about_the_code(&self) -> bool {
+        matches!(
+            self,
+            JoinLinkError::CodeTooLong
+                | JoinLinkError::CodeEmpty
+                | JoinLinkError::CodeLength { .. }
+                | JoinLinkError::CodeCharacter { .. }
+        )
+    }
+
+    /// The id of the words after the lead-in, lower case, in the app's
+    /// message catalog.
+    pub fn message_id(&self) -> &'static str {
+        use JoinLinkError as E;
+        match self {
+            E::TooLong | E::CodeTooLong => "live-link-bad-too-long",
+            E::NoScheme => "live-link-bad-scheme",
+            E::Spaces => "live-link-bad-spaces",
+            E::NoCode => "live-link-bad-no-code",
+            E::NoHost => "live-link-bad-no-host",
+            E::Ipv6Bracket => "live-link-bad-bracket",
+            E::NotIpv6 => "live-link-bad-not-ipv6",
+            E::BadPort => "live-link-bad-port",
+            E::HostTooLong => "live-link-bad-host-too-long",
+            E::HostCharacter { character } if printable(*character) => {
+                "live-link-bad-host-character"
+            }
+            E::HostCharacter { .. } => "live-link-bad-host-character-code",
+            E::UnknownKey { .. } => "live-link-bad-key",
+            E::TopicTwice => "live-link-bad-topic-twice",
+            E::TopicControl => "live-link-bad-topic-control",
+            E::Topic(_) => "live-link-bad-topic",
+            E::PercentSign => "live-link-bad-percent",
+            E::NotUtf8 => "live-link-bad-utf8",
+            E::CodeEmpty => "live-link-bad-code-empty",
+            E::CodeLength { .. } => "live-link-bad-code-length",
+            E::CodeCharacter { character, .. } if printable(*character) => {
+                "live-link-bad-code-character"
+            }
+            E::CodeCharacter { .. } => "live-link-bad-code-character-code",
+        }
+    }
+
+    /// The values the words need, by the names the catalog uses.
+    pub fn args(&self) -> Vec<(&'static str, MessageArg)> {
+        use JoinLinkError as E;
+        let character = |c: char| {
+            if printable(c) {
+                ("character", MessageArg::Text(c.to_string()))
+            } else {
+                ("code", MessageArg::Number(i64::from(u32::from(c))))
+            }
+        };
+        match self {
+            E::NoScheme => vec![("scheme", MessageArg::Text(JOIN_LINK_SCHEME.into()))],
+            E::HostCharacter { character: c } => vec![character(*c)],
+            E::UnknownKey { key } => vec![("key", MessageArg::Text(key.clone()))],
+            E::Topic(problem) => {
+                vec![("why", MessageArg::Message(problem.message_id(), Vec::new()))]
+            }
+            E::CodeLength { count } => vec![
+                (
+                    "count",
+                    MessageArg::Number(i64::try_from(*count).unwrap_or(i64::MAX)),
+                ),
+                ("needed", MessageArg::Number(JOIN_CODE_CHARS as i64)),
+            ],
+            E::CodeCharacter {
+                character: c,
+                group,
+            } => vec![
+                character(*c),
+                (
+                    "group",
+                    MessageArg::Number(i64::try_from(*group).unwrap_or(i64::MAX)),
+                ),
+            ],
+            _ => Vec::new(),
+        }
+    }
+
+    /// The English sentence without its "Join link error:" lead-in, as
+    /// `tw join-qr` prints it after "No join link:". A code error keeps
+    /// its "Join code error:" lead-in.
+    pub fn detail(&self) -> String {
+        let all = self.to_string();
+        match all.strip_prefix("Join link error: ") {
+            Some(rest) => rest.to_owned(),
+            None => all,
+        }
+    }
+
+    /// The words after the lead-in, in English.
+    fn words(&self) -> String {
+        use JoinLinkError as E;
+        let shown = |c: char| {
+            if printable(c) {
+                c.to_string()
+            } else {
+                format!("a character with code {}", u32::from(c))
+            }
+        };
+        match self {
+            E::TooLong | E::CodeTooLong => "the text is far too long.".into(),
+            E::NoScheme => format!("a join link starts with {JOIN_LINK_SCHEME}://."),
+            E::Spaces => "a join link has no spaces or line breaks.".into(),
+            E::NoCode => "no join code was given after the host and port.".into(),
+            E::NoHost => "no host was given.".into(),
+            E::Ipv6Bracket => "an IPv6 address needs its closing square bracket.".into(),
+            E::NotIpv6 => "the address in square brackets is not an IPv6 address.".into(),
+            E::BadPort => "the port is not a number from 1 to 65535.".into(),
+            E::HostTooLong => "the host name is too long.".into(),
+            E::HostCharacter { character } => format!(
+                "{} is not used in host names. Check the host.",
+                shown(*character)
+            ),
+            E::UnknownKey { key } => format!(
+                "{key} is not part of a join link. Only topic may follow the question mark."
+            ),
+            E::TopicTwice => "the topic is given twice.".into(),
+            E::TopicControl => "the topic holds a control character.".into(),
+            E::Topic(problem) => format!("{problem}."),
+            E::PercentSign => "the topic has a percent sign not followed by two hex digits.".into(),
+            E::NotUtf8 => "the topic is not UTF-8 text.".into(),
+            E::CodeEmpty => "no code was given.".into(),
+            E::CodeLength { count } => {
+                let chars = if *count == 1 {
+                    "character"
+                } else {
+                    "characters"
+                };
+                format!(
+                    "the code has {count} {chars}; it needs {JOIN_CODE_CHARS}, in four groups of four."
+                )
+            }
+            E::CodeCharacter { character, group } => format!(
+                "{} in group {group} is not used in join codes. Check that character.",
+                shown(*character)
+            ),
+        }
+    }
+
+    /// One of every variant, with sample values, for tests that check
+    /// each sentence in every language. Not part of the API.
+    #[doc(hidden)]
+    pub fn examples() -> Vec<JoinLinkError> {
+        use JoinLinkError as E;
+        let mut all = vec![
+            E::TooLong,
+            E::NoScheme,
+            E::Spaces,
+            E::NoCode,
+            E::NoHost,
+            E::Ipv6Bracket,
+            E::NotIpv6,
+            E::BadPort,
+            E::HostTooLong,
+            E::HostCharacter { character: '_' },
+            E::HostCharacter { character: '\u{7}' },
+            E::UnknownKey { key: "user".into() },
+            E::TopicTwice,
+            E::TopicControl,
+            E::PercentSign,
+            E::NotUtf8,
+            E::CodeTooLong,
+            E::CodeEmpty,
+            E::CodeLength { count: 1 },
+            E::CodeLength { count: 15 },
+            E::CodeCharacter {
+                character: '!',
+                group: 2,
+            },
+            E::CodeCharacter {
+                character: '\u{e9}',
+                group: 1,
+            },
+        ];
+        all.extend(TopicProblem::ALL.into_iter().map(E::Topic));
+        all
+    }
+}
+
+impl fmt::Display for JoinLinkError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let lead = if self.is_about_the_code() {
+            "Join code error"
+        } else {
+            "Join link error"
+        };
+        write!(f, "{lead}: {}", self.words())
+    }
+}
+
+impl std::error::Error for JoinLinkError {}
+
 /// Where `twjoin://` starts in `text`, in any case.
 fn scheme_at(text: &str) -> Option<usize> {
     let lower = text.to_ascii_lowercase();
@@ -220,14 +484,12 @@ fn scheme_at(text: &str) -> Option<usize> {
 }
 
 /// Reads `twjoin://HOST:PORT/CODE?topic=TOPIC`, starting at the scheme.
-fn parse_link(link: &str) -> Result<JoinLink, String> {
+fn parse_link(link: &str) -> Result<JoinLink, JoinLinkError> {
     let rest = &link[JOIN_LINK_SCHEME.len() + 3..];
     if rest.chars().any(char::is_whitespace) {
-        return Err("Join link error: a join link has no spaces or line breaks.".into());
+        return Err(JoinLinkError::Spaces);
     }
-    let (authority, rest) = rest.split_once('/').ok_or_else(|| {
-        "Join link error: no join code was given after the host and port.".to_string()
-    })?;
+    let (authority, rest) = rest.split_once('/').ok_or(JoinLinkError::NoCode)?;
     let (host, port) = split_host_port(authority)?;
     let (code, query) = match rest.split_once('?') {
         Some((c, q)) => (c, Some(q)),
@@ -235,21 +497,19 @@ fn parse_link(link: &str) -> Result<JoinLink, String> {
     };
     let code = code.trim_end_matches('/');
     if code.is_empty() {
-        return Err("Join link error: no join code was given after the host and port.".into());
+        return Err(JoinLinkError::NoCode);
     }
-    let code = JoinCode::parse(code)?;
+    let code = JoinCode::read(code)?;
     let mut topic = None;
     for pair in query.unwrap_or("").split('&').filter(|p| !p.is_empty()) {
         let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
         if !key.eq_ignore_ascii_case("topic") {
             let key = percent_decode(key).unwrap_or_else(|_| key.to_owned());
             let key: String = key.chars().filter(|c| !c.is_control()).take(40).collect();
-            return Err(format!(
-                "Join link error: {key} is not part of a join link. Only topic may follow the question mark."
-            ));
+            return Err(JoinLinkError::UnknownKey { key });
         }
         if topic.is_some() {
-            return Err("Join link error: the topic is given twice.".into());
+            return Err(JoinLinkError::TopicTwice);
         }
         let value = percent_decode(value)?;
         topic = Some(value);
@@ -258,22 +518,18 @@ fn parse_link(link: &str) -> Result<JoinLink, String> {
 }
 
 /// `HOST:PORT`, `[V6]:PORT`, or either without the port.
-fn split_host_port(authority: &str) -> Result<(String, u16), String> {
+fn split_host_port(authority: &str) -> Result<(String, u16), JoinLinkError> {
     if authority.is_empty() {
-        return Err("Join link error: no host was given.".into());
+        return Err(JoinLinkError::NoHost);
     }
     let (host, port) = if let Some(after) = authority.strip_prefix('[') {
-        let (h, rest) = after.split_once(']').ok_or_else(|| {
-            "Join link error: an IPv6 address needs its closing square bracket.".to_string()
-        })?;
+        let (h, rest) = after.split_once(']').ok_or(JoinLinkError::Ipv6Bracket)?;
         let port = match rest {
             "" => None,
-            p => Some(p.strip_prefix(':').ok_or_else(port_error)?),
+            p => Some(p.strip_prefix(':').ok_or(JoinLinkError::BadPort)?),
         };
         if h.parse::<Ipv6Addr>().is_err() {
-            return Err(
-                "Join link error: the address in square brackets is not an IPv6 address.".into(),
-            );
+            return Err(JoinLinkError::NotIpv6);
         }
         (h.to_owned(), port)
     } else {
@@ -288,52 +544,42 @@ fn split_host_port(authority: &str) -> Result<(String, u16), String> {
             .parse::<u16>()
             .ok()
             .filter(|p| *p > 0)
-            .ok_or_else(port_error)?,
+            .ok_or(JoinLinkError::BadPort)?,
     };
     Ok((host, port))
 }
 
-fn port_error() -> String {
-    "Join link error: the port is not a number from 1 to 65535.".into()
-}
-
 /// A host name, or an IP address (an IPv6 one without brackets).
-fn check_host(host: &str) -> Result<(), String> {
+fn check_host(host: &str) -> Result<(), JoinLinkError> {
     if host.is_empty() {
-        return Err("Join link error: no host was given.".into());
+        return Err(JoinLinkError::NoHost);
     }
     if host.contains(':') {
-        return host.parse::<Ipv6Addr>().map(|_| ()).map_err(|_| {
-            "Join link error: the address in square brackets is not an IPv6 address.".into()
-        });
+        return host
+            .parse::<Ipv6Addr>()
+            .map(|_| ())
+            .map_err(|_| JoinLinkError::NotIpv6);
     }
     if host.len() > 253 {
-        return Err("Join link error: the host name is too long.".into());
+        return Err(JoinLinkError::HostTooLong);
     }
-    if let Some(c) = host
+    if let Some(character) = host
         .chars()
         .find(|c| !(c.is_ascii_alphanumeric() || matches!(c, '.' | '-')))
     {
-        let shown = if c.is_ascii_graphic() {
-            c.to_string()
-        } else {
-            format!("a character with code {}", u32::from(c))
-        };
-        return Err(format!(
-            "Join link error: {shown} is not used in host names. Check the host."
-        ));
+        return Err(JoinLinkError::HostCharacter { character });
     }
     Ok(())
 }
 
 /// A topic filter a reader may subscribe to, cleaned of nothing: one with
 /// control characters is refused, not changed.
-fn check_topic(topic: &str) -> Result<String, String> {
+fn check_topic(topic: &str) -> Result<String, JoinLinkError> {
     if topic.chars().any(char::is_control) {
-        return Err("Join link error: the topic holds a control character.".into());
+        return Err(JoinLinkError::TopicControl);
     }
-    if let Some(why) = topic::filter_problem(topic) {
-        return Err(format!("Join link error: {why}."));
+    if let Some(problem) = TopicProblem::of_filter(topic) {
+        return Err(JoinLinkError::Topic(problem));
     }
     Ok(topic.to_owned())
 }
@@ -352,23 +598,23 @@ fn percent_encode(text: &str) -> String {
 }
 
 /// `%XX` back to bytes, and the bytes as UTF-8. A `+` stays a `+`.
-fn percent_decode(text: &str) -> Result<String, String> {
-    let bad = || "Join link error: the topic has a percent sign not followed by two hex digits.";
+fn percent_decode(text: &str) -> Result<String, JoinLinkError> {
+    let bad = JoinLinkError::PercentSign;
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' {
-            let hex = bytes.get(i + 1..i + 3).ok_or_else(|| bad().to_string())?;
-            let hex = std::str::from_utf8(hex).map_err(|_| bad().to_string())?;
-            out.push(u8::from_str_radix(hex, 16).map_err(|_| bad().to_string())?);
+            let hex = bytes.get(i + 1..i + 3).ok_or(bad.clone())?;
+            let hex = std::str::from_utf8(hex).map_err(|_| bad.clone())?;
+            out.push(u8::from_str_radix(hex, 16).map_err(|_| bad.clone())?);
             i += 3;
         } else {
             out.push(bytes[i]);
             i += 1;
         }
     }
-    String::from_utf8(out).map_err(|_| "Join link error: the topic is not UTF-8 text.".into())
+    String::from_utf8(out).map_err(|_| JoinLinkError::NotUtf8)
 }
 
 #[cfg(test)]
@@ -504,10 +750,43 @@ mod tests {
             ),
         ];
         for (text, want) in cases {
-            assert_eq!(JoinLink::parse(text).unwrap_err(), want, "{text}");
+            assert_eq!(
+                JoinLink::parse(text).unwrap_err().to_string(),
+                want,
+                "{text}"
+            );
         }
         let long = format!("twjoin://{}/ABCD-EFGH-JKMN-PQRS", "a".repeat(3000));
-        assert!(JoinLink::parse(&long).unwrap_err().contains("far too long"));
+        assert_eq!(JoinLink::parse(&long).unwrap_err(), JoinLinkError::TooLong);
+    }
+
+    #[test]
+    fn errors_are_data_with_one_english_sentence_each() {
+        assert_eq!(
+            JoinLink::parse("twjoin://h:0/ABCD-EFGH-JKMN-PQRS").unwrap_err(),
+            JoinLinkError::BadPort
+        );
+        assert_eq!(
+            JoinLink::parse("twjoin://h/ABCD-EFGH-JKMN-PQR").unwrap_err(),
+            JoinLinkError::CodeLength { count: 15 }
+        );
+        assert_eq!(
+            JoinLinkError::BadPort.detail(),
+            "the port is not a number from 1 to 65535."
+        );
+        assert_eq!(
+            JoinLinkError::CodeEmpty.detail(),
+            "Join code error: no code was given."
+        );
+        assert_eq!(
+            JoinLinkError::CodeLength { count: 1 }.to_string(),
+            "Join code error: the code has 1 character; it needs 16, in four groups of four."
+        );
+        for e in JoinLinkError::examples() {
+            let s = e.to_string();
+            assert!(s.ends_with('.'), "{s}");
+            assert!(!s.contains("ABCD"), "{s}");
+        }
     }
 
     #[test]

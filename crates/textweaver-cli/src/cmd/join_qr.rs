@@ -45,10 +45,7 @@ fn read_link(path: &Path) -> Result<JoinLink> {
         }
     }
     match bad {
-        Some(reason) => bail!(Plain(format!(
-            "No join link: {}",
-            reason.strip_prefix("Join link error: ").unwrap_or(&reason)
-        ))),
+        Some(reason) => bail!(Plain(format!("No join link: {}", reason.detail()))),
         None => bail!(Plain(
             "No join link: the QR code holds something else.".into()
         )),

@@ -39,7 +39,7 @@ impl PublishError {
 
 impl From<Failure> for PublishError {
     fn from(f: Failure) -> Self {
-        PublishError::new(f.text)
+        PublishError::new(f.reason.to_string())
     }
 }
 

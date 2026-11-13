@@ -883,14 +883,14 @@ mod tests {
                 seconds: 60,
             },
             MqttEvent::Skipped { count: 3 },
-            MqttEvent::Disconnected {
-                reason: "Connection lost to logger.example.ts.net:1883.".into(),
-                retrying: true,
-            },
-            MqttEvent::Disconnected {
-                reason: "Not authorized: check the user name and password.".into(),
-                retrying: false,
-            },
+            MqttEvent::disconnected(
+                textweaver_mqtt::DisconnectReason::Lost {
+                    target: "logger.example.ts.net:1883".into(),
+                    cause: textweaver_mqtt::IoCause::Closed,
+                },
+                true,
+            ),
+            MqttEvent::disconnected(textweaver_mqtt::DisconnectReason::LoginRefused, false),
         ] {
             s.push(e);
         }

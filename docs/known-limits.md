@@ -53,7 +53,7 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 - **A join code lasts one broker session.** The session's key is held in memory, so the code stops working when the broker stops, and a new run makes a new code. A QR code, like the code, lets anyone who sees it join until then.
 - **Join from a QR image refuses large pictures.** An image of more than 40 million pixels (width times height) is not read, in a file or on the clipboard; you are told to crop it to the code. A clipboard image with a side over 16,384 pixels is refused too.
 - **A terminal can still keep a copied join code.** Copy the join code marks the text private for the system clipboard, but a terminal that receives copied text through its own escape sequence (OSC 52, usual over SSH) decides for itself what to keep, and textweaver cannot mark it.
-- **A connection error from a live source can mix languages.** The message around it is translated, but the reason inside it comes from the MQTT connection and is in English.
+- **Some live errors still mix languages.** Why a connection failed, and why a join link does not read, are in the message catalog, but the system's own words inside them (a network or file error) stay in English, as everywhere in textweaver. Why the credential store failed is still in English inside a translated message.
 - **A quiet topic and a forbidden topic look the same** to textweaver, since Mosquitto accepts a subscription its access list denies. After `quiet_hint_seconds` it says so once, in words.
 
 ## Obsidian notes and vaults
