@@ -658,13 +658,17 @@ impl LiveLog {
         )
     }
 
-    /// [`replace`](Self::replace), with each item's key order.
+    /// [`replace`](Self::replace), with each item's key order. An entry
+    /// only moved (one before it removed or added) is not new: when no item
+    /// is new or changed but the entries moved, the last stands for the
+    /// change.
     pub fn replace_ordered(
         &mut self,
         items: Vec<(Map<String, Value>, KeyOrder)>,
         now: &str,
     ) -> Vec<usize> {
         let mut changed = Vec::new();
+        let mut moved = Vec::new();
         let mut next = Vec::with_capacity(items.len().min(MAX_ENTRIES));
         let mut dropped = 0;
         for (i, (mut fields, order)) in items.into_iter().enumerate() {
@@ -684,6 +688,7 @@ impl LiveLog {
                         .map(|_| i)
                 })
                 .map(|j| &self.entries[j]);
+            let new = old.is_none_or(|e| e.fields != fields);
             let entry = match old {
                 Some(e) if e.fields == fields => e.clone(),
                 Some(e) => LogEntry {
@@ -699,8 +704,10 @@ impl LiveLog {
                     order,
                 },
             };
-            if self.entries.get(i) != Some(&entry) {
+            if new {
                 changed.push(i);
+            } else if self.entries.get(i) != Some(&entry) {
+                moved.push(i);
             }
             next.push(entry);
         }
@@ -708,13 +715,13 @@ impl LiveLog {
         // Entries unchanged at their place keep their rendered parts.
         let cache = self.cache.get_mut();
         cache.truncate(next.len());
-        for &i in &changed {
+        for &i in changed.iter().chain(&moved) {
             cache.forget(i);
         }
         self.entries = next;
         self.dropped = dropped;
-        if changed.is_empty() && shrank {
-            // Entries removed at the end: nothing new to say, but the view
+        if changed.is_empty() && (shrank || !moved.is_empty()) {
+            // Entries removed or moved: nothing new to say, but the view
             // changes. The last entry stands for the change.
             changed.extend(self.entries.len().checked_sub(1));
         }

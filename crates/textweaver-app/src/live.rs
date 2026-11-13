@@ -168,8 +168,13 @@ fn changed_runs(a: &[String], b: &[String]) -> Vec<Run> {
     if n == 0 && m == 0 {
         return Vec::new();
     }
-    if n == 0 || m == 0 || (n + 1) * (m + 1) > CAP {
+    if n == 0 || m == 0 {
         return vec![(p..p + n, p..p + m)];
+    }
+    if (n + 1) * (m + 1) > CAP {
+        // A long log resent with a few lines changed: few differences,
+        // found without the table.
+        return few_changes(ma, mb, p).unwrap_or_else(|| vec![(p..p + n, p..p + m)]);
     }
     // lcs[i * w + j]: the longest common run of ma[i..] and mb[j..].
     let w = m + 1;
@@ -203,6 +208,83 @@ fn changed_runs(a: &[String], b: &[String]) -> Vec<Run> {
         runs.push((p + ri..p + n, p + rj..p + m));
     }
     runs
+}
+
+/// The runs of lines that differ between `a` and `b` (offset by `p`), from
+/// a shortest edit script (Myers's greedy algorithm), when it takes at most
+/// [`MAX_D`] lines added or removed: time and memory grow with the lines
+/// that differ, not with the product of the lengths. `None` past that.
+fn few_changes(a: &[String], b: &[String], p: usize) -> Option<Vec<Run>> {
+    /// The most lines added or removed searched for.
+    const MAX_D: usize = 1_000;
+    let (n, m) = (a.len() as isize, b.len() as isize);
+    let off = MAX_D as isize + 1;
+    let mut v = vec![0isize; 2 * MAX_D + 3];
+    // The furthest x on each diagonal before each step, for the way back.
+    let mut trace: Vec<Vec<isize>> = Vec::new();
+    let at = |k: isize| (k + off) as usize;
+    let back = |v: &[isize], k: isize, d: isize| {
+        if k == -d || (k != d && v[at(k - 1)] < v[at(k + 1)]) {
+            k + 1
+        } else {
+            k - 1
+        }
+    };
+    let mut end = None;
+    'search: for d in 0..=MAX_D as isize {
+        trace.push(v.clone());
+        for k in (-d..=d).step_by(2) {
+            let mut x = if back(&v, k, d) == k + 1 {
+                v[at(k + 1)]
+            } else {
+                v[at(k - 1)] + 1
+            };
+            let mut y = x - k;
+            while x < n && y < m && a[x as usize] == b[y as usize] {
+                x += 1;
+                y += 1;
+            }
+            v[at(k)] = x;
+            if x >= n && y >= m {
+                end = Some(d);
+                break 'search;
+            }
+        }
+    }
+    // Back from the end, the lines both have, last first.
+    let (mut x, mut y) = (n, m);
+    let mut same = Vec::new();
+    for d in (1..=end?).rev() {
+        let v = &trace[d as usize];
+        let k = x - y;
+        let pk = back(v, k, d);
+        let px = v[at(pk)];
+        let py = px - pk;
+        let (sx, sy) = if pk == k + 1 {
+            (px, py + 1)
+        } else {
+            (px + 1, py)
+        };
+        while x > sx && y > sy {
+            x -= 1;
+            y -= 1;
+            same.push((x as usize, y as usize));
+        }
+        (x, y) = (px, py);
+    }
+    same.extend((0..x as usize).rev().map(|i| (i, i)));
+    let mut runs = Vec::new();
+    let (mut ri, mut rj) = (0, 0);
+    for (i, j) in same.into_iter().rev() {
+        if ri < i || rj < j {
+            runs.push((p + ri..p + i, p + rj..p + j));
+        }
+        (ri, rj) = (i + 1, j + 1);
+    }
+    if ri < a.len() || rj < b.len() {
+        runs.push((p + ri..p + a.len(), p + rj..p + b.len()));
+    }
+    Some(runs)
 }
 
 /// An edit replacing `old` (which starts at char `at`) with `new`, less
@@ -403,5 +485,46 @@ fn keep_column(o: &EditOutcome, pos: CharPos) -> CharPos {
         pos.min(o.inserted.end)
     } else {
         o.map_pos(pos, Bias::Before)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The runs turn `a` into `b`.
+    fn rebuilds(a: &[String], b: &[String], runs: &[Run]) {
+        let mut out = Vec::new();
+        let mut i = 0;
+        for (ra, rb) in runs {
+            out.extend_from_slice(&a[i..ra.start]);
+            out.extend_from_slice(&b[rb.clone()]);
+            i = ra.end;
+        }
+        out.extend_from_slice(&a[i..]);
+        assert_eq!(out, b);
+    }
+
+    #[test]
+    fn few_changes_finds_what_the_table_finds() {
+        let mut seed = 7u64;
+        let mut below = |n: u64| {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (seed >> 33) % n
+        };
+        for _ in 0..300 {
+            let a: Vec<String> = (0..below(12)).map(|_| below(4).to_string()).collect();
+            let b: Vec<String> = (0..below(12)).map(|_| below(4).to_string()).collect();
+            let table = changed_runs(&a, &b);
+            let few = few_changes(&a, &b, 0).unwrap();
+            // Both keep the same number of lines: a longest common run.
+            let common =
+                |runs: &[Run]| a.len() - runs.iter().map(|(ra, _)| ra.len()).sum::<usize>();
+            assert_eq!(common(&few), common(&table), "{a:?} {b:?}");
+            rebuilds(&a, &b, &few);
+            rebuilds(&a, &b, &table);
+        }
     }
 }
