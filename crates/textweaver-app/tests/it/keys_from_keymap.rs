@@ -284,7 +284,11 @@ fn no_message_names_a_key_in_a_fixed_string() {
         .filter(|p| p.extension().is_some_and(|x| x == "ftl"))
         .collect();
     files.sort();
-    assert!(!files.is_empty(), "no catalog files in {}", catalog.display());
+    assert!(
+        !files.is_empty(),
+        "no catalog files in {}",
+        catalog.display()
+    );
     let text: String = files
         .iter()
         .map(|f| std::fs::read_to_string(f).unwrap() + "\n")
