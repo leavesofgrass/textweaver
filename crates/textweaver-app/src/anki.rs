@@ -239,7 +239,7 @@ pub fn export_apkg(decks: &[ExportDeck<'_>], now: i64) -> Result<Vec<u8>, AnkiEr
         .min(now);
     let crt = earliest - earliest.rem_euclid(DAY_SECS);
 
-    let conn = Connection::open_in_memory()?;
+    let mut conn = Connection::open_in_memory()?;
     conn.execute_batch(SCHEMA)?;
 
     let mut deck_json = serde_json::Map::new();
@@ -887,7 +887,7 @@ mod tests {
     /// note, a cloze note, a picture-only note, and a note with a sound
     /// beside its text, with a learning day in the review log.
     fn anki_fixture() -> Vec<u8> {
-        let conn = Connection::open_in_memory().unwrap();
+        let mut conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(SCHEMA).unwrap();
         let decks = json!({
             "1": { "id": 1, "name": "Default" },
