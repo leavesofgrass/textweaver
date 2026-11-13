@@ -212,14 +212,7 @@ fn caption_minute_headings_follow_the_language() {
         "The next topic.",
         "",
     ];
-    std::fs::write(
-        &path,
-        cues.join(
-            "
-",
-        ),
-    )
-    .unwrap();
+    std::fs::write(&path, cues.join("\n")).unwrap();
     app.open(&path).unwrap();
     let text = app.session().unwrap().doc.text().to_string();
     assert!(text.contains("The next topic."), "{text:?}");
