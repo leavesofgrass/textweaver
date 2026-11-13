@@ -45,6 +45,7 @@ mod reading_queue;
 mod reading_stops;
 mod recovery;
 mod reliability;
+mod replace_steps;
 mod rpc;
 mod settings_reference;
 mod settings_update;
