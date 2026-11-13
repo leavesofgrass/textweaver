@@ -1033,7 +1033,8 @@ pub fn build_tree(
                 app.map(empty_hint)
                     .unwrap_or_else(|| c.fmt("app-no-document-open", &args!["key" => "Ctrl+O"])),
             )
-            .with_editing_word(c.tr("section-editing")),
+            .with_editing_word(c.tr("section-editing"))
+            .with_aid_names(c.tr("gui-run-misspelled"), c.tr("gui-run-lint")),
     )
     .with_tag(DOC);
     let doc = NewWidget::new(Sidebar::new(doc)).with_tag(SIDEBAR);
@@ -2547,10 +2548,12 @@ impl Gui {
                 self.shown.time_left = None;
                 let hint = empty_hint(&self.app);
                 let editing_word = c.tr("section-editing");
+                let (misspelled, lint) = (c.tr("gui-run-misspelled"), c.tr("gui-run-lint"));
                 root.edit_widget_with_tag(DOC, |mut d| {
                     DocumentView::set_label(&mut d, doc_label);
                     DocumentView::set_empty_hint(&mut d, hint);
                     DocumentView::set_editing_word(&mut d, editing_word);
+                    DocumentView::set_aid_names(&mut d, misspelled, lint);
                 });
                 if self.log {
                     crate::log::line(&format!("labels: {}", self.lang));

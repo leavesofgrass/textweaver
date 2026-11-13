@@ -42,6 +42,13 @@ pub enum RunMark {
     /// A highlight with a palette name: its band, its line, and its name
     /// as the run's description.
     Highlight(crate::document::NamedMark),
+    /// A misspelled word (edit mode): AccessKit's `invalid` set to
+    /// spelling, "Misspelled" as its description, and its dotted line.
+    Misspelled,
+    /// A writing suggestion (edit mode, Markdown lint): `invalid` set to
+    /// grammar, "Writing suggestion" as its description, and its double
+    /// line.
+    Lint,
 }
 
 /// One paragraph of the window: canonical text between line breaks.
@@ -152,6 +159,10 @@ pub struct Run {
     pub mark: Option<RunMark>,
     /// Heading level of its paragraph.
     pub heading: Option<u8>,
+    /// True when its paragraph is right to left ([`base_rtl`]). Every run
+    /// of a paragraph has the paragraph's direction; the text stays in
+    /// logical order, as it is read.
+    pub rtl: bool,
 }
 
 impl Run {
@@ -274,6 +285,8 @@ pub struct ParaRuns {
     start: CharPos,
     has_break: bool,
     heading: Option<u8>,
+    /// The paragraph's base direction is right to left ([`base_rtl`]).
+    rtl: bool,
     clusters: Vec<Cluster>,
     /// Char offset (within the paragraph) where each cluster starts, then
     /// the paragraph's length.
@@ -318,6 +331,7 @@ impl ParaRuns {
             start: p.start,
             has_break: p.has_break,
             heading: p.heading,
+            rtl: base_rtl(&p.text),
             clusters,
             starts,
             bounds,
@@ -484,6 +498,7 @@ impl ParaRuns {
                     continues_line: false,
                     mark: None,
                     heading: self.heading,
+                    rtl: self.rtl,
                 });
             }
         }
@@ -517,8 +532,50 @@ impl ParaRuns {
             continues_line,
             mark,
             heading: self.heading,
+            rtl: self.rtl,
         }
     }
+}
+
+/// True when `text`, a paragraph, is right to left: its first strong
+/// letter is Hebrew, Arabic, Syriac, Thaana, N'Ko, or another
+/// right-to-left script, or it starts with a right-to-left mark. These are
+/// the Unicode Bidirectional Algorithm's rules P2 and P3 (text inside
+/// directional isolates is skipped), which Parley also follows when it
+/// lays the paragraph out, so the tree and the drawing agree. A paragraph
+/// with no strong letter (blank, digits, punctuation) is left to right.
+///
+/// Letters are classed by script block rather than by the full Unicode
+/// bidirectional class table, which this crate does not carry: a letter
+/// in a right-to-left block is strong right to left, any other letter
+/// strong left to right; digits are weak and skipped.
+pub fn base_rtl(text: &str) -> bool {
+    let mut isolates = 0usize;
+    for c in text.chars() {
+        match c {
+            // LRI, RLI, and FSI open an isolate; PDI closes one.
+            '\u{2066}'..='\u{2068}' => isolates += 1,
+            '\u{2069}' => isolates = isolates.saturating_sub(1),
+            _ if isolates > 0 => {}
+            // RLM and ALM, then LRM.
+            '\u{200f}' | '\u{061c}' => return true,
+            '\u{200e}' => return false,
+            _ if c.is_alphabetic() && !c.is_numeric() => return rtl_block(c),
+            _ => {}
+        }
+    }
+    false
+}
+
+/// True for a character in a block of right-to-left scripts (Unicode's
+/// default R and AL ranges): Hebrew through the Arabic extensions, the
+/// Hebrew and Arabic presentation forms, and the supplementary
+/// right-to-left blocks.
+fn rtl_block(c: char) -> bool {
+    matches!(
+        u32::from(c),
+        0x0590..=0x08FF | 0xFB1D..=0xFDFF | 0xFE70..=0xFEFF | 0x10800..=0x10FFF | 0x1E800..=0x1EFFF
+    )
 }
 
 /// The run position of `pos` in `runs` (as [`RunSet::position`]).
@@ -587,6 +644,7 @@ impl RunSet {
                 continues_line: false,
                 mark: None,
                 heading: None,
+                rtl: false,
             });
         }
         RunSet { runs }
@@ -873,6 +931,36 @@ mod tests {
             assert_eq!(pr.char_pos(run.start, index), Some(set.char_pos(want)));
         }
         assert_eq!(pr.char_pos(CharPos(1), 0), None);
+    }
+
+    #[test]
+    fn paragraph_direction_follows_the_first_strong_letter() {
+        assert!(base_rtl("\u{645}\u{631}\u{62d}\u{628}\u{627} world"));
+        assert!(base_rtl("123, \u{5e9}\u{5dc}\u{5d5}\u{5dd}"));
+        assert!(!base_rtl("Hello \u{645}\u{631}\u{62d}\u{628}\u{627}"));
+        assert!(!base_rtl("2026, 3.5"));
+        assert!(!base_rtl(""));
+        // Arabic-Indic digits are weak, so the Latin word decides.
+        assert!(!base_rtl("\u{661}\u{662} abc"));
+        // An isolate is skipped; a right-to-left mark decides.
+        assert!(!base_rtl("\u{2067}\u{5e9}\u{2069} abc"));
+        assert!(base_rtl("\u{200f}abc"));
+    }
+
+    #[test]
+    fn runs_of_a_right_to_left_paragraph_are_right_to_left_in_logical_order() {
+        // "Hello world" in Arabic and a Latin word, then a Latin paragraph.
+        let text = "\u{645}\u{631}\u{62d}\u{628}\u{627} \u{628}\u{627}\u{644}\u{639}\u{627}\u{644}\u{645} textweaver.\nPlain line.";
+        let s = set(text);
+        assert_eq!(s.text(), text);
+        assert!(s.runs[0].rtl);
+        assert!(!s.runs[1].rtl);
+        // Words start in logical order: the first Arabic word, the second,
+        // then the Latin word and its period.
+        assert_eq!(s.runs[0].word_starts, vec![0, 6, 14, 24]);
+        for c in 0..=text.chars().count() {
+            assert_eq!(s.char_pos(s.position(CharPos(c))), CharPos(c), "at {c}");
+        }
     }
 
     #[test]
