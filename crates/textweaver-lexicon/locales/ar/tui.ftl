@@ -5,8 +5,12 @@
 # $wanted is the speech backend asked for, $backend the one used instead.
 tui-setup-backend-unavailable = محرك الكلام { $wanted } غير متوفر؛ يُستخدم { $backend }.
 tui-setup-speech-failed = تعذّر بدء الكلام ({ $error })؛ التشغيل بصمت.
+speech-engine-fallback = الكلام بمحرك { $engine }: تعذر بدء { $failed }.
+speech-engine-fallback-silent = لا كلام: تعذر بدء { $failed }، ولا محرك آخر متاح.
 tui-setup-cannot-save = تعذّر حفظ الإعدادات أو المواضع: { $error } القراءة تعمل. تضيع التغييرات عند الخروج.
 tui-setup-keymap-ignored = جرى تجاهل ملف خريطة المفاتيح: { $error } تُستخدم المفاتيح الافتراضية. أصلح الملف، ثم أعد التشغيل.
+tui-setup-welcome = مرحبًا بك في { -brand }. { $open } يفتح مستندًا، و{ $help } المساعدة. { $play } للتشغيل والإيقاف المؤقت، و{ $stop } للإيقاف، و{ $palette } يسرد كل الأوامر.
+gui-setup-welcome-menus = مرحبًا بك في { -brand }. { $open } يفتح مستندًا، و{ $help } المساعدة. { $play } للتشغيل والإيقاف المؤقت، و{ $stop } للإيقاف، و{ $palette } يسرد كل الأوامر. Alt أو { $menu } يُظهر القوائم.
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.

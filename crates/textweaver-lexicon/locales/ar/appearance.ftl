@@ -27,6 +27,7 @@ access-mode-changed =
     }
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-a-screen-reader = قارئ شاشة
+access-hybrid-inferred = الوضع المختلط: ينطق { $reader } الرسائل، ويقرأ { -brand } المستندات. { $key } يغيّره.
 # On the first run with a screen reader and no mode chosen: hybrid mode is
 # used, not asked. $reader is the screen reader found (NVDA, JAWS), or
 # access-a-screen-reader; $key names the keys that change the mode.
