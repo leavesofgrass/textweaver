@@ -151,7 +151,7 @@ edit-undo-redo-line =
     }
 edit-nothing-to-undo = Rien à annuler.
 edit-nothing-to-redo = Rien à rétablir.
-edit-not-a-table-size = Ce n'est pas une taille de tableau : { $text }. Tapez colonnes et lignes, par exemple 3 by 2.
+edit-not-a-table-size = Ce n'est pas une taille de tableau : { $text }. Tapez colonnes et lignes, par exemple 3 par 2.
 # $name is the image's file name.
 edit-image-inserted = Image { $name } insérée. Sa description est sélectionnée ; tapez pour la remplacer.
 edit-image-failed = Impossible d'insérer l'image : { $error } Le texte n'a pas changé.
@@ -203,6 +203,7 @@ edit-replace-with =
 common-recovery-write-failed = Impossible d'écrire la copie de récupération : { $error }. Enregistrez bientôt ; { -brand } continuera d'essayer.
 common-recovery-writing-again = La copie de récupération est en cours de réécriture.
 # $title is the document; $when is how long ago its work was saved.
+edit-recovery-offer = Récupérer les modifications non enregistrées de { $title } ? Enregistré : { $when }. Haut et Bas choisissent, Entrée confirme.
 edit-recovery-title = Récupérer le travail non enregistré de { $title } ?
 edit-recovery-yes = Oui, récupérer { $title } et continuer à modifier
 edit-recovery-no = Non, abandonner les modifications non enregistrées
