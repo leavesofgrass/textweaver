@@ -221,8 +221,7 @@ fn no_new_duplicate_sentences() {
 /// still start with a longer sentence and may only become fewer.
 #[test]
 fn setting_helps_start_with_a_short_sentence() {
-    const LONG_FIRST_SENTENCE: [&str; 6] = [
-        "setting-display-follow-os-theme-help",
+    const LONG_FIRST_SENTENCE: [&str; 5] = [
         "setting-gui-speak-messages-help",
         "setting-highlight-lead-words-help",
         "setting-reading-aids-difficult-definitions-help",
