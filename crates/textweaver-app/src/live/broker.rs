@@ -196,8 +196,7 @@ impl App {
     /// Puts a secret on the clipboard as Copy does (the frontend takes it
     /// with [`App::take_clipboard`]) and says `said_id`, never the secret.
     fn live_copy_secret(&mut self, secret: String, said_id: &str) {
-        self.authoring.copied = Some(secret.clone());
-        self.clipboard = Some(secret);
+        self.copy_secret(secret);
         let m = self.msg(said_id);
         self.tell(&m);
     }

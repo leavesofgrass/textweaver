@@ -11,9 +11,17 @@
 //!   only paths that start with a random secret (`/<token>/`), so other
 //!   programs and other computers cannot read the document.
 //! - `/<token>/` is the page, with a short script added; `/<token>/events`
-//!   is a Server-Sent Events stream; `/<token>/files/…` serves images and
-//!   other files from the document's folder (never outside it). Anything
-//!   else is "404 Not Found".
+//!   is a Server-Sent Events stream; `/<token>/files/…` serves images,
+//!   style sheets, and fonts from the document's folder (never outside
+//!   it, and never a file or folder whose name starts with a dot).
+//!   Anything else is "404 Not Found", so a page cannot read the other
+//!   files beside the document.
+//! - Every answer carries a `Content-Security-Policy`: scripts run only
+//!   with the nonce the reload script is given for that one answer, and
+//!   the page may load and connect only to this server, so a script left
+//!   in a document could neither run nor send anything out (security L2).
+//!   A page from a trusted folder (`[preview] trusted_folders`) keeps its
+//!   own scripts, and is served without the policy.
 //! - [`PreviewServer::reload`] sends a `reload` event carrying the id of
 //!   the heading nearest the caret. The script stores it, reloads, and
 //!   then scrolls to that heading and focuses it, so a screen reader lands
@@ -56,6 +64,9 @@ struct State {
     /// The interface's messages, for the words a page shows; English
     /// until [`PreviewServer::set_catalog`].
     catalog: Option<Arc<Catalog>>,
+    /// The page is from a trusted folder: served without the content
+    /// security policy, so its own scripts run.
+    trusted: bool,
 }
 
 #[derive(Debug, Default)]
@@ -79,8 +90,10 @@ pub struct PreviewServer {
     thread: Option<JoinHandle<()>>,
 }
 
-/// A random secret for the address: 128 bits from the system's random
-/// hash keys.
+/// A random secret for the address, and the nonce of each answer's
+/// reload script: 128 bits from the system's random hash keys. (ring's
+/// `SystemRandom` would be the better source, but the app crate does not
+/// link ring.)
 fn token() -> String {
     let mut out = String::new();
     for i in 0..2u64 {
@@ -151,6 +164,13 @@ impl PreviewServer {
         let mut st = self.shared.state();
         st.page = page;
         st.folder = folder;
+    }
+
+    /// Whether the page is from a trusted folder: served without the
+    /// content security policy, so the scripts it keeps run. Off until
+    /// set.
+    pub fn set_trusted(&self, trusted: bool) {
+        self.shared.state().trusted = trusted;
     }
 
     /// Tells every open page to reload, then focus the element with the id
@@ -240,9 +260,34 @@ fn request_path(stream: &TcpStream) -> io::Result<Option<String>> {
     }
 }
 
-fn respond(mut stream: &TcpStream, status: &str, kind: &str, body: &[u8]) -> io::Result<()> {
+/// The content security policy of an answer whose reload script carries
+/// `nonce`: scripts only with the nonce, styles and fonts written in the
+/// page or from this server, images from this server or written in, and
+/// connections (the reload events) to this server only.
+fn content_policy(nonce: &str) -> String {
+    format!(
+        "default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'"
+    )
+}
+
+/// An answer with the content security policy (a nonce no script has).
+fn respond(stream: &TcpStream, status: &str, kind: &str, body: &[u8]) -> io::Result<()> {
+    respond_with(stream, status, kind, body, Some(&content_policy(&token())))
+}
+
+/// An answer, with `policy` as its `Content-Security-Policy` when given.
+fn respond_with(
+    mut stream: &TcpStream,
+    status: &str,
+    kind: &str,
+    body: &[u8],
+    policy: Option<&str>,
+) -> io::Result<()> {
+    let policy = policy
+        .map(|p| format!("Content-Security-Policy: {p}\r\n"))
+        .unwrap_or_default();
     let head = format!(
-        "HTTP/1.1 {status}\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 {status}\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n{policy}Connection: close\r\n\r\n",
         body.len()
     );
     stream.write_all(head.as_bytes())?;
@@ -275,15 +320,22 @@ fn handle(stream: TcpStream, shared: &Shared, token: &str) -> io::Result<()> {
     };
     match rest {
         "" | "index.html" => {
-            let page = shared.state().page.clone();
+            let (page, trusted) = {
+                let st = shared.state();
+                (st.page.clone(), st.trusted)
+            };
             match std::fs::read_to_string(&page) {
                 Ok(html) => {
-                    let body = served_page(&html, token);
-                    respond(
+                    // A new nonce for each answer, on the reload script only.
+                    let nonce = self::token();
+                    let body = served_page(&html, token, &nonce);
+                    let policy = (!trusted).then(|| content_policy(&nonce));
+                    respond_with(
                         &stream,
                         "200 OK",
                         "text/html; charset=utf-8",
                         body.as_bytes(),
+                        policy.as_deref(),
                     )
                 }
                 Err(_) => {
@@ -319,16 +371,19 @@ fn handle(stream: TcpStream, shared: &Shared, token: &str) -> io::Result<()> {
     }
 }
 
-/// A file from `folder`, never outside it.
+/// An image, style sheet, or font from `folder`, never outside it, and
+/// never a dotfile or a file in a dot folder.
 fn serve_file(stream: &TcpStream, folder: &Path, rel: &str) -> io::Result<()> {
     let rel = percent_decode(rel);
     let rel_path = Path::new(&rel);
-    let safe = rel_path
-        .components()
-        .all(|c| matches!(c, Component::Normal(_)));
-    if rel.is_empty() || !safe {
+    let safe = rel_path.components().all(|c| match c {
+        Component::Normal(name) => !name.to_string_lossy().starts_with('.'),
+        _ => false,
+    });
+    let kind = content_type(rel_path);
+    let Some(kind) = kind.filter(|_| safe && !rel.is_empty()) else {
         return not_found(stream);
-    }
+    };
     let file = folder.join(rel_path);
     let inside = match (file.canonicalize(), folder.canonicalize()) {
         (Ok(f), Ok(d)) => f.starts_with(d) && f.is_file(),
@@ -338,28 +393,35 @@ fn serve_file(stream: &TcpStream, folder: &Path, rel: &str) -> io::Result<()> {
         return not_found(stream);
     }
     match std::fs::read(&file) {
-        Ok(bytes) => respond(stream, "200 OK", content_type(&file), &bytes),
+        Ok(bytes) => respond(stream, "200 OK", kind, &bytes),
         Err(_) => not_found(stream),
     }
 }
 
-fn content_type(path: &Path) -> &'static str {
+/// The type of a file a page may load: an image, a style sheet, or a
+/// font. `None` for anything else (the document's own text, other
+/// documents, data), which is never served.
+fn content_type(path: &Path) -> Option<&'static str> {
     let ext = path
         .extension()
         .map(|e| e.to_string_lossy().to_ascii_lowercase())
         .unwrap_or_default();
-    match ext.as_str() {
+    Some(match ext.as_str() {
         "png" => "image/png",
         "jpg" | "jpeg" => "image/jpeg",
         "gif" => "image/gif",
         "svg" => "image/svg+xml",
         "webp" => "image/webp",
+        "avif" => "image/avif",
+        "bmp" => "image/bmp",
+        "ico" => "image/x-icon",
         "css" => "text/css; charset=utf-8",
-        "html" | "htm" => "text/html; charset=utf-8",
-        "txt" | "md" => "text/plain; charset=utf-8",
-        "pdf" => "application/pdf",
-        _ => "application/octet-stream",
-    }
+        "woff" => "font/woff",
+        "woff2" => "font/woff2",
+        "ttf" => "font/ttf",
+        "otf" => "font/otf",
+        _ => return None,
+    })
 }
 
 fn percent_decode(s: &str) -> String {
@@ -384,8 +446,8 @@ fn percent_decode(s: &str) -> String {
 }
 
 /// The page as served: its `<base>` points at the served files, and the
-/// reload script is added.
-pub(crate) fn served_page(html: &str, token: &str) -> String {
+/// reload script, carrying `nonce`, is added.
+pub(crate) fn served_page(html: &str, token: &str, nonce: &str) -> String {
     let mut out = without_base(html);
     let base = format!("<base href=\"/{token}/files/\">");
     out = match out.to_ascii_lowercase().find("<head>") {
@@ -395,7 +457,7 @@ pub(crate) fn served_page(html: &str, token: &str) -> String {
         }
         None => format!("{base}{out}"),
     };
-    let script = reload_script(token);
+    let script = reload_script(token, nonce);
     match out.to_ascii_lowercase().rfind("</body>") {
         Some(i) => format!("{}{script}\n{}", &out[..i], &out[i..]),
         None => format!("{out}\n{script}"),
@@ -415,10 +477,11 @@ fn without_base(html: &str) -> String {
 }
 
 /// The script that reloads on a `reload` event and, after the reload,
-/// scrolls to the heading it names and focuses it.
-fn reload_script(token: &str) -> String {
+/// scrolls to the heading it names and focuses it. It carries `nonce`, so
+/// the content security policy lets it alone run.
+fn reload_script(token: &str, nonce: &str) -> String {
     format!(
-        "<script>(function(){{var k=\"tw-preview-anchor\";try{{var a=sessionStorage.getItem(k);if(a!==null){{sessionStorage.removeItem(k);var go=function(){{var el=a?document.getElementById(a):null;if(el){{if(!el.hasAttribute(\"tabindex\"))el.setAttribute(\"tabindex\",\"-1\");el.scrollIntoView();el.focus();}}}};if(document.readyState===\"loading\"){{document.addEventListener(\"DOMContentLoaded\",go);}}else{{go();}}}}}}catch(e){{}}var es=new EventSource(\"/{token}/events\");es.addEventListener(\"reload\",function(e){{try{{sessionStorage.setItem(k,e.data||\"\");}}catch(x){{}}location.reload();}});}})();</script>"
+        "<script nonce=\"{nonce}\">(function(){{var k=\"tw-preview-anchor\";try{{var a=sessionStorage.getItem(k);if(a!==null){{sessionStorage.removeItem(k);var go=function(){{var el=a?document.getElementById(a):null;if(el){{if(!el.hasAttribute(\"tabindex\"))el.setAttribute(\"tabindex\",\"-1\");el.scrollIntoView();el.focus();}}}};if(document.readyState===\"loading\"){{document.addEventListener(\"DOMContentLoaded\",go);}}else{{go();}}}}}}catch(e){{}}var es=new EventSource(\"/{token}/events\");es.addEventListener(\"reload\",function(e){{try{{sessionStorage.setItem(k,e.data||\"\");}}catch(x){{}}location.reload();}});}})();</script>"
     )
 }
 
@@ -551,6 +614,70 @@ mod tests {
                 })
                 .map_or(true, |n| n == 0)
         );
+    }
+
+    /// Security L2: the page carries a content security policy whose nonce
+    /// is on the reload script alone; `files/` serves only images, style
+    /// sheets, and fonts, and never dotfiles; a trusted page goes without
+    /// the policy.
+    #[test]
+    fn the_page_has_a_policy_and_files_are_only_what_a_page_loads() {
+        let (dir, page) = setup();
+        std::fs::write(dir.path().join("notes.txt"), b"private").unwrap();
+        std::fs::write(dir.path().join("other.md"), b"# Other").unwrap();
+        std::fs::write(dir.path().join("style.css"), b"p{}").unwrap();
+        std::fs::write(dir.path().join(".hidden.png"), b"PNG").unwrap();
+        std::fs::create_dir(dir.path().join(".git")).unwrap();
+        std::fs::write(dir.path().join(".git").join("logo.png"), b"PNG").unwrap();
+        let mut server = PreviewServer::start(page, dir.path().to_owned()).unwrap();
+        let (addr, tok) = (server.local_addr(), server.token().to_owned());
+        let served = get(addr, &format!("/{tok}/"));
+        let head = served.split("\r\n\r\n").next().unwrap().to_owned();
+        let policy = head
+            .lines()
+            .find_map(|l| l.strip_prefix("Content-Security-Policy: "))
+            .expect("a content security policy")
+            .to_owned();
+        assert!(
+            policy.starts_with("default-src 'self'; script-src 'nonce-"),
+            "{policy}"
+        );
+        assert!(policy.contains("connect-src 'self'"), "{policy}");
+        assert!(policy.contains("img-src 'self' data:"), "{policy}");
+        let nonce = policy
+            .split("'nonce-")
+            .nth(1)
+            .and_then(|r| r.split('\'').next())
+            .unwrap()
+            .to_owned();
+        assert_eq!(nonce.len(), 32);
+        assert_eq!(served.matches(&format!("nonce=\"{nonce}\"")).count(), 1);
+        // A new nonce for each answer.
+        let again = get(addr, &format!("/{tok}/"));
+        assert!(!again.contains(&nonce), "{again}");
+        for (file, ok) in [
+            ("pic.png", true),
+            ("style.css", true),
+            ("notes.txt", false),
+            ("other.md", false),
+            ("page.html", false),
+            (".hidden.png", false),
+            (".git/logo.png", false),
+            ("%2egit/logo.png", false),
+        ] {
+            let answer = get(addr, &format!("/{tok}/files/{file}"));
+            assert_eq!(
+                answer.starts_with("HTTP/1.1 200 OK"),
+                ok,
+                "{file}: {answer}"
+            );
+            assert!(answer.contains("Content-Security-Policy: "), "{file}");
+        }
+        server.set_trusted(true);
+        let trusted = get(addr, &format!("/{tok}/"));
+        assert!(trusted.starts_with("HTTP/1.1 200 OK"), "{trusted}");
+        assert!(!trusted.contains("Content-Security-Policy"), "{trusted}");
+        server.stop();
     }
 
     #[test]

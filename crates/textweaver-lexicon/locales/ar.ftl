@@ -1379,6 +1379,9 @@ publish-preview-written-served = كُتبت المعاينة. يجري فتحه�
 publish-preview-written = كُتبت المعاينة. يجري فتحها في المتصفح. الحفظ يكتبها مجددًا؛ ثم اضغط F5 في المتصفح.{ $warned }
 publish-preview-updated = تحدّثت المعاينة.
 publish-preview-updated-press-f5 = تحدّثت المعاينة. اضغط F5 في المتصفح.
+# Said once for a document whose preview was cleaned of raw HTML
+# (scripts, event handlers) because its folder is not trusted.
+publish-preview-raw-html-left-out = حُذف HTML الخام من المعاينة. المجلدات الموثوقة في الإعدادات.
 publish-server-failed = تعذّر بدء خادم إعادة تحميل المعاينة ({ $error })؛ يجري فتح الملف بدلًا من ذلك.
 publish-render-failed = تعذّر عرض النص: { $error } اخرج من وضع التحرير لقراءة النص.
 publish-nothing-after-caret = لا شيء لقراءته بعد المؤشر.
@@ -1960,6 +1963,9 @@ links-open-question =
         [mail] فتح رابط البريد؟ y أو n. { $target }
        *[web] فتح رابط الويب؟ y أو n. { $target }
     }
+# A link to a file on another computer (a network share). Keep the
+# letters y and n: they are the keys that answer. $target is the link.
+links-network-question = فتح ملف على حاسوب آخر؟ y أو n. قد تُرسل إليه بيانات تسجيل دخولك. { $target }
 # The label of a heading reached by a link, at high verbosity.
 links-heading-label = عنوان
 # $anchor is the heading name the link gives.
@@ -2129,6 +2135,7 @@ tasks-could-not-open = تعذّر فتح { $target }: { $error }
 open-refused-scheme = لم يُفتح: رابط { $scheme } محظور.
 open-refused-missing = لم يُفتح: الملف غير موجود.
 open-refused-invalid = لم يُفتح: العنوان غير صالح.
+open-refused-network = لم يُفتح: الملف على حاسوب آخر.
 tasks-not-opened = لم يُفتح.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = فتحه؟ y أو n
@@ -2777,6 +2784,8 @@ setting-preview-pane = لوحة المعاينة
 setting-preview-pane-help = في وضع التحرير، إظهار المستند كما يُقرأ بجانب المحرر. F6 ينتقل إليها؛ ويبقى المؤشر في المحرر.
 setting-preview-pane-delay-ms = مهلة المعاينة
 setting-preview-pane-delay-ms-help = المدة التي يجب أن تتوقف فيها الكتابة قبل إعادة كتابة معاينة تتبع كتابتك.
+setting-preview-trusted-folders = مجلدات المعاينة الموثوقة
+setting-preview-trusted-folders-help = مجلدات تحتفظ مستنداتها بـ HTML الخام، بما فيه البرامج النصية، في معاينة المتصفح. لا تثق إلا بمجلدات كتاباتك: يمكن لبرنامج نصي في مستند موثوق أن يقرأ الملفات المجاورة له. المجلدات داخل مجلد موثوق موثوقة أيضًا. الفارغ لا يثق بأي مجلد، وتُنظَّف كل معاينة من البرامج النصية وHTML غير الآمن.
 setting-lexicon-glossary = المسرد
 setting-lexicon-glossary-help = مسردك الخاص، يُبحث فيه قبل القاموس: أسطر term: definition، أو JSON من star. عدم الضبط يستخدم glossary.txt في مجلد الإعدادات.
 setting-lexicon-data-file = ملف القاموس

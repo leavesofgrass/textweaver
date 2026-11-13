@@ -18,6 +18,13 @@
 //!   there; Forward (Alt+Right) then returns. The documents form one
 //!   history stack, as pages do in a web browser.
 //! - A web or mail link is said, with an offer to open it in the browser.
+//! - A link to a file on another computer (a UNC path such as
+//!   `\\host\share\notes.md`, a `\\?\` or `\\.\` path, or
+//!   `file://host/share/notes.md`) asks first, "Open a file on another
+//!   computer? y or n.", and nothing looks for the file before the answer
+//!   (security L5): on Windows, only checking that such a file exists
+//!   connects to that computer and sends it the person's sign-in. No
+//!   leaves it alone.
 
 use std::path::{Path, PathBuf};
 
@@ -109,7 +116,13 @@ fn block_id(anchor: &str) -> Option<&str> {
 /// it exists: a file inside an archive (`book.zip!chapter.xml`), else the
 /// vault resolver's answer (a path from the folder, then from the vault
 /// root, then by name, nearest first), with how many files share the name.
+///
+/// A target on another computer ([`crate::opener::is_remote`]) is never
+/// looked for here: `None`, before anything touches the disk.
 pub(crate) fn resolve_local(folder: &Path, target: &str) -> Option<(PathBuf, usize)> {
+    if crate::opener::is_remote(target) {
+        return None;
+    }
     let direct = folder.join(target);
     if !direct.is_file() && textweaver_formats::archive::exists(&direct) {
         return Some((direct, 1));
@@ -219,6 +232,12 @@ impl App {
         if has_scheme(&target) {
             let lower = target.to_ascii_lowercase();
             if lower.starts_with("file:") {
+                // A file on another computer: ask before anything looks
+                // for it (security L5).
+                if crate::opener::is_remote(&target) {
+                    let path = crate::opener::remote_path(&percent_decode(&target));
+                    return self.ask_network_link(path);
+                }
                 let path = percent_decode(
                     target
                         .trim_start_matches("file://")
@@ -290,9 +309,41 @@ impl App {
         }
     }
 
+    /// Asks before following a link to `target`, a file on another
+    /// computer; nothing has looked for it, and nothing does unless the
+    /// answer is yes ([`App::follow_network_link`]).
+    fn ask_network_link(&mut self, target: String) -> Vec<Effect> {
+        let question = self.msg_args(
+            "links-network-question",
+            &args!["target" => target.as_str()],
+        );
+        self.authoring.question = Some(crate::authoring_state::Question::NetworkLink(
+            target,
+            question.clone(),
+        ));
+        self.ask(&question);
+        vec![Effect::Redraw]
+    }
+
+    /// The answer to "Open a file on another computer?" was yes: follows
+    /// the link to `target`.
+    pub(crate) fn follow_network_link(&mut self, target: &str) -> Vec<Effect> {
+        self.follow_file(target, true)
+    }
+
     /// Opens the local file a link names, at its heading when the link
-    /// names one. A link to this same file moves to the heading.
+    /// names one. A link to this same file moves to the heading. A file on
+    /// another computer is asked about first.
     fn follow_local(&mut self, target: &str) -> Vec<Effect> {
+        if crate::opener::is_remote(target) {
+            return self.ask_network_link(crate::opener::remote_path(target));
+        }
+        self.follow_file(target, false)
+    }
+
+    /// Follows a link to the file `target`; `remote_confirmed` when it is
+    /// on another computer and the person said yes.
+    fn follow_file(&mut self, target: &str, remote_confirmed: bool) -> Vec<Effect> {
         let (file, anchor) = match target.split_once('#') {
             Some((f, a)) => (f, Some(a)),
             None => (target, None),
@@ -312,12 +363,18 @@ impl App {
             }
             return vec![Effect::Redraw];
         }
-        let found = resolve_local(&folder, file).or_else(|| {
-            // A note's title or alias, from the vault index.
-            let from = here.clone().unwrap_or_else(|| folder.join("_"));
-            self.vault_resolve(&from, file)
-                .map(|r| (r.path, r.same_name))
-        });
+        let found = if remote_confirmed {
+            // The person said yes: the file itself, by its whole path.
+            let p = PathBuf::from(file);
+            p.is_file().then_some((p, 1))
+        } else {
+            resolve_local(&folder, file).or_else(|| {
+                // A note's title or alias, from the vault index.
+                let from = here.clone().unwrap_or_else(|| folder.join("_"));
+                self.vault_resolve(&from, file)
+                    .map(|r| (r.path, r.same_name))
+            })
+        };
         let Some((path, same_name)) = found else {
             self.speech.earcon(Earcon::Error);
             // A note named without its extension, as wikilinks name them;
@@ -593,5 +650,22 @@ mod tests {
         assert!(has_scheme("mailto:a@b.c"));
         assert!(!has_scheme("C:\\notes\\a.md"));
         assert!(!has_scheme("notes/a.md"));
+    }
+
+    /// Security L5: a target on another computer is never looked for. The
+    /// folder does not exist and the host does not either; a look would
+    /// be slow and could only fail, so `None` here comes from the text.
+    #[test]
+    fn targets_on_other_computers_are_not_resolved() {
+        let folder = Path::new("tw-no-folder-here");
+        for t in [
+            "//tw-no-host.invalid/share/notes.md",
+            r"\\tw-no-host.invalid\share\notes.md",
+            r"\\?\UNC\tw-no-host.invalid\share\notes.md",
+            r"\\.\pipe\tw-no-pipe",
+        ] {
+            assert!(crate::opener::is_remote(t), "{t}");
+            assert_eq!(resolve_local(folder, t), None, "{t}");
+        }
     }
 }

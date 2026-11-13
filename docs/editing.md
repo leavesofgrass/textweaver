@@ -405,8 +405,10 @@ When the setting is not "nothing", run `preview in browser` again. The page is t
 - A reload still moves your screen reader's position to that heading, which is why the page follows nothing by default.
 - The pause before following your typing is `pane_delay_ms`, 300 milliseconds unless you change it (100 to 3000). The side-by-side preview pane uses the same pause, so the two stay in step. Reloads while you type appear on the status line and are not spoken.
 - The server stops when you open another document or quit textweaver. Choosing nothing stops it at once, and the browser keeps the last page it received.
-- Images and other files beside your document are served too, but nothing outside the document's folder.
+- Images, style sheets, and fonts beside your document are served too, but no other kind of file, no file or folder whose name starts with a dot, and nothing outside the document's folder.
 - Older settings files keep working. `auto_reload = true` is read as following each save, and `auto_reload = true` with `live = true` as following your typing. The next save of your settings writes only `follow`.
+
+**Raw HTML and scripts.** The preview leaves out a document's scripts and unsafe HTML, because a page served from your computer could otherwise read the files beside the document. Event handlers such as `onclick`, `javascript:` addresses, frames, and forms go too; ordinary HTML such as `<b>`, `<br>`, or `<details>` stays. The first time something is left out of a document's preview, you hear "Raw HTML left out of the preview. Trusted folders are in Settings." A served page also carries a content security policy: only textweaver's reload script runs, and images, style sheets, and fonts load only from textweaver's server or from the page itself, so a remote image is not shown. To keep a document's raw HTML, add its folder to Trusted preview folders in Settings (`trusted_folders` in `[preview]`); folders inside it are trusted too. Trust only folders of your own writing: a script in a trusted document can read the files beside it. Export to HTML and `tw convert` are not affected; `tw convert --sanitize` cleans a page in the same way. See [Privacy](privacy.md#the-browser-preview).
 
 ### Preview in the terminal reader
 

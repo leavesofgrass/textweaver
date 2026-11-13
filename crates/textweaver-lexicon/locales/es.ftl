@@ -1254,6 +1254,9 @@ publish-preview-written-served = Vista previa escrita. Abriéndola en el navegad
 publish-preview-written = Vista previa escrita. Abriéndola en el navegador. Guardar la vuelve a escribir; luego pulse F5 en el navegador.{ $warned }
 publish-preview-updated = Vista previa actualizada.
 publish-preview-updated-press-f5 = Vista previa actualizada. Pulse F5 en el navegador.
+# Said once for a document whose preview was cleaned of raw HTML
+# (scripts, event handlers) because its folder is not trusted.
+publish-preview-raw-html-left-out = HTML sin procesar omitido en la vista previa. Las carpetas de confianza están en Configuración.
 publish-server-failed = No se pudo iniciar el servidor de recarga de la vista previa ({ $error }); se abre el archivo en su lugar.
 publish-render-failed = No se pudo representar el texto: { $error } Salga del modo de edición para leer el texto.
 publish-nothing-after-caret = Nada que leer después del cursor.
@@ -1764,6 +1767,9 @@ links-open-question =
         [mail] ¿Abrir el enlace de correo? y o n. { $target }
        *[web] ¿Abrir el enlace web? y o n. { $target }
     }
+# A link to a file on another computer (a network share). Keep the
+# letters y and n: they are the keys that answer. $target is the link.
+links-network-question = ¿Abrir un archivo de otro equipo? y o n. Sus datos de inicio de sesión pueden enviarse a ese equipo. { $target }
 # The label of a heading reached by a link, at high verbosity.
 links-heading-label = Encabezado
 # $anchor is the heading name the link gives.
@@ -1924,6 +1930,7 @@ tasks-could-not-open = No se pudo abrir { $target }: { $error }
 open-refused-scheme = No abierto: enlace { $scheme } bloqueado.
 open-refused-missing = No abierto: archivo no encontrado.
 open-refused-invalid = No abierto: dirección no válida.
+open-refused-network = No abierto: el archivo está en otro equipo.
 tasks-not-opened = No se abrió.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = ¿Abrirlo? y o n
@@ -2558,6 +2565,8 @@ setting-preview-pane = Panel de vista previa
 setting-preview-pane-help = En el modo de edición, mostrar el documento tal como se lee junto al editor. F6 va a él; el cursor se queda en el editor.
 setting-preview-pane-delay-ms = Pausa de la vista previa
 setting-preview-pane-delay-ms-help = Cuánto debe durar una pausa al escribir antes de reescribir una vista previa que sigue lo que escribe.
+setting-preview-trusted-folders = Carpetas de confianza para la vista previa
+setting-preview-trusted-folders-help = Carpetas cuyos documentos conservan su HTML sin procesar, con los scripts, en la vista previa del navegador. Confíe solo en carpetas con sus propios escritos: un script de un documento de confianza puede leer los archivos que tiene al lado. Las carpetas dentro de una carpeta de confianza también son de confianza. Vacío no confía en ninguna, y cada vista previa se limpia de scripts y HTML inseguro.
 setting-lexicon-glossary = Glosario
 setting-lexicon-glossary-help = Su propio glosario, consultado antes que el diccionario: líneas término: definición, o el JSON de star. Sin definir usa glossary.txt en la carpeta de configuración.
 setting-lexicon-data-file = Archivo del diccionario

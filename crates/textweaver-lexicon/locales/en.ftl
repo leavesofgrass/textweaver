@@ -1275,6 +1275,9 @@ publish-preview-written-served = Preview written. Opening it in the browser. It 
 publish-preview-written = Preview written. Opening it in the browser. Saving writes it again; then press F5 in the browser.{ $warned }
 publish-preview-updated = Preview updated.
 publish-preview-updated-press-f5 = Preview updated. Press F5 in the browser.
+# Said once for a document whose preview was cleaned of raw HTML
+# (scripts, event handlers) because its folder is not trusted.
+publish-preview-raw-html-left-out = Raw HTML left out of the preview. Trusted folders are in Settings.
 publish-server-failed = Could not start the preview's reload server ({ $error }); opening the file instead.
 publish-render-failed = Could not render the text: { $error } Leave edit mode to read the text.
 publish-nothing-after-caret = Nothing to read after the cursor.
@@ -1803,6 +1806,9 @@ links-open-question =
         [mail] Open mail link? y or n. { $target }
        *[web] Open web link? y or n. { $target }
     }
+# A link to a file on another computer (a network share). Keep the
+# letters y and n: they are the keys that answer. $target is the link.
+links-network-question = Open a file on another computer? y or n. Your sign-in may be sent to it. { $target }
 # The label of a heading reached by a link, at high verbosity.
 links-heading-label = Heading
 # $anchor is the heading name the link gives.
@@ -1963,6 +1969,7 @@ tasks-could-not-open = Could not open { $target }: { $error }
 open-refused-scheme = Not opened: { $scheme } link blocked.
 open-refused-missing = Not opened: the file was not found.
 open-refused-invalid = Not opened: not a valid address.
+open-refused-network = Not opened: the file is on another computer.
 tasks-not-opened = Not opened.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = Open it? y or n
@@ -2599,6 +2606,8 @@ setting-preview-pane = Preview pane
 setting-preview-pane-help = In edit mode, show the document as it reads beside the editor. F6 moves to it; the cursor stays in the editor.
 setting-preview-pane-delay-ms = Preview pause
 setting-preview-pane-delay-ms-help = How long typing must pause before a preview that follows your typing is rewritten.
+setting-preview-trusted-folders = Trusted preview folders
+setting-preview-trusted-folders-help = Folders whose documents keep their raw HTML, scripts included, in the browser preview. Trust only folders of your own writing: a script in a trusted document can read the files beside it. Folders inside a trusted folder are trusted too. Empty trusts none, and every preview is cleaned of scripts and unsafe HTML.
 setting-lexicon-glossary = Glossary
 setting-lexicon-glossary-help = Your own glossary, looked up before the dictionary: term: definition lines, or star's JSON. Not set uses glossary.txt in the settings folder.
 setting-lexicon-data-file = Dictionary file

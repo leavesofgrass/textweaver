@@ -2439,12 +2439,25 @@ impl Gui {
         }
         // Copy and Cut (the keymap's): what the app copied goes on the
         // system clipboard, as the terminal sends it with OSC 52.
-        if let Some(text) = self.app.take_clipboard() {
+        // A secret (the join code or link) goes on privately, out of
+        // clipboard history (security QW4).
+        if let Some(copied) = self.app.take_clipboard_text() {
             if self.log {
-                crate::log::line(&format!("clipboard: {} chars", text.chars().count()));
+                crate::log::line(&format!("clipboard: {} chars", copied.text.chars().count()));
             }
-            ctx.render_root(self.window_id)
-                .edit_widget_with_tag(DOC, |mut d| d.ctx.set_clipboard(text));
+            match crate::clipboard::write_for(copied) {
+                crate::clipboard::Write::Plain(text) => {
+                    ctx.render_root(self.window_id)
+                        .edit_widget_with_tag(DOC, |mut d| d.ctx.set_clipboard(text));
+                }
+                crate::clipboard::Write::Private(text) => {
+                    if let Err(e) = crate::clipboard::write_private(&text) {
+                        log::warn!("private clipboard: {e}");
+                        ctx.render_root(self.window_id)
+                            .edit_widget_with_tag(DOC, |mut d| d.ctx.set_clipboard(text));
+                    }
+                }
+            }
         }
         let messages: Vec<Message> = self.queue.borrow_mut().drain(..).collect();
         let (tree_seen, release_due) = ctx

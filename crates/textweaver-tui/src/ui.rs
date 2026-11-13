@@ -500,16 +500,24 @@ impl Tui {
         self.clipboard_route
     }
 
+    /// The system clipboard copied text goes to on the system route; a
+    /// test gives a recording one ([`crate::clipboard::SystemClipboard::recording`]).
+    pub fn set_system_clipboard(&mut self, clipboard: crate::clipboard::SystemClipboard) {
+        self.system_clipboard = clipboard;
+    }
+
     /// Sends copied text on its route. The first use of the system
     /// clipboard is said once; if it fails, the text goes to the terminal
     /// instead, and the failure is said.
-    fn send_to_clipboard(&mut self, text: &str) {
+    /// A `secret` (the join code or link) goes to the system clipboard
+    /// marked private; OSC 52 cannot mark it.
+    fn send_to_clipboard(&mut self, text: &str, secret: bool) {
         use crate::clipboard::Route;
         let route = self.clipboard_route;
         let mut osc = route != Route::System;
         if route != Route::Osc52 {
             let c = self.app.catalog();
-            match self.system_clipboard.set_text(&c, text) {
+            match self.system_clipboard.set_text(&c, text, secret) {
                 Ok(()) => {
                     if route == Route::System && !self.system_clipboard_said {
                         self.system_clipboard_said = true;
@@ -537,8 +545,8 @@ impl Tui {
         if !effects.is_empty() {
             self.needs_draw = true;
         }
-        if let Some(text) = self.app.take_clipboard() {
-            self.send_to_clipboard(&text);
+        if let Some(copied) = self.app.take_clipboard_text() {
+            self.send_to_clipboard(&copied.text, copied.secret);
         }
         // Prompts and lists are the app's own models (Wave 3): the app
         // adopted them, and said a list's focused item, before returning

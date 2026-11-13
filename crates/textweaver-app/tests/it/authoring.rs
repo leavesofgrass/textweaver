@@ -853,6 +853,75 @@ fn preview_follow_serves_the_page_and_reloads_after_saves_and_typing() {
     assert!(refused, "the server still answers");
 }
 
+/// Security L2: a preview is cleaned of a document's scripts and unsafe
+/// HTML, says so once, and is served with a content security policy and
+/// only the files a page loads; a document in a trusted folder keeps its
+/// raw HTML.
+#[test]
+fn preview_leaves_out_raw_html_unless_the_folder_is_trusted() {
+    use std::io::{Read, Write};
+    use textweaver_app::store::PreviewFollow;
+    let mut r = Rig::new();
+    let text = "# Notes\n\nA <b>bold</b> word.\n\n<script>fetch('notes.txt')</script>\n\n<p onclick=\"steal()\">Click</p>\n";
+    let path = r.open("notes.md", text);
+    std::fs::write(r.dir.join("notes.txt"), "private").unwrap();
+    r.act(ActionId::PreviewInBrowser);
+    r.send(Command::Choose(0));
+    r.wait();
+    let page = std::fs::read_to_string(&r.opened()[0]).unwrap();
+    assert!(!page.contains("fetch("), "{page}");
+    assert!(!page.contains("onclick"), "{page}");
+    assert!(page.contains("<b>bold</b>"), "{page}");
+    let notice = "Raw HTML left out of the preview. Trusted folders are in Settings.";
+    assert!(r.said.any(notice), "{:?}", r.said.all());
+    // Said once for the document.
+    r.said.clear();
+    r.act(ActionId::PreviewInBrowser);
+    r.send(Command::Choose(0));
+    r.wait();
+    assert!(!r.said.any("Raw HTML"), "{:?}", r.said.all());
+    // Served: the policy, and none of the document's other files.
+    let _ = r
+        .app
+        .update_settings(|s| s.preview.follow = PreviewFollow::Save);
+    r.act(ActionId::PreviewInBrowser);
+    r.send(Command::Choose(0));
+    r.wait();
+    let url = r.opened().last().unwrap().clone();
+    let rest = url.trim_start_matches("http://");
+    let (host, tok) = rest.split_once('/').unwrap();
+    let addr: std::net::SocketAddr = host.parse().unwrap();
+    let get = |p: &str| {
+        let mut c = std::net::TcpStream::connect(addr).unwrap();
+        c.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+        write!(c, "GET {p} HTTP/1.1\r\n\r\n").unwrap();
+        let mut out = String::new();
+        let _ = c.read_to_string(&mut out);
+        out
+    };
+    let served = get(&format!("/{tok}"));
+    assert!(
+        served.contains("Content-Security-Policy: default-src 'self'; script-src 'nonce-"),
+        "{served}"
+    );
+    assert!(!served.contains("fetch("), "{served}");
+    assert!(get(&format!("/{tok}files/notes.txt")).starts_with("HTTP/1.1 404"));
+    // A trusted folder keeps the raw HTML, without the notice.
+    let folder = path.parent().unwrap().to_owned();
+    let _ = r.app.update_settings(|s| {
+        s.preview.follow = PreviewFollow::Off;
+        s.preview.trusted_folders = vec![folder];
+    });
+    r.said.clear();
+    r.act(ActionId::PreviewInBrowser);
+    r.send(Command::Choose(0));
+    r.wait();
+    let page = std::fs::read_to_string(r.opened().last().unwrap()).unwrap();
+    assert!(page.contains("fetch('notes.txt')"), "{page}");
+    assert!(page.contains("onclick"), "{page}");
+    assert!(!r.said.any("Raw HTML"), "{:?}", r.said.all());
+}
+
 /// The text from the caret, a few characters of it.
 fn at_caret(r: &Rig, n: usize) -> String {
     let s = r.app.session().unwrap();
@@ -1251,6 +1320,47 @@ fn links_open_only_web_and_mail_addresses_without_a_shell() {
         assert!(!r.app.confirmation_pending(), "no question for {scheme}");
     }
     assert_eq!(r.opened().len(), 2, "nothing else reached the opener");
+}
+
+/// Security L5: a link to a file on another computer asks first, and
+/// nothing looks for the file before the answer. None of these hosts
+/// exists: a look would have said "which was not found" instead of
+/// asking. No leaves it alone; any other key asks again.
+#[test]
+fn links_to_other_computers_ask_before_anything_looks() {
+    let mut r = Rig::new();
+    r.open(
+        "a.md",
+        "# A\n\nSee [share](//tw-no-host.invalid/share/notes.md) and [url](file://tw-no-host.invalid/share/notes.md#part) here.\n",
+    );
+    let sep = std::path::MAIN_SEPARATOR;
+    for word in ["share", "url"] {
+        r.said.clear();
+        r.go(word);
+        r.act(ActionId::FollowLink);
+        let status = r.status();
+        assert!(
+            status.starts_with(
+                "Open a file on another computer? y or n. Your sign-in may be sent to it. "
+            ),
+            "{status}"
+        );
+        assert!(
+            status.contains(&format!(
+                "{sep}{sep}tw-no-host.invalid{sep}share{sep}notes.md"
+            )),
+            "{status}"
+        );
+        assert!(r.app.confirmation_pending());
+        assert!(!r.said.any("not found"), "{:?}", r.said.all());
+        r.send(Command::Confirm(Confirm::Repeat));
+        assert_eq!(r.status(), status);
+        r.send(Command::Confirm(Confirm::No));
+        assert!(r.said.any("Not opened."), "{:?}", r.said.all());
+        assert!(!r.app.confirmation_pending());
+        assert_eq!(r.app.session().unwrap().title, "A");
+    }
+    assert!(r.opened().is_empty());
 }
 
 #[test]

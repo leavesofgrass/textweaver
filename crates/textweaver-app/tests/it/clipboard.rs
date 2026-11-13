@@ -54,6 +54,44 @@ fn html(html: &str) -> ClipboardContents {
     }
 }
 
+/// Security QW4: Copy the join code and Copy the join link hand the
+/// frontend their text marked as a secret, so it stays out of clipboard
+/// history; an ordinary Copy is not marked.
+#[cfg(feature = "mqtt")]
+#[test]
+fn the_join_code_and_link_are_copied_as_secrets() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut app = App::new(AppConfig {
+        paths: Some(textweaver_app::store::Paths::under(tmp.path())),
+        ..AppConfig::for_tests()
+    });
+    let _ = app.update_settings(|s| s.live.broker.listen = vec!["127.0.0.1:0".into()]);
+    act(&mut app, ActionId::StartBroker);
+    assert!(app.live_broker_running());
+    let _ = app.take_clipboard_text();
+    let code = app.live_broker_join_code().unwrap();
+    act(&mut app, ActionId::CopyJoinCode);
+    let copied = app.take_clipboard_text().unwrap();
+    assert_eq!(copied.text, code);
+    assert!(copied.secret);
+    act(&mut app, ActionId::CopyJoinLink);
+    let copied = app.take_clipboard_text().unwrap();
+    assert!(copied.text.starts_with("twjoin://"), "{}", copied.text);
+    assert!(copied.secret);
+    act(&mut app, ActionId::StopBroker);
+    // Nothing waits, and an ordinary copy afterwards is not a secret.
+    assert_eq!(app.take_clipboard_text(), None);
+    app.open_document(
+        Document::from_plain_text(SOURCE),
+        DocKey::untitled(1),
+        "T".into(),
+    );
+    act(&mut app, ActionId::Copy);
+    let copied = app.take_clipboard_text().unwrap();
+    assert_eq!(copied.text, "First sentence here.");
+    assert!(!copied.secret);
+}
+
 #[test]
 fn copy_and_paste_round_trip_through_the_clipboard() {
     let (mut app, clip) = app_with(SOURCE);

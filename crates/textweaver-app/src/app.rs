@@ -500,6 +500,9 @@ pub struct App {
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
+    /// The secret last put in [`clipboard`](Self::clipboard), so the
+    /// frontend keeps it out of clipboard history (security QW4).
+    pub(crate) clipboard_secret: Option<String>,
     /// The system clipboard Paste reads ([`App::set_clipboard`]).
     pub(crate) system_clipboard: Option<Box<dyn crate::clipboard::Clipboard>>,
     /// Where images are read from when the system clipboard is not
@@ -724,6 +727,7 @@ impl App {
             system_colors_win: false,
             voices: crate::voice::VoicesState::default(),
             clipboard: None,
+            clipboard_secret: None,
             system_clipboard: None,
             image_clipboard: None,
             paste_job: None,
