@@ -933,8 +933,9 @@ mod tests {
         );
         assert!(spoken_text(&with).contains("Alt or F10 shows the menus"));
         assert!(!plain.contains("menus"));
+        // Only the menus sentence is added.
         assert!(
-            written_text(&with).len() <= written_text(&plain).len() + 10,
+            written_text(&with).len() <= written_text(&plain).len() + 30,
             "{with}"
         );
     }

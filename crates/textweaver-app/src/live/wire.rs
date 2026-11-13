@@ -913,7 +913,7 @@ mod tests {
             polite
         );
         assert_eq!(r.priority_of("No messages yet on log/checkins."), polite);
-        assert_eq!(r.priority_of("3 messages were left out"), polite);
+        assert_eq!(r.priority_of("Left out 3 messages"), polite);
         assert_eq!(
             r.priority_of("Disconnected from Practice log: Connection lost"),
             assertive
