@@ -25,6 +25,7 @@ mod quick_wins;
 mod screen_readers;
 mod scripted;
 mod settings_screen;
+mod status_transcript;
 mod terminal_polish;
 mod usability;
 mod wiring;
