@@ -180,7 +180,7 @@ live-field-speak-off = Changes of { $field } are no longer spoken.
 live-state-connecting = Connecting
 live-state-reconnecting = Reconnecting
 live-state-encrypted = Connected, encrypted
-live-state-tailscale = Connected over Tailscale
+live-state-tailscale = Connected, Tailscale range
 live-state-plain = Connected, not encrypted
 live-state-lost = Connection lost
 

@@ -18,6 +18,7 @@ live-full
 live-log-save-failed
 live-resumed-dropped
 live-skipped
+live-state-tailscale
 live-too-large
 live-topic-refused
 name-close-live-source

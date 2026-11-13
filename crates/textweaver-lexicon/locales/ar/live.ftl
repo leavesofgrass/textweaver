@@ -167,7 +167,6 @@ live-field-speak-off = لم تعد تغييرات { $field } تُنطق.
 live-state-connecting = جارٍ الاتصال
 live-state-reconnecting = جارٍ إعادة الاتصال
 live-state-encrypted = متصل، مشفّر
-live-state-tailscale = متصل عبر Tailscale
 live-state-plain = متصل، غير مشفّر
 live-state-lost = انقطع الاتصال
 

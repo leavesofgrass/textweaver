@@ -170,7 +170,6 @@ live-field-speak-off = Les changements de { $field } ne sont plus lus à voix ha
 live-state-connecting = Connexion
 live-state-reconnecting = Reconnexion
 live-state-encrypted = Connecté, chiffré
-live-state-tailscale = Connecté par Tailscale
 live-state-plain = Connecté, non chiffré
 live-state-lost = Connexion perdue
 
