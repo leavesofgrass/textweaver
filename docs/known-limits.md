@@ -50,7 +50,9 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 - **Wrong join codes can turn a session's code off.** After 200 wrong join codes in one broker session, the join code stops working for everyone, so someone guessing can end a session's joining early; accounts keep working. Start the broker again for a new code.
 - **On Windows and macOS, a plain listener on a 100.64 address always warns.** The broker counts a 100.64.0.0/10 address as Tailscale only when it finds a Tailscale network interface, and it can look only on Linux so far. Use TLS, which needs no such check.
 - **On Windows, the broker's key and accounts take the data folder's permissions.** `broker-key.pem` and `broker.toml` are written owner-only on Linux and macOS. On Windows they inherit the folder's access list, which under your profile is yours alone; a data folder moved with `TEXTWEAVER_HOME` to a shared drive may let other accounts on the computer read them.
-- **A join code lasts one broker session.** The session's key is held in memory, so the code stops working when the broker stops, and a new run makes a new code. A QR code, like the code, lets anyone who sees it join until then. An image with a side over 16,384 pixels is refused when read from the clipboard.
+- **A join code lasts one broker session.** The session's key is held in memory, so the code stops working when the broker stops, and a new run makes a new code. A QR code, like the code, lets anyone who sees it join until then.
+- **Join from a QR image refuses large pictures.** An image of more than 40 million pixels (width times height) is not read, in a file or on the clipboard; you are told to crop it to the code. A clipboard image with a side over 16,384 pixels is refused too.
+- **A connection error from a live source can mix languages.** The message around it is translated, but the reason inside it comes from the MQTT connection and is in English.
 - **A quiet topic and a forbidden topic look the same** to textweaver, since Mosquitto accepts a subscription its access list denies. After `quiet_hint_seconds` it says so once, in words.
 
 ## Obsidian notes and vaults

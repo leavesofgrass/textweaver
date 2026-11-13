@@ -72,6 +72,7 @@ From there, [Architecture](architecture.md#the-crates) groups every crate by the
 ## Windows
 
 - Install Visual Studio or the Build Tools with the "Desktop development with C++" workload, for the MSVC linker, and cmake for the Opus encoder (`winget install Kitware.CMake`, or set `CMAKE` to a portable cmake).
+- **A newer Visual Studio needs a newer cmake.** The cmake bundled with Visual Studio 2022 cannot generate for Visual Studio 2026. On a machine that has Visual Studio 2026, a fresh build fails in the Opus encoder (`opusic-sys`) with "Could not create named generator Visual Studio 18 2026", and only after the C code has been compiling for some minutes. The cmake that Visual Studio 2022 put first on `PATH` is the one that fails. Install a current cmake (`winget install Kitware.CMake`, or a portable copy) and set the `CMAKE` environment variable to the full path of its `cmake.exe` before building; or turn off the `opus` feature (see above).
 - Add the 32-bit target, which the 32-bit engine hosts need:
 
   ```powershell

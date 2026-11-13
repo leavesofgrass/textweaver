@@ -1,6 +1,6 @@
 # Good first issues
 
-Small, well-scoped tasks for a first contribution. Each one says what to change, where to look, and how to check it. They were checked against the code on Wednesday, September 30, 2026; if one has been done since, the code will show it.
+Small, well-scoped tasks for a first contribution. Each one says what to change, where to look, and how to check it. They were checked against the code on Thursday, November 12, 2026; if one has been done since, the code will show it.
 
 Before you start:
 
