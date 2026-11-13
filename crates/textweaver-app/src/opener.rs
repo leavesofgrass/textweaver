@@ -9,6 +9,12 @@
 //! - Only `http:`, `https:` and `mailto:` addresses and files that exist
 //!   (a path, or a `file:` address) are opened ([`classify`]). Anything
 //!   else is refused, and the reader hears why in words.
+//! - A file on another computer (a UNC path such as `\\host\share`, a
+//!   `\\?\` or `\\.\` path, or a `file:` address naming a host) is refused
+//!   before anything looks for it ([`is_remote`]): on Windows, only
+//!   checking that such a file exists connects to that computer and sends
+//!   it the person's sign-in (security L5). Links in a document ask first
+//!   instead (`crate::links`).
 //! - No shell ever reads the target. Windows calls `ShellExecuteW`; macOS
 //!   runs `open` and Linux `xdg-open` with the target as one argument
 //!   ([`system_open`]). A file is passed as an absolute path, so it can
@@ -49,6 +55,72 @@ pub enum Refused {
     /// Empty, or with control characters in it.
     #[error("not a valid address")]
     Invalid,
+    /// A file on another computer ([`is_remote`]), never looked for.
+    #[error("the file is on another computer")]
+    Remote,
+}
+
+/// True when `path` starts like a path on another computer: two slashes
+/// or backslashes, as a UNC path (`\\host\share`, `//host/share`) and the
+/// `\\?\` and `\\.\` forms do.
+fn is_network_path(path: &str) -> bool {
+    let mut c = path.chars();
+    matches!((c.next(), c.next()), (Some('\\' | '/'), Some('\\' | '/')))
+}
+
+/// True when `target` names a file on another computer: a UNC path, a
+/// `\\?\` or `\\.\` path, or a `file:` address whose host is not empty or
+/// `localhost` (`file://host/share/x.md`). Decided from the text alone:
+/// nothing on disk or on the network is touched.
+pub fn is_remote(target: &str) -> bool {
+    let target = target.trim();
+    let Some(rest) = target
+        .get(..5)
+        .filter(|s| s.eq_ignore_ascii_case("file:"))
+        .map(|_| &target[5..])
+    else {
+        return is_network_path(target);
+    };
+    match rest.strip_prefix("//") {
+        Some(after) => {
+            let end = after.find(['/', '\\']).unwrap_or(after.len());
+            let host = &after[..end];
+            (!host.is_empty() && !host.eq_ignore_ascii_case("localhost"))
+                || is_network_path(&after[end..])
+        }
+        None => is_network_path(rest),
+    }
+}
+
+/// The path a `file:` address or a plain target names on another
+/// computer, as this system writes it (`\\host\share\x.md` on Windows),
+/// for asking about it and, once the person says yes, opening it.
+pub fn remote_path(target: &str) -> String {
+    let target = target.trim();
+    let path = match target.get(..5).filter(|s| s.eq_ignore_ascii_case("file:")) {
+        Some(_) => {
+            let rest = &target[5..];
+            match rest.strip_prefix("//") {
+                // file://host/share/x: the host is the start of the path.
+                Some(after) if !after.starts_with(['/', '\\']) => {
+                    let end = after.find(['/', '\\']).unwrap_or(after.len());
+                    if after[..end].eq_ignore_ascii_case("localhost") {
+                        after[end..].to_owned()
+                    } else {
+                        format!("//{after}")
+                    }
+                }
+                Some(after) => after.to_owned(),
+                None => rest.to_owned(),
+            }
+        }
+        None => target.to_owned(),
+    };
+    if cfg!(windows) {
+        path.replace('/', "\\")
+    } else {
+        path
+    }
 }
 
 /// The scheme of `target` (`https`), lowercase, when it has one. A drive
@@ -69,6 +141,10 @@ pub fn classify(target: &str) -> Result<OpenTarget, Refused> {
     let target = target.trim();
     if target.is_empty() || target.chars().any(char::is_control) {
         return Err(Refused::Invalid);
+    }
+    // Before anything looks for the file (security L5).
+    if is_remote(target) {
+        return Err(Refused::Remote);
     }
     match scheme_of(target).as_deref() {
         Some("http" | "https") => Ok(OpenTarget::Web(target.to_owned())),
@@ -236,6 +312,46 @@ mod tests {
         // A drive letter is not a scheme.
         assert_eq!(scheme_of(r"C:\notes"), None);
         assert_eq!(scheme_of("https://x"), Some("https".into()));
+    }
+
+    /// Security L5: a file on another computer is refused from its text
+    /// alone. None of these hosts exists, and none is looked up: a lookup
+    /// would make `classify` slow and say "not found" instead.
+    #[test]
+    fn files_on_other_computers_are_refused_untouched() {
+        for t in [
+            r"\\tw-no-host.invalid\share\notes.md",
+            "//tw-no-host.invalid/share/notes.md",
+            r"\\?\UNC\tw-no-host.invalid\share\notes.md",
+            r"\\.\pipe\tw-no-pipe",
+            "file://tw-no-host.invalid/share/notes.md",
+            "FILE://tw-no-host.invalid/share/notes.md",
+            "file:////tw-no-host.invalid/share/notes.md",
+            r"file:\\tw-no-host.invalid\share\notes.md",
+        ] {
+            assert!(is_remote(t), "{t}");
+            assert_eq!(classify(t), Err(Refused::Remote), "{t}");
+        }
+        for t in [
+            "notes.md",
+            "/home/ada/notes.md",
+            r"C:\notes\a.md",
+            "file:///home/ada/notes.md",
+            "file://localhost/home/ada/notes.md",
+            "file:notes.md",
+            "https://example.com/x",
+        ] {
+            assert!(!is_remote(t), "{t}");
+        }
+        let sep = std::path::MAIN_SEPARATOR;
+        assert_eq!(
+            remote_path("file://tw-no-host.invalid/share/x.md"),
+            format!("{sep}{sep}tw-no-host.invalid{sep}share{sep}x.md")
+        );
+        assert_eq!(
+            remote_path("//tw-no-host.invalid/share/x.md"),
+            format!("{sep}{sep}tw-no-host.invalid{sep}share{sep}x.md")
+        );
     }
 
     #[test]

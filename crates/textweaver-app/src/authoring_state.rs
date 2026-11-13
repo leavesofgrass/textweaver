@@ -217,6 +217,9 @@ pub(crate) enum Question {
     /// Export over this file, which already exists? The whole question as
     /// asked ("essay.pdf already exists. Replace it? y or n").
     ReplaceExport(PathBuf, String),
+    /// Follow a link to a file on another computer? The target, never
+    /// looked for yet, and the whole question as asked (security L5).
+    NetworkLink(String, String),
 }
 
 /// The authoring state.

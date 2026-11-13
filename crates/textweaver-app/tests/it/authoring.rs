@@ -1316,6 +1316,47 @@ fn verbosity_and_punctuation_cycle_and_are_saved() {
 
 // Notes.
 
+/// Security L5: a link to a file on another computer asks first, and
+/// nothing looks for the file before the answer. None of these hosts
+/// exists: a look would have said "which was not found" instead of
+/// asking. No leaves it alone; any other key asks again.
+#[test]
+fn links_to_other_computers_ask_before_anything_looks() {
+    let mut r = Rig::new();
+    r.open(
+        "a.md",
+        "# A\n\nSee [share](//tw-no-host.invalid/share/notes.md) and [url](file://tw-no-host.invalid/share/notes.md#part) here.\n",
+    );
+    let sep = std::path::MAIN_SEPARATOR;
+    for word in ["share", "url"] {
+        r.said.clear();
+        r.go(word);
+        r.act(ActionId::FollowLink);
+        let status = r.status();
+        assert!(
+            status.starts_with(
+                "Open a file on another computer? y or n. Your sign-in may be sent to it. "
+            ),
+            "{status}"
+        );
+        assert!(
+            status.contains(&format!(
+                "{sep}{sep}tw-no-host.invalid{sep}share{sep}notes.md"
+            )),
+            "{status}"
+        );
+        assert!(r.app.confirmation_pending());
+        assert!(!r.said.any("not found"), "{:?}", r.said.all());
+        r.send(Command::Confirm(Confirm::Repeat));
+        assert_eq!(r.status(), status);
+        r.send(Command::Confirm(Confirm::No));
+        assert!(r.said.any("Not opened."), "{:?}", r.said.all());
+        assert!(!r.app.confirmation_pending());
+        assert_eq!(r.app.session().unwrap().title, "A");
+    }
+    assert!(r.opened().is_empty());
+}
+
 #[test]
 fn notes_export_as_a_study_sheet_grouped_by_heading() {
     let mut r = Rig::new();

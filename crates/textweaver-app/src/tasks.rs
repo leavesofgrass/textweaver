@@ -149,6 +149,7 @@ impl App {
             }
             Refused::Missing => self.msg("open-refused-missing"),
             Refused::Invalid => self.msg("open-refused-invalid"),
+            Refused::Remote => self.msg("open-refused-network"),
         }
     }
 
@@ -184,6 +185,18 @@ impl App {
                 return self.export_not_replaced(path);
             }
             (Question::ReplaceExport(_, question), Confirm::Repeat) => {
+                self.ask(&question);
+            }
+            (Question::NetworkLink(target, _), Confirm::Yes) => {
+                self.authoring.question = None;
+                return self.follow_network_link(&target);
+            }
+            (Question::NetworkLink(..), Confirm::No) => {
+                self.authoring.question = None;
+                let msg = self.msg("tasks-not-opened");
+                self.note(&msg);
+            }
+            (Question::NetworkLink(_, question), Confirm::Repeat) => {
                 self.ask(&question);
             }
         }

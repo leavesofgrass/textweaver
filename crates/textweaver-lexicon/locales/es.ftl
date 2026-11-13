@@ -1764,6 +1764,9 @@ links-open-question =
         [mail] ¿Abrir el enlace de correo? y o n. { $target }
        *[web] ¿Abrir el enlace web? y o n. { $target }
     }
+# A link to a file on another computer (a network share). Keep the
+# letters y and n: they are the keys that answer. $target is the link.
+links-network-question = ¿Abrir un archivo de otro equipo? y o n. Sus datos de inicio de sesión pueden enviarse a ese equipo. { $target }
 # The label of a heading reached by a link, at high verbosity.
 links-heading-label = Encabezado
 # $anchor is the heading name the link gives.
@@ -1924,6 +1927,7 @@ tasks-could-not-open = No se pudo abrir { $target }: { $error }
 open-refused-scheme = No abierto: enlace { $scheme } bloqueado.
 open-refused-missing = No abierto: archivo no encontrado.
 open-refused-invalid = No abierto: dirección no válida.
+open-refused-network = No abierto: el archivo está en otro equipo.
 tasks-not-opened = No se abrió.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = ¿Abrirlo? y o n
