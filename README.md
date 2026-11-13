@@ -39,7 +39,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
 
 ## First steps
 
-These keys are the same in the app on every platform.
+These are the keys of the app on Windows and Linux. On a Mac, the app uses Cmd where this list says Ctrl (Cmd+O, Cmd+S, Cmd+E, Cmd+Q), Cmd+[ and Cmd+] to go back and forward, and Cmd+Option+Period and Cmd+Option+Comma to move by sentence. [Every key](docs/keyboard.md) also lists the terminal reader's keys, which differ.
 
 1. Ctrl+O opens a file: a Word document, PDF, EPUB, Markdown, or plain text. textweaver announces "Opened" and the title.
 2. Space starts reading, and the highlight follows each spoken word. Space again pauses; Escape stops.
@@ -77,7 +77,7 @@ The reader reads its own quick start aloud. Space starts and pauses; `?` lists e
 
 ## Screen readers
 
-textweaver can speak with its own voice or leave speech to your screen reader; Alt+Shift+A chooses between them. On Windows it works with NVDA and JAWS. On macOS the app works with VoiceOver, though testing so far has been basic and more is planned. On Linux the app has had basic testing with Orca; if it gives you trouble there, the terminal reader is a dependable alternative. [Using textweaver with a screen reader](docs/screen-readers.md) explains the options.
+textweaver can speak with its own voice or leave speech to your screen reader; Alt+Shift+A (Cmd+Option+Shift+A on a Mac) chooses between them. On Windows it works with NVDA and JAWS. On macOS the app works with VoiceOver, though testing so far has been basic and more is planned. On Linux the app has had basic testing with Orca; if it gives you trouble there, the terminal reader is a dependable alternative. [Using textweaver with a screen reader](docs/screen-readers.md) explains the options.
 
 ## Languages
 
