@@ -587,10 +587,9 @@ pub(crate) fn open_link(
                             | io::ErrorKind::ConnectionReset
                             | io::ErrorKind::ConnectionAborted
                     )
+                    && let DisconnectReason::LostLoggingIn { tls_hint, .. } = &mut f.reason
                 {
-                    if let DisconnectReason::LostLoggingIn { tls_hint, .. } = &mut f.reason {
-                        *tls_hint = true;
-                    }
+                    *tls_hint = true;
                 }
                 return Err(f);
             }
