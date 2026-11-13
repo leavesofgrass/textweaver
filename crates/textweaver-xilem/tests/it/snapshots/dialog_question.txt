@@ -1,0 +1,14 @@
+Accessibility tree in the textweaver app: the question dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Remove the voice?" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - Label [hidden]
+    - GenericContainer
+      - Button "Yes" [focused]
+        - Label [hidden]
+        - Label [hidden]
+      - Button "No"
+        - Label [hidden]
+        - Label [hidden]

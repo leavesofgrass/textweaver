@@ -1,0 +1,49 @@
+Accessibility tree in the textweaver app: the settings dialog, section braille. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Settings" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - ListBox "Sections" [active item "Braille, 8 settings"]
+          - ListBoxOption "Voice and speech, 11 settings"
+          - ListBoxOption "Pauses and verbosity, 8 settings"
+          - ListBoxOption "Speaking text, 13 settings"
+          - ListBoxOption "Accessibility and announcements, 6 settings"
+          - ListBoxOption "Reading, 9 settings"
+          - ListBoxOption "Documents, 7 settings"
+          - ListBoxOption "Highlight, 8 settings"
+          - ListBoxOption "Math, 5 settings"
+          - ListBoxOption "Braille, 8 settings" [selected]
+          - ListBoxOption "Morse code, 12 settings"
+          - ListBoxOption "Morse practice, 4 settings"
+          - ListBoxOption "Display, 4 settings"
+          - ListBoxOption "Colors, 13 settings"
+          - ListBoxOption "Spacing, font and ruler, 12 settings"
+          - ListBoxOption "Word aids, 15 settings"
+          - ListBoxOption "Word by word (RSVP), 13 settings"
+          - ListBoxOption "Editing, 14 settings"
+          - ListBoxOption "Library and study tools, 6 settings"
+          - ListBoxOption "Dictation, 3 settings"
+          - ListBoxOption "Keyboard and language, 3 settings"
+          - ListBoxOption "Toolbars and panels, 7 settings"
+          - ListBoxOption "Export, 6 settings"
+          - ListBoxOption "Live documents, 13 settings"
+          - ListBoxOption "Sync, 15 settings"
+          - ListBoxOption "Updates and components, 3 settings"
+          - ListBoxOption "All settings, 230 settings"
+      - Group "Braille settings" description="Up and Down move between settings. Left and Right change one. Enter types a new value. Delete puts the default back. Ctrl+PageDown and Ctrl+PageUp change the section. Type to filter. F1 says the help." [focused, active item "Braille grade"]
+        - ComboBox "Braille grade" value="uncontracted (grade 1)" description="Uncontracted (grade 1) or contracted (grade 2) braille, in BRF files and the Braille view." [selected]
+        - Slider "Braille display cells" value="40 cells" description="How many cells your Braille display has."
+        - ComboBox "Braille code of BRF files" value="UEB" description="The braille code BRF files are read in."
+        - ComboBox "Braille tables" value="linear" description="How BRF files lay out tables."
+        - ComboBox "Math braille" value="Nemeth" description="The braille code for math in BRF files and while exploring a formula with MathCAT."
+        - CheckBox "Braille view" description="Show the current line or sentence as braille dots at the bottom of the app." [not checked]
+        - CheckBox "Braille view print line" description="Under each braille cell, the print letter or contraction it stands for." [not checked]
+        - CheckBox "Braille view cell outlines" description="Draw an outline around each braille cell, so blank cells and spacing show." [not checked]
+    - GenericContainer
+      - Label [hidden]
+      - Button "Close" description="Close the settings. Every change is already saved."
+        - Label [hidden]
+        - Label [hidden]

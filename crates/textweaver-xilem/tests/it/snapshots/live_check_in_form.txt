@@ -1,0 +1,39 @@
+Accessibility tree in the textweaver app: the check-in form, field by field. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+Field 1:
+- Dialog "Callsign, 1 of 3" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Callsign, 1 of 3" [focused]
+        - Label [hidden]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+Field 2:
+- Dialog "Name, 2 of 3" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Name, 2 of 3" [focused]
+        - Label [hidden]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+Field 3:
+- Dialog "Notes, 3 of 3" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Notes, 3 of 3" [focused]
+        - Label [hidden]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]

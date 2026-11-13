@@ -1,0 +1,84 @@
+Accessibility tree in the textweaver app: the live source form, field by field. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+Field 1:
+- Dialog "Name, 1 of 7" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Name, 1 of 7" [focused]
+        - Label [hidden]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+Field 2:
+- Dialog "Broker host, 2 of 7" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Broker host, 2 of 7" [focused]
+        - Label [hidden]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+Field 3:
+- Dialog "Encryption, 3 of 7, Up or Down Arrow changes" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Encryption, 3 of 7, Up or Down Arrow changes" value="Off" [focused]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+Field 4:
+- Dialog "Port, 4 of 7" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Port, 4 of 7" value="1883" [focused]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+Field 5:
+- Dialog "Topic, 5 of 7" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Topic, 5 of 7" [focused]
+        - Label [hidden]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+Field 6:
+- Dialog "User name, 6 of 7" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "User name, 6 of 7" [focused]
+        - Label [hidden]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+Field 7:
+- Dialog "View, 7 of 7, Up or Down Arrow changes" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "View, 7 of 7, Up or Down Arrow changes" value="Log" [focused]
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]

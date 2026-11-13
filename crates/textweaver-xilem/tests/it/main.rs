@@ -18,5 +18,6 @@ mod mouse_select;
 mod preview;
 mod settings_dialog;
 mod sidebar;
+mod tree_snapshots;
 mod voice_manager;
 mod window_tree;

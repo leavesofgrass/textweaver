@@ -1,0 +1,43 @@
+Accessibility tree in the textweaver app: the find dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Find and replace" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - Label [hidden]
+      - GenericContainer
+        - GenericContainer
+          - TextInput "Find what" [focused]
+          - Label [hidden]
+    - Label
+    - GenericContainer
+      - GenericContainer
+        - Label [hidden]
+      - GenericContainer
+        - GenericContainer
+          - TextInput "Replace with"
+          - Label [hidden]
+    - GenericContainer
+      - CheckBox "Match case" [not checked]
+        - Label value="Match case"
+      - CheckBox "Whole words" [not checked]
+        - Label value="Whole words"
+    - GenericContainer
+      - CheckBox "Regular expression" [not checked]
+        - Label value="Regular expression"
+      - CheckBox "Across lines" [not checked]
+        - Label value="Across lines"
+    - GenericContainer
+      - Button "Find next" description="Selects the next match."
+        - Label [hidden]
+        - Label [hidden]
+      - Button "Replace" description="Replaces the match shown and goes to the next. The first press finds a match."
+        - Label [hidden]
+      - Button "Replace all" description="Says how many matches there are and asks once. One undo takes them all back."
+        - Label [hidden]
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
+    - Label [hidden]

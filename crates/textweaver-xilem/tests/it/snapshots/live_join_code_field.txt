@@ -1,0 +1,16 @@
+Accessibility tree in the textweaver app: the join code field of the live source form. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Join code, 4 of 7" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - PasswordInput "Join code, 4 of 7" value hidden [focused]
+    - GenericContainer
+      - CheckBox "Show the join code" [not checked]
+        - Label value="Show the join code"
+    - GenericContainer
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]

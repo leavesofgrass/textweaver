@@ -1,0 +1,19 @@
+Accessibility tree in the textweaver app: the join QR code dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Join QR code" description="Anyone who sees this code can join." [modal]
+  - GenericContainer
+    - Label [hidden]
+    - Label value="Anyone who sees this code can join."
+    - Image "QR code for joining 127.0.0.1"
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Join link" value="twjoin://127.0.0.1:PORT/CODE"
+    - GenericContainer
+      - Button "Copy the join link" [focused]
+        - Label [hidden]
+      - Button "Save the QR code"
+        - Label [hidden]
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]
