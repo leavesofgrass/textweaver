@@ -1,0 +1,7 @@
+### Reading and speech
+- **Find and replace steps at once in large documents.** The replace loop finds the matches once and keeps them: a skip is a lookup, and a replacement moves the matches after it instead of searching the whole text again. "Match N of M" stays exact, including matches the replacement itself adds.
+- **Structure moves look up their marker directly.** Next heading, list or table, and the item counts said with them, find their marker by position instead of reading every marker of the document.
+- **A live log stays quick as it grows.** Each entry's line is rendered once and kept until the entry changes, and an entry added or corrected changes the open document by one edit, rendered and parsed on its own, instead of the whole log rendered, parsed and compared. A whole log sent again, and switching between the list and the table, still take the full path. The reader's place never moves.
+- **The recovery snapshot is written as it is made.** Its JSON goes straight to the temporary file instead of being built in memory first, which lowers the peak memory of a large document's snapshot. The file is byte for byte what it was.
+- **The Windows color-scheme probe asks its two questions at once.** Dark mode and high contrast are read side by side, each still within half a second, so a busy machine waits for one answer, not two.
+- **The benchmark gate covers more.** It now times a live log of 2,000 and 10,000 entries and one replacement step, and gates the start of `tw` like any other time.
