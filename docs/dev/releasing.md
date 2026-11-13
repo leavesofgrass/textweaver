@@ -22,7 +22,13 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    This writes today's date and the version on the "Last listening check" line of this guide, and changes nothing else. The release prints a note when that line is old or for another version, and goes on.
 
-2. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
+2. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, before the tag:
+
+   - **Check the tool versions:** `cargo xtask tools --check`. Every installed tool must match its pin in `tools.toml`; a line starting "Fail" names the tool, the version here, and the pin.
+   - **Run the fuzz job.** Start the Nightly workflow from the Actions tab on `main` (or `gh workflow run nightly.yml --ref main`). It fuzzes every target in `fuzz/` for 10 minutes; read every failed target, and fix or explain each crash before tagging. Its other jobs (miri, the soak test, the nightly test profile) are worth reading too.
+   - **Run CI on a branch first.** Push the exact commit you will release to a throwaway branch named `ci/<name>`, such as `ci/beta6`, and run `gh workflow run ci.yml --ref ci/<name>` (a push to a `ci/` branch also starts it). This is the only way to see the macOS and Windows results before anything reaches `main`. Removing the branch afterwards needs the owner's approval.
+
+   Then, on `main`, with a clean tree and CI green, try the release without changing anything:
 
    ```bash
    cargo xtask release 0.1.0-beta.5 --dry-run
@@ -45,7 +51,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    Before a release, also run `cargo xtask notices` (it needs `cargo install --locked --features cli cargo-about@0.9.3`, the version CI pins) and commit `THIRD-PARTY-NOTICES.md` if it changed. CI fails when it is out of date.
 
-   **The changelog, grouped by area.** During development, contributors may add their `CHANGELOG.md` lines under a scratch heading of their own, to keep unrelated changes from colliding. Before a release, move those lines under area headings (reading and speech, documents, writing, the GUI, languages, packages) and add a short summary at the top of the section. `cargo xtask release` names any scratch heading it still finds in `[Unreleased]` and stops.
+   **The changelog, grouped by area.** During development, branches do not edit `CHANGELOG.md`: each adds a fragment, `changelog.d/<branch-name>.md`, one area heading line and plain bullets ([changelog.d/README.md](../../changelog.d/README.md)), so parallel branches never collide on it. After merging, `cargo xtask changelog` folds every fragment into `[Unreleased]`, under its area heading (merged into a heading of the same name, or added at the end of the section), and removes the fragments with `git rm`; commit the two together. `cargo xtask changelog --check` says where each fragment would go and changes nothing. Before a release, fold any fragments still waiting, check the area headings (reading and speech, documents, writing, the GUI, languages, packages), and add a short summary at the top of the section. `cargo xtask release` names any scratch heading it still finds in `[Unreleased]` and stops.
 
 3. **Try the packages.** Start the `Release` workflow from the Actions tab on `main`, with the tag left empty. That is a dry run: it builds and checks every package, keeps them as workflow artifacts, and creates no release, tag, or attestation. It also works on a pushed branch, to try a change to the packaging before it merges:
 

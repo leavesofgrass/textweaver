@@ -63,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame, daisy, pptx, sheet, archive, image, web, latex_math, asciimath, bibtex, ris, csl_json, theme, lexicon, vault_import, rpc, rtf, odt, docx_revisions, latex, eml, json, svg, obsidian, pdf_annots, sync_record, sync_group, mqtt, twlive, broker, qr]
+        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame, daisy, pptx, sheet, archive, image, web, latex_math, asciimath, bibtex, ris, csl_json, theme, lexicon, vault_import, rpc, rtf, odt, docx_revisions, latex, eml, json, svg, obsidian, pdf_annots, sync_record, sync_group, mqtt, twlive, broker, qr, join_link, update, dib, canvas]
     steps:
       - uses: actions/checkout@v7
       - name: Nightly Rust (this job only)
@@ -83,9 +83,9 @@ jobs:
       # fixtures for each target are listed in xtask/src/fuzz_seed.rs.
       - name: Seed the corpus
         run: cargo xtask fuzz-seed --target ${{ matrix.target }}
-      # The rpc target links the app, whose audio output needs ALSA.
-      - name: System libraries (rpc only)
-        if: matrix.target == 'rpc'
+      # The rpc and dib targets link the app, whose audio output needs ALSA.
+      - name: System libraries (rpc and dib only)
+        if: matrix.target == 'rpc' || matrix.target == 'dib'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
@@ -96,7 +96,7 @@ jobs:
       # ran.
       - name: Fuzz for 10 minutes
         env:
-          FEATURES: ${{ matrix.target == 'rpc' && '--features rpc' || '' }}
+          FEATURES: ${{ matrix.target == 'rpc' && '--features rpc' || matrix.target == 'dib' && '--features app' || '' }}
         run: |
           # $FEATURES is empty or one flag and its value: split on purpose.
           # shellcheck disable=SC2086

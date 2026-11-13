@@ -173,7 +173,9 @@ fn a_deleted_paragraph_mark_follows_its_deleted_text() {
 
 #[test]
 fn the_backup_name_says_what_it_is() {
-    let dir = std::env::temp_dir().join("tw-docx-update-backup-name");
+    // A folder of its own, so parallel runs never share a name.
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
     let p = dir.join("report.docx");
     assert_eq!(backup_path(&p), dir.join("report-original.docx"));
 }

@@ -54,10 +54,14 @@ textweaver-qr = { path = "../crates/textweaver-qr" }
 # the audio output, which needs the ALSA headers (libasound2-dev) on Linux,
 # so it is behind the `rpc` feature and the other targets build without it.
 textweaver-app = { path = "../crates/textweaver-app", default-features = false, optional = true }
+# Beta 6: the update check's release list and checksum files.
+textweaver-components = { path = "../crates/textweaver-components" }
 
 [features]
+# The targets that link the app (`dib`): `--features app`.
+app = ["dep:textweaver-app"]
 # The `rpc` target: `cargo +nightly fuzz run rpc --features rpc`.
-rpc = ["dep:textweaver-app"]
+rpc = ["app"]
 
 # Its own workspace, so the root workspace never builds it.
 [workspace]
@@ -349,6 +353,38 @@ bench = false
 [[bin]]
 name = "qr"
 path = "fuzz_targets/qr.rs"
+test = false
+doc = false
+bench = false
+
+# Beta 6 (security QW9): join links and pasted join codes, the update
+# check's network answers, clipboard bitmaps, and Obsidian canvases.
+
+[[bin]]
+name = "join_link"
+path = "fuzz_targets/join_link.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "update"
+path = "fuzz_targets/update.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "dib"
+path = "fuzz_targets/dib.rs"
+required-features = ["app"]
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "canvas"
+path = "fuzz_targets/canvas.rs"
 test = false
 doc = false
 bench = false
