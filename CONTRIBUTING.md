@@ -16,6 +16,7 @@ You do not need to write Rust to help.
 
 - **Try it and report what gets in your way.** Reports from people who use screen readers, Braille displays, magnifiers, or the keyboard alone are the most valuable thing you can give. The [issue forms](https://github.com/leavesofgrass/textweaver/issues/new/choose) ask for what helps most.
 - **Improve the docs.** If a guide confused you, it will confuse someone else. The guides are plain Markdown in [docs/](docs/README.md).
+- **Translate.** The interface speaks English, Spanish, French, German, Portuguese, and Arabic. Messages that wait for translation are listed in `crates/textweaver-lexicon/locales/untranslated.txt`, and a native speaker's review of any language helps too. [Writing messages](docs/dev/messages.md#translations) explains the files.
 - **Pick a good first issue.** [Good first issues](docs/dev/good-first-issues.md) lists small, well-scoped tasks, each with where to look and how to check it.
 - **Fix a bug or add a feature.** For anything larger than a small fix, open an issue first, so we can agree on the approach before you spend your time.
 
@@ -106,6 +107,7 @@ Every change must work for people who do not look at the screen.
 - Every file the app writes while it runs goes through the writer thread (`crates/textweaver-app/src/writer.rs`), never from the input thread.
 - Tests never play audio aloud. Write audio to a temporary file, or use a silent output.
 - Integration tests go in one test program per crate, `tests/it/main.rs`. A new integration test is a module there (`tests/it/<name>.rs`, with `mod <name>;` in `main.rs`), never a new file directly in `tests/`: every file there is a program of its own, which links the crate again and slows every test build. [Testing](docs/dev/testing.md#where-tests-go) has the details.
+- A new message goes in the area file that fits under `crates/textweaver-lexicon/locales/en/`. Translate it into the five other languages, or list its id in `locales/untranslated.txt` for the translation pass before the next release; [Writing messages](docs/dev/messages.md#translations) explains both.
 - Fix star's bugs rather than port them. If you keep a star quirk on purpose, say so.
 - US English in code comments, docs, and messages ("color", "behavior").
 
