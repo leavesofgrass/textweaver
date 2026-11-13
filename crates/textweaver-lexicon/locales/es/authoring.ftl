@@ -83,7 +83,7 @@ book-audio-on = Audio del libro activado. La grabación suena donde el libro la 
 book-audio-off = Audio del libro desactivado. La voz lee el libro.
 book-audio-rate = Los cambios de velocidad no se aplican al audio grabado.
 # $key names the Add Reference command's keys.
-citations-library-empty = Su biblioteca de referencias está vacía. Agregue una referencia por DOI o ISBN con { $key }, o ejecute importar referencias desde la paleta de comandos.
+citations-library-empty = Su biblioteca de referencias está vacía. Agregue una referencia por DOI, ISBN o PMID con { $key }, o ejecute importar referencias desde la paleta de comandos.
 # $n is how many references the picker lists.
 citations-picker-intro =
     { $n ->
@@ -97,7 +97,7 @@ citations-insert-failed = No se pudo insertar la cita: { $error } El texto no ha
 citations-looking-up = Buscando { $what }.
 citations-lookup-not-started = No se pudo iniciar la búsqueda: { $error } Espere un momento y vuelva a intentarlo.
 # $input is the DOI or ISBN as typed.
-citations-lookup-failed = No se pudo buscar { $input }: { $error } Compruebe el DOI o el ISBN y la conexión.
+citations-lookup-failed = No se pudo buscar { $input }: { $error } Compruebe el DOI, el ISBN o el PMID y la conexión.
 citations-no-library-to-add-to = No hay ninguna biblioteca a la que agregar: { -brand } no guarda archivos en esta sesión.
 citations-library-save-failed = No se pudo guardar la biblioteca: { $error } Compruebe que se puede escribir en su carpeta.
 # $n is how many citations the document has.

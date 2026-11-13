@@ -406,7 +406,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Paste the clipboard; formatted text from a browser or word processor becomes Markdown | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `Cmd+V` (edit) | `paste` |
 | Paste the clipboard as plain text, keeping none of its formatting | `Alt+Q` (edit) | `Ctrl+Shift+V` (edit), `Ctrl+Shift+M` (edit) | `Cmd+Shift+V` (edit), `Cmd+Shift+M` (edit) | `paste_plain_text` |
 | Insert a citation: pick a reference, then give a page or other locator | `Alt+C` (edit) | `Alt+C` (edit) | `Cmd+Option+C` (edit) | `insert_citation` |
-| Add a reference to your library by DOI or ISBN | `Alt+B` | `Alt+Shift+D` | `Cmd+Option+Shift+D` | `add_reference` |
+| Add a reference to your library by DOI, ISBN or PMID | `Alt+B` | `Alt+Shift+D` | `Cmd+Option+Shift+D` | `add_reference` |
 | Insert the bibliography of the works cited, at the cursor | palette | palette | palette | `insert_bibliography` |
 | Check the citations: how many there are, and which keys are not in your library | palette | palette | palette | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | palette | palette | palette | `import_references` |

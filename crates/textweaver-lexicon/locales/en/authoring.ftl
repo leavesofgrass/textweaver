@@ -83,7 +83,7 @@ book-audio-on = Book audio on. The recording plays where the book has one.
 book-audio-off = Book audio off. Speech reads the book.
 book-audio-rate = Rate changes do not apply to recorded audio.
 # $key names the Add Reference command's keys.
-citations-library-empty = Your reference library is empty. Add a reference by DOI or ISBN with { $key }, or run import references from the command palette.
+citations-library-empty = Your reference library is empty. Add a reference by DOI, ISBN or PMID with { $key }, or run import references from the command palette.
 # $n is how many references the picker lists.
 citations-picker-intro =
     { $n ->
@@ -97,7 +97,7 @@ citations-insert-failed = Could not insert the citation: { $error } The text is 
 citations-looking-up = Looking up { $what }.
 citations-lookup-not-started = Could not start the lookup: { $error } Wait a moment, then try again.
 # $input is the DOI or ISBN as typed.
-citations-lookup-failed = Could not look up { $input }: { $error } Check the DOI or ISBN and the connection.
+citations-lookup-failed = Could not look up { $input }: { $error } Check the DOI, ISBN or PMID and the connection.
 citations-no-library-to-add-to = There is no library to add to: { -brand } keeps no files in this session.
 citations-library-save-failed = Could not save the library: { $error } Check that its folder can be written to.
 # $n is how many citations the document has.

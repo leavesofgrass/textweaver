@@ -1297,7 +1297,7 @@ pub const INFO: &[Info] = &[
     number(
         "reading_aids.rsvp.font_size_pt",
         "RSVP size",
-        "Size of the RSVP word in the window.",
+        "Size of the RSVP word in the app.",
         (8.0, 200.0, 2.0),
         "points",
     ),
@@ -1373,7 +1373,7 @@ pub const INFO: &[Info] = &[
     open_choice(
         "reading_aids.font.family",
         "Font",
-        "The window's reading font. You can also type the name of any installed font.",
+        "The app's reading font. You can also type the name of any installed font.",
         &[
             ("system-ui", "the system font"),
             ("sans", "sans serif"),

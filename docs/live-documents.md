@@ -421,7 +421,7 @@ textweaver says each change of state once, in words, and starts each message wit
 - **"Left out N messages: they came too fast to show."** The source sent a flood. The log holds what was shown.
 - **"Left out, not text: N bytes on TOPIC."** or **"Left out, too large: N bytes on TOPIC."** Binary messages and those over 256 KiB are skipped.
 - **"Log full at 20000 entries; newer ones are left out."** Close the source and open it again for a new log.
-- **"NAME not opened: no password."** You cancelled the password prompt.
+- **"NAME not opened: no password."** You canceled the password prompt.
 - **"Live sources are not in this version of textweaver."** This build leaves out MQTT. A saved JSON log still opens.
 
 ## See also

@@ -386,7 +386,7 @@ pub fn task_status_words(c: char) -> Option<String> {
     let words = match c {
         ' ' | 'x' | 'X' => return None,
         '/' => "in progress",
-        '-' => "cancelled",
+        '-' => "canceled",
         '>' => "forwarded",
         '<' => "scheduled",
         '!' => "important",
@@ -533,7 +533,7 @@ mod tests {
         );
         assert_eq!(
             task_status_at("  12. [-] Old", 0),
-            Some(("cancelled".into(), 10))
+            Some(("canceled".into(), 10))
         );
         assert_eq!(task_status_at("* [>]", 0), Some(("forwarded".into(), 5)));
         assert_eq!(task_status_at("- [q] x", 0), Some(("marked q".into(), 6)));

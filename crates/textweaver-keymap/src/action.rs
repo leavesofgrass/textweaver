@@ -804,7 +804,7 @@ actions! {
     InsertCitation = "insert_citation", Editing,
         "Insert a citation: pick a reference, then give a page or other locator",
         gui ["e:Alt+C"], term ["e:Alt+C"], shared [];
-    AddReference = "add_reference", Editing, "Add a reference to your library by DOI or ISBN",
+    AddReference = "add_reference", Editing, "Add a reference to your library by DOI, ISBN or PMID",
         gui ["g:Alt+Shift+D"], term ["g:Alt+B"], shared [];
     InsertBibliography = "insert_bibliography", Editing,
         "Insert the bibliography of the works cited, at the cursor",

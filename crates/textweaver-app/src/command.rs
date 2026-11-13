@@ -420,7 +420,7 @@ impl PromptPurpose {
             PromptPurpose::CitationLocator => {
                 "Page or other locator, for example 12 or chapter 2; Enter for none"
             }
-            PromptPurpose::ReferenceIdentifier => "DOI or ISBN to add",
+            PromptPurpose::ReferenceIdentifier => "DOI, ISBN or PMID to add",
             PromptPurpose::ImportReferences => "Import references from file",
             PromptPurpose::TemplateTitle => "Title of the new document",
             // The app takes these from the message catalog.

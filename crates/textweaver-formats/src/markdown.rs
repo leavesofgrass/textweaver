@@ -1613,7 +1613,7 @@ mod tests {
             labels,
             [
                 "in progress",
-                "cancelled",
+                "canceled",
                 "forwarded",
                 "important",
                 "not checked",

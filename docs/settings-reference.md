@@ -207,7 +207,7 @@ Only the speech engine's own settings are listed here: the voice, rate and pitch
 - `reading_aids.spacing.paragraph_spacing`: default 1. Paragraph spacing. Space after each paragraph, in multiples of the font size. From 0 to 4, in steps of 0.25. Syncs between computers.
 - `reading_aids.spacing.letter_spacing`: default 0. Letter spacing. Extra space between letters, in multiples of the font size. From 0 to 0.5, in steps of 0.02. Syncs between computers.
 - `reading_aids.spacing.word_spacing`: default 0. Word spacing. Extra space between words, in multiples of the font size. From 0 to 1, in steps of 0.04. Syncs between computers.
-- `reading_aids.font.family`: default sans serif (`"sans"`). Font. The window's reading font. You can also type the name of any installed font. Choices: `"system-ui"` (the system font), `"sans"` (sans serif), `"serif"`, `"monospace"`, `"atkinson"` (Atkinson Hyperlegible), `"opendyslexic"` (OpenDyslexic), `"lexend"` (Lexend). Other values may be written too. Syncs between computers.
+- `reading_aids.font.family`: default sans serif (`"sans"`). Font. The app's reading font. You can also type the name of any installed font. Choices: `"system-ui"` (the system font), `"sans"` (sans serif), `"serif"`, `"monospace"`, `"atkinson"` (Atkinson Hyperlegible), `"opendyslexic"` (OpenDyslexic), `"lexend"` (Lexend). Other values may be written too. Syncs between computers.
 - `reading_aids.font.size_pt`: default 14 points. Font size. The window's font size. From 6 to 72 points, in steps of 1. Syncs between computers.
 - `reading_aids.font.weight`: default 400. Font weight. 400 is regular, 700 bold. From 100 to 900, in steps of 100. Syncs between computers.
 - `reading_aids.ruler.mode`: default `"off"`. Reading ruler. Mark the current line, or a band of lines. Choices: `"off"`, `"current_line"` (current line), `"ruler"`. Syncs between computers.
@@ -247,7 +247,7 @@ Only the speech engine's own settings are listed here: the voice, rate and pitch
 - `reading_aids.rsvp.show_previous`: default on (`true`). RSVP previous word. Show the previous word too. On or off: `true` or `false`. Syncs between computers.
 - `reading_aids.rsvp.show_next`: default on (`true`). RSVP next word. Show the next word too. On or off: `true` or `false`. Syncs between computers.
 - `reading_aids.rsvp.position`: default top center (`"top-center"`). RSVP position. Where the RSVP word appears. Choices: `"top-left"` (top left), `"top-center"` (top center), `"top-right"` (top right), `"center-left"` (middle left), `"center"`, `"center-right"` (middle right), `"bottom-left"` (bottom left), `"bottom-center"` (bottom center), `"bottom-right"` (bottom right). Syncs between computers.
-- `reading_aids.rsvp.font_size_pt`: default 48 points. RSVP size. Size of the RSVP word in the window. From 8 to 200 points, in steps of 2. Syncs between computers.
+- `reading_aids.rsvp.font_size_pt`: default 48 points. RSVP size. Size of the RSVP word in the app. From 8 to 200 points, in steps of 2. Syncs between computers.
 - `reading_aids.rsvp.lead_words`: default 0 words. RSVP lead. With speech pacing, show this many words ahead of the word spoken. From -5 to 5 words, in steps of 1. Syncs between computers.
 
 ## Editing

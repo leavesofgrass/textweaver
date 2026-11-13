@@ -83,7 +83,7 @@ book-audio-on = Hörbuchaufnahme an. Die Aufnahme spielt, wo das Buch eine hat.
 book-audio-off = Hörbuchaufnahme aus. Die Sprachausgabe liest das Buch.
 book-audio-rate = Das Tempo gilt nicht für aufgenommenes Audio.
 # $key names the Add Reference command's keys.
-citations-library-empty = Ihre Literaturbibliothek ist leer. Fügen Sie eine Literaturangabe per DOI oder ISBN hinzu mit { $key }, oder führen Sie Literaturangaben importieren aus der Befehlspalette aus.
+citations-library-empty = Ihre Literaturbibliothek ist leer. Fügen Sie eine Literaturangabe per DOI, ISBN oder PMID hinzu mit { $key }, oder führen Sie Literaturangaben importieren aus der Befehlspalette aus.
 # $n is how many references the picker lists.
 citations-picker-intro =
     { $n ->
@@ -97,7 +97,7 @@ citations-insert-failed = Das Zitat konnte nicht eingefügt werden: { $error } D
 citations-looking-up = { $what } wird nachgeschlagen.
 citations-lookup-not-started = Das Nachschlagen konnte nicht gestartet werden: { $error } Warten Sie kurz und versuchen Sie es dann erneut.
 # $input is the DOI or ISBN as typed.
-citations-lookup-failed = { $input } konnte nicht nachgeschlagen werden: { $error } Prüfen Sie die DOI oder ISBN und die Verbindung.
+citations-lookup-failed = { $input } konnte nicht nachgeschlagen werden: { $error } Prüfen Sie die DOI, ISBN oder PMID und die Verbindung.
 citations-no-library-to-add-to = Es gibt keine Bibliothek zum Hinzufügen: { -brand } hält in dieser Sitzung keine Dateien.
 citations-library-save-failed = Die Bibliothek konnte nicht gespeichert werden: { $error } Prüfen Sie, ob in seinen Ordner geschrieben werden kann.
 # $n is how many citations the document has.

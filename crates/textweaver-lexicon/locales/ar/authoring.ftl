@@ -110,7 +110,7 @@ book-audio-on = صوت الكتاب مفعّل. يُشغَّل التسجيل ح
 book-audio-off = صوت الكتاب متوقف. الصوت المُركَّب يقرأ الكتاب.
 book-audio-rate = تغييرات السرعة لا تنطبق على الصوت المسجَّل.
 # $key names the Add Reference command's keys.
-citations-library-empty = مكتبة مراجعك فارغة. أضف مرجعًا بـDOI أو ISBN بـ{ $key }، أو شغّل استيراد مراجع من لوحة الأوامر.
+citations-library-empty = مكتبة مراجعك فارغة. أضف مرجعًا بـDOI أو ISBN أو PMID بـ{ $key }، أو شغّل استيراد مراجع من لوحة الأوامر.
 # $n is how many references the picker lists.
 citations-picker-intro =
     { $n ->
@@ -127,7 +127,7 @@ citations-insert-failed = تعذّر إدراج الاستشهاد: { $error } �
 citations-looking-up = البحث عن { $what }.
 citations-lookup-not-started = تعذّر بدء البحث: { $error } انتظر قليلًا، ثم حاول مرة أخرى.
 # $input is the DOI or ISBN as typed.
-citations-lookup-failed = تعذّر البحث عن { $input }: { $error } تحقّق من رقم DOI أو ISBN ومن الاتصال.
+citations-lookup-failed = تعذّر البحث عن { $input }: { $error } تحقّق من رقم DOI أو ISBN أو PMID ومن الاتصال.
 citations-no-library-to-add-to = لا توجد مكتبة لإضافة إليها: لا يحتفظ { -brand } بملفات في هذه الجلسة.
 citations-library-save-failed = تعذّر حفظ المكتبة: { $error } تحقّق من إمكانية الكتابة في مجلده.
 # $n is how many citations the document has.
