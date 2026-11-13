@@ -25,7 +25,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 These limits apply to the textweaver app (`textweaver`). The terminal reader does not have them, unless stated.
 
-- **Scrolling stops near the cursor in a very long document.** `j` and Shift+J scroll within the text the app holds around the cursor, about 120,000 characters; moving the cursor brings in the rest ([Scrolling and line numbers](gui.md#scrolling-and-line-numbers)).
+- **The mouse wheel stops near the cursor in a very long document.** It scrolls within the text the app holds around the cursor, about 120,000 characters; `j` and Shift+J scroll on to the document's ends ([Scrolling and line numbers](gui.md#scrolling-and-line-numbers)).
 
 ## Braille
 

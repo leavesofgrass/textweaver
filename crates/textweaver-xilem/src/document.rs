@@ -181,6 +181,15 @@ pub struct DocModel {
     pub breaks: Vec<CharPos>,
     /// What is drawn between syllables (a middle dot by default).
     pub separator: String,
+    /// A gap in the window, after the view scrolled far from the cursor
+    /// (`j` and Shift+J in a very long document): the index of the first
+    /// paragraph after it, and how many of the document's lines it skips.
+    /// The paragraphs before it are the text around the cursor, kept so
+    /// that a screen reader keeps its place on the caret; those after it
+    /// are the text scrolled to. The view scrolls up to the gap and no
+    /// further, never draws across it, and numbers the lines after it as
+    /// the document does. `None` for a window in one piece.
+    pub gap: Option<(usize, usize)>,
 }
 
 impl DocModel {
@@ -707,6 +716,10 @@ pub struct DocumentView {
     /// Paragraphs on screen and their top y, from the last layout.
     visible: Vec<(usize, f64)>,
     follow: bool,
+    /// The view's top was placed by Scroll Down or Up
+    /// ([`DocumentView::scroll_line`]), not by following the caret: a
+    /// window that slides keeps it there, on the same text.
+    scrolled: bool,
     goal_x: Option<f32>,
     /// The caret's foot as last painted, in the window's logical pixels:
     /// where a context menu opened from the keyboard appears.
@@ -815,6 +828,7 @@ impl DocumentView {
             scrolled_down: false,
             visible: Vec::new(),
             follow: true,
+            scrolled: false,
             goal_x: None,
             caret_at: None,
             press: None,
@@ -994,6 +1008,21 @@ impl DocumentView {
         self.model.paragraphs.len()
     }
 
+    /// The index of the model's first paragraph after its gap, if it has
+    /// one ([`DocModel::gap`]).
+    fn gap(&self) -> Option<usize> {
+        self.model.gap.map(|g| g.0)
+    }
+
+    /// The document lines from the model's first paragraph to paragraph
+    /// `i`: `i`, and the lines in the gap when `i` is past it.
+    fn lines_before(&self, i: usize) -> usize {
+        match self.model.gap {
+            Some((at, skipped)) if i >= at => i + skipped,
+            _ => i,
+        }
+    }
+
     fn reset_caches(&mut self) {
         let n = self.para_count();
         self.layouts.clear();
@@ -1047,7 +1076,9 @@ impl DocumentView {
                 && a.has_break == b.has_break
                 && a.list == b.list
         };
-        if model.separator != old.separator {
+        // A window with a gap (scrolled far from the cursor) is slid,
+        // never edited in place.
+        if model.separator != old.separator || model.gap.is_some() || old.gap.is_some() {
             return Err(Box::new(model));
         }
         let old_styles = old.styles_by_paragraph();
@@ -1227,6 +1258,7 @@ impl DocumentView {
         let w = &mut *this.widget;
         // Keep the scroll anchor on the same text when the window moves.
         let anchor_pos = w.model.paragraphs.get(w.top.0).map(|p| p.start);
+        let anchor_text = w.model.paragraphs.get(w.top.0).map(|p| p.text.clone());
         let old = std::mem::replace(&mut w.model, model);
         w.para_spans = w.model.spans_by_paragraph();
         let mut old_layouts = std::mem::take(&mut w.layouts);
@@ -1270,11 +1302,19 @@ impl DocumentView {
             w.run_ids.clear();
             w.ids_to_pos.clear();
         }
-        w.top = (
-            anchor_pos.map_or(0, |pos| caret::paragraph_at(&w.model.paragraphs, pos)),
-            0.0,
-        );
-        w.follow = true;
+        let top = anchor_pos.map_or(0, |pos| caret::paragraph_at(&w.model.paragraphs, pos));
+        // A view scrolled away from the caret stays where it was when the
+        // window slides under it: on the same line of the same paragraph.
+        // Otherwise it follows the caret again.
+        let kept = keep_ids
+            && w.scrolled
+            && w.model.paragraphs.get(top).map(|p| (p.start, &p.text))
+                == anchor_pos.zip(anchor_text.as_ref());
+        w.top = (top, if kept { w.top.1 } else { 0.0 });
+        if !(keep_ids && w.scrolled) {
+            w.follow = true;
+            w.scrolled = false;
+        }
         this.ctx.request_layout();
         this.ctx.request_render();
     }
@@ -1302,6 +1342,7 @@ impl DocumentView {
         if old.caret != state.caret || old.spoken != state.spoken {
             w.goal_x = None;
             w.follow = true;
+            w.scrolled = false;
             this.ctx.request_layout();
         }
         this.ctx.request_render();
@@ -1377,16 +1418,22 @@ impl DocumentView {
         self.normalize_top(fcx, lcx);
         let (i, off) = self.top;
         let tops = self.line_tops(i, fcx, lcx);
+        // The gap is an edge, as the window's ends are.
+        let gap = self.gap();
         let to = if down {
             match tops.iter().find(|t| t.0 > off + 0.5) {
                 Some(&t) => Some((i, t)),
-                None if i + 1 < n => Some((i + 1, (0.0, self.model.paragraphs[i + 1].start))),
+                None if i + 1 < n && gap != Some(i + 1) => {
+                    Some((i + 1, (0.0, self.model.paragraphs[i + 1].start)))
+                }
                 None => None,
             }
         } else {
             match tops.iter().rev().find(|t| t.0 < off - 0.5) {
                 Some(&t) => Some((i, t)),
-                None if i > 0 => self.line_tops(i - 1, fcx, lcx).last().map(|&t| (i - 1, t)),
+                None if i > 0 && gap != Some(i) => {
+                    self.line_tops(i - 1, fcx, lcx).last().map(|&t| (i - 1, t))
+                }
                 None => None,
             }
         };
@@ -1394,6 +1441,7 @@ impl DocumentView {
         self.top = (para, y);
         self.scrolled_down = down;
         self.follow = false;
+        self.scrolled = true;
         Some(pos)
     }
 
@@ -1422,7 +1470,9 @@ impl DocumentView {
         let Some(first) = self.line_numbers.filter(|_| !self.preview) else {
             return 0.0;
         };
-        let digits = (first + self.para_count().max(1)).to_string().len();
+        let digits = (first + self.lines_before(self.para_count().max(1)))
+            .to_string()
+            .len();
         let widest = number_layout(fcx, lcx, &"0".repeat(digits), &self.font);
         f64::from(widest.full_width()).ceil() + NUMBER_GAP
     }
@@ -2135,6 +2185,7 @@ impl DocumentView {
         let view_h = self.size.height;
         if self.follow {
             self.follow = false;
+            self.scrolled = false;
             let focus = match (self.state.reading, self.state.spoken) {
                 (true, Some(r)) => r.start,
                 _ => self.state.caret,
@@ -2145,7 +2196,9 @@ impl DocumentView {
         self.snap_top();
         let mut y = INSET - self.top.1;
         let mut i = self.top.0;
-        while i < n && y < view_h {
+        // Never drawn across a gap: the text after it is far away.
+        let end = self.gap().filter(|&g| g > self.top.0).unwrap_or(n);
+        while i < end && y < view_h {
             self.ensure_layout(i, fcx, lcx);
             self.visible.push((i, y));
             y += self.height_of(i);
@@ -2158,7 +2211,9 @@ impl DocumentView {
     fn normalize_top(&mut self, fcx: &mut FontContext, lcx: &mut LayoutContext<BrushIndex>) {
         let n = self.para_count();
         self.top.0 = self.top.0.min(n.saturating_sub(1));
-        while self.top.1 < 0.0 && self.top.0 > 0 {
+        // The gap is an edge, as the window's ends are.
+        let gap = self.gap();
+        while self.top.1 < 0.0 && self.top.0 > 0 && gap != Some(self.top.0) {
             self.top.0 -= 1;
             self.ensure_layout(self.top.0, fcx, lcx);
             self.top.1 += self.height_of(self.top.0);
@@ -2169,7 +2224,7 @@ impl DocumentView {
         loop {
             self.ensure_layout(self.top.0, fcx, lcx);
             let h = self.height_of(self.top.0);
-            if self.top.1 >= h && self.top.0 + 1 < n {
+            if self.top.1 >= h && self.top.0 + 1 < n && gap != Some(self.top.0 + 1) {
                 self.top.1 -= h;
                 self.top.0 += 1;
             } else {
@@ -3377,7 +3432,7 @@ impl Widget for DocumentView {
         self.number_layouts.clear();
         if let Some(first) = self.line_numbers.filter(|_| self.gutter > 0.0) {
             for &(i, _) in &self.visible {
-                let n = (first + i + 1).to_string();
+                let n = (first + self.lines_before(i) + 1).to_string();
                 let l = number_layout(fcx, lcx, &n, &self.font);
                 self.number_layouts.push((i, l));
             }
@@ -3894,7 +3949,7 @@ impl Widget for DocumentView {
             let at = Vec2::new(x, y + pl.top_gap + base - own);
             render_text(painter, Affine::translate(at), l, &brushes, false);
             let r = Rect::new(0.0, 0.0, w, f64::from(l.height())) + at;
-            painted.push(PaintStep::LineNumber(first + i + 1, r));
+            painted.push(PaintStep::LineNumber(first + self.lines_before(*i) + 1, r));
         }
         // No document: how to open one, where the text would start.
         if let Some(h) = self

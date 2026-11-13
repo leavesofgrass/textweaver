@@ -2726,3 +2726,120 @@ fn a_notes_links_take_their_keys_in_the_window() {
     let (_, after) = shown_list(&app.dispatch(Command::Confirm(Confirm::Yes))).expect("shown");
     assert_eq!(after, ["What links here: nothing yet", "Add a link"]);
 }
+
+/// Scrolling in a very long document (beta 6): Scroll Down goes on past
+/// the text the app holds around the cursor, to the document's last line,
+/// with the cursor and its text kept in the tree all the way, so a screen
+/// reader keeps its place on the caret; moving the cursor brings the view
+/// and the window back to it.
+#[test]
+fn scrolling_reaches_the_end_of_a_long_document_with_the_caret_in_the_tree() {
+    use textweaver_app::Command;
+    use textweaver_app::core::CharPos;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("long.txt");
+    let mut text = String::new();
+    let mut lines = 0;
+    while text.len() < 1 << 20 {
+        text.push_str(&format!(
+            "Line {lines} of a long document that scrolls on past the text held around the cursor.\n"
+        ));
+        lines += 1;
+    }
+    std::fs::write(&path, &text).unwrap();
+    let opts = Options {
+        no_speech: true,
+        home: Some(dir.path().join("home")),
+        ..Options::default()
+    };
+    let (mut app, _) = setup::build_app(&opts, Box::new(LogAnnouncer::default()));
+    app.open(&path).expect("the long document opens");
+    let p = Palette::galaxy();
+    let tree = gui::build_tree(
+        &p,
+        Default::default(),
+        Some(&app),
+        Rc::new(Cell::new(0)),
+        Default::default(),
+    );
+    let mut params = TestHarnessParams::default();
+    params.window_size = (1100, 780).into();
+    let mut h = TestHarness::create_with(theme::default_properties(&p), tree.root, params);
+    let mut r = gui::Refresher::default();
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let doc = h.get_widget(DOC).id();
+    // The caret's text and the caret, as a screen reader finds them.
+    let caret_line = |h: &TestHarness<Root>| -> (String, String) {
+        let node = h.access_node(doc).expect("the document");
+        let focus = node
+            .text_selection_focus()
+            .expect("the caret is in the tree");
+        let run = focus.inner_node().value().unwrap_or_default();
+        (node.document_range().text(), run)
+    };
+    let last = format!("Line {} of", lines - 1);
+    let (all, run) = caret_line(&h);
+    assert!(!all.contains(&last), "the window starts around the cursor");
+    assert!(run.starts_with("Line 0 of"), "{run}");
+    let mut steps = 0;
+    let mut tops = Vec::new();
+    while let Some(top) = r.scroll(&mut app, &mut h, true) {
+        tops.push(top);
+        steps += 1;
+        assert!(steps <= lines * 4, "Scroll Down never stopped");
+        if steps % 2000 == 0 {
+            // On the way, the caret stays in the tree.
+            let _ = h.redraw();
+            assert!(
+                caret_line(&h).1.starts_with("Line 0 of"),
+                "after {steps} lines"
+            );
+        }
+    }
+    assert!(tops.windows(2).all(|w| w[0] < w[1]), "each step goes down");
+    let _ = h.redraw();
+    let (all, run) = caret_line(&h);
+    assert!(all.contains(&last), "scrolled to the last line");
+    assert!(all.contains("Line 0 of"), "the caret's text is kept");
+    assert!(run.starts_with("Line 0 of"), "{run}");
+    assert!(
+        all.len() < 3 * 120_000,
+        "the tree holds a window, not the document"
+    );
+    assert_eq!(app.session().unwrap().cursor, CharPos::ZERO);
+    // The last line is on screen, at the top.
+    let view = h.get_widget(DOC);
+    let first = view.inner().visible_paragraphs()[0].0;
+    assert!(first > 0, "the view is past the caret's text");
+    // Line numbers after the gap are the document's.
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::document::PaintStep;
+    let _ = app.dispatch(Command::Action(ActionId::ToggleLineNumbers));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let numbers: Vec<usize> = h
+        .get_widget(DOC)
+        .inner()
+        .painted()
+        .iter()
+        .filter_map(|s| match s {
+            PaintStep::LineNumber(n, _) => Some(*n),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        numbers,
+        vec![lines],
+        "the last line, numbered as in the document"
+    );
+    // Scroll Up goes back by one line, at the gap too.
+    assert!(r.scroll(&mut app, &mut h, false).is_some());
+    // Moving the cursor brings the window back around it.
+    let _ = app.dispatch(Command::SetCursor(CharPos(10)));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let (all, run) = caret_line(&h);
+    assert!(!all.contains(&last), "the window is back around the cursor");
+    assert!(run.starts_with("Line 0 of"), "{run}");
+}
