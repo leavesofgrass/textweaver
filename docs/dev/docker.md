@@ -45,12 +45,18 @@ Build (or rebuild) the image:
 docker compose build dev
 ```
 
-The full check, as CI runs it on Linux. `scripts/dev-check.sh` runs formatting, clippy, the tests, rustdoc, the keyboard reference check, the link check, and the site data check, with every feature:
+The full check, as CI runs it on Linux. `scripts/dev-check.sh` runs every step of the check (formatting, clippy, the lean build, the tests with the sentinel, rustdoc, the pseudo-locale check, the generated files, the dependency direction, parity, the link and site checks, and `cargo deny` when cargo-deny is installed; the image does not carry it), with every feature ([Testing](testing.md#the-checks)):
 
 ```bash
 docker compose run --rm -T dev bash scripts/dev-check.sh
 ```
 
+
+For one branch, the fast check runs only the changed crates and what depends on them ([Check tiers](testing.md#check-tiers)); `--base` names the branch to compare with:
+
+```bash
+docker compose run --rm -T dev bash scripts/dev-check.sh --fast
+```
 
 An interactive shell in `/work`:
 
@@ -114,7 +120,7 @@ The ignored tests of live documents run against Debian 13's own Mosquitto, in a 
 
 ## The Linux release image
 
-`docker/appimage/` holds a second image, only for building the Linux release packages: Ubuntu 22.04 (an older glibc, so the packages run on older distributions), Rust, and the AppImage tools, checked against their published checksums. `cargo xtask appimage --docker` builds the image and the packages from any system with Docker, into `target/dist/`, and `bash docker/appimage/test-distros.sh target/dist` runs them on Debian, Fedora, and Arch. [Releasing](releasing.md#the-linux-packages) has the details.
+`docker/appimage/` holds a second image, only for building the Linux release packages: Ubuntu 22.04 (an older glibc, so the packages run on older distributions), Rust, and the AppImage tools, checked against their published checksums. `cargo xtask appimage --docker` builds the image and the packages from any system with Docker, into `target/dist/`, and `bash docker/appimage/test-distros.sh target/dist` runs them on Debian, Fedora, and Arch (x86_64 only; Arch has no official arm64 image). Its Arch step does a full upgrade first (`pacman -Syu`, never a partial one, which Arch does not support), and when an install fails it prints the package manager's last lines. [Releasing](releasing.md#the-linux-packages) has the details.
 
 ## See also
 

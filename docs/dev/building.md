@@ -59,7 +59,7 @@ For the app, list its other default features: `cargo build -p textweaver-xilem -
    ```
 
 4. **Read [Architecture](architecture.md)** for the crate map and the path a document takes from disk to a spoken, highlighted word, then read the ADR it links for the crate you are working in. The [interactive architecture page](../site/architecture.html) shows the same map, browsable by keyboard.
-5. **Make a change and run the checks** in [Testing](testing.md) before you send it: `scripts/dev-check.sh` (or `scripts\dev-check.ps1` on Windows) runs formatting, clippy, the tests, and the doc and link checks in one command.
+5. **Make a change and run the checks** in [Testing](testing.md) before you send it: `scripts/dev-check.sh` (or `scripts\dev-check.ps1` on Windows) runs formatting, clippy, the tests, and the doc and link checks in one command, and `--fast` (`-Fast`) runs only what your branch changed. Some checks use tools that are pinned in `tools.toml` (cargo-deny, cargo-nextest and others); `cargo xtask tools --check` tells you which ones you have and whether they match.
 
 **Where to start.** A few crates are good places to get oriented, because they are small, have few dependencies, and are exercised directly by their own tests:
 

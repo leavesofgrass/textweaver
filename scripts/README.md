@@ -144,6 +144,7 @@ Run every check CI runs, so contributors see CI's answer before they push:
 - the lean terminal reader (`--no-default-features`) with warnings as errors;
 - the tests, with `--no-fail-fast`, between the sentinel's record and check (no test wrote to the real data folders);
 - rustdoc with `-D warnings`;
+- the pseudo-locale check (`pseudo`): every message comes from the translation catalog;
 - `cargo xtask regen --check`: every generated file is current (the notices, the settings reference, `docs/keyboard.md`, the `docs/site` data, and the docs indexes and crate counts), one line each;
 - `cargo xtask deps --check` (the dependency direction between the crates) and `cargo xtask parity` (segmentation parity with star);
 - `cargo deny check`, when cargo-deny is installed;
@@ -155,7 +156,7 @@ The two Python steps need Python 3; without it they are skipped and the summary 
 
 Every cargo call has `--locked`, and `RUSTFLAGS` is `-D warnings`, as in CI. On Windows it uses `--features textweaver-speech/omnivox` instead of `--all-features`, and it also builds the 32-bit engine hosts; a green Windows run does not cover CI's Linux `--all-features` leg. `--only fmt,clippy` runs some of the steps, and `--docker` runs everything in the development container.
 
-`--fast` (`-Fast` in PowerShell) checks only the crates changed since the merge base of `main` and the crates that depend on them, from `cargo xtask affected`. [Testing](../docs/dev/testing.md#check-tiers) says when to use which.
+`--fast` (`-Fast` in PowerShell) checks only the crates changed since the merge base of `main` (or of `--base REF`, `-Base REF`) and the crates that depend on them, from `cargo xtask affected`: formatting, clippy, the tests (with cargo-nextest when it is installed) and the doc tests, plus the lean build and the generated checks when the change calls for them. It leaves out the rest, and says so; run the full check once per batch. [Testing](../docs/dev/testing.md#check-tiers) says when to use which.
 
 ### convert-folder.sh and convert-folder.ps1
 
