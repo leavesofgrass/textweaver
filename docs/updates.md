@@ -72,7 +72,7 @@ Update available: textweaver 0.2.0-beta.2, 92.1 MB.
 
 ## Privacy
 
-The check reads one public page, the list of textweaver releases at `https://api.github.com/repos/leavesofgrass/textweaver/releases`, and the download comes from the same release. Each request carries only textweaver's neutral User-Agent. Nothing about you, your computer, or your documents is sent, and textweaver keeps no record of the check beyond the time of the last one and the release you declined, both in `settings.toml`.
+The check reads one public page, the list of textweaver releases at `https://api.github.com/repos/leavesofgrass/textweaver/releases`, and the download comes from the same release. Each request carries only textweaver's neutral User-Agent, which names the project and has no version number, the same one every other request textweaver makes carries. Nothing about you, your computer, or your documents is sent, and textweaver keeps no record of the check beyond the time of the last one and the release you declined, both in `settings.toml`.
 
 ## Settings
 
