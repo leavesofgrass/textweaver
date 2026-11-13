@@ -56,6 +56,11 @@ sync-arrived =
 sync-resumed = { $title }: retomado em { $pct } por cento, de { $device }.
 sync-place-arrived = Posição de { $device }: { $pct } por cento.
 sync-place-question = { $device } em { $pct } por cento. Ir para lá? y ou n
+sync-suggestion-question =
+    { $n ->
+        [one] Usar a nota de { $device } aqui? y ou n. Pode ser { $title }, com 1 nota.
+       *[other] Usar as notas de { $device } aqui? y ou n. Pode ser { $title }, com { $n } notas.
+    }
 sync-went-to-place = Posição de { $device }, { $pct } por cento.
 sync-kept-place = Esta posição foi mantida.
 sync-suggestion-accepted = Usando as notas de { $device }.
