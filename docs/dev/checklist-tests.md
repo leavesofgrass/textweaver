@@ -21,8 +21,8 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 
 **C1. Every dialog is modal, named, hides the window behind it, focuses its first control, closes on Escape, returns the focus, and says it closed.**
 
-- Test: `crates/textweaver-xilem/tests/it/dialogs.rs`, `every_dialog_has_a_close_escape_closes_and_focus_returns` (focus in, a Close or No, Escape, focus back) and `every_dialog_is_modal_named_and_hides_the_window_behind` (one modal dialog, named by its title, the window behind disabled and hidden from readers, back after closing). Both run over the seven kinds: list, prompt, palette, question, settings, colors, voices.
-- Test: "Canceled." on Escape in an app list, `crates/textweaver-app/tests/it/list_contract.rs`.
+- Test: `crates/textweaver-xilem/tests/it/dialogs.rs`, `every_dialog_has_a_close_escape_closes_and_focus_returns` (focus in, a Close or No, Escape, focus back) and `every_dialog_is_modal_named_and_hides_the_window_behind` (one modal dialog, named by its title, the window behind disabled and hidden from readers, back after closing). Both run over the eleven kinds in `KINDS`: list, prompt, palette, question, settings, colors, reading, voices, find, links, changes.
+- Test: Escape in an app list closes it and says something (the sweep in `crates/textweaver-app/tests/it/list_contract.rs`).
 - Report: the UI Automation report, `crates/textweaver-xilem/tools/uia-report.ps1`.
 - Manual, session S3: the settings, colors and voice dialogs say they closed (the app's driver says it, which the headless tests do not run).
 
@@ -30,7 +30,7 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 
 - Test: `crates/textweaver-app/tests/it/list_contract.rs`. It dispatches every action on the sample document and checks each list that opens: the introduction once, "1 of n" on open, F1 repeats the introduction, the Say Status key says something, End and Home say the place, a letter jumps (or filters a filtering list), Escape closes and says so, and Enter chooses.
 - Test: the terminal's 40-cell list lines, `crates/textweaver-tui/tests/it/braille.rs`.
-- Ignored: `the_known_list_defects_are_fixed`. The file browser's Say Status key says nothing on a Places row, and Escape closes the settings profiles and colors lists without a word. The `KNOWN` list in the test names each; take a line off when its fix lands.
+- Known defects: none. The `KNOWN` list in the test is empty, and `the_known_list_defects_are_fixed` runs the whole sweep with no exceptions. A defect the sweep finds is added to `KNOWN` with the action and the start of the failure text, and taken off when its fix lands.
 - Manual, session S3.
 
 **C3. Every message has a level, a catalog entry in six languages, keys from the keymap, and its key fact first.**

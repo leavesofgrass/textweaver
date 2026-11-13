@@ -4,7 +4,7 @@ This page summarizes what each release brought, for readers who want the changes
 
 ## 0.1.0-beta.5
 
-Not yet released.
+Released on Thursday, October 29, 2026.
 
 Summary: live documents, textweaver's own broker, and joining by link or QR code. textweaver can follow any MQTT broker and topic as a document that grows while you read it, as a log or as current values, with each new entry carried to a screen reader and a Braille display. It can also run a small broker of its own and publish into it, and a reader can join that broker with one link, a code read aloud, or a QR code.
 

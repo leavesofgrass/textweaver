@@ -9,6 +9,8 @@ Each item has a status:
 - **missing**: not done yet. See the [roadmap](roadmap.md) for what is planned next.
 - **dropped**: out of scope on purpose.
 
+Of the 45 items below that carry a status, 34 are done, 6 are partly done, none is missing and 5 are dropped.
+
 This page is kept current as features land; see [CHANGELOG.md](../CHANGELOG.md) for when each one shipped.
 
 ## Reading aids
@@ -63,10 +65,10 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 ## Peripheral
 
 - **Knowledge graph and concept extraction.** Typed links between notes; exports to SVG, DOT, PlantUML, and JSON. Status: partly. Typed links between notes are added, changed, removed, filtered by type, and followed from the notes list, with "What links here" across the library and `tw notes links` ([notes guide](notes.md#links-between-notes)); vault import and export keep them. The whole graph exports as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or a CSV edge list ([Export the knowledge graph](notes.md#export-the-knowledge-graph)); textweaver never draws it, and SVG is not written. Concept extraction is dropped.
-- **Karaoke video export.** Status: dropped.
+- **Karaoke video export.** Status: done. An `.mp4` file name writes the document read aloud, with the current sentence on screen and the current word in bold and underlined; it needs ffmpeg ([Make a video with captions](audio-export.md#make-a-video-with-captions)).
 - **Feeds, Wikipedia, and PubMed** quick open. Status: dropped.
 - **More engines:** Coqui, Festival, Qt speech, and cloud voices. Status: dropped. speech-dispatcher, which can drive Festival, and DECtalk were added instead.
-- **SSML pauses.** Status: partly. Reading leaves a short silence after each heading, paragraph, and list item, which you can set ([Pauses at headings, paragraphs and list items](speech.md#pauses-at-headings-paragraphs-and-list-items)); pauses written as markup in the text itself are dropped.
+- **SSML pauses.** Status: done. Reading leaves a short silence after each heading, paragraph, and list item, which you can set ([Pauses at headings, paragraphs and list items](speech.md#pauses-at-headings-paragraphs-and-list-items)), and pause markup in the text itself, such as `<break time="1s"/>`, is read as a pause ([Pauses written in the text](speech.md#pauses-written-in-the-text)). Full SSML is not read.
 - **Audio export to OGG and AAC,** and an M4B cover image. Status: partly. M4B audiobooks are AAC, and Ogg Opus and Ogg Vorbis files are written ([audio-export.md](audio-export.md)); a separate AAC file and the cover image are dropped.
 - **Infrastructure:**
   - plugins. Status: dropped.

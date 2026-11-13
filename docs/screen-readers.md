@@ -52,9 +52,9 @@ The title line shows `hybrid` or `screen reader mode` when one of those is in ef
 
 ### The first run with a screen reader
 
-The very first run starts with the list of interface languages instead (see [Language](#language)); the question below comes on the next start.
+textweaver does not ask about hybrid mode. When it starts, the mode has never been chosen, and a screen reader is running, it starts in hybrid mode, saves that, and says so once, in one sentence: "NVDA is running: textweaver reads documents aloud and leaves messages to your screen reader. Alt+Shift+A changes this." The sentence names your screen reader and the key that changes the mode; Alt+Shift+A cycles the three modes. It is not repeated on later starts, until you choose Tools, Ask again about first-run choices (or set `hybrid_offered = false` under `[accessibility]`); the sentence then comes again at the next start.
 
-When textweaver starts, the mode has never been chosen, and a screen reader is running, it asks once: "NVDA is running. Use hybrid mode, where textweaver reads documents aloud and your screen reader speaks messages and typing? y or n". The question stays on the status line until you answer. **y** switches to hybrid and saves it. **n** or **Escape** keeps self-voicing. Either way it is not asked again until you choose Tools, Ask again about first-run choices (or set `hybrid_offered = false` under `[accessibility]`); it then asks at the next start.
+The list of interface languages is a separate step of the first run (see [Language](#language)). It comes only when your system's language is not one of the six built in.
 
 How textweaver notices a screen reader:
 
@@ -213,7 +213,7 @@ Any key can be changed in `keymap.toml`. The [keyboard reference](keyboard.md) e
 
 textweaver's own words (messages, lists, help, and settings) are in English, Spanish, French, German, Portuguese, or Arabic. Your documents are read in their own language whatever you choose.
 
-- **The first run** shows a list of languages, each in its own name ("Español", "Français"), your system's language first. Up and Down move, Enter chooses, Escape keeps English.
+- **The first run** puts your system's language into effect without asking when it is one of the six built in. Only when it is not does it show a list of languages, each in its own name ("Español", "Français"), your system's language first. Up and Down move, Enter chooses, Escape keeps English.
 - **Later**, open the settings screen (Shift+F10), type `language`, and press Enter or Right on "Interface language". The change is immediate: you hear it confirmed in the new language, then the title line. From the command line: `tw settings language es`.
 - **The voice follows the language** when the speech engine has a voice for it: a Spanish voice for Spanish. **When the engine has no voice for the language, the current voice keeps speaking, and textweaver says so.** It never goes silent. For example, if your Eloquence has English only, choosing Spanish keeps Eloquence and says that no Spanish voice was found. `[speech.voices_by_language]` in the [settings](settings.md) chooses the voice per language.
 - **Keys keep their written names** (Ctrl+S) on the status line and on your Braille display; textweaver's own voice says them in your language.
@@ -300,13 +300,13 @@ textweaver also has an app, the graphical version, written entirely in Rust with
 
 ## Checklist: try each mode with JAWS and NVDA
 
-Run through this once with NVDA and once with JAWS, in Windows Terminal and, if you like, again in the classic console. Use a throwaway state folder so your own settings are untouched: add `--home %TEMP%\tw-check` to each command (in PowerShell, `--home $env:TEMP\tw-check`). Two sample files have what is needed: `fixtures/sample.md` has a table, and `fixtures/o/math-sample.md` has math.
+Run through this once with NVDA and once with JAWS, in Windows Terminal and, if you like, again in the classic console. Use a throwaway state folder so your own settings are untouched: add `--home %TEMP%\tw-check` to each command (in PowerShell, `--home $env:TEMP\tw-check`). With `--home`, the settings file is `config\settings.toml` inside that folder. Two sample files have what is needed: `fixtures/sample.md` has a table, and `fixtures/o/math-sample.md` has math.
 
 ### First run
 
 1. Delete the folder `%TEMP%\tw-check` if it exists. With your screen reader running, start `tw --home %TEMP%\tw-check fixtures/sample.md`.
-2. Expected: the question "NVDA is running. Use hybrid mode ...? y or n" (JAWS: "JAWS is running."). Your screen reader reads it from the status line, and textweaver speaks it too.
-3. Press **y**. Expected: "Hybrid mode. ..." is read once, by your screen reader. Quit with **Ctrl+Q**, then **y**, and start again: no question this time.
+2. Expected: no yes-or-no question. One sentence says "NVDA is running: textweaver reads documents aloud and leaves messages to your screen reader. Alt+Shift+A changes this." (JAWS: "JAWS is running."). Your screen reader reads it from the status line. The title line shows `hybrid`.
+3. Quit with **Ctrl+Q**, then **y**, and start again. Expected: the sentence does not come again, and the title line still shows `hybrid`.
 
 ### Hybrid (`--mode hybrid`)
 
@@ -334,7 +334,7 @@ Screen reader settings: dynamic content (NVDA) or screen echo "all" (JAWS) on; t
 
 ### Quiet screen and the status-line cursor
 
-1. Add `quiet_screen = true` and `cursor = "status"` under `[accessibility]` in `%TEMP%\tw-check`'s `settings.toml`, and start in self-voicing mode with your screen reader's dynamic content or screen echo on.
+1. Add `quiet_screen = true` and `cursor = "status"` under `[accessibility]` in `config\settings.toml` inside `%TEMP%\tw-check`, and start in self-voicing mode with your screen reader's dynamic content or screen echo on.
 2. Press **Space**. Expected: the title line's "line ... of ..." stays still while textweaver reads, and your screen reader does not chatter.
 3. Press **Escape**, then **Alt+.**, then your screen reader's "read current line" (**NVDA+Up**, **Insert+Up**). Expected: it repeats the message on the status line.
 
@@ -351,7 +351,7 @@ Please note which steps did not behave as expected, with the screen reader, its 
 - **Everything is said twice.** Use hybrid mode (**Alt+Shift+A**), or see [Avoid hearing things twice](#avoid-hearing-things-twice).
 - **Your screen reader does not read the status line.** Turn on its reading of new text in terminals: NVDA's "report dynamic content changes" (**NVDA+5**), or JAWS's screen echo (**Insert+S**).
 - **Nothing is said at all.** In screen-reader mode textweaver is silent by design; check that your screen reader reads new text. The title line shows the mode.
-- **The question about hybrid mode never came, or came wrongly.** See [The first run with a screen reader](#the-first-run-with-a-screen-reader) and `TEXTWEAVER_SCREEN_READER`.
+- **The sentence about hybrid mode never came, or came wrongly.** See [The first run with a screen reader](#the-first-run-with-a-screen-reader) and `TEXTWEAVER_SCREEN_READER`.
 - **A key does nothing.** See [Windows Terminal keys that clash](#windows-terminal-keys-that-clash) and [Troubleshooting](troubleshooting.md), "A key does nothing".
 - **No speech from textweaver.** Check the title line: `silent` means `--no-speech` or no engine. See [Troubleshooting](troubleshooting.md).
 
