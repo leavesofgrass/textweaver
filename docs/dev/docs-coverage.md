@@ -1,6 +1,6 @@
 # Documentation coverage
 
-This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, again for beta 4 on Friday, October 23, 2026, for beta 5 on Thursday, October 29, 2026, and for wave 1 of beta 6 on Thursday, November 12, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
+This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, extended on Saturday, October 10, 2026, again for beta 4 on Friday, October 23, 2026, for beta 5 on Thursday, October 29, 2026, for wave 1 of beta 6 on Thursday, November 12, 2026, and for wave 2 on Friday, November 13, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
 
 The generated pages (`keyboard.md` and `settings-reference.md`) list every key and setting, so this page tracks the guides that explain them.
 
@@ -144,6 +144,26 @@ Each change merged in wave 1 of beta 6, and the guide that should cover it, open
 - F3 is Find next in both frontends and shows or hides a secret field: keyboard.md, gui.md, reading.md, editing.md. Pass.
 - Dependency security updates (pulldown-cmark 0.13.6, calamine 0.38, rusqlite 0.41.1, async-executor 1.14.1, the AccessKit patch releases): THIRD-PARTY-NOTICES.md lists the new versions. No guide needs to say more. Pass.
 - Contributor tooling (the fast check, affected crates, tool pins, changelog fragments, four new fuzz targets, CI on `ci/` branches, the narrower release workflow, pinned actions, macOS 15 runners, the Arch full upgrade, the "Not yet released" docs check, `ring` in the app): dev/testing.md, dev/releasing.md, dev/architecture.md, dev/docker.md, dev/building.md, CONTRIBUTING.md, scripts/README.md, fuzz/README.md, changelog.d/README.md. Pass, after fix.
+
+## Beta 6, wave 2, checked on Friday, November 13, 2026
+
+Each change merged in wave 2 of beta 6, and the guide that should cover it, opened and read against the changelog's Unreleased section and the code. "Not found" means the guide was opened and does not say it; the gap is open, unless the user guides' sweep, which ran at the same time, has fixed it since.
+
+- Twenty often-heard messages put the key fact first (the hybrid mode sentence, "Speaking with Y: X could not start.", "Recover unsaved edits to ...", "Left out, too large: ...", "Word highlight estimated: this voice reports no words."): screen-readers.md, troubleshooting.md, editing.md, live-documents.md, speech.md. Pass.
+- Closing a list replaces the status line with "Canceled." or "Settings closed.": screen-readers.md, gui.md and quickstart.md. Not found.
+- Settings that wait for a restart say "Used from the next start." and say so in their help: settings.md names the restart for individual settings ("from the next start") but does not quote the message or say that every such setting's help carries it. Not found. The message is in settings-reference.md, generated.
+- Graphics is a setting (Toolbars and panels, kept on this computer): settings.md, gui.md. Pass.
+- Live documents commands "Open a live source", "Close the live source" and "Save the live log now": live-documents.md, keyboard.md (generated). Pass.
+- The status bar says "Connected, Tailscale range": gui.md. Pass.
+- Why a live source is down is said in the reader's language, with the system's own words in English: live-documents.md, troubleshooting.md, known-limits.md. Pass.
+- Join link errors are said in the reader's language, a one-character join code says "1 character", and the QR reader's errors have no "Join code error:" lead-in: live-documents.md. Not found.
+- Find and replace keeps its matches while it steps: editing.md describes the steps, which are unchanged, and says nothing of speed. Not found.
+- A live log stays quick as it grows, one edit for an added or corrected entry: live-documents.md. Not found.
+- The recovery snapshot is streamed: editing.md describes recovery and says nothing of memory. Not found.
+- The Windows color-scheme probe asks both questions at once: themes.md, settings.md. Not found.
+- The first-run hybrid mode question is gone: screen-readers.md, quickstart.md. Pass (both say the mode is started and said once).
+- What is new records wave 2's visible changes: whats-new.md. Not found; its beta 6 summary says "More beta 6 work is still to come".
+- Contributor changes (catalogs by area, English first and the untranslated list, the release gate, four message checks, the command registry, the every-action and settings range tests, the status transcript and dialog tree snapshots, typed live errors, the streamed snapshot, new bench keys, link checks of fragments): dev/messages.md, dev/architecture.md, dev/testing.md, dev/checklist-tests.md, dev/releasing.md, dev/good-first-issues.md, CONTRIBUTING.md, changelog.d/README.md, site/architecture.html. Pass, after fix.
 
 ## Still open
 
