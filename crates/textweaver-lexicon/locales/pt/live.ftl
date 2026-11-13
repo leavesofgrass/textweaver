@@ -39,9 +39,13 @@ live-paused = Atualizações pausadas. As novas entradas aguardam até você ret
 live-paused-status = atualizações pausadas
 live-stopped = { $name } parou. O registro continua aberto, somente leitura.
 live-log-saved = Registro salvo como { $name } em { $folder }.
+live-log-save-failed = Não foi possível salvar o registro ao vivo: { $error } Nova tentativa em 10 segundos. Registro: { $path }.
 live-log-empty-not-saved = O registro ainda não tem entradas, então nada foi salvo.
 live-log-nowhere = Não há pasta para salvar o registro ao vivo.
 live-log-saved-already = Este registro foi aberto de { $path }; já está salvo.
+live-binary = Ignorado, não é texto: { $len } bytes em { $topic }.
+live-too-large = Ignorado, grande demais: { $len } bytes em { $topic }.
+live-full = Registro cheio com { $max } entradas; as mais novas são ignoradas.
 live-connecting = Conectando a { $name }.
 live-reconnecting = Reconectando a { $name }, tentativa { $attempt }.
 live-connected = Conectado a { $name }, criptografado.
@@ -66,6 +70,7 @@ live-resumed =
         [one] Atualizações retomadas, 1 atualização aplicada.
        *[other] Atualizações retomadas, { $count } atualizações aplicadas.
     }
+live-resumed-dropped = Atualizações retomadas, { $count } aplicadas; { $dropped } mais antigas ignoradas durante a pausa.
 
 ## Beta 5: live sources' commands, the set-up steps, and new entries said.
 ## $name is a source's name, $topic an MQTT topic, $line an entry as one
@@ -78,6 +83,12 @@ menu-live-publish = Publicar
 prompt-live-setup = Configurar uma fonte ao vivo
 prompt-save-live-source-file = Salvar fonte como arquivo
 live-failed = Não é possível conectar a { $name }: { $reason } Sem novas tentativas; corrija isso e abra a fonte de novo.
+live-topic-refused = Tópico recusado: { $topic }. Esta conta não pode lê-lo.
+live-skipped =
+    { $count ->
+        [one] Ignorou 1 mensagem: chegou rápido demais para mostrar.
+       *[other] Ignorou { $count } mensagens: chegaram rápido demais para mostrar.
+    }
 live-new-entries = { $line } { $count } novas entradas.
 live-unread-newest = { $count }. A mais recente: { $line }
 live-not-in-build = As fontes ao vivo não estão nesta versão do { -brand }.
@@ -170,6 +181,7 @@ live-field-speak-off = As mudanças de { $field } não são mais faladas.
 live-state-connecting = Conectando
 live-state-reconnecting = Reconectando
 live-state-encrypted = Conectado, criptografado
+live-state-tailscale = Conectado, faixa do Tailscale
 live-state-plain = Conectado, sem criptografia
 live-state-lost = Conexão perdida
 
@@ -210,6 +222,7 @@ live-broker-started-local = Broker ligado: { $addresses }, TLS, só este computa
 live-broker-started = Broker ligado: { $addresses }, TLS.
 live-broker-started-plain-local = Broker ligado: { $addresses }, sem criptografia, só este computador.
 live-broker-started-plain = Broker ligado: { $addresses }, sem criptografia.
+live-broker-plain-warning = Sem criptografia: qualquer pessoa nesta rede pode ler as mensagens e as senhas. Use TLS, ou só este computador ou o Tailscale.
 live-broker-join-code = Código de acesso: { $code }.
 live-broker-pin = Pin do certificado: { $pin }.
 live-broker-not-running = Nenhum broker está ligado. Iniciar seu broker inicia um.

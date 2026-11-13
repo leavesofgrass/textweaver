@@ -1,3 +1,84 @@
 ### Live documents: why a live source is down, and why a join link does not read.
 
-## Not translated yet: these messages are said in English until the translation pass (locales/untranslated.txt).
+live-down-bad-login = Não autorizado: o broker recusou o nome de usuário ou a senha.
+live-down-login-refused = Não autorizado: o broker recusou o login. Verifique o nome de usuário e a senha.
+live-down-protocol-version = Recusado: o broker não aceita MQTT 3.1.1.
+live-down-client-id = Recusado: o broker rejeitou o identificador do cliente.
+live-down-unavailable = Inacessível: o broker diz que está indisponível agora.
+live-down-unexpected-success = Erro de protocolo: código de sucesso inesperado.
+live-down-tls-needed = TLS necessário: { $target } respondeu com TLS. Ligue o TLS nesta fonte.
+live-down-cannot-connect = Inacessível: não foi possível conectar a { $target }: { $why }.
+live-down-connect-failed = Inacessível: não foi possível conectar a { $target }.
+live-down-handshake = Falha de TLS: a negociação com { $target } não terminou: { $why }.
+live-down-lost-logging-in = Conexão perdida com { $target } durante o login: { $why }.
+live-down-lost-logging-in-tls = Conexão perdida com { $target } durante o login: { $why }. Se esta porta espera TLS, ligue o TLS nesta fonte.
+live-down-lost = Conexão perdida com { $target }: { $why }.
+live-down-session-ended = Conexão perdida com { $target }: o broker encerrou a sessão.
+live-down-stopped-answering = Conexão perdida com { $target }: o broker parou de responder.
+live-down-login-timeout = Inacessível: { $target } aceitou a conexão, mas não respondeu ao login a tempo.
+live-down-no-address = Inacessível: o host { $host } não tem endereço.
+live-down-host-not-found = Inacessível: não foi possível encontrar o host { $host }: { $why }.
+live-down-thread = Falhou: não foi possível iniciar a tarefa de conexão: { $error } Abra a fonte de novo.
+live-down-topics-refused = Não autorizado: o broker recusou todos os tópicos que esta fonte pediu.
+live-down-qos2 = Erro de protocolo: o broker enviou QoS 2, que não foi pedido.
+live-down-unexpected-packet = Erro de protocolo: pacote { $packet } inesperado do broker.
+live-down-no-connack = Erro de protocolo: o broker não respondeu ao login com CONNACK.
+live-down-no-host = Erro de configuração: nenhum host definido.
+live-down-port-zero = Erro de configuração: a porta é 0.
+live-down-no-topic = Erro de configuração: nenhum tópico definido.
+live-down-bad-topic = Erro de configuração: { $why }: { $topic }.
+live-down-password-without-user = Erro de configuração: uma senha precisa de um nome de usuário.
+live-down-tls-on-plain = Erro de configuração: o TLS foi pedido numa conexão sem criptografia.
+live-down-ca-unreadable = Erro de configuração: não foi possível ler o arquivo CA { $path }: { $error } Verifique o arquivo CA nas configurações da fonte.
+live-down-ca-not-pem = Erro de configuração: o arquivo CA { $path } não é um PEM válido: { $error } Escolha um arquivo de certificado PEM.
+live-down-ca-refused = Erro de configuração: um certificado em { $path } foi recusado: { $error } Verifique o arquivo CA nas configurações da fonte.
+live-down-ca-empty = Erro de configuração: o arquivo CA { $path } não contém nenhum certificado.
+live-down-bad-tls-host = Erro de configuração: { $host } não é um nome de host válido para TLS.
+live-down-unknown-issuer = Falha de TLS: o certificado do broker não é confiável. O emissor é desconhecido; defina um arquivo CA se o broker usa um certificado privado.
+live-down-wrong-host-name = Falha de TLS: o certificado do broker é de outro nome de host.
+live-down-expired = Falha de TLS: o certificado do broker expirou.
+live-down-not-valid-yet = Falha de TLS: o certificado do broker ainda não é válido. Verifique o relógio deste computador.
+live-down-revoked = Falha de TLS: o certificado do broker foi revogado.
+live-down-pin-mismatch = Falha de TLS: a chave do broker não corresponde ao pin. Verifique o pin ou o código de acesso; este pode não ser o broker que você queria.
+live-down-certificate-refused = Falha de TLS: o certificado do broker foi recusado ({ $detail }).
+live-down-handshake-alert = Falha de TLS: o broker encerrou a negociação ({ $detail }).
+live-down-no-certificate = Falha de TLS: o broker não enviou nenhum certificado.
+live-down-incompatible = Falha de TLS: as configurações de TLS do broker não são compatíveis ({ $detail }).
+live-down-not-tls = Falha de TLS: o broker não respondeu com TLS ({ $detail }). Esta é uma porta sem criptografia?
+live-down-tls = Falha de TLS: { $error } Verifique as configurações de TLS da fonte.
+live-why-nothing-listening = nada está escutando nessa porta
+live-why-no-answer = sem resposta a tempo
+live-why-reset = a conexão foi redefinida
+live-why-closed = o broker fechou a conexão
+live-why-no-route = sem rota até o host
+live-why-lookup-failed = a consulta do nome falhou
+live-topic-problem-empty = um tópico está vazio
+live-topic-problem-too-long = um tópico tem mais de 65535 bytes
+live-topic-problem-nul = um tópico contém um caractere NUL
+live-topic-problem-hash = # só pode ser o último nível inteiro de um tópico
+live-topic-problem-plus = + só pode ser um nível inteiro de um tópico
+live-link-bad-too-long = o texto é longo demais.
+live-link-bad-scheme = um link de acesso começa com { $scheme }://.
+live-link-bad-spaces = um link de acesso não tem espaços nem quebras de linha.
+live-link-bad-no-code = nenhum código de acesso foi dado depois do host e da porta.
+live-link-bad-no-host = nenhum host foi dado.
+live-link-bad-bracket = um endereço IPv6 precisa do colchete de fechamento.
+live-link-bad-not-ipv6 = o endereço entre colchetes não é um endereço IPv6.
+live-link-bad-port = a porta não é um número de 1 a 65535.
+live-link-bad-host-too-long = o nome do host é longo demais.
+live-link-bad-host-character = { $character } não é usado em nomes de host. Verifique o host.
+live-link-bad-host-character-code = um caractere com código { $code } não é usado em nomes de host. Verifique o host.
+live-link-bad-key = { $key } não faz parte de um link de acesso. Só topic pode vir depois do ponto de interrogação.
+live-link-bad-topic-twice = o tópico foi dado duas vezes.
+live-link-bad-topic-control = o tópico contém um caractere de controle.
+live-link-bad-topic = { $why }.
+live-link-bad-percent = o tópico tem um sinal de por cento sem dois dígitos hexadecimais depois.
+live-link-bad-utf8 = o tópico não é texto UTF-8.
+live-link-bad-code-empty = nenhum código foi dado.
+live-link-bad-code-length =
+    { $count ->
+        [one] o código tem 1 caractere; precisa de { $needed }, em quatro grupos de quatro.
+       *[other] o código tem { $count } caracteres; precisa de { $needed }, em quatro grupos de quatro.
+    }
+live-link-bad-code-character = { $character } no grupo { $group } não é usado em códigos de acesso. Verifique esse caractere.
+live-link-bad-code-character-code = um caractere com código { $code } no grupo { $group } não é usado em códigos de acesso. Verifique esse caractere.

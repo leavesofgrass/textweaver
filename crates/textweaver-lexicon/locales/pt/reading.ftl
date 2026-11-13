@@ -250,6 +250,8 @@ nav-position = Linha { $line } de { $lines }, { $pct } por cento.
 nav-position-word = Palavra { $word } de { $words }.
 nav-position-heading = Sob o cabeçalho { $heading }.
 nav-position-mode = Modo { $mode }.
+playback-caps-no-words = Destaque de palavras estimado: esta voz não informa as palavras.
+playback-caps-words = Destaque de palavras exato: esta voz informa cada palavra.
 
 ## Reading aloud.
 
