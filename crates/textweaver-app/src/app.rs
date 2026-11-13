@@ -2320,6 +2320,11 @@ impl App {
             // Editing, files, and bookmarks work on the source.
             self.end_preview(false);
         }
+        // A command a module registered runs its handler (crate::menu): the
+        // module adds it in its own file, not in this match.
+        if let Some(handler) = self.registered_handler(a) {
+            return handler(self);
+        }
         use ActionId as A;
         match a {
             A::Quit => return self.dictation_finish_then(Self::quit),
@@ -2604,43 +2609,14 @@ impl App {
             A::Help => return self.help(),
             A::Menu => return self.open_menu(),
             A::ContextMenu => return self.open_context_menu(),
-            A::BrowseFiles
-            | A::BatchConvert
-            | A::ExportAudio
-            | A::ExportReadAlong
-            | A::Dictate
-            | A::PauseDictation
-            | A::DownloadDictationModel
-            | A::ManageComponents
-            | A::CheckForUpdates
-            | A::ForgetGitHubToken => {
-                return self.run_registered(a);
-            }
-            A::OpenLiveSource
-            | A::SetUpLiveSource
-            | A::EditLiveSource
-            | A::SaveLiveSourceFile
-            | A::CloseLiveSource
-            | A::LiveSwitchView
+            A::LiveSwitchView
             | A::LiveJumpNewest
             | A::LiveTogglePause
             | A::LiveToggleSpeak
             | A::LiveToggleFieldShow
             | A::LiveToggleFieldSpeak
             | A::LiveSayUnread
-            | A::SaveLiveLog
-            | A::ForgetLiveSourcePassword
-            | A::StartBroker
-            | A::StopBroker
-            | A::ShowJoinCode
-            | A::CopyJoinCode
-            | A::CopyJoinLink
-            | A::OpenJoinLink
-            | A::ShowJoinQr
-            | A::JoinFromQrImage
-            | A::ShareDocumentLive
-            | A::StopSharing
-            | A::SendCheckIn => return self.live_action(a),
+            | A::SaveLiveLog => return self.live_action(a),
             A::ColorSettings => return self.open_color_settings(),
             A::CustomizeButtons => return self.customize_buttons(),
             A::ReadingForm => return self.open_reading_form(),
@@ -2735,6 +2711,9 @@ impl App {
             | A::InsertBibliography
             | A::CheckCitations
             | A::ImportReferences => return self.authoring_action(a),
+            // A command no module registered (a pending one in a build
+            // without its module) says it is not available.
+            _ => return self.run_registered(a),
         }
         vec![Effect::Redraw]
     }

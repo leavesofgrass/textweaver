@@ -45,6 +45,18 @@ use crate::list_model::ListKey;
 /// A command other modules implement, run by [`App::register_handler`].
 pub type Handler = fn(&mut App) -> Vec<Effect>;
 
+/// Whether a registered command works in this build
+/// ([`App::register_command`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Availability {
+    /// The command works: it shows in the menus and the command palette.
+    Available,
+    /// The command is not in this build (a lean build without its
+    /// feature): it stays out of the menus and the command palette, and
+    /// its handler, run by a key, says so in words.
+    NotInThisBuild,
+}
+
 /// Commands whose ids and menu entries exist before their modules do:
 /// browse files (W6f), batch conversion (W6k), audio export (W6v), and
 /// dictation (W6d). Each is hidden from the menus and the command palette
@@ -1040,7 +1052,7 @@ pub fn menu_chord(keymap: &Keymap, a: ActionId) -> Option<KeyChord> {
 /// and the terminal's open menu.
 #[derive(Default)]
 pub(crate) struct MenuState {
-    handlers: Vec<(ActionId, Handler)>,
+    handlers: Vec<(ActionId, Availability, Handler)>,
     /// Commands run from a menu or the palette, newest first.
     pub(crate) recent: Vec<ActionId>,
     /// The next command key is described, not run (Help, "What does this
@@ -1066,31 +1078,49 @@ impl App {
     /// Registers the handler of a command a module provides (the pending
     /// ones, [`PENDING`]); the command then appears in the menus and the
     /// command palette, and runs `handler`. A later registration replaces
-    /// an earlier one.
+    /// an earlier one. A command runs its registered handler before
+    /// anything else, so a module adds a command in its own file.
     pub fn register_handler(&mut self, action: ActionId, handler: Handler) {
-        self.menu.handlers.retain(|(a, _)| *a != action);
-        self.menu.handlers.push((action, handler));
+        self.register_command(action, Availability::Available, handler);
     }
 
-    /// True when `action` can run: every command but a pending one whose
-    /// module has not registered a handler ([`PENDING`]).
+    /// Registers the handler of a command a module provides, saying whether
+    /// it works in this build. A command [`Availability::NotInThisBuild`]
+    /// stays out of the menus and the command palette; run by a key, it
+    /// runs `handler`, which says in words that it is not in this build.
+    pub fn register_command(
+        &mut self,
+        action: ActionId,
+        availability: Availability,
+        handler: Handler,
+    ) {
+        self.menu.handlers.retain(|(a, _, _)| *a != action);
+        self.menu.handlers.push((action, availability, handler));
+    }
+
+    /// True when `action` can run: a registered command that works in this
+    /// build, or any command but a pending one ([`PENDING`]).
     pub fn is_available(&self, action: ActionId) -> bool {
-        !PENDING.contains(&action) || self.menu.handlers.iter().any(|(a, _)| *a == action)
+        match self.menu.handlers.iter().find(|(a, _, _)| *a == action) {
+            Some((_, availability, _)) => *availability == Availability::Available,
+            None => !PENDING.contains(&action),
+        }
     }
 
-    /// Runs a command registered with [`register_handler`](Self::register_handler).
-    pub(crate) fn run_registered(&mut self, action: ActionId) -> Vec<Effect> {
-        if let Some(h) = self
-            .menu
+    /// The handler registered for `action`, if any.
+    pub(crate) fn registered_handler(&self, action: ActionId) -> Option<Handler> {
+        self.menu
             .handlers
             .iter()
-            .find(|(a, _)| *a == action)
-            .map(|(_, h)| *h)
-        {
+            .find(|(a, _, _)| *a == action)
+            .map(|(_, _, h)| *h)
+    }
+
+    /// Runs a command registered with [`register_handler`](Self::register_handler),
+    /// or says that it is not available.
+    pub(crate) fn run_registered(&mut self, action: ActionId) -> Vec<Effect> {
+        if let Some(h) = self.registered_handler(action) {
             return h(self);
-        }
-        if crate::live::wire::NEEDS_MQTT.contains(&action) {
-            return self.live_not_in_build();
         }
         let name = action_name(self.cat(), action);
         let msg = self.msg_args("menu-not-available", &args!["name" => name]);
@@ -1772,7 +1802,7 @@ mod tests {
     #[test]
     fn every_visible_menu_command_has_a_handler() {
         let app = App::new(crate::AppConfig::for_tests());
-        let registered = |a: A| app.menu.handlers.iter().any(|(h, _)| *h == a);
+        let registered = |a: A| app.menu.handlers.iter().any(|(h, _, _)| *h == a);
         for m in MenuId::ALL {
             for item in app.menu_view(m).items {
                 if let MenuItemKind::Action(a) = item.kind
