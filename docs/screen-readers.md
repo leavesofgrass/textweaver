@@ -298,6 +298,13 @@ A live document sends each new or corrected entry to your screen reader as one p
 
 textweaver also has an app, the graphical version, written entirely in Rust with AccessKit for screen readers. It shares documents, keys, settings, notes, and voices with the terminal reader, and it has been checked with NVDA, JAWS, and a braille display on Windows. [The textweaver app](gui.md) covers it in full: starting it, the file chooser, edit mode, how messages reach your screen reader (a live region, or UI Automation notifications), and the spoken word's highlight. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
 
+### Spelling marks and text direction in the app
+
+In edit mode, each misspelled word and each Markdown lint problem is its own text run in the accessibility tree. A misspelled word is marked invalid for spelling and a lint problem invalid for grammar (AccessKit's `invalid` property), each has its name in words as its description ("Misspelled", "Writing suggestion"), and each carries its underline as drawn: dotted under a misspelling, double under a lint problem.
+
+- **On Windows**, the AccessKit version textweaver uses does not yet pass the spelling and grammar marks, or a text run's description, to UI Automation, so NVDA's and JAWS's "report spelling errors" do not announce them yet. What does reach them is the underline style, which they report with font attributes or formatting reporting on. Alt+M and Alt+Shift+M remain the dependable way to move between misspelled words, and Ctrl+F8 and Ctrl+Shift+F8 between lint problems.
+- **Right-to-left text.** A paragraph whose first letter is Arabic, Hebrew, or another right-to-left script is marked right to left, every run of it, a Latin word inside it included; other paragraphs are left to right. The text, its words, and the cursor are always in reading order. UI Automation on Windows does not report text direction, so this matters most on macOS and Linux and for magnifiers.
+
 ## Checklist: try each mode with JAWS and NVDA
 
 Run through this once with NVDA and once with JAWS, in Windows Terminal and, if you like, again in the classic console. Use a throwaway state folder so your own settings are untouched: add `--home %TEMP%\tw-check` to each command (in PowerShell, `--home $env:TEMP\tw-check`). With `--home`, the settings file is `config\settings.toml` inside that folder. Two sample files have what is needed: `fixtures/sample.md` has a table, and `fixtures/o/math-sample.md` has math.
