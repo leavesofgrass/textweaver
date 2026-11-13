@@ -181,7 +181,12 @@ def check_file(path: Path) -> list[str]:
         file_part = unquote(file_part.split("?", 1)[0])
         anchor = unquote(anchor)
         if file_part:
-            dest = (path.parent / file_part).resolve()
+            # A changelog fragment is folded into CHANGELOG.md at the root, so
+            # its links are written as they will read there.
+            base = path.parent
+            if base.name == "changelog.d" and path.name != "README.md":
+                base = ROOT
+            dest = (base / file_part).resolve()
             try:
                 dest.relative_to(ROOT)
             except ValueError:

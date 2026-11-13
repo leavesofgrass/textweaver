@@ -991,7 +991,7 @@ mod tests {
         let c = Catalog::english();
         for &a in ActionId::ALL {
             let id = format!("action-{}", a.id().replace('_', "-"));
-            assert!(c.has(&id), "en.ftl has no {id}");
+            assert!(c.has(&id), "the English catalog has no {id}");
             assert_eq!(action_help(&c, a), a.help(), "{id}");
         }
         for cat in CATEGORIES {

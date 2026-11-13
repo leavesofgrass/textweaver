@@ -6,7 +6,7 @@ Before you start:
 
 - Read [CONTRIBUTING.md](../../CONTRIBUTING.md), and set up a build with [Building](building.md).
 - Open an issue for the task you pick, or comment on one that exists, and say you are working on it. That way two people do not do the same work, and a maintainer can answer questions before you write code.
-- Every task here must work with a screen reader and a Braille display. Where a task adds something the user hears, the message goes in the message catalog, `crates/textweaver-lexicon/locales/`, in all six languages. If you cannot translate, put the English text in each language and say so in your pull request; a maintainer will find a translator.
+- Every task here must work with a screen reader and a Braille display. Where a task adds something the user hears, the message goes in the message catalog, in English, in the area file under `crates/textweaver-lexicon/locales/en/`. Translate it into the other five languages if you can; if you cannot, add its id to `crates/textweaver-lexicon/locales/untranslated.txt` and say so in your pull request. The other languages then show the English text until the translation pass before a release ([Messages](messages.md)).
 
 Sizes: small is a few hours; medium is about a day.
 

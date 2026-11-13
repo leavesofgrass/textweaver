@@ -275,11 +275,20 @@ fn no_message_names_a_key_in_a_fixed_string() {
     }
     // The messages themselves live in the catalog now (W4d): a key there
     // must be a value such as `{ $key }`, filled from the keymap.
-    let catalog = crates
-        .join("textweaver-lexicon")
-        .join("locales")
-        .join("en.ftl");
-    let text = std::fs::read_to_string(&catalog).unwrap();
+    // The English catalog is one file per area (beta 6); read them all, in
+    // name order. `ALLOWED` still names the catalog "en.ftl".
+    let catalog = crates.join("textweaver-lexicon").join("locales").join("en");
+    let mut files: Vec<_> = std::fs::read_dir(&catalog)
+        .unwrap()
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().is_some_and(|x| x == "ftl"))
+        .collect();
+    files.sort();
+    assert!(!files.is_empty(), "no catalog files in {}", catalog.display());
+    let text: String = files
+        .iter()
+        .map(|f| std::fs::read_to_string(f).unwrap() + "\n")
+        .collect();
     for line in text.lines().filter(|l| !l.trim_start().starts_with('#')) {
         for chord in chords_in(line) {
             let allowed = ALLOWED
