@@ -5,7 +5,7 @@
 
 #![allow(non_upper_case_globals)]
 
-use accesskit::{Action, ActionData, ActionRequest, ScrollHint, VerticalOffset};
+use accesskit::{Action, ActionData, ActionRequest, Invalid, ScrollHint, VerticalOffset};
 use accesskit_consumer::{
     NodeRef, TextPosition as Position, TextRange as Range, Tree, TreeState,
     WeakTextRange as WeakRange,
@@ -204,6 +204,45 @@ fn move_position(
         moved = -moved;
     }
     Ok((pos, moved))
+}
+
+// textweaver: a text run marked invalid for spelling or for grammar is a
+// spelling error or a grammar error annotation, which NVDA reads with
+// "report spelling errors" on. `Invalid::True` names no kind, so no type.
+fn run_annotation_type(node: &NodeRef) -> Option<i32> {
+    match node.data().invalid() {
+        Some(Invalid::Spelling) => Some(AnnotationType_SpellingError.0),
+        Some(Invalid::Grammar) => Some(AnnotationType_GrammarError.0),
+        _ => None,
+    }
+}
+
+// textweaver: UIA_AnnotationTypesAttributeId for a range: the runs' one
+// annotation type as an array (empty for plain text), or the mixed
+// attribute value when the range's runs differ, as for every other text
+// attribute (AccessKit's `fetch_property`, walking the same runs).
+fn annotation_types(range: &Range) -> Variant {
+    let mut first: Option<Option<i32>> = None;
+    let mixed = range
+        .traverse_text(|node, _| {
+            let kind = run_annotation_type(node);
+            match first {
+                None => {
+                    first = Some(kind);
+                    None
+                }
+                Some(seen) if seen != kind => Some(()),
+                Some(_) => None,
+            }
+        })
+        .is_some();
+    if mixed {
+        return unsafe { UiaGetReservedMixedAttributeValue() }
+            .unwrap()
+            .into();
+    }
+    let types: Vec<i32> = first.flatten().into_iter().collect();
+    variant_from_i32_slice(&types)
 }
 
 #[implement(ITextRangeProvider)]
@@ -483,6 +522,7 @@ impl ITextRangeProvider_Impl for PlatformRange_Impl {
                     .map(|o| o == VerticalOffset::Superscript),
             )
             .into()),
+            UIA_AnnotationTypesAttributeId => Ok(annotation_types(&range).into()),
             // TODO: implement more attributes
             _ => {
                 let value = unsafe { UiaGetReservedNotSupportedValue() }.unwrap();
@@ -649,4 +689,146 @@ impl ITextRangeProvider_Impl for PlatformRange_Impl {
 fn platform_range_impl_send_sync() {
     fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<PlatformRange>();
+}
+
+// textweaver: the AnnotationTypes text attribute, read through the range
+// provider itself, with no window and no UI Automation client.
+#[cfg(test)]
+mod textweaver_annotation_tests {
+    use accesskit::{Invalid, Node, NodeId, Role, TreeId, TreeInfo, TreeUpdate};
+    use accesskit_consumer::Tree;
+    use std::sync::Arc;
+    use windows::Win32::{
+        Foundation::HWND,
+        System::{Ole::*, Variant::*},
+        UI::Accessibility::*,
+    };
+
+    use super::PlatformRange;
+    use crate::context::{ActionHandlerNoMut, Context};
+
+    struct NoActions;
+    impl ActionHandlerNoMut for NoActions {
+        fn do_action(&self, _request: accesskit::ActionRequest) {}
+    }
+
+    fn run(text: &str, invalid: Option<Invalid>) -> Node {
+        let mut node = Node::new(Role::TextRun);
+        node.set_value(text);
+        node.set_character_lengths(vec![1; text.chars().count()]);
+        if let Some(invalid) = invalid {
+            node.set_invalid(invalid);
+        }
+        node
+    }
+
+    // "A wrod and it are": plain 0..2, misspelled 2..6, plain 6..11,
+    // a grammar problem 11..17.
+    fn context() -> Arc<Context> {
+        let mut root = Node::new(Role::MultilineTextInput);
+        root.set_children(vec![NodeId(1), NodeId(2), NodeId(3), NodeId(4)]);
+        let update = TreeUpdate {
+            nodes: vec![
+                (NodeId(0), root),
+                (NodeId(1), run("A ", None)),
+                (NodeId(2), run("wrod", Some(Invalid::Spelling))),
+                (NodeId(3), run(" and ", None)),
+                (NodeId(4), run("it are", Some(Invalid::Grammar))),
+            ],
+            tree: Some(TreeInfo::new(NodeId(0))),
+            tree_id: TreeId::ROOT,
+            focus: NodeId(0),
+        };
+        Context::new(
+            HWND::default().into(),
+            Tree::new(update, false),
+            Arc::new(NoActions),
+            false,
+        )
+    }
+
+    fn provider(context: &Arc<Context>, start: usize, end: usize) -> ITextRangeProvider {
+        let tree = context.read_tree();
+        let node = tree.state().root();
+        let mut range = node.document_range();
+        range.set_start(node.text_position_from_global_usv_index(start).unwrap());
+        range.set_end(node.text_position_from_global_usv_index(end).unwrap());
+        PlatformRange::new(&Arc::downgrade(context), range).into()
+    }
+
+    enum Value {
+        Types(Vec<i32>),
+        Mixed,
+    }
+
+    fn annotation_types(context: &Arc<Context>, start: usize, end: usize) -> Value {
+        let p = provider(context, start, end);
+        let v = unsafe { p.GetAttributeValue(UIA_AnnotationTypesAttributeId) }.unwrap();
+        let inner = unsafe { &v.Anonymous.Anonymous };
+        if inner.vt == VT_UNKNOWN {
+            let mixed = unsafe { UiaGetReservedMixedAttributeValue() }.unwrap();
+            let got = unsafe { inner.Anonymous.punkVal.as_ref() }.cloned();
+            assert_eq!(
+                got,
+                Some(mixed),
+                "an unknown value that is not the mixed value"
+            );
+            return Value::Mixed;
+        }
+        assert_eq!(inner.vt, VT_ARRAY | VT_I4);
+        let sa = unsafe { inner.Anonymous.parray };
+        let upper = unsafe { SafeArrayGetUBound(sa, 1) }.unwrap();
+        let mut types = Vec::new();
+        for i in 0..=upper {
+            let mut t = 0i32;
+            unsafe { SafeArrayGetElement(sa, &i, &mut t as *mut i32 as *mut _) }.unwrap();
+            types.push(t);
+        }
+        Value::Types(types)
+    }
+
+    fn types(v: Value) -> Vec<i32> {
+        match v {
+            Value::Types(t) => t,
+            Value::Mixed => panic!("mixed, where one value was expected"),
+        }
+    }
+
+    #[test]
+    fn a_misspelled_run_is_a_spelling_error() {
+        let c = context();
+        assert_eq!(
+            types(annotation_types(&c, 2, 6)),
+            vec![AnnotationType_SpellingError.0]
+        );
+        // The caret inside the word.
+        assert_eq!(
+            types(annotation_types(&c, 3, 3)),
+            vec![AnnotationType_SpellingError.0]
+        );
+    }
+
+    #[test]
+    fn a_grammar_run_is_a_grammar_error() {
+        let c = context();
+        assert_eq!(
+            types(annotation_types(&c, 11, 17)),
+            vec![AnnotationType_GrammarError.0]
+        );
+    }
+
+    #[test]
+    fn a_plain_run_has_no_annotation_types() {
+        let c = context();
+        assert!(types(annotation_types(&c, 0, 2)).is_empty());
+        assert!(types(annotation_types(&c, 7, 10)).is_empty());
+    }
+
+    #[test]
+    fn a_range_over_two_kinds_is_mixed() {
+        let c = context();
+        assert!(matches!(annotation_types(&c, 0, 6), Value::Mixed));
+        assert!(matches!(annotation_types(&c, 2, 17), Value::Mixed));
+        assert!(matches!(annotation_types(&c, 4, 12), Value::Mixed));
+    }
 }

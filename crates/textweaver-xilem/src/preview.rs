@@ -211,6 +211,7 @@ fn model_of(doc: &Document, range: CharRange, title: &str) -> DocModel {
         title: title.to_owned(),
         breaks: Vec::new(),
         separator: String::new(),
+        gap: None,
     }
 }
 

@@ -266,6 +266,63 @@ struct Shown {
     /// Line numbers as the view draws them: the window's first line, or
     /// `None` when `[display] show_line_numbers` is off.
     line_numbers: Option<usize>,
+    /// Scroll Down or Up reached the end of the text held around the
+    /// cursor ([`scroll_host`]): until the cursor moves, reading starts,
+    /// or the text changes, the window follows the view instead.
+    away: Option<ScrolledAway>,
+    /// While [`away`](Self::away): the text around the cursor kept in the
+    /// view's model besides the window, when the window no longer holds
+    /// the cursor ([`island_for`]).
+    island: Option<CharRange>,
+}
+
+/// Where the view scrolled to, far from the cursor ([`Shown::away`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ScrolledAway {
+    /// The point the window moves towards: the end of the text the view
+    /// reached (its start, scrolling up).
+    focus: textweaver_app::core::CharPos,
+    /// The cursor when the view scrolled away; a cursor that moves ends it.
+    cursor: textweaver_app::core::CharPos,
+    /// The text revision; an edit ends it.
+    revision: u64,
+}
+
+/// The text kept around the cursor while the view is scrolled far from it,
+/// in UTF-16 units: a quarter of the window, so that a caret key's first
+/// move, before the window comes back to the cursor, stays inside it, as
+/// in a window in one piece (whose margin is an eighth).
+const ISLAND_UNITS: usize = WINDOW_UNITS / 4;
+
+/// The text around `cursor` to keep in the view besides the window `w`,
+/// while the view is scrolled away: `None` when the window holds the
+/// cursor. The island is about [`ISLAND_UNITS`] around the cursor, cut at
+/// paragraph boundaries as the window is; one that overlaps or touches
+/// the window is joined to it ([`shown_ranges`]).
+fn island_for(
+    doc: &textweaver_app::text::Document,
+    w: &DocWindow,
+    cursor: textweaver_app::core::CharPos,
+) -> Option<CharRange> {
+    if w.contains(doc, cursor) {
+        return None;
+    }
+    Some(DocWindow::with_budget(doc, cursor, ISLAND_UNITS).range())
+}
+
+/// The ranges the view's model holds, in document order: the window, and
+/// the island around the cursor ([`island_for`]) before or after it, or
+/// both joined into one range when they overlap or touch.
+fn shown_ranges(window: CharRange, island: Option<CharRange>) -> Vec<CharRange> {
+    match island {
+        None => vec![window],
+        Some(i) if i.end.0 >= window.start.0 && i.start.0 <= window.end.0 => vec![CharRange::new(
+            i.start.0.min(window.start.0),
+            i.end.0.max(window.end.0),
+        )],
+        Some(i) if i.end.0 < window.start.0 => vec![i, window],
+        Some(i) => vec![window, i],
+    }
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
@@ -1878,7 +1935,38 @@ pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
         // between two chars of the document), as the terminal draws them.
         breaks: app.syllable_breaks(w),
         separator: app.syllable_separator().to_owned(),
+        gap: None,
     })
+}
+
+/// [`model_for`] over `ranges` ([`shown_ranges`]): one range is a window
+/// in one piece; two are the island around the cursor and the window,
+/// with a gap between them ([`DocModel::gap`]).
+fn model_over(app: &App, ranges: &[CharRange]) -> Option<DocModel> {
+    let (first, rest) = ranges.split_first()?;
+    let mut model = model_for(app, *first)?;
+    let Some(second) = rest.first() else {
+        return Some(model);
+    };
+    let s = app.session()?;
+    let more = model_for(app, *second)?;
+    let at = model.paragraphs.len();
+    // The document lines between the first range's last paragraph and the
+    // second range's first.
+    let lines = s
+        .doc
+        .line_of(second.start)
+        .saturating_sub(s.doc.line_of(first.start) + at);
+    model.paragraphs.extend(more.paragraphs);
+    // A span that reaches over the gap is in both; keep it once.
+    for span in more.spans {
+        if span.range.start.0 >= second.start.0 || !model.spans.contains(&span) {
+            model.spans.push(span);
+        }
+    }
+    model.breaks.extend(more.breaks);
+    model.gap = Some((at, lines));
+    Some(model)
 }
 
 /// A number that changes whenever what the window shows could have changed
@@ -1939,6 +2027,14 @@ pub fn marks_in(
     app: &App,
     window: CharRange,
 ) -> (Vec<(CharRange, crate::document::DocMark)>, Vec<String>) {
+    marks_over(app, &[window])
+}
+
+/// [`marks_in`] over the ranges the view holds ([`shown_ranges`]).
+fn marks_over(
+    app: &App,
+    ranges: &[CharRange],
+) -> (Vec<(CharRange, crate::document::DocMark)>, Vec<String>) {
     use crate::document::{DocMark, NamedMark};
     use textweaver_app::HighlightKind as K;
     let mut marks = Vec::new();
@@ -1947,7 +2043,8 @@ pub fn marks_in(
         let c = app.catalog();
         for h in &s.highlights {
             let r = h.range;
-            if !(r.intersects(window) || (r.is_empty() && window.contains(r.start))) {
+            let touches = |w: &CharRange| r.intersects(*w) || (r.is_empty() && w.contains(r.start));
+            if !ranges.iter().any(touches) {
                 continue;
             }
             // Its name, color and shape, as the terminal reader draws it.
@@ -1965,18 +2062,25 @@ pub fn marks_in(
             marks.push((r, DocMark::Named(mark)));
         }
     }
-    let rest = app.highlights(window).into_iter().filter_map(|h| {
-        let mark = match h.kind {
-            K::UserHighlight => return None,
-            K::Note => DocMark::Note,
-            K::Bookmark => DocMark::Bookmark,
-            K::FindHit => DocMark::FindHit,
-            K::CurrentFindHit => DocMark::CurrentFindHit,
-            K::Selection | K::SpokenSentence | K::SpokenWord => return None,
-        };
-        Some((h.range, mark))
-    });
-    marks.extend(rest);
+    for window in ranges {
+        let rest = app.highlights(*window).into_iter().filter_map(|h| {
+            let mark = match h.kind {
+                K::UserHighlight => return None,
+                K::Note => DocMark::Note,
+                K::Bookmark => DocMark::Bookmark,
+                K::FindHit => DocMark::FindHit,
+                K::CurrentFindHit => DocMark::CurrentFindHit,
+                K::Selection | K::SpokenSentence | K::SpokenWord => return None,
+            };
+            Some((h.range, mark))
+        });
+        for m in rest {
+            // A note that reaches over the gap is in both ranges.
+            if m.0.start.0 >= window.start.0 || !marks.contains(&m) {
+                marks.push(m);
+            }
+        }
+    }
     (marks, names)
 }
 
@@ -2065,6 +2169,53 @@ pub fn sync_caret(
     Some(app.dispatch(Command::SetCursor(caret)))
 }
 
+/// Scroll Down (`down`) or Scroll Up, as the window runs it: the view
+/// moves by one drawn line ([`DocumentView::scroll_line`]). At the end of
+/// the text the app holds around the cursor, in a document that goes on,
+/// the window moves on towards where the view is ([`Shown::away`]),
+/// keeping the text around the cursor ([`island_for`]), and the view moves
+/// its line. Returns the first char now at the top, or `None` at the
+/// document's first line (up) or with its last line at the top (down).
+fn scroll_host(
+    app: &App,
+    shown: &mut Shown,
+    host: &mut impl Host,
+    down: bool,
+) -> Option<textweaver_app::core::CharPos> {
+    let top = host.edit(DOC, |mut d| DocumentView::scroll_line(&mut d, down));
+    if top.is_some() {
+        return top;
+    }
+    let s = app.session()?;
+    let w = shown.window?;
+    // The edge the view reached: of the window, or of the window and the
+    // island joined to it.
+    let ranges = shown_ranges(w.range(), shown.island);
+    let edge = if ranges.len() == 1 {
+        ranges[0]
+    } else {
+        w.range()
+    };
+    let focus = if down {
+        if edge.end.0 >= s.doc.len_chars() {
+            return None;
+        }
+        textweaver_app::core::CharPos(edge.end.0.saturating_sub(1))
+    } else {
+        if edge.start.0 == 0 {
+            return None;
+        }
+        edge.start
+    };
+    shown.away = Some(ScrolledAway {
+        focus,
+        cursor: s.cursor,
+        revision: s.revision,
+    });
+    let _ = refresh_host(app, shown, host, false);
+    host.edit(DOC, |mut d| DocumentView::scroll_line(&mut d, down))
+}
+
 /// Brings `host` up to date with `app`. Returns the load time in
 /// milliseconds when the document's text (or window) was rebuilt.
 fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -> Option<f64> {
@@ -2081,6 +2232,8 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
                     DocumentView::set_model(&mut d, DocModel::default())
                 });
                 shown.window = None;
+                shown.island = None;
+                shown.away = None;
             }
         }
         Some(s) => {
@@ -2091,6 +2244,18 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             };
             let started = Instant::now();
             let new_doc = shown.doc.as_ref() != Some(&id);
+            // Scrolled away from the cursor (scroll_host): the window
+            // follows the view until the cursor moves, reading starts, or
+            // the text changes.
+            if shown.away.is_some_and(|a| {
+                new_doc
+                    || a.cursor != s.cursor
+                    || a.revision != s.revision
+                    || app.playback() == Playback::Reading
+            }) {
+                shown.away = None;
+            }
+            let focus = shown.away.map_or(focus, |a| a.focus);
             // Edit mode: the same document with its text changed (a key,
             // undo, a command): the paragraphs that stay keep their nodes,
             // as in a slide, so the screen reader keeps its place.
@@ -2100,6 +2265,9 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             // same path, so an entry added or corrected never moves the
             // screen reader off the nodes it is on.
             let edited = same_key && ((app.is_editing() && shown.editing) || s.live.is_some());
+            // The view held the island around the cursor: the paragraphs
+            // that stay keep their nodes, the caret's among them.
+            let had_island = shown.island.is_some() && !new_doc;
             let mut w = match shown.window {
                 Some(w) if !new_doc => w,
                 _ => DocWindow::with_budget(&s.doc, focus, WINDOW_UNITS),
@@ -2107,14 +2275,23 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             // The app's window follows the focus: it slides while reading
             // and recenters on jumps or when the text changed.
             let change = w.follow_session(s, focus);
+            // Scrolled away, the window may have left the cursor behind:
+            // the text around it stays in the view's model, so the caret
+            // and the screen reader's place stay in the tree.
+            let island = shown.away.and_then(|_| island_for(&s.doc, &w, s.cursor));
+            let island_changed = island != shown.island;
             // Bionic reading or difficult words turned on or off: the same
             // text with new spans.
             let key = aid_spans_key(app);
             let aids_changed = shown.aid_spans.as_ref() != Some(&key);
-            if new_doc || aids_changed || change != WindowChange::Unchanged {
+            if new_doc || aids_changed || island_changed || change != WindowChange::Unchanged {
                 // A slide keeps the runs that stay (and the screen reader's
                 // place on them); a new document or a jump replaces them.
+                // So does a window that moved for scrolling, or came back
+                // to the cursor from there.
                 let slide = edited
+                    || shown.away.is_some()
+                    || had_island
                     || (!new_doc
                         && matches!(
                             change,
@@ -2123,12 +2300,13 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
                                 | WindowChange::Unchanged
                         ));
                 shown.aid_spans = Some(key);
-                if let Some(model) = model_for(app, w.range()) {
+                let ranges = shown_ranges(w.range(), island);
+                if let Some(model) = model_over(app, &ranges) {
                     host.edit(DOC, |mut d| {
                         // An edit keeps the paragraphs around the change
                         // (their layouts and nodes); else a slide or a
                         // new model.
-                        let model = if edited && !aids_changed {
+                        let model = if edited && !aids_changed && !had_island {
                             match DocumentView::edit_model(&mut d, model) {
                                 Ok(()) => return,
                                 Err(model) => *model,
@@ -2156,6 +2334,7 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
                 loaded = Some(ms);
             }
             shown.window = Some(w);
+            shown.island = island;
         }
     }
     // Edit mode: a multi-line edit that takes typing.
@@ -2172,7 +2351,7 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     // The reader's marks and the search matches in the window.
     let (marks, names) = shown
         .window
-        .map(|w| marks_in(app, w.range()))
+        .map(|w| marks_over(app, &shown_ranges(w.range(), shown.island)))
         .unwrap_or_default();
     if names != shown.mark_names {
         host.edit(DOC, |mut d| {
@@ -2208,7 +2387,10 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         .show_line_numbers
         .then(|| app.session().zip(shown.window.as_ref()))
         .flatten()
-        .map(|(s, w)| s.doc.line_of(w.range().start));
+        .map(|(s, w)| {
+            s.doc
+                .line_of(shown_ranges(w.range(), shown.island)[0].start)
+        });
     if numbers != shown.line_numbers {
         host.edit(DOC, |mut d| DocumentView::set_line_numbers(&mut d, numbers));
         shown.line_numbers = numbers;
@@ -2988,9 +3170,8 @@ impl Gui {
     /// one drawn line and the caret stays; the app says what the terminal
     /// reader's scrolling says ([`App::scrolled_to`]).
     fn scroll_key(&mut self, ctx: &mut DriverCtx<'_>, down: bool) {
-        let top = ctx
-            .render_root(self.window_id)
-            .edit_widget_with_tag(DOC, |mut d| DocumentView::scroll_line(&mut d, down));
+        let root = ctx.render_root(self.window_id);
+        let top = scroll_host(&self.app, &mut self.shown, root, down);
         if self.log {
             crate::log::line(&format!(
                 "scroll {}: {top:?}",
@@ -6327,6 +6508,22 @@ impl Refresher {
         }
         loaded?;
         self.shown.window.map(|w| w.range())
+    }
+
+    /// Scroll Down (`down`) or Scroll Up, as the window runs it: the view
+    /// moves one drawn line, and in a very long document the text it holds
+    /// moves on when it reaches its end, keeping the text around the
+    /// cursor. The app says what the window's key says. Returns the first
+    /// char now at the top, or `None` at the document's top or bottom.
+    pub fn scroll(
+        &mut self,
+        app: &mut App,
+        host: &mut impl sidebar::FocusHost,
+        down: bool,
+    ) -> Option<textweaver_app::core::CharPos> {
+        let top = scroll_host(app, &mut self.shown, host, down);
+        app.scrolled_to(top, down);
+        top
     }
 
     /// The preview pane as last shown.

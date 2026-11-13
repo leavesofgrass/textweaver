@@ -300,6 +300,23 @@ impl From<Vec<IUnknown>> for Variant {
     }
 }
 
+// textweaver: a VT_ARRAY | VT_I4 value, empty included, as UI Automation's
+// AnnotationTypes text attribute takes (its default is an empty array).
+pub(crate) fn variant_from_i32_slice(slice: &[i32]) -> Variant {
+    let parray = safe_array_from_i32_slice(slice);
+    Variant(VARIANT {
+        Anonymous: VARIANT_0 {
+            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
+                vt: VT_ARRAY | VT_I4,
+                wReserved1: 0,
+                wReserved2: 0,
+                wReserved3: 0,
+                Anonymous: VARIANT_0_0_0 { parray },
+            }),
+        },
+    })
+}
+
 fn safe_array_from_primitive_slice<T>(vt: VARENUM, slice: &[T]) -> *mut SAFEARRAY {
     let sa = unsafe { SafeArrayCreateVector(VARENUM(vt.0), 0, slice.len().try_into().unwrap()) };
     if sa.is_null() {

@@ -212,6 +212,7 @@ fn harness_with_aids(p: &Palette) -> TestHarness<DocumentView> {
         title: "Test".into(),
         breaks: vec![CharPos(reader + 4), CharPos(closely + 5)],
         separator: "\u{b7}".into(),
+        gap: None,
     };
     h.edit_root_widget(|mut d| DocumentView::set_model(&mut d, model));
     let _ = h.redraw();
