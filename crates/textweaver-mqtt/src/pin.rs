@@ -27,6 +27,7 @@ use std::fmt;
 use ring::{digest, hkdf, rand::SecureRandom};
 
 use crate::Secret;
+use crate::link::JoinLinkError;
 
 /// Crockford base 32: no I, L, O or U, so nothing looks alike when read.
 const ALPHABET: &[u8; 32] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -63,7 +64,7 @@ impl Pin {
     /// Reads a pin as typed or read aloud: 52 characters (full) or 12 (the
     /// pin part of a join code). Errors are sentences, meaning first.
     pub fn parse(text: &str) -> Result<Pin, String> {
-        let chars = normalize(text, "Pin error", "pins")?;
+        let chars = normalize(text).map_err(|u| u.sentence("Pin error", "pins"))?;
         match chars.len() {
             FULL_PIN_CHARS | SHORT_PIN_CHARS => Ok(Pin(chars)),
             0 => Err("Pin error: no pin was given.".into()),
@@ -137,13 +138,21 @@ impl JoinCode {
     /// Reads a code as typed or read aloud: 16 characters, in any case,
     /// with or without separators. Errors are sentences, meaning first.
     pub fn parse(text: &str) -> Result<JoinCode, String> {
-        let chars = normalize(text, "Join code error", "join codes")?;
+        JoinCode::read(text).map_err(|e| e.to_string())
+    }
+
+    /// [`JoinCode::parse`], with the error as data.
+    pub(crate) fn read(text: &str) -> Result<JoinCode, JoinLinkError> {
+        let chars = normalize(text).map_err(|u| match u {
+            Unread::TooLong => JoinLinkError::CodeTooLong,
+            Unread::Character { character, group } => {
+                JoinLinkError::CodeCharacter { character, group }
+            }
+        })?;
         match chars.len() {
             JOIN_CODE_CHARS => Ok(JoinCode(chars)),
-            0 => Err("Join code error: no code was given.".into()),
-            n => Err(format!(
-                "Join code error: the code has {n} characters; it needs {JOIN_CODE_CHARS}, in four groups of four."
-            )),
+            0 => Err(JoinLinkError::CodeEmpty),
+            count => Err(JoinLinkError::CodeLength { count }),
         }
     }
 
@@ -155,7 +164,7 @@ impl JoinCode {
     /// is [`JoinCode::parse`]'s for the whole text.
     pub fn from_pasted(text: &str) -> Result<JoinCode, String> {
         if let Some(link) = crate::link::JoinLink::find(text) {
-            return link.map(|l| l.code().clone());
+            return link.map(|l| l.code().clone()).map_err(|e| e.to_string());
         }
         let whole = match JoinCode::parse(unquote(text)) {
             Ok(code) => return Ok(code),
@@ -258,9 +267,9 @@ fn grouped(chars: &str) -> String {
 /// underscores, read O as zero
 /// and I or L as one. Any other character is an error naming it and its
 /// group of four.
-fn normalize(text: &str, what: &str, kind: &str) -> Result<String, String> {
+fn normalize(text: &str) -> Result<String, Unread> {
     if text.chars().count() > 200 {
-        return Err(format!("{what}: the text is far too long."));
+        return Err(Unread::TooLong);
     }
     let mut out = String::new();
     for c in text.chars() {
@@ -275,18 +284,40 @@ fn normalize(text: &str, what: &str, kind: &str) -> Result<String, String> {
         if up.is_ascii() && ALPHABET.contains(&(up as u8)) {
             out.push(up);
         } else {
-            let group = out.len() / 4 + 1;
-            let shown = if c.is_control() || !c.is_ascii_graphic() {
-                format!("a character with code {}", u32::from(c))
-            } else {
-                c.to_string()
-            };
-            return Err(format!(
-                "{what}: {shown} in group {group} is not used in {kind}. Check that character."
-            ));
+            return Err(Unread::Character {
+                character: c,
+                group: out.len() / 4 + 1,
+            });
         }
     }
     Ok(out)
+}
+
+/// What [`normalize`] refused.
+enum Unread {
+    /// More than 200 characters.
+    TooLong,
+    /// A character the alphabet does not use, and its group of four.
+    Character { character: char, group: usize },
+}
+
+impl Unread {
+    /// The sentence, after `what` ("Pin error"), naming `kind` ("pins").
+    fn sentence(&self, what: &str, kind: &str) -> String {
+        match self {
+            Unread::TooLong => format!("{what}: the text is far too long."),
+            Unread::Character { character, group } => {
+                let shown = if character.is_ascii_graphic() {
+                    character.to_string()
+                } else {
+                    format!("a character with code {}", u32::from(*character))
+                };
+                format!(
+                    "{what}: {shown} in group {group} is not used in {kind}. Check that character."
+                )
+            }
+        }
+    }
 }
 
 /// The SubjectPublicKeyInfo of an X.509 certificate in DER, with its tag

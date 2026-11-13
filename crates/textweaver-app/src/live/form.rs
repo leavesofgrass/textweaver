@@ -1001,13 +1001,10 @@ impl App {
                         if let Some(form) = self.live_wire.form.as_mut() {
                             form.set(focus, before.to_owned());
                         }
-                        // "Not a join link: the port is ...", not "Not a
-                        // join link: Join link error: the port is ...".
-                        let reason = ["Join link error: ", "Join code error: "]
-                            .iter()
-                            .find_map(|p| reason.strip_prefix(p))
-                            .unwrap_or(&reason)
-                            .to_owned();
+                        // "Not a join link: the port is ...", in the
+                        // reader's language.
+                        let reason =
+                            super::mqtt::join_link_error_text(&self.study.catalog, &reason);
                         let m = self.msg_args("live-join-link-bad", &args!["reason" => reason]);
                         self.error(&m);
                         self.live_form_prompt(false)

@@ -76,7 +76,7 @@ use std::time::Duration;
 
 pub use client::MqttSource;
 pub use document::{DOCUMENT_TYPE, SharedDocument, document_message, format_for_name, is_document};
-pub use link::{JOIN_LINK_SCHEME, JoinLink};
+pub use link::{JOIN_LINK_SCHEME, JoinLink, JoinLinkError};
 pub use pin::{
     FULL_PIN_CHARS, JOIN_CODE_CHARS, JOIN_SECRET_CHARS, JOIN_USER, JoinCode, Pin, SHORT_PIN_CHARS,
     ct_eq,

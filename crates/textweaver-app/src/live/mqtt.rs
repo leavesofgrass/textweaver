@@ -15,7 +15,8 @@ use std::time::Duration;
 use textweaver_components::credentials::Password;
 use textweaver_lexicon::i18n::{Arg, Catalog};
 use textweaver_mqtt::{
-    DisconnectReason, MessageArg, MqttConfig, MqttEvent, MqttSource, Payload, Pin, Secret, Tls,
+    DisconnectReason, JoinLinkError, MessageArg, MqttConfig, MqttEvent, MqttSource, Payload, Pin,
+    Secret, Tls,
 };
 use textweaver_store::{LiveSettings, LiveSourceSettings, LiveTls};
 
@@ -129,6 +130,14 @@ pub fn live_event(event: MqttEvent) -> LiveEvent {
 /// `catalog`. In English it is the reason's own sentence, word for word.
 pub fn reason_text(catalog: &Catalog, why: &DisconnectReason) -> String {
     message_text(catalog, why.message_id(), &why.args())
+}
+
+/// Why a join link does not read, in the language of `catalog`: the
+/// words after "Not a join link:", lower case, with no lead-in. In
+/// English they are word for word the error's own, after its "Join link
+/// error:" or "Join code error:".
+pub fn join_link_error_text(catalog: &Catalog, error: &JoinLinkError) -> String {
+    message_text(catalog, error.message_id(), &error.args())
 }
 
 /// The message `id` from `catalog`, with `args`; a value that is a
@@ -246,6 +255,21 @@ mod tests {
         let en = Catalog::english();
         for why in DisconnectReason::examples() {
             assert_eq!(reason_text(&en, &why), why.to_string(), "{why:?}");
+        }
+    }
+
+    /// In English, each join link error reads as its own words, after
+    /// the lead-in `tw` prints.
+    #[test]
+    fn every_join_link_error_reads_the_same_from_the_english_catalog() {
+        let en = Catalog::english();
+        for e in JoinLinkError::examples() {
+            let english = e.to_string();
+            let words = english
+                .strip_prefix("Join link error: ")
+                .or_else(|| english.strip_prefix("Join code error: "))
+                .unwrap_or(&english);
+            assert_eq!(join_link_error_text(&en, &e), words, "{e:?}");
         }
     }
 

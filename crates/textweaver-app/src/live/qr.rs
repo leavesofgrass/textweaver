@@ -536,7 +536,8 @@ mod imp {
             }
             Err(match bad {
                 Some(reason) => {
-                    let reason = reason.strip_prefix("Join link error: ").unwrap_or(&reason);
+                    let reason =
+                        crate::live::mqtt::join_link_error_text(&self.study.catalog, &reason);
                     let mut chars = reason.chars();
                     chars.next().map_or_else(String::new, |c| {
                         c.to_uppercase().chain(chars).collect::<String>()

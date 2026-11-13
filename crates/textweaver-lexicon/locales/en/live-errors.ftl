@@ -68,3 +68,35 @@ live-topic-problem-too-long = a topic is longer than 65535 bytes
 live-topic-problem-nul = a topic holds a NUL character
 live-topic-problem-hash = # may only be a whole last level of a topic
 live-topic-problem-plus = + may only be a whole level of a topic
+
+## Why a join link does not read (beta 6), lower case, said after "Not a
+## join link:" or "No join link:". $scheme is twjoin, $key what followed
+## the question mark, $character a character as typed, $code a
+## character's number, $group its group of four in the code, $count the
+## characters a code has, $needed the 16 it needs. $why is one of the
+## live-topic-problem-* pieces.
+live-link-bad-too-long = the text is far too long.
+live-link-bad-scheme = a join link starts with { $scheme }://.
+live-link-bad-spaces = a join link has no spaces or line breaks.
+live-link-bad-no-code = no join code was given after the host and port.
+live-link-bad-no-host = no host was given.
+live-link-bad-bracket = an IPv6 address needs its closing square bracket.
+live-link-bad-not-ipv6 = the address in square brackets is not an IPv6 address.
+live-link-bad-port = the port is not a number from 1 to 65535.
+live-link-bad-host-too-long = the host name is too long.
+live-link-bad-host-character = { $character } is not used in host names. Check the host.
+live-link-bad-host-character-code = a character with code { $code } is not used in host names. Check the host.
+live-link-bad-key = { $key } is not part of a join link. Only topic may follow the question mark.
+live-link-bad-topic-twice = the topic is given twice.
+live-link-bad-topic-control = the topic holds a control character.
+live-link-bad-topic = { $why }.
+live-link-bad-percent = the topic has a percent sign not followed by two hex digits.
+live-link-bad-utf8 = the topic is not UTF-8 text.
+live-link-bad-code-empty = no code was given.
+live-link-bad-code-length =
+    { $count ->
+        [one] the code has 1 character; it needs { $needed }, in four groups of four.
+       *[other] the code has { $count } characters; it needs { $needed }, in four groups of four.
+    }
+live-link-bad-code-character = { $character } in group { $group } is not used in join codes. Check that character.
+live-link-bad-code-character-code = a character with code { $code } in group { $group } is not used in join codes. Check that character.
