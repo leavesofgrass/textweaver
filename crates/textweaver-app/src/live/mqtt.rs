@@ -273,6 +273,71 @@ mod tests {
         }
     }
 
+    /// The pseudo-locale check (tests/it/pseudo_locale.rs) for every
+    /// disconnect reason and join link error: in `en-XA` each comes out
+    /// in brackets, with nothing outside them. A value said from the
+    /// catalog, such as a cause or a topic problem, is accented too, so
+    /// any plain English word left anywhere but the sample values is
+    /// English that bypassed the catalog. In `ar-XB` every message closes
+    /// the direction marks it opens.
+    #[test]
+    fn every_reason_and_link_error_is_in_the_pseudo_locales() {
+        let (xa, _) = Catalog::for_language("en-XA", None);
+        let (xb, _) = Catalog::for_language("ar-XB", None);
+        let mut said: Vec<(String, String, String)> = Vec::new();
+        for why in DisconnectReason::examples() {
+            said.push((
+                format!("{why:?}"),
+                reason_text(&xa, &why),
+                reason_text(&xb, &why),
+            ));
+        }
+        for e in JoinLinkError::examples() {
+            said.push((
+                format!("{e:?}"),
+                join_link_error_text(&xa, &e),
+                join_link_error_text(&xb, &e),
+            ));
+        }
+        let mut problems = Vec::new();
+        for (what, accented, rtl) in &said {
+            if !(accented.starts_with('\u{27e6}') && accented.ends_with('\u{27e7}')) {
+                problems.push(format!("{what}: not bracketed: {accented}"));
+            }
+            let words = plain_english(accented);
+            if !words.is_empty() {
+                problems.push(format!("{what}: {accented}: {}", words.join(" ")));
+            }
+            let marks = textweaver_lexicon::i18n::bidi_problems(rtl);
+            if !marks.is_empty() {
+                problems.push(format!("{what}: {marks:?}"));
+            }
+        }
+        assert!(problems.is_empty(), "{}", problems.join("\n"));
+    }
+
+    /// Plain English words of three letters or more, anywhere in `s`, but
+    /// for the sample values the examples put in: the pseudo-locale
+    /// accents every message's own letters, so such a word is English
+    /// that did not come from the catalog.
+    fn plain_english(s: &str) -> Vec<String> {
+        const VALUES: &[&str] = &[
+            "logger",
+            "example",
+            "error",
+            "pem",
+            "badencoding",
+            "pubrec",
+            "user",
+            "twjoin",
+        ];
+        s.split(|c: char| !c.is_ascii_alphabetic())
+            .filter(|w| w.len() >= 3)
+            .map(str::to_lowercase)
+            .filter(|w| !VALUES.contains(&w.as_str()))
+            .collect()
+    }
+
     #[test]
     fn every_client_event_has_its_live_event() {
         let script = Script::default();
