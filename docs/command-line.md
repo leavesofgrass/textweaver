@@ -102,6 +102,10 @@ An error is one line on standard error, starting with "Error:", then what failed
 Error: Cannot open notes.md: there is no file named notes.md here. Check the name.
 ```
 
+## Control characters on a terminal
+
+A document can hold control characters that a terminal acts on instead of showing, such as an escape sequence that sets the window title or writes to the clipboard. When standard output is a terminal, `tw text`, `tw search` and `tw info` leave out every control character except tab and line feed, so the rest of such a sequence prints as ordinary text. Error lines on a terminal follow the same rule, since they may quote a title or a file name. Output that goes to a pipe or a file is written exactly as the document holds it. Setting the environment variable `TEXTWEAVER_ASSUME_TERMINAL=1` makes `tw` treat its output as a terminal, which is how textweaver's own tests check this.
+
 ## Reading standard input
 
 `tw speak -` reads the text to speak from standard input, so a pipe can feed it. To hear what is on the clipboard:

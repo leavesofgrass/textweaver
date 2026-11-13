@@ -54,7 +54,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         if let (Some((n, all)), Some(obj)) = (components, facts.as_object_mut()) {
             obj.insert("components".into(), json!({ "installed": n, "known": all }));
         }
-        super::print_all(&format!(
+        super::print_text(&format!(
             "{}
 ",
             serde_json::to_string_pretty(&facts)?
@@ -64,7 +64,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         if let Some(c) = components {
             text.push_str(&components_line(c));
         }
-        super::print_all(&text)
+        super::print_text(&text)
     }
 }
 

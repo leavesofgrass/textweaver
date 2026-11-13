@@ -10,7 +10,14 @@
 //! - After a successful conversion the source moves to `processed/` when
 //!   `move_processed` is on (`watch_move_processed`, on by default); after
 //!   a failure it always moves to `failed/`, so it is not retried forever.
-//!   A name already taken there gets a timestamp, never overwriting.
+//!   A name already taken there gets a timestamp, never overwriting:
+//!   `notes.20260925-140307.md`, then `notes.20260925-140307-2.md`.
+//! - Names come from whoever can write to the folder, so every name
+//!   textweaver writes (outputs and moved sources) is made plain first
+//!   ([`plain_name`]): letters, digits, `-`, `_` and `.` only.
+//! - Links (symbolic links, and on Windows junctions too) are never
+//!   followed: one in the folder could point at any file the person can
+//!   read. They are skipped and named in the log.
 //! - Every attempt is logged with a UTC timestamp to
 //!   `<output>/textweaver-watch.log`.
 //!
@@ -84,6 +91,8 @@ pub enum WatchEvent {
     },
     /// A file was ignored (no reader for its type).
     Ignored(PathBuf),
+    /// A link was ignored: the hot folder never follows one.
+    Link(PathBuf),
     /// A problem that does not stop watching.
     Error(String),
     /// Watching stopped.
@@ -127,6 +136,10 @@ impl WatchEvent {
             WatchEvent::Ignored(p) => {
                 format!("Ignored {}: not a document type textweaver reads.", name(p))
             }
+            WatchEvent::Link(p) => format!(
+                "Ignored {}: it is a link, and the hot folder does not follow links.",
+                name(p)
+            ),
             WatchEvent::Error(e) => format!("Problem: {e}"),
             WatchEvent::Stopped => "Stopped watching.".to_owned(),
         }
@@ -207,7 +220,17 @@ pub fn watch(
             if !parent_ok {
                 continue;
             }
-            if !p.is_file() || pending.contains_key(&p) || is_temporary(&p) {
+            if pending.contains_key(&p) || is_temporary(&p) {
+                continue;
+            }
+            // Never follow a link out of the folder (security review, L10).
+            if is_link(&p) {
+                if ignored.insert(p.clone()) {
+                    emit(WatchEvent::Link(p));
+                }
+                continue;
+            }
+            if !p.is_file() {
                 continue;
             }
             let ext = extension(&p);
@@ -249,11 +272,15 @@ pub fn watch(
             if stop.load(Ordering::SeqCst) {
                 break;
             }
-            let name = source
-                .file_name()
-                .map_or_else(|| PathBuf::from("output"), PathBuf::from);
+            // Checked again: a file may be swapped for a link while it settles.
+            if is_link(&source) {
+                if ignored.insert(source.clone()) {
+                    emit(WatchEvent::Link(source));
+                }
+                continue;
+            }
             let job = Job {
-                output: output.join(name.with_extension(out_ext)),
+                output: output.join(output_name(&source, out_ext)),
                 source: source.clone(),
                 root: input.to_owned(),
             };
@@ -296,23 +323,84 @@ fn is_temporary(p: &Path) -> bool {
             .any(|s| name.ends_with(s))
 }
 
-/// Moves `src` into `dir`, adding a timestamp (and a counter) to the name
-/// when it is taken.
+/// True when `p` is a link, read without following it: a symbolic link,
+/// or on Windows any reparse point that names another place (a symbolic
+/// link or a junction; the standard library reports both as links). Other
+/// reparse points, such as cloud files a sync client has not downloaded
+/// yet, are the person's own files and are read as usual.
+fn is_link(p: &Path) -> bool {
+    std::fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_symlink())
+}
+
+/// A plain form of `name`, a file name that came from outside: letters,
+/// digits, `-`, `_` and `.` are kept, and every run of anything else
+/// (spaces, `$`, quotes, parentheses, control characters) becomes one
+/// `_`. Leading dots and dashes, and trailing dots and underscores, go;
+/// a Windows device name gets a `_` after it; at most 120 characters;
+/// "document" when nothing is left.
+pub(crate) fn plain_name(name: &str) -> String {
+    let mut out = String::with_capacity(name.len());
+    for c in name.chars() {
+        if c.is_alphanumeric() || matches!(c, '-' | '_' | '.') {
+            out.push(c);
+        } else if !out.ends_with('_') {
+            out.push('_');
+        }
+    }
+    let trimmed = out.trim_start_matches(['.', '-']);
+    let mut out: String = trimmed.chars().take(120).collect();
+    while out.ends_with(['.', '_']) {
+        out.pop();
+    }
+    if out.is_empty() {
+        return "document".to_owned();
+    }
+    let stem = out.split('.').next().unwrap_or("").to_ascii_uppercase();
+    let device = matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.len() == 4
+            && stem.as_bytes()[3].is_ascii_digit());
+    if device {
+        out.insert(stem.len(), '_');
+    }
+    out
+}
+
+/// The stem and the extension (with its dot, or empty) of `path`'s file
+/// name, each made plain.
+fn plain_parts(path: &Path) -> (String, String) {
+    let stem = plain_name(&path.file_stem().unwrap_or_default().to_string_lossy());
+    let ext = path
+        .extension()
+        .map(|e| e.to_string_lossy().into_owned())
+        .filter(|e| !e.is_empty())
+        .map(|e| plain_name(&e))
+        .filter(|e| e != "document")
+        .map(|e| format!(".{e}"))
+        .unwrap_or_default();
+    (stem, ext)
+}
+
+/// The output's file name for `source`: its stem made plain, with
+/// `out_ext`.
+fn output_name(source: &Path, out_ext: &str) -> String {
+    let (stem, _) = plain_parts(source);
+    format!("{stem}.{out_ext}")
+}
+
+/// Moves `src` into `dir` under a plain form of its name, adding a
+/// timestamp (and a counter) when the name is taken: `stem.STAMP.ext`,
+/// then `stem.STAMP-2.ext`.
 fn move_aside(src: &Path, dir: &Path) -> std::io::Result<PathBuf> {
     std::fs::create_dir_all(dir)?;
-    let name = src.file_name().unwrap_or_default();
-    let mut dest = dir.join(name);
+    let (stem, ext) = plain_parts(src);
+    let mut dest = dir.join(format!("{stem}{ext}"));
     if dest.exists() {
-        let stem = src.file_stem().unwrap_or_default().to_string_lossy();
-        let ext = src
-            .extension()
-            .map(|e| format!(".{}", e.to_string_lossy()))
-            .unwrap_or_default();
         let stamp = compact_utc(SystemTime::now());
         dest = dir.join(format!("{stem}.{stamp}{ext}"));
         let mut n = 2;
         while dest.exists() {
-            dest = dir.join(format!("{stem}.{stamp} ({n}){ext}"));
+            dest = dir.join(format!("{stem}.{stamp}-{n}{ext}"));
             n += 1;
         }
     }
@@ -406,5 +494,121 @@ mod tests {
             assert!(!src.exists());
         }
         assert_eq!(std::fs::read_dir(&dest).expect("read").count(), 3);
+    }
+
+    /// A name taken twice gets the stamp, then the stamp and `-2`: no
+    /// space or parentheses (security review, QW8).
+    #[test]
+    fn a_second_move_gives_stamp_dash_two() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dest = dir.path().join("processed");
+        std::fs::create_dir_all(&dest).expect("mkdir");
+        std::fs::write(dest.join("name.md"), "x").expect("write");
+        // Take the stamped name of this second and of the next minute, so
+        // the move goes to the counter whenever the test runs.
+        let now = SystemTime::now();
+        for s in 0..60 {
+            let stamp = compact_utc(now + Duration::from_secs(s));
+            std::fs::write(dest.join(format!("name.{stamp}.md")), "x").expect("write");
+        }
+        let src = dir.path().join("name.md");
+        std::fs::write(&src, "new").expect("write");
+        let to = move_aside(&src, &dest).expect("move");
+        let name = to.file_name().expect("name").to_string_lossy().into_owned();
+        let stamp = name
+            .strip_prefix("name.")
+            .and_then(|s| s.strip_suffix("-2.md"))
+            .unwrap_or_else(|| panic!("not name.STAMP-2.md: {name}"));
+        assert_eq!(stamp.len(), "20260925-140307".len(), "{name}");
+        assert!(!name.contains([' ', '(', ')']), "{name}");
+        assert_eq!(std::fs::read_to_string(&to).expect("read"), "new");
+    }
+
+    #[test]
+    fn outside_names_become_plain() {
+        assert_eq!(
+            output_name(Path::new("in/my $HOME notes.md"), "txt"),
+            "my_HOME_notes.txt"
+        );
+        assert_eq!(
+            output_name(Path::new("in/report (final).docx"), "html"),
+            "report_final.html"
+        );
+        assert_eq!(
+            output_name(Path::new("in/caf\u{e9}.md"), "txt"),
+            "caf\u{e9}.txt"
+        );
+        assert_eq!(plain_name("..$`!"), "document");
+        assert_eq!(plain_name("con"), "con_");
+        assert_eq!(plain_name("COM1.md"), "COM1_.md");
+        assert_eq!(plain_name("tab\there\u{e000}."), "tab_here");
+        let dir = tempfile::tempdir().expect("tempdir");
+        let src = dir.path().join("a $b c.md");
+        std::fs::write(&src, "x").expect("write");
+        let to = move_aside(&src, &dir.path().join("processed")).expect("move");
+        assert_eq!(to.file_name().expect("name"), "a_b_c.md");
+    }
+
+    /// A symbolic link in the hot folder is skipped, never converted, and
+    /// named in the watch log (security review, L10).
+    #[cfg(unix)]
+    #[test]
+    fn links_are_not_followed() {
+        use crate::{ConvertOptions, OutputFormat};
+        let dir = tempfile::tempdir().expect("tempdir");
+        let input = dir.path().join("inbox");
+        let out = dir.path().join("out");
+        std::fs::create_dir_all(&input).expect("mkdir");
+        let secret = dir.path().join("secret.md");
+        std::fs::write(&secret, "# Private\n").expect("write");
+        std::os::unix::fs::symlink(&secret, input.join("linked.md")).expect("symlink");
+        assert!(is_link(&input.join("linked.md")));
+        assert!(!is_link(&secret));
+        let conv = Converter::new(ConvertOptions {
+            to: OutputFormat::Text,
+            out_dir: Some(out.clone()),
+            pandoc: false,
+            ..ConvertOptions::default()
+        })
+        .expect("converter");
+        let stop = AtomicBool::new(false);
+        let opts = WatchOptions {
+            stable: Duration::from_millis(50),
+            poll: Duration::from_millis(20),
+            rescan: Duration::from_millis(50),
+            ..WatchOptions::default()
+        };
+        let mut said = Vec::new();
+        watch(&conv, &input, &out, &opts, &stop, &mut |e: &WatchEvent| {
+            said.push(e.sentence());
+            if matches!(e, WatchEvent::Link(_)) {
+                stop.store(true, Ordering::SeqCst);
+            }
+        })
+        .expect("watch");
+        assert!(
+            said.iter()
+                .any(|s| s.starts_with("Ignored linked.md: it is a link")),
+            "{said:?}"
+        );
+        assert!(!out.join("linked.txt").exists());
+        assert!(input.join("linked.md").exists(), "the link stays put");
+        let log = std::fs::read_to_string(out.join("textweaver-watch.log")).expect("log");
+        assert!(log.contains("Ignored linked.md: it is a link"), "{log}");
+    }
+
+    /// On Windows a symbolic link needs a privilege most accounts lack, so
+    /// the same check runs when one can be made.
+    #[cfg(windows)]
+    #[test]
+    fn windows_links_are_seen_when_they_can_be_made() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let target = dir.path().join("secret.md");
+        std::fs::write(&target, "x").expect("write");
+        let link = dir.path().join("linked.md");
+        if std::os::windows::fs::symlink_file(&target, &link).is_ok() {
+            assert!(is_link(&link));
+        }
+        assert!(!is_link(&target));
     }
 }

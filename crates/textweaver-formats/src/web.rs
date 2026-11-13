@@ -27,6 +27,12 @@ pub const MAX_BYTES: u64 = 64 * 1024 * 1024;
 /// How long fetching one address may take.
 pub const TIMEOUT: Duration = Duration::from_secs(60);
 
+/// The User-Agent sent with every request: the project, nothing personal
+/// and no version (the owner's rule). The same string as
+/// `textweaver_components::USER_AGENT`, which this crate does not depend
+/// on; a workspace test checks every User-Agent in the sources.
+pub const USER_AGENT: &str = "textweaver-research (+https://github.com/leavesofgrass/textweaver)";
+
 /// What a response is, from its media type, the address's extension, or
 /// its first bytes: the extension to load it as.
 fn kind_of(mime: &str, url: &str, head: &[u8]) -> &'static str {
@@ -105,11 +111,7 @@ pub(crate) fn load(
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(TIMEOUT))
         .http_status_as_error(false)
-        .user_agent(concat!(
-            "textweaver/",
-            env!("CARGO_PKG_VERSION"),
-            " (+https://github.com/leavesofgrass/textweaver)"
-        ))
+        .user_agent(USER_AGENT)
         .build()
         .into();
     let fail = |e: &dyn std::fmt::Display| {
