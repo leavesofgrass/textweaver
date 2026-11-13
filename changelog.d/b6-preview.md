@@ -1,6 +1,0 @@
-### Security and privacy
-
-- The browser preview leaves out a document's scripts and unsafe HTML (event handlers, `javascript:` addresses, frames), and says once for each document: "Raw HTML left out of the preview. Trusted folders are in Settings." Documents in a folder listed in the new Trusted preview folders setting (`[preview] trusted_folders`, empty by default, never synced) keep their raw HTML.
-- A served preview carries a content security policy: only textweaver's reload script runs, with a new nonce for each page, and the page loads and connects only to textweaver's own server. The server gives a page only images, style sheets, and fonts from the document's folder, never another file or a dotfile.
-- A link to a file on another computer (a UNC path, a `\\?\` or `\\.\` path, or a `file:` address with a host) asks "Open a file on another computer? y or n." before anything looks for the file, because on Windows even that check sends the computer your sign-in. Opening such a path with the system's default program is refused.
-- Copy the join code and Copy the join link mark the copied text as private: on Windows it stays out of clipboard history and the cloud clipboard, on macOS it is marked concealed, and on Linux it is marked for clipboard managers to skip.
