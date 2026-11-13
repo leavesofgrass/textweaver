@@ -22,6 +22,10 @@ textweaver is in beta. This statement describes release 0.1.0-beta.5, the newest
 - **Joining a broker** (beta 5) is accessible without sight. The join code field is a password field to a screen reader, masked with one star per character, and says how many characters it holds rather than the code; `F3`, or the Show check box in the app, shows it as typed so that speech or a Braille display can check it. A join link can be pasted into any field, so a code never has to be read character by character. The join QR code is for a camera, so its dialog puts the words first: the warning comes first in words ("Anyone who sees this code can join."), the image is named "QR code for joining HOST" and never holds the link in its name, and the link is in a field to read and copy, with Copy the join link focused first. The terminal reader draws the code in block characters only when chosen, after a warning that a screen reader reads them as noise. Join from a QR image reads a photo or screenshot, so a blind user can join from a code someone sends. A large image is read on a helper thread, so the interface stays usable, and "Reading the QR image." is said once after a second.
 - The keying adapters were checked from their manuals and not yet with the hardware; see [Known limits](known-limits.md).
 
+## Translations
+
+Some messages new in beta 6 are written in English first and translated in a later pass. Until then the five other interface languages say them in English, so a Braille display or screen reader in those languages may show an English message. Known limits says which areas are affected.
+
 ## What has been tested
 
 - **Windows, by listening.** A person who is blind has used the app and the terminal reader with NVDA and JAWS, and with a 40-cell Braille display. The app had two such sessions. The terminal reader's newest Braille layout is waiting for the checklist in [the screen reader guide](screen-readers.md).

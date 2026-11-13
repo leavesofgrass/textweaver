@@ -259,7 +259,7 @@ If you finish editing, open another file, start a new document, or quit while ch
 
 While you edit, textweaver writes a recovery copy of your text every 20 seconds, but only while there are unsaved changes. If textweaver or the computer stops before you save, the copy survives; finishing edit mode normally deletes it.
 
-The next time textweaver starts, it offers to restore the copy: "Recover unsaved edits to", the title, then "Saved", the time, and "Up and Down choose, Enter confirms." The list has two choices:
+The next time textweaver starts, it offers to restore the copy with a question that names the document first: "Recover unsaved edits to", the title, then a question mark; "Saved", the time; and "Up and Down choose, Enter confirms." The list has two choices:
 
 - "Yes, recover", the title, "and keep editing": opens the document in edit mode with the recovered text, marked unsaved. You hear "Recovered unsaved work in", the title, then "Remember to save."
 - "No, discard the unsaved changes": deletes the copy.
