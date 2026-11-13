@@ -3176,7 +3176,11 @@ impl App {
     pub(crate) fn close_settings_screen(&mut self) {
         self.settings_screen = None;
         let msg = self.msg("settings-closed");
-        self.say_dialog(&msg);
+        self.say_closed(
+            &msg,
+            textweaver_a11y::Verbosity::Low,
+            textweaver_a11y::Importance::Dialog,
+        );
     }
 
     /// The filter of the settings screen, when it is showing.

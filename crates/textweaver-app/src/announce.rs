@@ -247,6 +247,9 @@ mod tests {
             ("app.rs", "fn say_kind_voiced"),
             ("app.rs", "fn announce_queued"),
             ("app.rs", "fn show"),
+            // A closing message kept quiet still replaces the status
+            // line, for the Braille display; it is never spoken.
+            ("app.rs", "fn say_closed"),
             // Document text read on the status line (screen-reader say
             // all): reading, not an interface announcement.
             ("access.rs", "fn show_screen_sentence"),
