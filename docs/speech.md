@@ -38,7 +38,7 @@ With `"auto"`, textweaver uses the available engine with the highest priority. T
 
 An installed, licensed Eloquence is therefore always the first choice. On macOS, `[speech.apple] backend` can put `avspeech` above `nsspeech`, or the other way round.
 
-When you name an engine, with `--backend` or in the settings, textweaver uses it if it is available. If it is not, textweaver does not fall silent; it makes the automatic choice instead and tells you. The reader says "Speech engine", the id, "is not available; using", and the engine it chose. If the chosen engine then fails to start, the reader says "Speech could not start", the reason, then "running silently."
+When you name an engine, with `--backend` or in the settings, textweaver uses it if it is available. If it is not, textweaver does not fall silent; it makes the automatic choice instead and tells you. The reader says "Speech engine", the id, "is not available; using", and the engine it chose. If an engine starts and then fails, the reader leads with the engine now speaking, for example "Speaking with eSpeak NG: Piper could not start."; if no engine can start, it says "No speech:", the engines that failed, and that no other engine is available. When speech cannot start at all, it says "Speech could not start", the reason, then "running silently."
 
 A voice saved for one engine is never an error with another. If speech falls back to Windows SAPI 5 and later returns to Eloquence or DECtalk, the saved SAPI voice is set aside quietly; the engine keeps its own voice, and your rate, pitch, and volume still apply. To make a voice permanent for an engine, choose it in the voice manager.
 
@@ -60,7 +60,7 @@ When a screen reader is running, you may not want textweaver to speak everything
 tw backends
 ```
 
-It prints one line per engine: its id and name, whether it is available here, its priority, and what it supports. The line also states where the word highlight's timing comes from. "Word timing from the engine" means the engine reports where each word falls (Piper's comes from the voice model itself); "Word timing estimated" means textweaver paces the highlight. The engine the automatic choice picks says "Chosen automatically". For example:
+It prints one line per engine: its id and name, whether it is available here, its priority, and what it supports. The line also states where the word highlight's timing comes from; an engine that is not installed says "Not installed", an engine used only when named says "Only when chosen by name", and the engine your settings choose, when it is not the automatic one, says "Chosen by your settings". "Word timing from the engine" means the engine reports where each word falls (Piper's comes from the voice model itself); "Word timing estimated" means textweaver paces the highlight. The engine the automatic choice picks says "Chosen automatically". For example:
 
 ```text
 eci: Eloquence (OpenEVV, direct). Available. Priority 1000. Supports word highlighting, pause, pitch, volume, audio files, tones, and reads numbers and abbreviations itself. Word timing from the engine. Chosen automatically.
@@ -162,6 +162,8 @@ The rate is in words per minute, from 50 to 900. The default is 265.
 - **+** or **=**: faster by 20.
 - **-**: slower by 20.
 
+These are single-key shortcuts of reading mode; with them turned off (F9), or in edit mode, use the command palette ("speak faster", "speak slower"), the textweaver app's toolbar buttons, or, on macOS, **Cmd+Option+]** and **Cmd+Option+[**. The same holds for the pitch keys **)** and **(**, and the volume keys **0** and **9**.
+
 The graphical version uses the same keys while reading, including the number pad's plus and minus; in it, **Ctrl+=** and **Ctrl+-** change the text size instead, and in edit mode, where these keys type, the toolbar's Slower and Faster buttons change the rate (on macOS, **Cmd+Option+]** and **Cmd+Option+[** also work in edit mode). Each change is announced, for example "285 words per minute.", and at the limits you hear "Fastest rate." or "Slowest rate." Each engine converts words per minute to its own scale, so a given rate sounds approximately the same on every engine. A Piper voice is the exception at fast rates: from about 300 words a minute up it speaks slower than the rate you ask for ([Known limits](known-limits.md#reading-and-speech)).
 
 ### Speed presets: F8
@@ -173,7 +175,7 @@ The graphical version uses the same keys while reading, including the number pad
 - study, 200;
 - slow, 150.
 
-You hear the preset name and then its rate, for example "Study, rate 200." Change the presets, or add your own, in `[speech.speed_presets]`:
+You hear the preset name and then its rate, for example "Study, 200 words per minute." Change the presets, or add your own, in `[speech.speed_presets]`:
 
 ```toml
 [speech.speed_presets]

@@ -54,7 +54,7 @@ To write `.m4b` or `.mp4`, textweaver first writes a WAV and then has ffmpeg con
 
 textweaver searches for ffmpeg in three places, in this order:
 
-1. The `TEXTWEAVER_FFMPEG` environment variable, if it is set. It must be the full path to the ffmpeg program.
+1. The `TEXTWEAVER_FFMPEG` environment variable, if it is set and names an existing file. It must be the full path to the ffmpeg program.
 2. textweaver's components folder, `components` in the data folder, where a copy that textweaver fetched, or one from a components source, goes.
 3. Otherwise, a program named `ffmpeg` in one of the folders on your `PATH`, which is where installers put it.
 
@@ -104,7 +104,7 @@ In a Linux or macOS shell:
 export TEXTWEAVER_FFMPEG="$HOME/tools/ffmpeg"
 ```
 
-When `TEXTWEAVER_FFMPEG` is set, textweaver uses only that path and does not search `PATH`. If the path is wrong, textweaver reports that ffmpeg was not found, even when ffmpeg is on the `PATH`.
+When `TEXTWEAVER_FFMPEG` names an existing file, textweaver uses it before anything else. If it names a file that does not exist, the variable is ignored and textweaver goes on to the components folder and then the `PATH`.
 
 ## Export a document to a WAV file
 
@@ -125,7 +125,7 @@ The output format comes from the file name you give with `--out`:
 - `.ogg`: an Ogg Vorbis file. Always works; textweaver encodes it itself with libvorbis, at quality 3, at the voice's own sample rate.
 - `.m4b`: an M4B audiobook (AAC audio at 64 kilobits per second). Needs ffmpeg.
 
-The extension is not case-sensitive, so `.MP3` works too. Any other extension is refused before anything is read. A name with no extension, such as `--out reading`, receives the format in `[export] audio_format`, FLAC by default, so `reading.flac` is written.
+An `.mp4` name writes a video and an `.html` name a read-along page; both are described below. The extension is not case-sensitive, so `.MP3` works too. Any other extension is refused before anything is read. A name with no extension, such as `--out reading`, receives the format in `[export] audio_format`, FLAC by default, so `reading.flac` is written.
 
 If the output file already exists, it is replaced without asking.
 
@@ -133,7 +133,7 @@ If the output file already exists, it is replaced without asking.
 
 Progress is reported in steps of ten percent, one short sentence each, so that a screen reader is not flooded, for example "10 percent done." A message is issued only when a new step is reached at the end of a sentence, so a short document skips some steps.
 
-On completion, one sentence reports the result, followed by a second when subtitles were written. This is an actual result from a short document with two headings:
+On completion, one sentence reports the result, followed by a short sentence for each extra file written: "Subtitles in reading.srt." and, when a chapters file was written, "Chapters in reading.chapters.vtt." This is an actual result from a short document with two headings:
 
 ```text
 Wrote reading.wav: 9 seconds, 7 sentences, 2 chapters, with Recording (test double). Subtitles in reading.srt.
@@ -449,7 +449,7 @@ These settings are used by `tw export-audio` and by Export audio in the reader, 
 tw export-audio reading.md --out reading.wav --json
 ```
 
-`--json` prints a full report instead of the result sentence, for scripts and other programs. Progress messages are omitted, as with `--quiet`. The report has two parts.
+`--json` prints a full report instead of the result sentence, for scripts and other programs. Progress messages are omitted, as with `--quiet`. The report has two parts, and a third, `chapters`, which is the chapters file written (or `null`).
 
 `backend` says which engine was used:
 
@@ -463,6 +463,7 @@ tw export-audio reading.md --out reading.wav --json
 - `format`: `wav`, `flac`, `mp3`, `opus`, `ogg`, `m4b`, or `mp4`.
 - `subtitles`: the subtitle file, or `null`.
 - `ffmpeg`: the ffmpeg program used for M4B or MP4, or `null`.
+- `video`: for an MP4, the frames sent and drawn; otherwise `null`.
 - `timeline`: everything about the audio.
 
 `timeline` holds:
@@ -494,7 +495,7 @@ tw export-audio reading.md --out reading.wav --home "E:\textweaver"
 Every problem is reported as one sentence beginning with "Error:". The messages below are the ones most likely to occur, with the remedy for each.
 
 - "Error: writing M4B needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, .ogg, or .wav". This is said before anything is read aloud. ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.flac`, `.mp3`, `.opus`, `.ogg`, or `.wav`, which need nothing.
-- "Error: cannot write notes.aac: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name". Only WAV, FLAC, MP3, Opus, Ogg Vorbis, and M4B can be written. For a small file of speech, use `.opus` or `.ogg`.
+- "Error: cannot write notes.aac: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name, .mp4 for a video with captions, or .html for a read-along page". Only those file names can be written. For a small file of speech, use `.opus` or `.ogg`.
 - "Error: The voice failed on sentence 1: engine error: the voice could not be used:" followed by the reason. The voice you chose could not be loaded, so nothing was written with another voice by mistake. Run `tw voices --backend sapi` and choose a voice from the list.
 - "Error: Cannot write subtitles to notes.txt: use a .srt, .vtt, or .ass file name." Give the subtitle file a `.srt`, `.vtt`, or `.ass` extension.
 - "Error: no installed voice can write audio files; install espeak-ng, or choose one with --backend". textweaver found no engine that can write files. Run `tw backends` and look for "audio files". On Windows, the SAPI5 voices usually can. On Linux, install eSpeak NG; see [the speech guide](speech.md).

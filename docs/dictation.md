@@ -362,7 +362,7 @@ The model is released by OpenAI under the MIT license. The onnx-community copies
 
 textweaver offers to download the model and never does so unprompted.
 
-- **In the reader and the app:** the first time you dictate without the model, you hear "Dictation needs the Whisper model, 79.3 MB, license MIT, unconfirmed. Download it now? y or n". Press `y` and the download starts, with progress announced every 10 percent; Escape stops it, and the next download resumes where it stopped. When the download finishes you hear "Ready" and dictation starts. Press `n` and nothing is downloaded; you are not asked again until textweaver next starts, and Dictate says "No model, so no dictation for now."
+- **In the reader and the app:** the first time you dictate without the model, you hear "Dictation needs the Whisper model, 79.3 MB, license MIT, unconfirmed. Download it now? y or n". Press `y` and the download starts, with progress announced every 10 percent; Escape stops it, and the next download resumes where it stopped. When the download finishes you hear "Ready:" and the model's name, and dictation starts. Press `n` and nothing is downloaded; you are not asked again until textweaver next starts, and Dictate says "No model, so no dictation for now."
 - **From the Tools menu:** Download the dictation model asks the same question at any time.
 - **From the command line:** `tw dictate download` says what it downloads and asks; `tw dictate download --yes` downloads without asking. When `tw dictate` finds no model, it offers the same download (`--yes` answers for it), then goes on dictating.
 - **From Manage optional components** (Tools menu, or `tw components`): the model is listed with its size and license, with Download, Verify, Remove, and Install from a file.
@@ -416,7 +416,7 @@ tw dictate --file note.wav --timings
 
 In edit mode, the **Dictate** command types what you say at the cursor. It is in the Edit menu and the command palette (**F2**, then "dictate"), and its key is **Ctrl+Shift+F9**, or whatever the menu shows beside it. Press the key again to stop.
 
-1. Open a document and turn on edit mode (**Ctrl+E**). If edit mode is off when you ask to dictate, textweaver first asks "Turn on edit mode and dictate? y or n".
+1. Open a document and turn on edit mode (**Ctrl+E**). If edit mode is off when you ask to dictate, textweaver first says "Dictation types in edit mode. Turn on edit mode and dictate? y or n".
 2. Choose Dictate. You hear "Dictating. Speak, then press", the key, and "to stop." Reading aloud stops, so that the microphone does not pick it up.
 3. Speak. The status line shows what textweaver is sure of as you talk, beginning "Dictating:", with the newest words last and no more than 40 characters, so a 40-cell Braille display shows the latest words without scrolling. Words are never changed once shown.
 4. Pause. At each pause (about half a second of silence) the phrase is typed at the cursor, with spoken commands applied ("new line", "period", "comma", "open quote"; see [Use spoken commands](#use-spoken-commands)). Each phrase is one step for Undo.

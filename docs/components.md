@@ -62,6 +62,7 @@ The first time the graphical version or the terminal reader starts, after the la
 - Each item says whether it is chosen, in words, then what it is, what it is for, its size, and its license: "Not chosen: Whisper base.en, English dictation, for dictation, 79.3 MB, license MIT, unconfirmed".
 - Space (or Enter) chooses an item or takes it back, and says "Chosen" or "Not chosen".
 - "Download the chosen ones" downloads them, one after another, with progress said every 10 percent.
+- The last row is not a component: "Not chosen: Check for updates automatically, once a day, from GitHub". Choosing it turns on the daily update check; it is off unless you choose it.
 - "Skip for now" or Escape closes the list. Nothing is downloaded.
 
 It is the same list as Manage optional components, shown once (the `[components] chooser_shown` setting records that it has been). Tools, Ask again about first-run choices shows it again at the next start. `tw` never shows it.
@@ -138,7 +139,7 @@ The source is tried first, before a mirror and before each file's public address
 
 Only the components for your computer's platform are listed. Every file is verified against its SHA-256, and a file that does not match is refused, "Not installed: a file did not match. Get it again, or check the source.", and nothing is installed. Fields textweaver does not know yet are ignored, so a list written for a later version still loads.
 
-Components from a source go into the components folder, `components` in the data folder. textweaver looks there first for FFmpeg, Pandoc, liblouis, the eSpeak NG library and the Eloquence engine library, before the environment variables and the usual install places.
+Components from a source go into the components folder, `components` in the data folder. textweaver looks there for FFmpeg, Pandoc and liblouis after the environment variable that names the program (when it names an existing file) and before the PATH, and for the eSpeak NG library and the Eloquence engine library before the environment variables and the usual install places.
 
 ### What installing does
 
