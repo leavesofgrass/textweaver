@@ -133,11 +133,11 @@ Each change merged in wave 1 of beta 6, and the guide that should cover it, open
 - The broker's key and accounts file narrowed to the owner on Linux and macOS, and not on Windows: live-broker.md, known-limits.md. Pass.
 - The connected message for a Tailscale-range address ("If this is Tailscale, the link is encrypted"): live-documents.md, live-broker.md. Pass.
 - Copy the join code and link marked as private clipboard text: privacy.md. Pass.
-- Join from a QR image read on a helper thread, "Reading the QR image." after a second, cancelled by another dialog: live-documents.md. Not found. The guide describes the join but not the wait or the cancel; the code's own comments do.
+- Join from a QR image read on a helper thread, "Reading the QR image." after a second, cancelled by another dialog: live-documents.md. Pass.
 - A QR image over 40 million pixels refused: known-limits.md. Pass.
-- OCR and QR images checked against their size limits from the header before decoding: known-limits.md names the QR limit only. Not found for OCR images.
+- OCR and QR images checked against their size limits from the header before decoding: known-limits.md. Pass.
 - `tw text`, `tw search` and `tw info` leave out control characters on a terminal: command-line.md. Pass.
-- One neutral User-Agent for web pages and reference lookups: components.md, updates.md, privacy.md. Pass for components.md and updates.md. privacy.md does not name the User-Agent, and Not found there.
+- One neutral User-Agent for web pages and reference lookups: components.md, updates.md, privacy.md. Pass.
 - The hot folder's plain names and its refusal to follow links: converting.md. Pass.
 - The browser preview without raw HTML or scripts, the one-time message, Trusted preview folders, the served page's content security policy and its file rules: editing.md, privacy.md, settings.md, settings-reference.md. Pass.
 - A link to a file on another computer asks first: reading.md, privacy.md. Pass.

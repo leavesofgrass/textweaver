@@ -78,6 +78,7 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 - **Translating a document** is not offered.
 - **RAR archives** do not open. ZIP, TAR, and 7z do. Extract a RAR archive first; the message says so.
 - **Scanned pages** are read by OCR, and OCR makes mistakes. Check anything important against the original.
+- **Very large images are not read by OCR.** An image with a side over 20,000 pixels, or more than 150 million pixels in all, is refused before it is decoded, from the size its header declares. Scale it down or split it first.
 
 ## Output
 
