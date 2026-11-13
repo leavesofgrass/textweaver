@@ -22,12 +22,16 @@ textweaver-fonts.workspace = true
 textweaver-math.workspace = true
 textweaver-mathcat = { workspace = true, optional = true }
 textweaver-store = { workspace = true, optional = true }
+# liblouis's library, loaded at run time for the print each braille cell
+# stands for (the `liblouis` feature; `louis`).
+libloading = { workspace = true, optional = true }
 
 [features]
 default = ["bundled-fonts"]
 # Contracted (grade 2) braille through liblouis's `lou_translate`, when it
-# is installed (found in the components folder first, then the PATH).
-liblouis = ["dep:textweaver-store"]
+# is installed (found in the components folder first, then the PATH), and
+# each cell's print through the library beside it (`louis`).
+liblouis = ["dep:textweaver-store", "dep:libloading"]
 # Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic): PDF
 # output needs no installed font, and EPUB can embed them.
 bundled-fonts = ["textweaver-fonts/bundled-fonts"]

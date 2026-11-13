@@ -33,6 +33,8 @@ pub mod brf;
 pub mod docx;
 pub mod docx_update;
 pub mod epub;
+#[cfg(any(feature = "liblouis", test))]
+pub mod louis;
 mod math;
 pub mod model;
 pub mod pdf;
