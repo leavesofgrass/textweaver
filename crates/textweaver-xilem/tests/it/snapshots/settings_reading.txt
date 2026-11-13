@@ -1,0 +1,50 @@
+Accessibility tree in the textweaver app: the settings dialog, section reading. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Settings" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - ListBox "Sections" [active item "Reading, 9 settings"]
+          - ListBoxOption "Voice and speech, 11 settings"
+          - ListBoxOption "Pauses and verbosity, 8 settings"
+          - ListBoxOption "Speaking text, 13 settings"
+          - ListBoxOption "Accessibility and announcements, 6 settings"
+          - ListBoxOption "Reading, 9 settings" [selected]
+          - ListBoxOption "Documents, 7 settings"
+          - ListBoxOption "Highlight, 8 settings"
+          - ListBoxOption "Math, 5 settings"
+          - ListBoxOption "Braille, 8 settings"
+          - ListBoxOption "Morse code, 12 settings"
+          - ListBoxOption "Morse practice, 4 settings"
+          - ListBoxOption "Display, 4 settings"
+          - ListBoxOption "Colors, 13 settings"
+          - ListBoxOption "Spacing, font and ruler, 12 settings"
+          - ListBoxOption "Word aids, 15 settings"
+          - ListBoxOption "Word by word (RSVP), 13 settings"
+          - ListBoxOption "Editing, 14 settings"
+          - ListBoxOption "Library and study tools, 6 settings"
+          - ListBoxOption "Dictation, 3 settings"
+          - ListBoxOption "Keyboard and language, 3 settings"
+          - ListBoxOption "Toolbars and panels, 7 settings"
+          - ListBoxOption "Export, 6 settings"
+          - ListBoxOption "Live documents, 13 settings"
+          - ListBoxOption "Sync, 15 settings"
+          - ListBoxOption "Updates and components, 3 settings"
+          - ListBoxOption "All settings, 230 settings"
+      - Group "Reading settings" description="Up and Down move between settings. Left and Right change one. Enter types a new value. Delete puts the default back. Ctrl+PageDown and Ctrl+PageUp change the section. Type to filter. F1 says the help." [focused, active item "Read on opening"]
+        - CheckBox "Read on opening" description="Start reading when a document opens." [not checked, selected]
+        - CheckBox "Resume where you left off" description="Go back to the saved position when a document opens." [checked]
+        - CheckBox "Cursor follows speech" description="The cursor moves with the word being read." [checked]
+        - CheckBox "Wrap navigation" description="Moving past the end of the document goes on from the start." [not checked]
+        - Slider "Back history" value="50 places" description="How many places Back remembers."
+        - ComboBox "Stop at section end" value="never" description="Where continuous reading stops by itself and says End of section."
+        - Slider "Reading timer" value="0 minutes" description="Continuous reading stops at a sentence end after this many minutes of reading."
+        - ComboBox "After a document ends" value="stop" description="What follows the end of a document when the reading queue has another."
+        - CheckBox "Recall prompts" description="At a section end, reading asks you to say what you remember." [not checked]
+    - GenericContainer
+      - Label [hidden]
+      - Button "Close" description="Close the settings. Every change is already saved."
+        - Label [hidden]
+        - Label [hidden]

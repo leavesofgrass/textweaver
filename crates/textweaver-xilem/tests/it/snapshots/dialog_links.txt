@@ -1,0 +1,16 @@
+Accessibility tree in the textweaver app: the links dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Links of: Energy note" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - ListBox "Links of: Energy note" [focused, active item "supports: Chapter note"]
+      - ListBoxOption "supports: Chapter note" [selected]
+      - ListBoxOption "cites: Week four note, in Pharmacology 2"
+      - ListBoxOption "What links here: 1 note"
+      - ListBoxOption "Add a link"
+    - GenericContainer
+      - Label [hidden]
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]

@@ -1,0 +1,16 @@
+Accessibility tree in the textweaver app: the changes dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Changes and comments" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - ListBox "Changes and comments" [focused, active item "Inserted: 'renal', by Ada Example, Tuesday, March 3, 2026"]
+      - ListBoxOption "Inserted: 'renal', by Ada Example, Tuesday, March 3, 2026" [selected]
+      - ListBoxOption "Moved away: 'Check the labs first.', by Ada Example, Thursday, March 5, 2026"
+      - ListBoxOption "Comment by Bo Example: check this date, 1 reply, resolved"
+      - ListBoxOption "Inserted: 'Repeat tomorrow.', by Bo Example, date not recorded"
+    - GenericContainer
+      - Label [hidden]
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]

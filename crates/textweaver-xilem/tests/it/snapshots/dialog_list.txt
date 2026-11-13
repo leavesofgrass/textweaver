@@ -1,0 +1,42 @@
+Accessibility tree in the textweaver app: the list dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Bookmarks" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - ListBox "Bookmarks" [focused, active item "Bookmark 1"]
+      - ListBoxOption "Bookmark 1" [selected]
+      - ListBoxOption "Bookmark 2"
+      - ListBoxOption "Bookmark 3"
+      - ListBoxOption "Bookmark 4"
+      - ListBoxOption "Bookmark 5"
+      - ListBoxOption "Bookmark 6"
+      - ListBoxOption "Bookmark 7"
+      - ListBoxOption "Bookmark 8"
+      - ListBoxOption "Bookmark 9"
+      - ListBoxOption "Bookmark 10"
+      - ListBoxOption "Bookmark 11"
+      - ListBoxOption "Bookmark 12"
+      - ListBoxOption "Bookmark 13"
+      - ListBoxOption "Bookmark 14"
+      - ListBoxOption "Bookmark 15"
+      - ListBoxOption "Bookmark 16"
+      - ListBoxOption "Bookmark 17"
+      - ListBoxOption "Bookmark 18"
+      - ListBoxOption "Bookmark 19"
+      - ListBoxOption "Bookmark 20"
+      - ListBoxOption "Bookmark 21"
+      - ListBoxOption "Bookmark 22"
+      - ListBoxOption "Bookmark 23"
+      - ListBoxOption "Bookmark 24"
+      - ListBoxOption "Bookmark 25"
+      - ListBoxOption "Bookmark 26"
+      - ListBoxOption "Bookmark 27"
+      - ListBoxOption "Bookmark 28"
+      - ListBoxOption "Bookmark 29"
+      - ListBoxOption "Bookmark 30"
+    - GenericContainer
+      - Label [hidden]
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]

@@ -1,0 +1,15 @@
+Accessibility tree in the textweaver app: the prompt dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Go to line" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - TextInput "Go to line" [focused]
+        - Label [hidden]
+    - GenericContainer
+      - Label [hidden]
+      - Button "Close"
+        - Label [hidden]
+        - Label [hidden]

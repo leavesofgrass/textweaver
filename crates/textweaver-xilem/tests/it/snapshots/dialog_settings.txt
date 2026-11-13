@@ -1,0 +1,52 @@
+Accessibility tree in the textweaver app: the settings dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Settings" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - GenericContainer
+      - GenericContainer
+        - ListBox "Sections" [active item "Voice and speech, 11 settings"]
+          - ListBoxOption "Voice and speech, 11 settings" [selected]
+          - ListBoxOption "Pauses and verbosity, 8 settings"
+          - ListBoxOption "Speaking text, 13 settings"
+          - ListBoxOption "Accessibility and announcements, 6 settings"
+          - ListBoxOption "Reading, 9 settings"
+          - ListBoxOption "Documents, 7 settings"
+          - ListBoxOption "Highlight, 8 settings"
+          - ListBoxOption "Math, 5 settings"
+          - ListBoxOption "Braille, 8 settings"
+          - ListBoxOption "Morse code, 12 settings"
+          - ListBoxOption "Morse practice, 4 settings"
+          - ListBoxOption "Display, 4 settings"
+          - ListBoxOption "Colors, 13 settings"
+          - ListBoxOption "Spacing, font and ruler, 12 settings"
+          - ListBoxOption "Word aids, 15 settings"
+          - ListBoxOption "Word by word (RSVP), 13 settings"
+          - ListBoxOption "Editing, 14 settings"
+          - ListBoxOption "Library and study tools, 6 settings"
+          - ListBoxOption "Dictation, 3 settings"
+          - ListBoxOption "Keyboard and language, 3 settings"
+          - ListBoxOption "Toolbars and panels, 7 settings"
+          - ListBoxOption "Export, 6 settings"
+          - ListBoxOption "Live documents, 13 settings"
+          - ListBoxOption "Sync, 15 settings"
+          - ListBoxOption "Updates and components, 3 settings"
+          - ListBoxOption "All settings, 230 settings"
+      - Group "Voice and speech settings" description="Up and Down move between settings. Left and Right change one. Enter types a new value. Delete puts the default back. Ctrl+PageDown and Ctrl+PageUp change the section. Type to filter. F1 says the help." [focused, active item "Speech engine"]
+        - ComboBox "Speech engine" value="automatic" description="The speech engine: auto picks the best one available." [selected]
+        - TextInput "Voice" value="not set" description="The voice's id; not set picks one automatically."
+        - TextInput "Preferred voice" value="eloquence" description="When no voice is set, the first voice whose name contains this, such as eloquence."
+        - TextInput "Favorite voices" value="none" description="Voices listed first by the Voices command, by id, separated by commas."
+        - Slider "Rate" value="265 words per minute" description="How fast textweaver speaks."
+        - Slider "Pitch" value="0 semitones" description="Higher or lower than the voice's own pitch."
+        - Slider "Volume" value="100 percent" description="How loud textweaver speaks."
+        - Label "Speed presets" value="Speed presets, 4 entries" description="Named rates that F8 cycles through."
+        - Label "Voices by language" value="Voices by language, none" description="The voice for each interface language, by language tag, such as es = the voice's id."
+        - Label "Rate and pitch per voice" value="Rate and pitch per voice, none" description="The rate and pitch each voice was last used at."
+        - TextInput "Output device" value="not set" description="The sound device speech plays on, by its id."
+    - GenericContainer
+      - Label [hidden]
+      - Button "Close" description="Close the settings. Every change is already saved."
+        - Label [hidden]
+        - Label [hidden]

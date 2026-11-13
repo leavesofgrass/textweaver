@@ -1,0 +1,34 @@
+Accessibility tree in the textweaver app: the colors dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Colors" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - Group "Colors" description="Left and Right choose a named color, blue and orange first. Enter types a name or a #rrggbb value. Delete puts the theme's color back. Every mark keeps its underline, weight, or symbol, whatever its color." [focused, active item "Word highlight color"]
+      - ComboBox "Word highlight color" value="the theme's color, contrast 9.2 to 1, good" description="The color behind the word being read." [selected]
+      - ComboBox "Sentence highlight color" value="not set, contrast 7 to 1, good" description="The color behind the sentence being read."
+      - ComboBox "Reading ruler color" value="the theme's color, contrast 8.3 to 1, good" description="The band of the reading ruler and the marked current line."
+      - ComboBox "Difficult words color" value="the theme's color, contrast 11.9 to 1, good" description="The underline of difficult words; they stay underlined and are named at high verbosity."
+      - ComboBox "Syllable marks color" value="the theme's color, contrast 11.9 to 1, good" description="The middle dots between syllables."
+      - ComboBox "Misspellings color" value="the theme's color, contrast 5.8 to 1, good" description="The underline of misspelled words, which are also said."
+      - ComboBox "Lint marks color" value="the theme's color, contrast 11.9 to 1, good" description="The underline of Markdown lint and grammar problems, which are also said."
+      - ComboBox "Search match color" value="the theme's color, contrast 6.9 to 1, good" description="The band behind search matches; they stay underlined."
+      - ComboBox "Selection color" value="the theme's color, contrast 11.9 to 1, good" description="The band behind selected text."
+      - ComboBox "Focus color" value="the theme's color, contrast 5.8 to 1, good" description="The focus outline and the focused item of a list; they stay bold."
+      - ComboBox "Link color" value="the theme's color, contrast 5.8 to 1, good" description="The color of links."
+      - ComboBox "Heading color" value="the theme's color, contrast 9.2 to 1, good" description="The color of headings."
+      - ComboBox "Status bar color" value="the theme's color, contrast 9.2 to 1, good" description="The band of the status and title bars."
+      - ComboBox "Note color" value="the theme's color, contrast 11.9 to 1, good" description="The band behind text with a note; it stays italic and underlined."
+      - ComboBox "Bookmark color" value="the theme's color, contrast 11.9 to 1, good" description="The band behind a bookmarked word; it stays bold and underlined."
+      - Label "Highlight name important" value="Highlight name important, yellow, underline, contrast 1.3 to 1 with the text and 15.5 to 1 with the page, low" description="Under 3 to 1 it is hard to see; choose a lighter or darker color."
+      - Label "Highlight name define" value="Highlight name define, green, double underline, contrast 1 to 1 with the text and 11.8 to 1 with the page, low" description="Under 3 to 1 it is hard to see; choose a lighter or darker color."
+      - Label "Highlight name question" value="Highlight name question, cyan, brackets, contrast 1.1 to 1 with the text and 13.3 to 1 with the page, low" description="Under 3 to 1 it is hard to see; choose a lighter or darker color."
+      - Label "Highlight name example" value="Highlight name example, pink, dotted underline, contrast 1.1 to 1 with the text and 10.8 to 1 with the page, low" description="Under 3 to 1 it is hard to see; choose a lighter or darker color."
+      - Label "Highlight name review" value="Highlight name review, orange, bold, contrast 1.4 to 1 with the text and 8.4 to 1 with the page, low" description="Under 3 to 1 it is hard to see; choose a lighter or darker color."
+    - GenericContainer
+      - Label [hidden]
+      - Button "Reset all colors" description="Put the theme's own color back for every part."
+        - Label [hidden]
+      - Button "Close" description="Close the settings. Every change is already saved."
+        - Label [hidden]
+        - Label [hidden]

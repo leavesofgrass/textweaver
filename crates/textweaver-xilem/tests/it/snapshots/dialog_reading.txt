@@ -1,0 +1,36 @@
+Accessibility tree in the textweaver app: the reading dialog. One node per line.
+Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1.
+
+- Dialog "Reading settings" [modal]
+  - GenericContainer
+    - Label [hidden]
+    - Group "Reading settings" description="Up and Down move, Left and Right change a value, Enter types one, F1 says the help." [focused, active item "Rate"]
+      - Slider "Rate" value="265 words per minute" description="How fast textweaver speaks." [selected]
+      - ComboBox "Font" value="sans serif" description="The window's reading font."
+      - Slider "Font size" value="14 points" description="The window's font size."
+      - Slider "Font weight" value="400" description="400 is regular, 700 bold."
+      - Slider "Line height" value="1.5" description="Line height as a multiple of the font size."
+      - Slider "Paragraph spacing" value="1" description="Space after each paragraph, in multiples of the font size."
+      - Slider "Word spacing" value="0" description="Extra space between words, in multiples of the font size."
+      - Slider "Letter spacing" value="0" description="Extra space between letters, in multiples of the font size."
+      - Slider "Line length" value="66 characters" description="How many characters a line holds in the window, from 25 to 90."
+      - ComboBox "Theme" value="Galaxy, meets AA" description="The color theme."
+      - ComboBox "Highlight" value="the word and the sentence" description="What the reading highlight covers."
+      - ComboBox "Word highlight color" value="the theme's color, contrast 9.2 to 1, good" description="The color behind the word being read."
+      - ComboBox "Sentence highlight color" value="not set, contrast 7 to 1, good" description="The color behind the sentence being read."
+      - ComboBox "Reading ruler" value="off" description="Mark the current line, or a band of lines."
+      - CheckBox "Ruler mask" description="Dim the rows outside the band." [not checked]
+      - CheckBox "Bionic reading" description="Draw the start of each word in bold." [not checked]
+      - CheckBox "Syllables" description="Draw words split into syllables with a middle dot; speech is unchanged." [not checked]
+    - GenericContainer
+      - Button "Voices" description="Open the voice manager."
+        - Label [hidden]
+      - Button "WCAG spacing" description="Set the four spacings to the WCAG values."
+        - Label [hidden]
+      - Button "Generous spacing" description="Set the four spacings wider than WCAG."
+        - Label [hidden]
+    - GenericContainer
+      - Label [hidden]
+      - Button "Close" description="Close the settings. Every change is already saved."
+        - Label [hidden]
+        - Label [hidden]
