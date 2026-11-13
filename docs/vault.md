@@ -29,6 +29,7 @@ The command takes the form `tw vault`, then an action, then the vault folder (or
 - `--dry-run` (import only): read the vault and report what an import would do, storing nothing.
 - `--tag NAME` (tags only): list the notes that carry the tag `NAME`, written with or without `#`, instead of every tag.
 - `--json` (every action): print the full result as JSON, for scripts.
+- `--home DIR` (every action): use the settings and notes kept under another folder instead of the usual place, as `TEXTWEAVER_HOME` does for one run.
 
 ## Export notes and highlights to a vault
 

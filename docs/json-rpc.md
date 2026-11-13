@@ -87,6 +87,8 @@ The header line ends with a carriage return and line feed, and a blank line (ano
 
 The server determines the framing of each incoming message: a line beginning with `Content-Length:` introduces a framed message, and any other line is a complete message. It responds, and sends its own notifications, in the framing of the last message received; before the first message it uses one message per line. Framed responses carry only a `Content-Length` header.
 
+A message, whether a line or the body announced by `Content-Length`, may be at most 16 MiB (16,777,216 bytes). If a client sends more, the server stops reading, saves, and shuts down as though the client had closed its end.
+
 A client should choose one framing and keep to it. A framed response is not followed by a newline, so switching in mid-session can place the next line-delimited response on the same line.
 
 ### What every message looks like

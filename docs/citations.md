@@ -50,6 +50,8 @@ tw cite list --folder "Biology essay"
 
 The `--folder` and `--library` options may precede or follow the command name, so `tw cite --folder "Biology essay" list` works too.
 
+Every `tw cite` command also takes `--home DIR`, to use the files kept under another folder instead of the usual place. Most take `--json` to print the result for a script.
+
 ## Add a reference by DOI
 
 ```bash

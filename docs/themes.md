@@ -20,9 +20,10 @@ Galaxy's light partner is Galaxy Light. When textweaver follows your system's ap
 ## Choosing a theme
 
 - Press F5 to move to the next theme. textweaver says the theme's name.
-- Start with a theme for one session:
+- Start with a theme for one session, in the terminal reader or in the textweaver app:
 
   ```bash
+  tw --theme sepia notes.md
   textweaver --theme sepia notes.md
   ```
 
@@ -110,7 +111,7 @@ textweaver uses as many colors as your terminal offers:
 
 Inside tmux, and over SSH, a terminal usually gets 256 colors even when the terminal itself has full color. Set `TEXTWEAVER_COLOR=truecolor` if yours passes full color through.
 
-With full color or 256 colors, the title and status lines sit on the panel color, so the spoken word's band is the one strong color on the screen; with 16 colors or none they keep reverse video. The reading ruler's mask draws the text outside the band in a color most of the way toward the page, the same mask the window draws; with 16 colors or none it uses the terminal's dim attribute.
+With full color or 256 colors, the title and status lines sit on the panel color, so the spoken word's band is the one strong color on the screen; with 16 colors or none they keep reverse video. The reading ruler's mask draws the text outside the band in a color most of the way toward the page, the same mask the app draws; with 16 colors or none it uses the terminal's dim attribute.
 
 To turn color off, set the `NO_COLOR` environment variable to any value, such as `1`. To choose a level yourself, set `TEXTWEAVER_COLOR` to `truecolor`, `256`, `16`, or `none`. For example, in a Linux or macOS shell:
 
@@ -172,7 +173,7 @@ To start from a complete copy instead, copy a built-in theme's file (in textweav
 
 ### Everything a theme can set
 
-`[theme]`: `name` (letters, digits, and hyphens; the file name is used if it is missing), `display_name` (the name read aloud), `kind` (`dark`, `light`, or `high-contrast`; high contrast raises the text minimum to 7 to 1), `description`, `author`, `counterpart` (the light or dark partner), and `inherits`.
+`[theme]`: `name` (letters, digits, and hyphens; the file name is used if it is missing), `display_name` (the name read aloud), `kind` (`dark`, `light`, or `high-contrast`; high contrast raises the text minimum to 7 to 1), `description`, `author`, `counterpart` (the light or dark partner), `origin` (where the theme came from), and `inherits`.
 
 `[colors]`: `background`, `surface` (lists and panels), `text`, `dim_text` (hints, line numbers, rules; used on the page only), `heading1` to `heading6`, `link`, `code`, `code_background`, `quote`, and `error`.
 
