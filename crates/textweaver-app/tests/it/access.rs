@@ -5,7 +5,6 @@
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use textweaver_app::a11y::detect::Detected;
 use textweaver_app::a11y::{AccessMode, Announcer, CursorPlacement, Priority};
 use textweaver_app::core::CharPos;
 use textweaver_app::keymap::ActionId;
@@ -15,7 +14,7 @@ use textweaver_app::store::{
 use textweaver_app::store::{DocKey, Settings};
 use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::text::Document;
-use textweaver_app::{App, AppConfig, Command, Confirm, Playback};
+use textweaver_app::{App, AppConfig, Command, Playback};
 
 const TEXT: &str = "First sentence here. Second sentence follows now. Third and last one.";
 
@@ -279,56 +278,6 @@ fn cycling_the_mode_saves_it_and_says_it() {
         r.app.settings().accessibility.mode,
         ModeSetting::SelfVoicing
     );
-}
-
-/// First run with a screen reader: one question, y switches to hybrid, and
-/// it is never asked again either way.
-#[test]
-fn the_first_run_offers_hybrid_once() {
-    let nvda = Detected {
-        name: Some("NVDA".into()),
-    };
-    let mut r = rig(AccessMode::SelfVoicing);
-    assert!(r.app.hybrid_offer_due());
-    assert!(r.app.offer_hybrid(&nvda));
-    assert!(r.app.confirmation_pending());
-    let q = r.app.pending_question().unwrap();
-    assert!(q.starts_with("NVDA is running. Use hybrid mode"), "{q}");
-    assert_eq!(r.status(), q);
-    // Another key repeats the question.
-    r.app.dispatch(Command::Confirm(Confirm::Repeat));
-    assert_eq!(r.status(), q);
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
-    assert!(!r.app.confirmation_pending());
-    assert_eq!(r.app.access_mode(), AccessMode::Hybrid);
-    let a = &r.app.settings().accessibility;
-    assert!(a.hybrid_offered);
-    assert_eq!(a.mode, ModeSetting::Hybrid);
-    let mode_key = textweaver_app::key_text(r.app.keymap(), ActionId::CycleAccessMode);
-    assert!(r.status().contains(&mode_key), "{}", r.status());
-    assert!(!r.app.hybrid_offer_due());
-    assert!(!r.app.offer_hybrid(&nvda));
-
-    let mut no = rig(AccessMode::SelfVoicing);
-    assert!(no.app.offer_hybrid(&Detected { name: None }));
-    assert!(
-        no.app
-            .pending_question()
-            .unwrap()
-            .starts_with("A screen reader is running.")
-    );
-    no.app.dispatch(Command::Cancel);
-    assert_eq!(no.app.access_mode(), AccessMode::SelfVoicing);
-    assert!(no.app.settings().accessibility.hybrid_offered);
-    assert!(no.status().starts_with("Staying in self-voicing mode."));
-    assert!(!no.app.offer_hybrid(&nvda));
-
-    // A mode chosen already (in the settings or for this run) asks nothing.
-    let mut chosen = rig(AccessMode::ScreenReader);
-    assert!(!chosen.app.offer_hybrid(&nvda));
-    let mut run = rig(AccessMode::SelfVoicing);
-    run.app.set_access_mode_for_run(AccessMode::Hybrid);
-    assert!(!run.app.offer_hybrid(&nvda));
 }
 
 /// Quiet screen: while reading aloud, the text read is not copied to the

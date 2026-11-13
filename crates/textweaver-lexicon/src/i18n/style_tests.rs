@@ -367,11 +367,10 @@ fn ratchet(rule: &str, list_name: &str, listed: &[&str], offenders: &BTreeMap<St
 /// become fewer.
 #[test]
 fn questions_come_first() {
-    const QUESTION_LATE: [&str; 20] = [
+    const QUESTION_LATE: [&str; 19] = [
         "about-docs-question",
         "about-quick-start-online",
         "about-report-question",
-        "access-hybrid-question",
         "dictation-model-question",
         "dictation-needs-edit",
         "disk-overwrite-question",

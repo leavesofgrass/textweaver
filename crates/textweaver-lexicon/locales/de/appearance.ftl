@@ -30,7 +30,6 @@ access-hybrid-chosen = Hybrid-Modus. textweaver liest Dokumente vor; Ihr Screenr
 # No to the first-run question; $key names the keys that change the mode.
 access-hybrid-declined = Bleibt im Selbstsprechend-Modus. { $key } wechselt den Modus.
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
-access-hybrid-question = { $reader } läuft. Hybrid-Modus verwenden, bei dem textweaver Dokumente vorliest und Ihr Screenreader Meldungen und Tippen spricht? y oder n
 access-a-screen-reader = Ein Screenreader
 # On the first run with a screen reader and no mode chosen: hybrid mode is
 # used, not asked. $reader is the screen reader found (NVDA, JAWS), or
