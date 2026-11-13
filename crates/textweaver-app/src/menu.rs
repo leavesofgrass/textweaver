@@ -1730,6 +1730,43 @@ mod tests {
     use textweaver_keymap::{Frontend, Platform};
     use textweaver_lexicon::i18n::LANGUAGES;
 
+    /// Every command runs something: an arm of the match in
+    /// `App::run_action` (app.rs) or a handler a module registered
+    /// (`App::register_handler`). A command with neither still compiles,
+    /// since the match ends in a catch-all, and only says "not available"
+    /// when run. The arms are read from app.rs's source, so nothing runs.
+    #[test]
+    fn every_action_is_handled() {
+        let source = include_str!("app.rs");
+        let start = source
+            .find("    fn run_action(&mut self, a: ActionId)")
+            .expect("App::run_action in app.rs");
+        let body = &source[start..];
+        let end = body.find("\n    }\n").expect("the end of App::run_action");
+        let body = &body[..end];
+        let mut in_match = std::collections::BTreeSet::new();
+        for (at, _) in body.match_indices("A::") {
+            let name: String = body[at + 3..]
+                .chars()
+                .take_while(char::is_ascii_alphanumeric)
+                .collect();
+            in_match.insert(name);
+        }
+        assert!(in_match.len() > 100, "{} arms read", in_match.len());
+        let app = App::new(crate::AppConfig::for_tests());
+        let unhandled: Vec<ActionId> = ActionId::ALL
+            .iter()
+            .copied()
+            .filter(|a| {
+                app.registered_handler(*a).is_none() && !in_match.contains(&format!("{a:?}"))
+            })
+            .collect();
+        assert!(
+            unhandled.is_empty(),
+            "no run_action arm and no registered handler: {unhandled:?}"
+        );
+    }
+
     #[test]
     fn access_marks_split_and_join() {
         assert_eq!(split_access("E&xport as"), ("Export as".into(), Some('x')));
