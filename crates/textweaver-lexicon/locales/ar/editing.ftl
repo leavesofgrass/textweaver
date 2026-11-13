@@ -214,6 +214,7 @@ edit-replace-with =
 
 common-recovery-write-failed = تعذّرت كتابة نسخة الاسترداد: { $error }. احفظ قريبًا؛ سيواصل { -brand } المحاولة.
 common-recovery-writing-again = تجري كتابة نسخة الاسترداد مجددًا.
+edit-recovery-offer = استرداد التعديلات غير المحفوظة في { $title }؟ حُفظت { $when }. السهمان لأعلى وأسفل للاختيار، وEnter للتأكيد.
 # $title is the document; $when is how long ago its work was saved.
 edit-recovery-title = استرداد العمل غير المحفوظ في { $title }؟
 edit-recovery-yes = نعم، استرداد { $title } ومتابعة التحرير

@@ -308,6 +308,8 @@ nav-position = السطر { $line } من { $lines }، { $pct } بالمئة.
 nav-position-word = الكلمة { $word } من { $words }.
 nav-position-heading = تحت العنوان { $heading }.
 nav-position-mode = وضع { $mode }.
+playback-caps-no-words = تمييز الكلمات تقديري: لا يبلّغ هذا الصوت عن الكلمات.
+playback-caps-words = تمييز الكلمات دقيق: يبلّغ هذا الصوت عن كل كلمة.
 
 ## القراءة بصوت عالٍ.
 

@@ -39,9 +39,13 @@ live-paused = تم إيقاف التحديثات مؤقتًا. تنتظر الإ
 live-paused-status = التحديثات متوقفة مؤقتًا
 live-stopped = توقف { $name }. يبقى السجل مفتوحًا للقراءة فقط.
 live-log-saved = تم حفظ السجل باسم { $name } في { $folder }.
+live-log-save-failed = تعذر حفظ السجل المباشر: { $error } تُعاد المحاولة بعد 10 ثوانٍ. السجل: { $path }.
 live-log-empty-not-saved = لا توجد في السجل إدخالات بعد، لذا لم يُحفظ شيء.
 live-log-nowhere = لا يوجد مجلد لحفظ السجل المباشر فيه.
 live-log-saved-already = فُتح هذا السجل من { $path }؛ وهو محفوظ بالفعل.
+live-binary = أُغفل، ليس نصًا: { $len } بايت على { $topic }.
+live-too-large = أُغفل، كبير جدًا: { $len } بايت على { $topic }.
+live-full = السجل ممتلئ عند { $max } إدخال؛ أُغفلت الإدخالات الأحدث.
 live-connecting = جارٍ الاتصال بـ { $name }.
 live-reconnecting = إعادة الاتصال بـ { $name }، المحاولة { $attempt }.
 live-connected = متصل بـ { $name }، مشفر.
@@ -64,6 +68,7 @@ live-resumed =
         [0] استؤنفت التحديثات.
        *[other] استؤنفت التحديثات، وطُبق { $count } تحديث.
     }
+live-resumed-dropped = استؤنفت التحديثات، وطُبق { $count }؛ وأُغفل { $dropped } أقدم أثناء الإيقاف المؤقت.
 
 ## Beta 5: live sources' commands, the set-up steps, and new entries said.
 ## $name is a source's name, $topic an MQTT topic, $line an entry as one
@@ -76,6 +81,15 @@ menu-live-publish = النشر
 prompt-live-setup = إعداد مصدر مباشر
 prompt-save-live-source-file = حفظ المصدر المباشر في ملف
 live-failed = تعذر الاتصال بـ { $name }: { $reason } لا مزيد من المحاولات؛ أصلح ذلك ثم افتح المصدر مرة أخرى.
+live-topic-refused = رُفض الموضوع: { $topic }. لا يحق لهذا الحساب قراءته.
+live-skipped =
+    { $count ->
+        [one] أُغفلت رسالة واحدة: وصلت أسرع من أن تُعرض.
+        [two] أُغفلت رسالتان: وصلتا أسرع من أن تُعرضا.
+        [few] أُغفلت { $count } رسائل: وصلت أسرع من أن تُعرض.
+        [many] أُغفلت { $count } رسالة: وصلت أسرع من أن تُعرض.
+       *[other] أُغفلت { $count } رسالة: وصلت أسرع من أن تُعرض.
+    }
 live-new-entries = { $line } { $count } إدخالات جديدة.
 live-unread-newest = { $count }. الأحدث: { $line }
 live-not-in-build = المصادر المباشرة غير متاحة في هذا الإصدار من { -brand }.
@@ -167,6 +181,7 @@ live-field-speak-off = لم تعد تغييرات { $field } تُنطق.
 live-state-connecting = جارٍ الاتصال
 live-state-reconnecting = جارٍ إعادة الاتصال
 live-state-encrypted = متصل، مشفّر
+live-state-tailscale = متصل، نطاق Tailscale
 live-state-plain = متصل، غير مشفّر
 live-state-lost = انقطع الاتصال
 
@@ -207,6 +222,7 @@ live-broker-started-local = الوسيط يعمل: { $addresses }، TLS، هذا
 live-broker-started = الوسيط يعمل: { $addresses }، TLS.
 live-broker-started-plain-local = الوسيط يعمل: { $addresses }، غير مشفر، هذا الحاسوب فقط.
 live-broker-started-plain = الوسيط يعمل: { $addresses }، غير مشفر.
+live-broker-plain-warning = غير مشفر: يستطيع أي شخص على هذه الشبكة قراءة الرسائل وكلمات المرور. استخدم TLS، أو هذا الحاسوب أو Tailscale فقط.
 live-broker-join-code = رمز الانضمام: { $code }.
 live-broker-pin = بصمة الشهادة: { $pin }.
 live-broker-not-running = لا وسيط يعمل. تشغيل وسيطك يبدأ واحدًا.
