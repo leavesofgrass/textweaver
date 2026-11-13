@@ -264,6 +264,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("preview.follow", Portable),
     ("preview.pane", Portable),
     ("preview.pane_delay_ms", Portable),
+    // Which folders are trusted is about this computer's files.
+    ("preview.trusted_folders", Machine),
     // [lexicon]: paths. The glossary's entries sync in the glossary group.
     ("lexicon.glossary", Machine),
     ("lexicon.data_file", Machine),
@@ -635,6 +637,7 @@ mod tests {
             "accessibility.mode",
             "keyboard.preset",
             "library.folders",
+            "preview.trusted_folders",
             "lexicon.glossary",
             "lexicon.data_file",
             "speech.eci.library",

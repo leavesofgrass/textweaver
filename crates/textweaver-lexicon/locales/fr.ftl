@@ -1282,6 +1282,9 @@ publish-preview-written-served = Aperçu écrit. Ouverture dans le navigateur. I
 publish-preview-written = Aperçu écrit. Ouverture dans le navigateur. Un enregistrement le réécrit ; appuyez ensuite sur F5 dans le navigateur.{ $warned }
 publish-preview-updated = Aperçu mis à jour.
 publish-preview-updated-press-f5 = Aperçu mis à jour. Appuyez sur F5 dans le navigateur.
+# Said once for a document whose preview was cleaned of raw HTML
+# (scripts, event handlers) because its folder is not trusted.
+publish-preview-raw-html-left-out = HTML brut omis dans l’aperçu. Les dossiers de confiance sont dans les Paramètres.
 publish-server-failed = Impossible de démarrer le serveur de rechargement de l'aperçu ({ $error }) ; ouverture du fichier à la place.
 publish-render-failed = Impossible de rendre le texte : { $error } Quittez le mode édition pour lire le texte.
 publish-nothing-after-caret = Rien à lire après le curseur.
@@ -2590,6 +2593,8 @@ setting-preview-pane = Volet d'aperçu
 setting-preview-pane-help = En mode édition, afficher le document tel qu'il se lit à côté de l'éditeur. F6 y va ; le curseur reste dans l'éditeur.
 setting-preview-pane-delay-ms = Pause de l'aperçu
 setting-preview-pane-delay-ms-help = Durée de la pause de frappe avant la réécriture d'un aperçu qui suit votre frappe.
+setting-preview-trusted-folders = Dossiers de confiance pour l’aperçu
+setting-preview-trusted-folders-help = Dossiers dont les documents gardent leur HTML brut, scripts compris, dans l’aperçu du navigateur. Ne faites confiance qu’aux dossiers de vos propres écrits : un script dans un document de confiance peut lire les fichiers qui l’entourent. Les dossiers contenus dans un dossier de confiance le sont aussi. Vide ne fait confiance à aucun, et chaque aperçu est nettoyé des scripts et du HTML dangereux.
 setting-lexicon-glossary = Glossaire
 setting-lexicon-glossary-help = Votre propre glossaire, consulté avant le dictionnaire : lignes terme : définition, ou le JSON de star. Non défini utilise glossary.txt dans le dossier des paramètres.
 setting-lexicon-data-file = Fichier de dictionnaire

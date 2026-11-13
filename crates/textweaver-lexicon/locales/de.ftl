@@ -1290,6 +1290,9 @@ publish-preview-written-served = Vorschau geschrieben. Sie wird im Browser geöf
 publish-preview-written = Vorschau geschrieben. Sie wird im Browser geöffnet. Speichern schreibt sie erneut; drücken Sie dann F5 im Browser.{ $warned }
 publish-preview-updated = Vorschau aktualisiert.
 publish-preview-updated-press-f5 = Vorschau aktualisiert. Drücken Sie F5 im Browser.
+# Said once for a document whose preview was cleaned of raw HTML
+# (scripts, event handlers) because its folder is not trusted.
+publish-preview-raw-html-left-out = Rohes HTML in der Vorschau weggelassen. Vertrauenswürdige Ordner stehen in den Einstellungen.
 publish-server-failed = Der Neuladeserver der Vorschau konnte nicht gestartet werden ({ $error }); die Datei wird stattdessen geöffnet.
 publish-render-failed = Der Text konnte nicht dargestellt werden: { $error } Verlassen Sie den Bearbeitungsmodus, um den Text zu lesen.
 publish-nothing-after-caret = Nichts zu lesen nach dem Cursor.
@@ -2598,6 +2601,8 @@ setting-preview-pane = Vorschaubereich
 setting-preview-pane-help = Im Bearbeitungsmodus das Dokument, wie es gelesen wird, neben dem Editor zeigen. F6 wechselt dorthin; die Einfügemarke bleibt im Editor.
 setting-preview-pane-delay-ms = Vorschaupause
 setting-preview-pane-delay-ms-help = Wie lange das Tippen pausieren muss, bevor eine Vorschau, die Ihrem Tippen folgt, neu geschrieben wird.
+setting-preview-trusted-folders = Vertrauenswürdige Vorschauordner
+setting-preview-trusted-folders-help = Ordner, deren Dokumente in der Browservorschau ihr rohes HTML samt Skripten behalten. Vertrauen Sie nur Ordnern mit Ihren eigenen Texten: Ein Skript in einem vertrauenswürdigen Dokument kann die Dateien daneben lesen. Ordner in einem vertrauenswürdigen Ordner sind ebenfalls vertrauenswürdig. Leer vertraut keinem, und jede Vorschau wird von Skripten und unsicherem HTML bereinigt.
 setting-lexicon-glossary = Glossar
 setting-lexicon-glossary-help = Ihr eigenes Glossar, vor dem Wörterbuch nachgeschlagen: Begriff: Definition-Zeilen, oder das JSON von star. Nicht gesetzt verwendet glossary.txt im Einstellungsordner.
 setting-lexicon-data-file = Wörterbuchdatei

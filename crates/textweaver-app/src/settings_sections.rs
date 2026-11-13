@@ -337,6 +337,7 @@ pub const SECTIONS: &[Section] = &[
             "preview.pane",
             "preview.follow",
             "preview.pane_delay_ms",
+            "preview.trusted_folders",
         ],
     },
     Section {

@@ -265,6 +265,7 @@ Only the speech engine's own settings are listed here: the voice, rate and pitch
 - `preview.pane`: default off (`false`). Preview pane. In edit mode, show the document as it reads beside the editor. F6 moves to it; the cursor stays in the editor. On or off: `true` or `false`. Syncs between computers.
 - `preview.follow`: default nothing (`"off"`). Browser preview follows. When the browser preview reloads itself: never, after each save, or also when typing pauses. With never, press F5 in the browser after a save. It reloads through a small server on this computer only. Choices: `"off"` (nothing), `"save"` (each save), `"typing"` (your typing). Syncs between computers.
 - `preview.pane_delay_ms`: default 300 milliseconds. Preview pause. How long typing must pause before a preview that follows your typing is rewritten. From 100 to 3000 milliseconds, in steps of 50. Syncs between computers.
+- `preview.trusted_folders`: default an empty list. Trusted preview folders. Folders whose documents keep their raw HTML, scripts included, in the browser preview. Trust only folders of your own writing: a script in a trusted document can read the files beside it. Folders inside a trusted folder are trusted too. Empty trusts none, and every preview is cleaned of scripts and unsafe HTML. A list of texts, such as `["a", "b"]`. Stays on this computer.
 
 ## Library and study tools
 

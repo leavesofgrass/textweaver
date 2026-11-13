@@ -1213,6 +1213,13 @@ pub struct PreviewSettings {
     /// rewritten, in milliseconds (100 to 3000; 300 by default). The
     /// preview pane uses the same pause.
     pub pane_delay_ms: u32,
+    /// Folders whose documents keep their raw HTML, scripts included, in
+    /// the browser preview. Every other preview is cleaned: scripts, event
+    /// handlers, and other unsafe markup are left out, because a page
+    /// served from this computer could read the files beside the
+    /// document. Empty (the default) trusts no folder; a folder trusts
+    /// the folders inside it. A machine setting: never synced.
+    pub trusted_folders: Vec<PathBuf>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1224,6 +1231,7 @@ impl Default for PreviewSettings {
             follow: PreviewFollow::Off,
             pane: false,
             pane_delay_ms: PREVIEW_DELAY_MS,
+            trusted_folders: Vec::new(),
             extra: toml::Table::new(),
         }
     }
@@ -4321,6 +4329,20 @@ shape = \"brackets\"
         assert!(w.is_empty(), "{w:?}");
         assert_eq!(s.preview.follow, PreviewFollow::Typing);
         assert_eq!(s.preview.pane_delay_ms, 500);
+    }
+
+    /// No folder is trusted with raw HTML in the preview until one is
+    /// listed (security L2).
+    #[test]
+    fn preview_trusts_no_folder_by_default() {
+        assert!(Settings::default().preview.trusted_folders.is_empty());
+        let (s, w) = Settings::from_table_unclamped(
+            "[preview]\ntrusted_folders = [\"notes\"]\n"
+                .parse()
+                .unwrap(),
+        );
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(s.preview.trusted_folders, [PathBuf::from("notes")]);
     }
 
     /// The old `[preview] auto_reload` and `live` load as `follow`, and

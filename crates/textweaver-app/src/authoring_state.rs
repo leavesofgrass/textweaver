@@ -168,6 +168,9 @@ pub(crate) struct ExportDone {
     pub(crate) report: Option<Result<PathBuf, String>>,
     /// For an export: the items that could not be made accessible.
     pub(crate) issues: usize,
+    /// For a preview: cleaning left out some of the document's raw HTML
+    /// (its folder is not trusted).
+    pub(crate) raw_html_left_out: bool,
 }
 
 /// Progress announcements for a long export: the first after
@@ -271,6 +274,9 @@ pub(crate) struct Authoring {
     pub(crate) preview_version: u64,
     /// The document folder of the preview, for its images.
     pub(crate) preview_folder: Option<PathBuf>,
+    /// Documents whose preview has said that raw HTML was left out, so it
+    /// is said once for each.
+    pub(crate) preview_raw_html_said: std::collections::BTreeSet<PathBuf>,
     /// The theme chosen for HTML pages this session: offered first the
     /// next time, and used when the preview is rewritten.
     pub(crate) html_theme: Option<String>,

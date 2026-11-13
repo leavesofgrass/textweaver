@@ -68,6 +68,24 @@ fn follow_name(follow: PreviewFollow) -> &'static str {
     }
 }
 
+/// True when cleaning leaves out some of the raw HTML in the Markdown
+/// file `source` (security L2). Other formats carry no raw HTML into the
+/// page; a file that cannot be read says nothing.
+fn raw_html_left_out(source: &Path, render: &textweaver_render::RenderOptions) -> bool {
+    let markdown = source
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| {
+            MarkdownLoader
+                .extensions()
+                .iter()
+                .any(|x| x.eq_ignore_ascii_case(e))
+        });
+    markdown
+        && std::fs::read_to_string(source)
+            .is_ok_and(|text| textweaver_render::sanitize::raw_html_removed(&text, render))
+}
+
 /// The headings of an HTML page: each one's id and its text without tags.
 fn page_headings(html: &str) -> Vec<(String, String)> {
     let ids = crate::preview_server::heading_ids(html);
@@ -395,6 +413,10 @@ impl App {
             root: src.folder.clone(),
         };
         let temp = src.temp.clone();
+        // A cleaned preview says when the document's raw HTML lost
+        // something (security L2).
+        let raw_check = kind != ExportKind::Export && options.render.sanitize;
+        let render = options.render.clone();
         let wake = self.waker_slot();
         let spawned = std::thread::Builder::new()
             .name("tw-export".into())
@@ -423,6 +445,7 @@ impl App {
                         )
                     });
                     let issues = r.issues.len() + r.issues_omitted;
+                    let raw_html_left_out = raw_check && raw_html_left_out(&job.source, &render);
                     match std::mem::replace(&mut r.status, Status::Skipped) {
                         Status::Failed(reason) => Err(reason),
                         Status::Converted | Status::Skipped => {
@@ -443,6 +466,7 @@ impl App {
                                 headings,
                                 report,
                                 issues,
+                                raw_html_left_out,
                             })
                         }
                     }
@@ -719,12 +743,17 @@ impl App {
             .as_ref()
             .map_or_else(std::env::temp_dir, |p| p.cache_dir.clone());
         let output = cache.join("preview").join(format!("{}.html", src.stem));
-        let options = self.convert_options(OutputFormat::Html, &src);
+        let mut options = self.convert_options(OutputFormat::Html, &src);
+        // Raw HTML and scripts reach the page only from a trusted folder
+        // (security L2); `tw convert` keeps its own --sanitize.
+        let trusted = self.preview_trusted(&src.folder);
+        options.render.sanitize = !trusted;
         let base = Some(folder_url(&src.folder));
         self.authoring.preview = Some(output.clone());
         self.authoring.preview_version = self.authoring.structure.version;
         if let Some(server) = &self.preview_server {
             server.set_page(output.clone(), src.folder.clone());
+            server.set_trusted(trusted);
         }
         self.authoring.preview_folder = Some(src.folder.clone());
         self.spawn_export(String::new(), kind, src, options, output, base);
@@ -854,6 +883,7 @@ impl App {
             headings,
             report,
             issues,
+            raw_html_left_out,
         } = match result {
             Ok(x) => x,
             Err(e) => {
@@ -883,6 +913,15 @@ impl App {
                 )
             ),
         };
+        // Raw HTML left out of an untrusted preview: said once for each
+        // document, after the warnings.
+        let raw_note = (raw_html_left_out && kind != ExportKind::Export)
+            .then(|| {
+                let (doc, folder, stem) = self.doc_place();
+                doc.unwrap_or_else(|| folder.join(stem))
+            })
+            .filter(|key| self.authoring.preview_raw_html_said.insert(key.clone()))
+            .map(|_| self.msg("publish-preview-raw-html-left-out"));
         match kind {
             ExportKind::Export => {
                 // What could not be made accessible, and where the report
@@ -923,6 +962,11 @@ impl App {
                 self.offer_open(target, &question);
             }
             ExportKind::PreviewOpen => {
+                let mut warned = warned;
+                if let Some(note) = raw_note {
+                    warned.push(' ');
+                    warned.push_str(&note);
+                }
                 let served = if self.settings.preview.follow != PreviewFollow::Off {
                     self.serve_preview(&path)
                 } else {
@@ -961,8 +1005,29 @@ impl App {
                         self.tell(&msg);
                     }
                 }
+                if let Some(note) = raw_note {
+                    self.tell(&note);
+                }
             }
         }
+    }
+
+    /// True when the document folder `folder` is one of `[preview]
+    /// trusted_folders` or inside one: its previews keep their raw HTML.
+    pub(crate) fn preview_trusted(&self, folder: &Path) -> bool {
+        let trusted = &self.settings.preview.trusted_folders;
+        if trusted.is_empty() {
+            return false;
+        }
+        let here = std::fs::canonicalize(folder).unwrap_or_else(|_| folder.to_owned());
+        // An empty entry trusts nothing (it would match every folder).
+        trusted
+            .iter()
+            .filter(|t| !t.as_os_str().is_empty())
+            .any(|t| {
+                let t = std::fs::canonicalize(t).unwrap_or_else(|_| t.clone());
+                here.starts_with(&t)
+            })
     }
 
     /// Starts the reload server for the preview at `page` (or points the
@@ -973,13 +1038,16 @@ impl App {
             .preview_folder
             .clone()
             .unwrap_or_else(|| self.loose_folder());
+        let trusted = self.preview_trusted(&folder);
         if let Some(server) = &self.preview_server {
             server.set_page(page.to_owned(), folder);
+            server.set_trusted(trusted);
             return Some(server.url());
         }
         match crate::preview_server::PreviewServer::start(page.to_owned(), folder) {
             Ok(server) => {
                 server.set_catalog(self.catalog());
+                server.set_trusted(trusted);
                 let url = server.url();
                 self.preview_server = Some(server);
                 Some(url)

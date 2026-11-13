@@ -1490,6 +1490,11 @@ pub const INFO: &[Info] = &[
         "Preview pane",
         "In edit mode, show the document as it reads beside the editor. F6 moves to it; the cursor stays in the editor.",
     ),
+    list(
+        "preview.trusted_folders",
+        "Trusted preview folders",
+        "Folders whose documents keep their raw HTML, scripts included, in the browser preview. Trust only folders of your own writing: a script in a trusted document can read the files beside it. Folders inside a trusted folder are trusted too. Empty trusts none, and every preview is cleaned of scripts and unsafe HTML.",
+    ),
     // [lexicon] (Agent W3e)
     optional(
         "lexicon.glossary",

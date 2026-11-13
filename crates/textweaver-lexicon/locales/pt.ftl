@@ -1270,6 +1270,9 @@ publish-preview-written-served = Pré-visualização escrita. Abrindo-a no naveg
 publish-preview-written = Pré-visualização escrita. Abrindo-a no navegador. Salvar a escreve de novo; depois pressione F5 no navegador.{ $warned }
 publish-preview-updated = Pré-visualização atualizada.
 publish-preview-updated-press-f5 = Pré-visualização atualizada. Pressione F5 no navegador.
+# Said once for a document whose preview was cleaned of raw HTML
+# (scripts, event handlers) because its folder is not trusted.
+publish-preview-raw-html-left-out = HTML bruto omitido na pré-visualização. As pastas confiáveis estão em Configurações.
 publish-server-failed = Não foi possível iniciar o servidor de recarga da pré-visualização ({ $error }); abrindo o arquivo em vez disso.
 publish-render-failed = Não foi possível renderizar o texto: { $error } Saia do modo de edição para ler o texto.
 publish-nothing-after-caret = Nada para ler depois do cursor.
@@ -2578,6 +2581,8 @@ setting-preview-pane = Painel de pré-visualização
 setting-preview-pane-help = No modo de edição, mostrar o documento como é lido ao lado do editor. F6 vai até ele; o cursor fica no editor.
 setting-preview-pane-delay-ms = Pausa da pré-visualização
 setting-preview-pane-delay-ms-help = Quanto tempo a digitação precisa pausar antes de reescrever uma pré-visualização que acompanha sua digitação.
+setting-preview-trusted-folders = Pastas confiáveis da pré-visualização
+setting-preview-trusted-folders-help = Pastas cujos documentos mantêm o HTML bruto, scripts incluídos, na pré-visualização do navegador. Confie apenas em pastas com seus próprios textos: um script em um documento confiável pode ler os arquivos ao lado dele. Pastas dentro de uma pasta confiável também são confiáveis. Vazio não confia em nenhuma, e toda pré-visualização é limpa de scripts e de HTML inseguro.
 setting-lexicon-glossary = Glossário
 setting-lexicon-glossary-help = Seu próprio glossário, consultado antes do dicionário: linhas termo: definição, ou o JSON do star. Não definido usa glossary.txt na pasta de configurações.
 setting-lexicon-data-file = Arquivo de dicionário
