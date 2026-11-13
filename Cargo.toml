@@ -550,9 +550,11 @@ parley = { path = "third_party/xilem/parley" }
 # shortcut given to UI Automation as AcceleratorKey, so screen readers can
 # say a button's key (ADR-0033, third_party/accesskit_windows/TEXTWEAVER.md).
 accesskit_windows = { path = "third_party/accesskit_windows" }
-# Wave 5, Agent W5c4: MathCAT vendored for the fix for issue #827
+# Wave 5, Agent W5c4: MathCAT was vendored to carry a fix for issue #827
 # (GetNavigationBraille panicked in no-unsafe builds). Since beta 6 the copy
-# is MathCAT 0.7.7, which fixes the issue itself; only the manifest's test
-# targets are trimmed (ADR-0036, third_party/mathcat/TEXTWEAVER.md). The
-# version above stays pinned.
+# is the MathCAT 0.7.7 package, which fixes the issue itself, with only the
+# manifest's test targets trimmed (ADR-0036, third_party/mathcat/TEXTWEAVER.md).
+# The copy is no longer needed but stays for now: using the crates.io
+# package and dropping this line waits for the owner's go. The version
+# above stays pinned.
 mathcat = { path = "third_party/mathcat" }
