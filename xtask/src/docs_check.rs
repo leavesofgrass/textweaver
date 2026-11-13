@@ -18,8 +18,9 @@
 //!   `docs/dev`) name releases, not internal waves or dates ([`dated_words`]);
 //!   a theme count in `docs/README.md` matches the theme files; and every
 //!   image has alternative text and a "Description:" line near it
-//!   ([`image_problems`]). Each problem is one line naming the file and the
-//!   fact.
+//!   ([`image_problems`]); and `docs/whats-new.md` says "Not yet released"
+//!   under no version whose `vVERSION` tag exists ([`released_but_pending`]).
+//!   Each problem is one line naming the file and the fact.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -268,6 +269,14 @@ pub fn check(root: &Path) -> anyhow::Result<Vec<String>> {
         ));
     }
 
+    // What is new: no tagged release still "Not yet released".
+    let whats_new = "docs/whats-new.md";
+    problems.extend(released_but_pending(
+        whats_new,
+        &read(whats_new)?,
+        &version_tags(root),
+    ));
+
     // Images: alternative text, and a description in words beside them.
     let mut pages = vec!["README.md".to_owned()];
     markdown_under(root, "docs", &mut pages)?;
@@ -277,6 +286,49 @@ pub fn check(root: &Path) -> anyhow::Result<Vec<String>> {
         }
     }
     Ok(problems)
+}
+
+/// The repository's `v*` tags; none when git cannot list them (a source
+/// archive without its history), so the check then finds nothing.
+fn version_tags(root: &Path) -> Vec<String> {
+    Command::new("git")
+        .args(["tag", "--list", "v*"])
+        .current_dir(root)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|l| l.trim().to_owned())
+                .filter(|l| !l.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Each version heading (`## VERSION`) of the What is new page whose
+/// section still says "Not yet released" although `tags` holds
+/// `vVERSION`: one problem line each, meaning first.
+fn released_but_pending(rel: &str, text: &str, tags: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut version: Option<&str> = None;
+    for line in text.lines() {
+        if let Some(heading) = line.strip_prefix("## ") {
+            let v = heading.trim();
+            version = v.starts_with(|c: char| c.is_ascii_digit()).then_some(v);
+            continue;
+        }
+        let Some(v) = version else { continue };
+        if line.contains("Not yet released") && tags.iter().any(|t| t.strip_prefix('v') == Some(v))
+        {
+            out.push(format!(
+                "{rel}: {v} says \"Not yet released\", but the tag v{v} exists; say it is released"
+            ));
+            version = None;
+        }
+    }
+    out
 }
 
 const MONTHS: [&str; 12] = [
@@ -610,6 +662,25 @@ mod tests {
     fn the_docs_are_current() {
         let problems = check(&root()).expect("the docs are readable");
         assert!(problems.is_empty(), "{}", problems.join("\n"));
+    }
+
+    #[test]
+    fn a_tagged_release_still_not_yet_released_is_found() {
+        let page = "# What is new\n\n## 0.2.0\n\nNot yet released.\n\n## 0.1.0\n\n\
+                    Not yet released.\n\n- A change.\n\n## See also\n\nNot yet released.\n";
+        let tags = vec!["v0.1.0".to_owned(), "v0.0.9".to_owned()];
+        assert_eq!(
+            released_but_pending("docs/whats-new.md", page, &tags),
+            vec![
+                "docs/whats-new.md: 0.1.0 says \"Not yet released\", but the tag v0.1.0 exists; say it is released"
+            ]
+        );
+        // Once tagged, said once; no tags, nothing.
+        let tags = vec!["v0.2.0".to_owned(), "v0.1.0".to_owned()];
+        assert_eq!(released_but_pending("w", page, &tags).len(), 2);
+        assert!(released_but_pending("w", page, &[]).is_empty());
+        // A released section says nothing.
+        assert!(released_but_pending("w", "## 0.1.0\n\nReleased.\n", &tags).is_empty());
     }
 
     #[test]
