@@ -16,7 +16,7 @@ With no configuration, textweaver searches the usual install folders. On Windows
 - `DECtalk`, `Fonix\DECtalk`, and `Fonix DECtalk` inside `Program Files` and `Program Files (x86)`;
 - `dectalk.dll` in `Windows\System32` and `Windows\SysWOW64`.
 
-On Linux they are `/usr/lib`, `/usr/local/lib`, and `/opt/dectalk/lib`, where textweaver looks for `libtts.so` or `libdectalk.so`.
+On Linux textweaver looks for `libtts.so` in `/usr/lib`, `/usr/local/lib`, and `/opt/dectalk/lib`, and for `libdectalk.so` in `/usr/lib` and `/usr/local/lib`.
 
 If your DECtalk is installed elsewhere, name its library with an environment variable.
 
@@ -53,7 +53,7 @@ The 32-bit host, `textweaver-host-x86.exe`, must sit beside `tw` and `textweaver
 
 ## Choosing DECtalk and a voice
 
-DECtalk is not selected automatically when Eloquence or a Windows SAPI voice is available, so you must choose it. To hear a sentence:
+DECtalk is not selected automatically when Eloquence or a Windows SAPI voice is available, so you must choose it. It ranks above eSpeak NG, so where neither Eloquence nor SAPI is available, automatic selection picks DECtalk before eSpeak NG. To hear a sentence:
 
 ```bash
 tw speak --backend dectalk "Hello from DECtalk."
@@ -92,7 +92,7 @@ The rate is measured in words per minute, DECtalk's native unit, from 75 to 600.
 
 - "no DECtalk found": textweaver did not find a library. Name it as described above.
 - "does not look like a DECtalk library": the file you named is not a DECtalk library. Check the path.
-- "DECtalk did not start": the library loaded but refused to start. Confirm that it is licensed on this computer and that its dictionary, `dtalk_us.dic`, is in the same folder as the library.
+- "DECtalk could not start", followed by the reason: the library loaded but refused to start. Confirm that it is licensed on this computer and that its dictionary, `dtalk_us.dic`, is in the same folder as the library.
 - "textweaver-host-x86.exe not found": your DECtalk is a 32-bit library, which requires the 32-bit host. Keep `textweaver-host-x86.exe` from the release package beside `textweaver.exe`, or build it with `cargo xtask hosts`.
 
 ## About the free DECtalk source

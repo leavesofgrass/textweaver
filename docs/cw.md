@@ -49,7 +49,7 @@ The tone is a sine wave, 600 Hz by default (CW tone, 200 to 1500 Hz). CW tone is
 
 ## Following along: highlight, RSVP, and the status line
 
-The highlight follows the word being sent. Its timing is not estimated: textweaver computes where each word starts in the audio it plays, so the highlight moves when the word's first element sounds, and it stops when the audio pauses. RSVP (Alt+Shift+P) shows the word being sent. Dots and dashes are never shown.
+The highlight follows the word being sent. Its timing is not estimated: textweaver computes where each word starts in the audio it plays, so the highlight moves when the word's first element sounds, and it stops when the audio pauses. RSVP (Alt+Shift+R) shows the word being sent. Dots and dashes are never shown.
 
 For a reader who follows on a Braille display, the status line shows the characters as they are sent, newest last, after "CW:", in at most 40 cells: "CW: CQ CQ DE". A screen reader shows the status line on the Braille display, so each character appears as it starts to sound. textweaver itself announces nothing extra for them; the line is shown, not said. In the terminal reader, a screen reader that speaks changes on the screen may also speak the line as it changes; if it does, and you want the characters on the Braille display only, check your screen reader's settings for reading screen changes. To keep the status line for messages, turn off CW characters on the status line.
 
@@ -77,7 +77,7 @@ practice_delay_ms = 1000
 - `status_line`: show the characters being sent on the status line.
 - `practice_threshold`, `practice_group`, `practice_groups`, `practice_delay_ms`: Morse code practice (see [Practice and training](#practice-and-training)).
 
-A change applies from the next sentence; while CW is reading, the reading goes on from the last word with the new value. These settings are the same on every computer you sync.
+A change applies from the next sentence; while CW is reading, the reading goes on from the last word with the new value. These settings sync between computers, except the MIDI notes and the MIDI channel (see [Settings for keying](#settings-for-keying)).
 
 In Settings, while CW is the speech engine, the speeds, the tone, and its level are at the top of Voice and speech, with the prosigns and the status line, and Voice and speech lists no voice, rate, or pitch. With any other engine they are in Morse code, which also holds the keying settings; the practice settings are in Morse practice. Typing a word such as `wpm` or `sidetone` in the search finds a setting from anywhere. See [Settings](settings.md#morse-code).
 
@@ -87,7 +87,7 @@ With a key or paddle and a key adapter, Morse code you key is typed into the doc
 
 ### Turn keying on and off
 
-Keying is a mode, so ordinary typing is never taken for Morse code by surprise. Enter edit mode (Ctrl+E), then press **Alt+Shift+F11** (CW keying, also in the Edit menu and the command palette). textweaver says "CW keying on." and names each MIDI adapter as it starts listening to it. Press Alt+Shift+F11 again to turn keying off. Leaving edit mode turns keying off too, and says so. In reading mode the key says that keying types in edit mode.
+Keying is a mode, so ordinary typing is never taken for Morse code by surprise. Enter edit mode (Ctrl+E), then press **Alt+Shift+F11** (CW keying, also in the Edit menu and the command palette). textweaver says "CW keying on.", with the key that turns it off, and names each MIDI adapter as it starts listening to it. Press Alt+Shift+F11 again to turn keying off. Leaving edit mode turns keying off too, and says so. In reading mode the key says that keying types in edit mode.
 
 ### What is typed
 
