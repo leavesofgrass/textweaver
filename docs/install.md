@@ -16,7 +16,7 @@ Since beta 3, textweaver is one program, and every package contains it with the 
 - `tw` runs the terminal program from the same program. `tw FILE` opens the terminal reader, and `tw COMMAND` runs a command without it, such as `tw convert` (see [The command line](command-line.md)). On Linux and macOS `tw` is a link to `textweaver`; on Windows `tw.exe` is a small console program that starts `textweaver.exe` in terminal mode and waits for it, as a terminal expects.
 - `textweaver --tw` (or `--cli`) does the same as `tw`, and `textweaver COMMAND`, such as `textweaver convert`, runs the command, so scripts written for earlier releases keep working.
 
-Releases up to beta 2 had separate programs: the app as `textweaver-gui`, and `tw` with `textweaver` as a second name that opened the terminal reader. Releases up to 0.1.0-alpha.9 distributed the app in separate packages whose names ended in `-gui`. Neither is produced any more.
+Releases up to beta 2 had separate programs: the app as `textweaver-gui`, and `tw` with `textweaver` as a second name that opened the terminal reader. Releases up to 0.1.0-alpha.9 distributed the app in separate packages whose names ended in `-gui`. Neither is produced any more. <!-- history -->
 
 Download from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
 
@@ -202,7 +202,7 @@ To install by hand:
 
 Run `tw backends` to see which engines textweaver found.
 
-**Updates.** The AppImage carries update information, so AppImageUpdate and similar tools can update it by downloading only what changed. After an update from beta 2 or earlier, a link named `textweaver` opens the app rather than the terminal reader; a link named `tw` still runs the terminal program. The separate app AppImages of 0.1.0-alpha.9 and earlier are no longer offered updates; download the current AppImage instead. `scripts/update.sh` updates an install made by the script.
+**Updates.** The AppImage carries update information, so AppImageUpdate and similar tools can update it by downloading only what changed. After an update from beta 2 or earlier, a link named `textweaver` opens the app rather than the terminal reader; a link named `tw` still runs the terminal program. The separate app AppImages of 0.1.0-alpha.9 and earlier are no longer offered updates; download the current AppImage instead. `scripts/update.sh` updates an install made by the script. <!-- history -->
 
 To build from source instead, run the install script without `--release`; it supports Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine, and other architectures. The Docker image in `docker/` contains everything a build needs, including espeak-ng; see [docs/dev/docker.md](dev/docker.md).
 
