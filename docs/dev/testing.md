@@ -531,6 +531,21 @@ On Windows, `tree-dump.ps1` asks accessibility-cli for the tree every two second
 
 Running `tree-dump.sh` or `tree-dump.ps1` on your own machine is safe: it opens the GUI in the background, reads nothing aloud, and drives no screen reader. It needs accessibility-cli on the `PATH`, or its path in `A11Y_CLI` (`-Cli` in PowerShell).
 
+### Snapshots in words: the status transcript and the dialog trees
+
+Two test suites turn checks that used to need the ear into text diffs a reviewer reads. Both run with `cargo test`, need no screen reader, no audio and no network, and give the same text on Windows, macOS and Linux.
+
+- **The status-line transcript** (`crates/textweaver-tui/tests/it/status_transcript.rs`) drives the terminal reader in screen-reader mode, with the cursor on the status line, through a scripted walk: open a fixture, move by heading, the outline, Find and Find next, Settings, a bookmarks list, a live entry from a scripted source, and Repeat Message. Each step is one line: the status text, its length in characters, where the step's key fact ends and whether that is within 40 characters, the first 40 characters, where the hardware cursor is, and whether the message repeats the one before. The snapshot is `crates/textweaver-tui/tests/it/snapshots/status_transcript.txt`.
+- **The dialog trees** (`crates/textweaver-xilem/tests/it/tree_snapshots.rs`) write the accessibility tree of each dialog kind in the app, the live source form, the join code field, the check-in form, the join QR code dialog, and three settings sections: one node per line, indented by depth, with the role, the name, the value, the description and the states in words. Each has its own file in `crates/textweaver-xilem/tests/it/snapshots/`. A password field is written with "value hidden", and a separate test asserts that the masked field is a password field and that its secret is nowhere in the tree, so a snapshot update can never hide a leak.
+
+A test fails with the first line that differs. When the change is meant (a reworded message, a renamed label), write the snapshots again and read the diff before committing it:
+
+```bash
+TEXTWEAVER_UPDATE_SNAPSHOTS=1 cargo test -p textweaver-tui --test it status_transcript
+TEXTWEAVER_UPDATE_SNAPSHOTS=1 cargo test -p textweaver-xilem --test it tree_snapshots
+git diff -- crates/textweaver-tui/tests/it/snapshots crates/textweaver-xilem/tests/it/snapshots
+```
+
 ### The screen-reader sessions, by hand
 
 Run "Screen-reader checks" (`a11y-tests.yml`) from the Actions tab, and choose a session: `nvda`, `orca`, `voiceover`, or `all`. It also runs when its own files change. Each session opens `fixtures/t/reading.md`, reads about three sentences, pauses, moves to the next heading, opens a dialog, and closes it. What was said is checked against `fixtures/t/expected-phrases.json`.

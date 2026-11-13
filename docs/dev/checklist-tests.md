@@ -88,6 +88,8 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 - Ignored: `the_position_line_keeps_modified_inside_forty_cells_at_long_lines`. In edit mode at a three-digit line, "modified" ends at cell 41.
 - Manual, session S7 on the Mantis Q40.
 
+**A8a. Snapshots in words.** Tests: `crates/textweaver-tui/tests/it/status_transcript.rs` backs up the status-line checks of sessions S2, S3 and S7 (the message, its first 40 characters, the cursor, a message said twice), and `crates/textweaver-xilem/tests/it/tree_snapshots.rs` backs up the dialog and form checks of session S3 (names, order and masked fields); see [Testing](testing.md). They do not replace the sessions.
+
 **A9. Keyboard only, no screen reader.** Manual, session S9.
 
 **A10. The WCAG 2.2 AA and UAAG 2.0 AA rows.** Manual: the conformance page, with the evidence from the rows here.
