@@ -73,6 +73,9 @@ pub fn write_atomic_with_permissions(
     write_atomic_inner(path, permissions, |f| f.write_all(bytes))
 }
 
+/// The buffer of [`write_atomic_streamed`], in bytes.
+const STREAM_BUFFER: usize = 256 * 1024;
+
 /// [`write_atomic`], with the contents written by `write` straight into
 /// the temporary file through a buffer, so a large file is never held in
 /// memory whole (the recovery snapshot of a long document). An error from
@@ -81,8 +84,10 @@ pub fn write_atomic_streamed(
     path: &Path,
     write: impl FnOnce(&mut dyn std::io::Write) -> std::io::Result<()>,
 ) -> std::io::Result<()> {
+    // A large buffer: few writes to the file, which a scanner may inspect
+    // one by one, at a small fixed cost in memory.
     write_atomic_inner(path, None, |f| {
-        let mut w = std::io::BufWriter::new(f);
+        let mut w = std::io::BufWriter::with_capacity(STREAM_BUFFER, f);
         write(&mut w)?;
         w.flush()
     })
