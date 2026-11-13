@@ -82,7 +82,7 @@ New entries are added at the end of the document. Your cursor, selection, bookma
 - The unread count is the number of entries after the furthest entry you have reached. The title line and the status bar show it ("3 unread") in place of a position that would change with every entry.
 - **Say unread entries** (`Alt+Shift+F5`) says the count and the newest entry.
 - **Jump to newest entry** (`Alt+Shift+F6`) moves to the last entry and says it.
-- **Pause or resume updates** (`Alt+Shift+F1`) holds new messages while you read a stretch undisturbed. Up to 1,000 messages wait, and a whole log replaces the ones that waited. On resuming, textweaver applies them as one change and says how many ("Updates resumed, 3 applied.").
+- **Pause or resume updates** (`Alt+Shift+F1`) holds new messages while you read a stretch undisturbed. Up to 1,000 messages wait, and a whole log replaces the ones that waited. On resuming, textweaver applies them as one change and says how many ("Updates resumed, 3 updates applied.").
 
 A live document is read only. Edit mode is refused in words. textweaver saves no reading position for it, adds it to no library or recent list, and never syncs it. Save writes the JSON log (see [The JSON log](#the-json-log)).
 
@@ -415,7 +415,7 @@ textweaver says each change of state once, in words, and starts each message wit
   - "TLS needed: ... answered with TLS. Turn TLS on for this source." The port expects TLS.
   - "Settings error: ..." The CA file cannot be read, or the host name is not valid.
   - "Refused: the broker does not accept MQTT 3.1.1." textweaver speaks only that version.
-- **"Unreachable: cannot connect to HOST:PORT: ..."** The broker could not be reached: "nothing is listening on that port", "no answer in time", or "no route to the host". textweaver keeps trying. Check the host, the port, that the broker runs, and that Tailscale or your network is up. Right after a first failed connection on a plain port, the message may add "If this port expects TLS, turn TLS on for this source."
+- **"Unreachable: cannot connect to HOST:PORT: ..."** The broker could not be reached: "nothing is listening on that port", "no answer in time", or "no route to the host". textweaver keeps trying. Check the host, the port, that the broker runs, and that Tailscale or your network is up. On a plain port, a connection that drops while logging in says "Connection lost while logging in to HOST:PORT: ..." and may add "If this port expects TLS, turn TLS on for this source."
 - **"No messages yet on TOPIC. If this lasts, check that the broker lets this account read it."** A broker may accept a subscription its access list forbids, and then send nothing, so textweaver cannot tell a silent topic from a forbidden one. It says this once, after `quiet_hint_seconds`.
 - **"Topic refused: TOPIC. This account may not read it."** The broker refused the subscription. Check the topic and the account's access.
 - **"Left out N messages: they came too fast to show."** The source sent a flood. The log holds what was shown.

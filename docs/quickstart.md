@@ -44,7 +44,7 @@ textweaver records your place in each document and returns to it the next time y
 
 ## Who speaks
 
-If you use a screen reader, decide whether textweaver or the screen reader reads documents aloud. **Alt+Shift+A** cycles through self-voicing (textweaver reads aloud), hybrid (textweaver reads documents and your screen reader speaks messages), and screen reader mode (your screen reader reads). Avoiding duplicate speech is the main reason to choose deliberately; [Using textweaver with a screen reader](screen-readers.md) describes the modes.
+If you use a screen reader, decide whether textweaver or the screen reader reads documents aloud. In the terminal reader, **Alt+Shift+A** cycles through self-voicing (textweaver reads aloud), hybrid (textweaver reads documents and your screen reader speaks messages), and screen reader mode (your screen reader reads). In the textweaver app it switches between two choices, "textweaver reads aloud" and "my screen reader reads". Avoiding duplicate speech is the main reason to choose deliberately; [Using textweaver with a screen reader](screen-readers.md) describes the modes.
 
 ## See also
 
