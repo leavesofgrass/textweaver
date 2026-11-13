@@ -17,7 +17,9 @@ name: GUI (Xilem)
 
 on:
   push:
-    branches: [main]
+    # ci/<name> branches run the same jobs as main (a path filter still
+    # applies; start the workflow by hand to run it regardless).
+    branches: [main, 'ci/**']
     paths:
       - 'crates/**'
       - 'third_party/xilem/**'
@@ -61,9 +63,9 @@ jobs:
     # minutes on Windows; the room lets the run finish and save it.
     timeout-minutes: 150
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: gui-xilem
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -82,7 +84,7 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File crates/textweaver-xilem/tools/uia-report.ps1 -Out uia-xilem.md
           Get-Content uia-xilem.md | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: uia-xilem-report
@@ -107,7 +109,7 @@ jobs:
         # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
         # design, unless the cache becomes the only way to get the tool.
         continue-on-error: true
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
@@ -130,7 +132,7 @@ jobs:
         # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
         # design.
         continue-on-error: true
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
@@ -153,7 +155,7 @@ jobs:
             --summary "$GITHUB_STEP_SUMMARY"
       # Standing since Friday, October 2, 2026 (was report-only, with no
       # reason given); if-no-files-found: warn already covers a missing tree.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: a11y-tree-windows
@@ -172,7 +174,7 @@ jobs:
       - name: Package (cargo xtask gui-dist)
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         run: cargo xtask gui-dist --out gui-dist
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
           name: textweaver-package-windows
@@ -182,9 +184,9 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: gui-xilem
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -221,7 +223,7 @@ jobs:
         # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
         # design, unless the cache becomes the only way to get the tool.
         continue-on-error: true
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
@@ -244,7 +246,7 @@ jobs:
         # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
         # design.
         continue-on-error: true
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
@@ -268,7 +270,7 @@ jobs:
             --summary "$GITHUB_STEP_SUMMARY"
       # Standing since Friday, October 2, 2026 (was report-only, with no
       # reason given); if-no-files-found: warn already covers a missing tree.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: a11y-tree-macos
@@ -281,7 +283,7 @@ jobs:
       - name: Package (cargo xtask gui-dist)
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         run: cargo xtask gui-dist --out gui-dist
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
           name: textweaver-package-macos
@@ -291,9 +293,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: gui-xilem
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -341,7 +343,7 @@ jobs:
         # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
         # design, unless the cache becomes the only way to get the tool.
         continue-on-error: true
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
@@ -364,7 +366,7 @@ jobs:
         # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
         # design.
         continue-on-error: true
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
@@ -388,7 +390,7 @@ jobs:
             --summary "$GITHUB_STEP_SUMMARY"
       # Standing since Friday, October 2, 2026 (was report-only, with no
       # reason given); if-no-files-found: warn already covers a missing tree.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: a11y-tree-linux
@@ -399,7 +401,7 @@ jobs:
           if-no-files-found: warn
       - name: Review screenshots (100% and 200%)
         run: ./target/debug/textweaver --review-screenshots screenshots fixtures/sample.md
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: gui-xilem-linux
@@ -417,7 +419,7 @@ jobs:
           APPIMAGETOOL="$RUNNER_TEMP/appimage/appimagetool" \
           APPIMAGE_RUNTIME="$RUNNER_TEMP/appimage/runtime-x86_64" \
             cargo xtask gui-dist --out gui-dist
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
           name: textweaver-package-linux

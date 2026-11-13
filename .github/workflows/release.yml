@@ -29,6 +29,13 @@
 # checksums job that the published release holds exactly the expected
 # assets (cargo xtask release-assets).
 #
+# Power is split by job. The build jobs (windows, macos, linux) run every
+# dependency's build script, so they hold a read-only token, no GH_TOKEN, and
+# no OIDC permission; they keep the finished package as a workflow artifact.
+# A separate publish job per platform downloads that artifact, attests it, and
+# uploads it, and runs no build. Only those jobs, the job that creates the
+# release, and the checksums job can write.
+#
 # Dry run: start the workflow by hand with the tag left empty. It builds and
 # checks every package from the chosen branch and keeps them as workflow
 # artifacts, and creates no release, attestation, or tag.
@@ -49,16 +56,12 @@ concurrency:
   group: release-${{ github.event.inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  # Build provenance attestations (actions/attest-build-provenance).
-  id-token: write
-  attestations: write
+# No permission by default; each job asks for what it needs.
+permissions: {}
 
 env:
   CARGO_TERM_COLOR: always
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
-  GH_TOKEN: ${{ github.token }}
   # 'true' for a hand-started run with no tag: build and check only.
   DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag == '' }}
 
@@ -67,10 +70,14 @@ jobs:
     name: Create the release
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      # Create the release (gh release create). The job builds nothing.
+      contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
+          persist-credentials: false
       - run: rustup toolchain install
       - name: Dry run (no release is created)
         if: env.DRY_RUN == 'true'
@@ -82,18 +89,25 @@ jobs:
           test "v$version" = "$TAG" || { echo "Cargo.toml version $version does not match tag $TAG"; exit 1; }
       - name: Create the release (notes from CHANGELOG.md)
         if: env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: tools/release-upload.sh --no-sums "$TAG"
 
   windows:
     name: Windows package
     needs: release
     runs-on: windows-latest
+    # Builds only: a read-only token, no GH_TOKEN, no OIDC. The publish job
+    # below attests and uploads.
+    permissions:
+      contents: read
     # textweaver (Vello and wgpu, fat LTO), the launcher, and the 32-bit host.
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
+          persist-credentials: false
       - run: rustup toolchain install
       - run: rustup target add i686-pc-windows-msvc
       - name: Build the package
@@ -144,20 +158,18 @@ jobs:
       # Exactly the files this job uploads: none missing, no stray one.
       - name: The package files are exactly the expected ones
         run: cargo xtask release-assets --dir target/dist --platform windows
-      - uses: actions/attest-build-provenance@v4
-        if: env.DRY_RUN != 'true'
+      # Kept for the publish job; no release is touched here.
+      - name: Keep the package for the publish job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          subject-path: |
+          name: package-windows
+          path: |
             target/dist/textweaver-*-windows-x86_64.zip
-      - name: Upload to the release
-        if: env.DRY_RUN != 'true'
-        shell: bash
-        run: |
-          tools/release-upload.sh --no-sums "$TAG" \
-            target/dist/textweaver-*-windows-x86_64.zip
+          retention-days: 1
+          if-no-files-found: error
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dry-run-windows
           path: |
@@ -166,12 +178,17 @@ jobs:
   macos:
     name: macOS package
     needs: release
-    runs-on: macos-14
+    # macos-14 runners were withdrawn (a dry run on Thursday, November 12,
+    # 2026: "The configuration 'macos-14-arm64-us-default' is not supported").
+    runs-on: macos-15
+    permissions:
+      contents: read
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
+          persist-credentials: false
       - run: rustup toolchain install
       - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
       - name: Build the package
@@ -222,19 +239,18 @@ jobs:
       # Exactly the files this job uploads: none missing, no stray one.
       - name: The package files are exactly the expected ones
         run: cargo xtask release-assets --dir target/dist --platform macos
-      - uses: actions/attest-build-provenance@v4
-        if: env.DRY_RUN != 'true'
+      # Kept for the publish job; no release is touched here.
+      - name: Keep the package for the publish job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          subject-path: |
+          name: package-macos
+          path: |
             target/dist/textweaver-*-macos-universal.zip
-      - name: Upload to the release
-        if: env.DRY_RUN != 'true'
-        run: |
-          tools/release-upload.sh --no-sums "$TAG" \
-            target/dist/textweaver-*-macos-universal.zip
+          retention-days: 1
+          if-no-files-found: error
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dry-run-macos
           path: |
@@ -257,11 +273,14 @@ jobs:
             runner: ubuntu-22.04-arm
             distros: debian:stable fedora:latest
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
+          persist-credentials: false
       - name: Runner architecture
         run: |
           test "$(uname -m)" = "${{ matrix.arch }}" || { echo "Fail: the runner is $(uname -m), not ${{ matrix.arch }}"; exit 1; }
@@ -343,8 +362,135 @@ jobs:
       - run: rustup toolchain install
       - name: The package files are exactly the expected ones
         run: cargo xtask release-assets --dir target/dist --platform linux-${{ matrix.arch }}
-      - uses: actions/attest-build-provenance@v4
+      # Kept for the publish job; no release is touched here.
+      - name: Keep the packages for the publish job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: package-linux-${{ matrix.arch }}
+          path: |
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage.zsync
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+      - name: Keep the packages (dry run)
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: dry-run-linux-${{ matrix.arch }}
+          path: |
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
+
+  # The publish jobs build nothing: they download the checked package, attest
+  # its build provenance, and upload it. In a dry run they only download it,
+  # so the hand-off is tested; nothing is attested or uploaded.
+  publish-windows:
+    name: Publish the Windows package
+    needs: windows
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Upload the package to the release.
+      contents: write
+      # Sign the build provenance (actions/attest-build-provenance).
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: package-windows
+          path: target/dist
+      # Runs in a dry run too, so the hand-off from the build job is tested.
+      - name: The package arrived
+        run: ls -l target/dist && test -n "$(ls target/dist)"
+      - name: Attest the build provenance
         if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: |
+            target/dist/textweaver-*-windows-x86_64.zip
+      - name: Upload to the release
+        if: env.DRY_RUN != 'true'
+        run: |
+          tools/release-upload.sh --no-sums "$TAG" \
+            target/dist/textweaver-*-windows-x86_64.zip
+
+  publish-macos:
+    name: Publish the macOS package
+    needs: macos
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Upload the package to the release.
+      contents: write
+      # Sign the build provenance (actions/attest-build-provenance).
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: package-macos
+          path: target/dist
+      # Runs in a dry run too, so the hand-off from the build job is tested.
+      - name: The package arrived
+        run: ls -l target/dist && test -n "$(ls target/dist)"
+      - name: Attest the build provenance
+        if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: |
+            target/dist/textweaver-*-macos-universal.zip
+      - name: Upload to the release
+        if: env.DRY_RUN != 'true'
+        run: |
+          tools/release-upload.sh --no-sums "$TAG" \
+            target/dist/textweaver-*-macos-universal.zip
+
+  publish-linux:
+    name: Publish the Linux packages, ${{ matrix.arch }}
+    needs: linux
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Upload the packages to the release.
+      contents: write
+      # Sign the build provenance (actions/attest-build-provenance).
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: package-linux-${{ matrix.arch }}
+          path: target/dist
+      # Runs in a dry run too, so the hand-off from the build job is tested.
+      - name: The package arrived
+        run: ls -l target/dist && test -n "$(ls target/dist)"
+      - name: Attest the build provenance
+        if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
@@ -356,41 +502,59 @@ jobs:
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage \
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage.zsync \
             target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
-      - name: Keep the packages (dry run)
-        if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: dry-run-linux-${{ matrix.arch }}
-          path: |
-            target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
-            target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
 
   checksums:
     name: SHA256SUMS.txt
-    needs: [windows, macos, linux]
+    needs: [publish-windows, publish-macos, publish-linux]
     # Not in a dry run: there is no release to sum.
     if: github.event_name != 'workflow_dispatch' || github.event.inputs.tag != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      # Upload SHA256SUMS.txt to the release.
+      contents: write
+      # Sign the build provenance of SHA256SUMS.txt.
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
+          ref: ${{ env.TAG }}
+          persist-credentials: false
       # With no files, the script only rebuilds the checksums of every
       # package on the release, once, after all the packages are there.
       - name: Write the checksums
         run: tools/release-upload.sh "$TAG"
       - name: Fetch the checksums file
         run: gh release download "$TAG" --pattern SHA256SUMS.txt --dir sums
-      # The published release holds exactly the expected assets: every
-      # platform's packages, the .zsync files, and SHA256SUMS.txt, for
-      # this tag's version, and nothing else.
-      - run: rustup toolchain install
-      - name: The release's assets are exactly the expected ones
-        shell: bash
-        run: |
-          gh release view "$TAG" --json assets --jq '.assets[].name' > assets.txt
-          cargo xtask release-assets --names assets.txt --version "${TAG#v}" | tee -a "$GITHUB_STEP_SUMMARY"
-      - uses: actions/attest-build-provenance@v4
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: sums/SHA256SUMS.txt
+
+  # The published release holds exactly the expected assets: every
+  # platform's packages, the .zsync files, and SHA256SUMS.txt, for this
+  # tag's version, and nothing else. This job compiles xtask, so it can only
+  # read; the token is given to the one gh step.
+  verify-assets:
+    name: The release's assets
+    needs: checksums
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Read the release's asset list.
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - run: rustup toolchain install
+      - name: List the release's assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "$TAG" --json assets --jq '.assets[].name' > assets.txt
+      - name: The release's assets are exactly the expected ones
+        shell: bash
+        run: cargo xtask release-assets --names assets.txt --version "${TAG#v}" | tee -a "$GITHUB_STEP_SUMMARY"

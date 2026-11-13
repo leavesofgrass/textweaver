@@ -87,10 +87,23 @@ pm_install() {
     apt-get update -qq > /dev/null
     for p in "$@"; do apt-get install -y -qq --no-install-recommends "$p" > /dev/null 2>&1 || true; done
   elif command -v dnf > /dev/null; then
-    dnf install -y -q "$@" > /dev/null 2>&1
+    dnf install -y -q "$@" > /tmp/pm.log 2>&1 || pm_failed "$@"
   elif command -v pacman > /dev/null; then
-    pacman -Sy --noconfirm --needed "$@" > /dev/null 2>&1
+    # A full upgrade (-Syu), never -Sy alone: Arch does not support
+    # installing onto an out-of-date image, and it failed that way on
+    # Thursday, November 12, 2026 ("installing openssl breaks dependency").
+    # The second try is for a pacman whose download sandbox cannot start in
+    # a container.
+    pacman -Syu --noconfirm --needed "$@" > /tmp/pm.log 2>&1 ||
+      pacman -Syu --noconfirm --needed --disable-sandbox "$@" >> /tmp/pm.log 2>&1 ||
+      pm_failed "$@"
   fi
+}
+# Says why, instead of stopping with no output.
+pm_failed() {
+  echo "  Fail: the package manager could not install: $*"
+  tail -n 20 /tmp/pm.log | sed 's/^/      /'
+  return 1
 }
 alsa() {
   if command -v apt-get > /dev/null; then echo libasound2t64 libasound2; else echo alsa-lib; fi
