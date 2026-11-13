@@ -13,7 +13,7 @@
 edition = "2024"
 rust-version = "1.87"
 name = "accesskit_windows"
-version = "0.35.1"
+version = "0.35.2"
 authors = ["The AccessKit contributors"]
 build = false
 exclude = ["examples"]
@@ -42,10 +42,10 @@ name = "accesskit_windows"
 path = "src/lib.rs"
 
 [dependencies.accesskit]
-version = "0.25.1"
+version = "0.25.2"
 
 [dependencies.accesskit_consumer]
-version = "0.39.1"
+version = "0.39.2"
 
 [dependencies.hashbrown]
 version = "0.17"

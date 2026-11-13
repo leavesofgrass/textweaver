@@ -175,7 +175,7 @@ textweaver-qr = { path = "crates/textweaver-qr" }
 ropey = "1.6"
 unicode-segmentation = "1.13"
 regex = "1.13"
-pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+pulldown-cmark = { version = "0.13.6", default-features = false, features = ["html"] }
 scraper = "0.27"
 # Wave 4, Agent W4b: every compression method a zip member may use, all in
 # pure Rust: deflate through zlib-rs, LZMA and XZ through lzma-rust2, bzip2
@@ -273,7 +273,7 @@ fontique = { version = "0.11.1", default-features = false }
 # W4s (GUI session prep): the xilem crate's tests check options against
 # AccessKit's own filter, the one the platform adapters use. Already in the
 # tree through masonry_testing; a dev-dependency only.
-accesskit_consumer = "0.39.1"
+accesskit_consumer = "0.39.2"
 # W4s: `--announce uia` implements one small COM provider with the `windows`
 # crate's `#[implement]`, which names `windows_core` by its own name. The
 # same version AccessKit's Windows adapter already uses (Windows only).
@@ -304,7 +304,7 @@ png = "0.18"
 zune-jpeg = "0.5"
 # Spreadsheets (XLSX, XLS, ODS) and archives (tar, tar.gz, 7z). flate2 was
 # in the tree already (zip, png); its default back end is pure Rust.
-calamine = "0.36.1"
+calamine = "0.38"
 flate2 = "1.1"
 tar = { version = "0.4.46", default-features = false }
 sevenz-rust2 = { version = "0.23.0", default-features = false }
@@ -547,7 +547,7 @@ codegen-units = 1
 # vendored Masonry (ADR-0027). No other crate in the workspace uses Parley.
 [patch.crates-io]
 parley = { path = "third_party/xilem/parley" }
-# Wave 4, Agent W4a3: AccessKit's Windows adapter 0.35.1 with the keyboard
+# Wave 4, Agent W4a3: AccessKit's Windows adapter (0.35.2 since beta 6) with the keyboard
 # shortcut given to UI Automation as AcceleratorKey, so screen readers can
 # say a button's key (ADR-0033, third_party/accesskit_windows/TEXTWEAVER.md).
 accesskit_windows = { path = "third_party/accesskit_windows" }

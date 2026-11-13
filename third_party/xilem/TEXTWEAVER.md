@@ -15,7 +15,7 @@ It is its own Cargo workspace. The root workspace excludes it (`exclude = ["thir
 
 `textweaver.patch` holds every change against upstream, as a unified diff. In short:
 
-1. **AccessKit 0.25.1 and accesskit_winit 0.34.1** (from 0.24 and 0.32.2), and accesskit_consumer 0.39.1 (from 0.35). This brings the Orca-detection fix (`accesskit_unix` 0.22 and later) that Xilem issue #1733 is about, plus text attributes on macOS and the AT-SPI EditableText and Document interfaces.
+1. **AccessKit 0.25.2 and accesskit_winit 0.34.2** (from 0.24 and 0.32.2), and accesskit_consumer 0.39.2 (from 0.35). The October 25, 2026 patch releases (beta 6) keep the content of password inputs from screen readers. This brings the Orca-detection fix (`accesskit_unix` 0.22 and later) that Xilem issue #1733 is about, plus text attributes on macOS and the AT-SPI EditableText and Document interfaces.
 2. `masonry_core`: `accesskit::Tree` became `TreeInfo` in AccessKit 0.25.
 3. `masonry_testing`: `accesskit_consumer::Node` became `NodeRef`. `TestHarness::access_node` now uses `node_by_tree_local_id` (AccessKit PR #707) instead of an `unsafe` write into a private `NodeId`, which closes the workaround for AccessKit issue #701.
 4. **Parley 0.11.1**: its optional `accesskit` dependency moved from 0.24.0 to 0.25.1 (`parley/Cargo.toml`, the published manifest; `Cargo.toml.orig` is left as published). One source change: `bidi.rs` allows the deprecation of `BidiClass::to_icu4c_value` in icu_properties 2.3 (the workspace resolves 2.3; Parley asks for 2.1), because CI builds with `-D warnings`.
