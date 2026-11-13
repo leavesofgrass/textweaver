@@ -131,7 +131,8 @@ pub fn write_snapshot(dir: &Path, snapshot: &RecoverySnapshot) -> std::io::Resul
 /// Writes a snapshot whose text is still a rope to `<dir>/<doc_key>.json`
 /// atomically, a chunk of the rope at a time: neither the whole text nor
 /// its JSON is ever built in memory. The file is byte for byte what
-/// [`write_snapshot`] writes for [`PendingSnapshot::to_snapshot`].
+/// [`write_snapshot`] writes for
+/// [`PendingSnapshot::to_snapshot`](crate::PendingSnapshot::to_snapshot).
 /// Returns its path.
 pub fn write_pending_snapshot(
     dir: &Path,
