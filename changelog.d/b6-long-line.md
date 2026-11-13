@@ -1,2 +1,0 @@
-### Reading and speech
-- **Typing in a very long line is fast again.** In edit mode, each typed character checked whether it completed a Markdown marker (`## `, `- `, `1. `) or the first word of a heading, and to do so copied the whole line several times. On a 2 MB single line that took about 7 ms a key. The checks now read only the few characters a marker or the first word can span, so a key costs the same in a long line as in a short one, and what is said is unchanged.

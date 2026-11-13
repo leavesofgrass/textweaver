@@ -13,6 +13,7 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 - **MathCAT 0.7.7.** Math speech and math braille now use MathCAT 0.7.7 (October 21, 2026), with its new and revised language rules, its Unified English Braille updates and its Nemeth fix. The words textweaver records for its test formulas are unchanged in English, and Nemeth braille is unchanged. UEB math in contracted (grade 2) braille now marks grade 1 with symbol and word indicators where it used a grade 1 passage, so a formula no longer starts with the passage indicator and ends with the terminator.
 - **Math in Portuguese.** MathCAT 0.7.7 has Portuguese speech rules, so a document in Portuguese has its math read in Portuguese instead of English.
 - MathCAT's own release fixes the navigation braille crash in builds without unsafe code (issue #827), so textweaver's copy of MathCAT no longer carries a fix of its own.
+- **Typing in a very long line is fast again.** In edit mode, each typed character checked whether it completed a Markdown marker (`## `, `- `, `1. `) or the first word of a heading, and to do so copied the whole line several times. On a 2 MB single line that took about 7 ms a key. The checks now read only the few characters a marker or the first word can span, so a key costs the same in a long line as in a short one, and what is said is unchanged.
 
 ### Live documents
 
@@ -102,6 +103,14 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 - Known limits, the accessibility statement and the README say that 124 new or reworded messages are in English in the other five languages until the translation pass.
 - The developer guides match the third wave of beta 6: architecture (the caption loader and how a format registers, the EPUB accessibility metadata, PubMed lookup, the vendored MathCAT 0.7.7 and Windows adapter, and the app's document view with its gap), third-party data (a new section on vendored code: MathCAT, the Windows adapter, and the Xilem patches with their status lines), testing (the loader fixture rule, the accessibility tree tests, the adapter's tests and the one left out, and the frames probe's options), the fuzz page (caption files), the good first issues (checked again) and the documentation coverage page.
 - The site lists EPUB accessibility information, caption transcripts, PubMed ID lookup and spelling errors for screen readers, and the crate map's descriptions of the formats and cite crates name captions and PubMed.
+- The what is new page covers wave 3 of beta 6: caption files as transcripts, an EPUB's accessibility information, PubMed IDs in references, math in Portuguese with MathCAT 0.7.7, spelling and grammar marks for NVDA in the app, right-to-left paragraphs, scrolling to the ends of a very long document, and the updated HTML cleaner.
+- The reading guide describes the minute headings of a caption transcript as following the interface language, and says that `j` and Shift+J reach the ends of a very long document in the app while the mouse wheel still stops.
+- The converting guide, the index, the README, the quick start for students and the roadmap list SubRip and WebVTT among the formats textweaver reads.
+- The citations guide gives the PubMed ID forms that work on the command line: `PMID:12345678`, or the space form in quotes, because `tw cite add PMID 12345678` without quotes is refused as two arguments. The editing, app, screen reader, privacy, security and JSON-RPC pages say that references can be added by PubMed ID too.
+- The math guide says how contracted (grade 2) braille writes UEB math with MathCAT 0.7.7: symbol and word indicators instead of a grade 1 passage.
+- The screen reader guide gives the steps to hear spelling errors in NVDA (Document Formatting settings, spelling errors on) and says that JAWS is not confirmed and that none of it has been heard by ear. The troubleshooting guide has entries for missing spelling announcements and for a caption file that reads as plain text.
+- Known limits count 140 messages in English only until the translation pass, and add that a Piper voice falls short of the rate asked for from about 300 words a minute up, with the numbers measured for one voice (300 asked, 234 reached; 400, 282; 500, 309; 600, 342).
+- The index counts 44 fuzz targets, the staff guide names the conversion report file correctly (`conversion-report.md`), the settings guide describes the first-run language list as it is, and the history lines of the app, command line, installation, troubleshooting and README pages carry the history marker.
 
 ### For contributors
 
@@ -133,6 +142,13 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 - **The app's document view keeps a gap.** Scrolled far from the cursor in a very long document, the view holds the text around the cursor and the text scrolled to as two pieces (`DocModel::gap`), and the cursor's runs stay in the accessibility tree. The frames probe has a hidden `--frames-marks` option that measures edit mode with its spelling and lint marks.
 - **The caption loader takes its minute heading from the app.** `LoadOptions::minute_heading` carries the catalog's `captions-minute` words, and a pseudo-locale test checks that the heading follows the language.
 - **ammonia 4.1.9** (see Security and privacy) is in `Cargo.lock`; the notices list it.
+- **The app's tests no longer open this machine's MIDI inputs.** Turning CW keying on opens the system's MIDI inputs only in a session that keeps files, as opening a file with the default program already does. In a workspace build, where the `cw-midi` feature is on, the app's test program had crashed with an access violation inside Windows' MIDI library (`Windows.Devices.Midi.dll`), and passed when run again.
+- **A MIDI input is closed when CW keying stops.** The connection is now closed with midir's `close`, which removes its message handler and closes the port; before, it was only dropped, and midir's WinRT backend does neither on drop.
+- **`tw cite add PMID 12345678` works without quotes.** The identifier may be several words, joined with a space, so `PMID 12345678`, `PMID:12345678` and `"PMID 12345678"` all look up the same article; a DOI or ISBN works as before ([Add an article by PubMed ID](docs/citations.md#add-an-article-by-pubmed-id)).
+- The English messages spell "canceled" the US way: the task status "Canceled." and the help of Cycle task status.
+- The code left over from the removed first-run question about hybrid mode is gone, with its two messages in every language; the help of `accessibility.hybrid_offered` says what the setting records now.
+- `cargo xtask release` runs every step of a full `scripts/dev-check`, the one list of steps, in its own target folder; the dry run lists the steps ([Releasing](docs/dev/releasing.md)).
+- Comments brought up to date: the steps in `dev-check.ps1`'s header, `tw changes`' hidden old flags, and the vendored MathCAT in the root `Cargo.toml`. The `tw backends` example in the speech guide names Eloquence as `tw` prints it.
 
 ## [0.1.0-beta.5] - 2026-10-29
 

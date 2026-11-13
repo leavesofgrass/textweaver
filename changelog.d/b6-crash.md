@@ -1,3 +1,0 @@
-### For contributors
-- **The app's tests no longer open this machine's MIDI inputs.** Turning CW keying on opens the system's MIDI inputs only in a session that keeps files, as opening a file with the default program already does. In a workspace build, where the `cw-midi` feature is on, the app's test program had crashed with an access violation inside Windows' MIDI library (`Windows.Devices.Midi.dll`), and passed when run again.
-- **A MIDI input is closed when CW keying stops.** The connection is now closed with midir's `close`, which removes its message handler and closes the port; before, it was only dropped, and midir's WinRT backend does neither on drop.
