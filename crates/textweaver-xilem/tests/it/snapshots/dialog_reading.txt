@@ -6,7 +6,7 @@ Written by tests/it/tree_snapshots.rs; update with TEXTWEAVER_UPDATE_SNAPSHOTS=1
     - Label [hidden]
     - Group "Reading settings" description="Up and Down move, Left and Right change a value, Enter types one, F1 says the help." [focused, active item "Rate"]
       - Slider "Rate" value="265 words per minute" description="How fast textweaver speaks." [selected]
-      - ComboBox "Font" value="sans serif" description="The window's reading font."
+      - ComboBox "Font" value="sans serif" description="The app's reading font."
       - Slider "Font size" value="14 points" description="The window's font size."
       - Slider "Font weight" value="400" description="400 is regular, 700 bold."
       - Slider "Line height" value="1.5" description="Line height as a multiple of the font size."
