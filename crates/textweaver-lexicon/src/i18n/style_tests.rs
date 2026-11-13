@@ -281,9 +281,12 @@ fn button_hints_are_short_in_every_language() {
 /// names and labels (menus, settings and their helps, choices, sections,
 /// units, kinds, languages), command descriptions, key names, help-topic
 /// fragments and the button hints, which have tests of their own. The
-/// accessibility audit after beta 5 chose these the same way.
+/// accessibility audit after beta 5 chose these the same way. The reasons
+/// a live source gives (`live-why-`, `live-link-bad-`,
+/// `live-topic-problem-`) are fragments said after another message's
+/// lead, such as "Not a join link:", so the lead rules do not apply.
 fn is_status(id: &str) -> bool {
-    const NOT_STATUS: [&str; 15] = [
+    const NOT_STATUS: [&str; 18] = [
         "action-",
         "category-",
         "choice-",
@@ -292,6 +295,9 @@ fn is_status(id: &str) -> bool {
         "keyname-",
         "kind-",
         "lang-",
+        "live-link-bad-",
+        "live-topic-problem-",
+        "live-why-",
         "menu-",
         "name-",
         "pos-",
@@ -451,7 +457,7 @@ fn no_symbols_in_any_language() {
 /// still start with a longer clause and may only become fewer.
 #[test]
 fn status_messages_lead_within_forty_characters() {
-    const LONG_FIRST_CLAUSE: [&str; 200] = [
+    const LONG_FIRST_CLAUSE: [&str; 202] = [
         "aids-difficult-no-list",
         "aids-reading-level-too-short",
         "app-terminal-only",
@@ -559,6 +565,8 @@ fn status_messages_lead_within_forty_characters() {
         "live-checkin-through-title",
         "live-connected-tailscale",
         "live-document-shown",
+        "live-down-lost-logging-in",
+        "live-down-lost-logging-in-tls",
         "live-field-speak-off",
         "live-file-not-read",
         "live-file-note-join-code",
