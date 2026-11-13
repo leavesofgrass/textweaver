@@ -133,7 +133,7 @@ A lecture's captions are often the only transcript a student has. A SubRip (`.sr
 - **Time.** Every five minutes of the recording there is a heading, "Minute 5", "Minute 10", and so on, so the heading keys move through the talk by time, and the outline (**Alt+O**) lists the minutes. A long silence goes straight to the heading of the minute where the talk starts again.
 - **What is left out.** Italics, bold, colors, positions, the WebVTT header and its notes and style blocks, and caption numbers. Captions that repeat the line before, as automatic captions often do while they scroll, are read once.
 
-A caption file with a damaged time is still read, in its place. A file with no caption times at all is read as plain text, and the document says so. Caption files open from the file browser and the open dialog, and `tw text lecture.vtt` prints the transcript. The headings' words are English for now.
+A caption file with a damaged time is still read, in its place. A file with no caption times at all is read as plain text, and the document says so. Caption files open from the file browser and the open dialog, and `tw text lecture.vtt` prints the transcript. The minute headings' words come from the interface language in the reader and the app; the other five languages say "Minute 5" in English until the translation pass, and `tw text` always prints it in English.
 
 ## What the screen shows
 
@@ -372,7 +372,7 @@ Chapters are the book's sections when the document has them (EPUB chapters, Word
 ### Pages and scrolling
 
 - **PageDown** and **PageUp**: move one screen, less four lines. You hear "Page, line", the line number, and a preview.
-- **j** and **Shift+J**: scroll the view down or up one line without moving the cursor, in the terminal reader and in the textweaver app. At normal verbosity you hear "Top of document." or "Bottom of document." when you reach an end, and at high verbosity also "Line 12 at top." for the line now at the top.
+- **j** and **Shift+J**: scroll the view down or up one line without moving the cursor, in the terminal reader and in the textweaver app. At normal verbosity you hear "Top of document." or "Bottom of document." when you reach an end, and at high verbosity also "Line 12 at top." for the line now at the top. In a very long document the app holds only the text around the cursor; these keys still reach the first and last lines, and the mouse wheel does not.
 - **Line numbers** (View, Line numbers, or the command palette's "toggle line numbers") are drawn in the left margin in both; they are drawn only, so a screen reader reads the text without them. See [Scrolling and line numbers](gui.md#scrolling-and-line-numbers).
 
 ### The cursor keys
@@ -581,7 +581,7 @@ tw changes reject draft.docx --out original.docx
 tw changes accept draft.docx --in-place
 ```
 
-`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `tw changes accept` or `tw changes reject` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`; the original file is left alone. The older spellings, `--accept-all` and `--reject-all`, still work through beta 1. With `--in-place` instead, the Word file itself is changed, exactly as Save changes to the Word file does it, after the original is copied to `draft-original.docx`.
+`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `tw changes accept` or `tw changes reject` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`; the original file is left alone. The older spellings, `--accept-all` and `--reject-all`, still work but are hidden from the help. With `--in-place` instead, the Word file itself is changed, exactly as Save changes to the Word file does it, after the original is copied to `draft-original.docx`.
 
 ## Go back and forward
 

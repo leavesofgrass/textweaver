@@ -340,6 +340,8 @@ tw convert notes.md --to brf --math-code ueb
 - **Nemeth** (the default): the Nemeth Code, inside the Unified English Braille text around it. Each formula starts with the opening Nemeth indicator and a space, and ends with a space and the Nemeth terminator, as BANA's guidance for Nemeth in UEB contexts says. A number on its own, such as the 2 in "2 roots", stays in UEB.
 - **UEB**: Unified English Braille's own mathematics, with no switch indicators.
 
+With contracted (grade 2) braille (`braille.grade = "contracted"`, which needs liblouis), UEB math marks a single symbol that could be read as a contraction with a grade 1 symbol indicator, and a word with a grade 1 word indicator, as MathCAT 0.7.7 writes them. Before beta 6, some formulas were instead wrapped in a grade 1 passage, so they began with the passage indicator and ended with the terminator. Nemeth braille, and UEB math in uncontracted text, are unchanged. Exploring a formula in the app always shows its braille as for uncontracted text.
+
 After a braille file is written, `tw convert` says which code it used, for example "Math braille: Nemeth." Exports from the reader (`export brf`) use `math_code` in the `[braille]` section of `settings.toml`:
 
 ```toml

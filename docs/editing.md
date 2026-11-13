@@ -313,7 +313,7 @@ Pasting into a prompt such as Find inserts the text into the prompt.
 
 ## Citations
 
-In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (**Alt+Shift+D** in the graphical version) adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
+In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (**Alt+Shift+D** in the graphical version) adds a reference by DOI, ISBN, or PubMed ID. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
 
 ## Spelling
 
@@ -381,7 +381,7 @@ Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` 
 
 ### The preview pane in the app
 
-In the app, the preview can sit beside the editor instead of in a browser: **Alt+F5**, Show preview in the View menu, or `show preview` in the palette turns it on or off, and the choice is kept (`pane` in `[preview]`, off by default). It shows the document as the reading view draws it, parsed by textweaver's own Markdown reader rather than a web engine, and is redrawn once you pause typing for 300 milliseconds (`pane_delay_ms`, 100 to 3000). The block being edited is scrolled into view and marked with a band and an underline. Focus stays in the editor and nothing is announced, so the preview never interrupts your screen reader. F6 moves into it to read, and back. The [window guide](gui.md#the-preview-pane) describes narrow windows and the keys in full.
+In the app, the preview can sit beside the editor instead of in a browser: **Alt+F5**, Show preview in the View menu, or `show preview` in the palette turns it on or off, and the choice is kept (`pane` in `[preview]`, off by default). It shows the document as the reading view draws it, parsed by textweaver's own Markdown reader rather than a web engine, and is redrawn once you pause typing for 300 milliseconds (`pane_delay_ms`, 100 to 3000). The block being edited is scrolled into view and marked with a band and an underline. Focus stays in the editor and nothing is announced, so the preview never interrupts your screen reader. F6 moves into it to read, and back. The [app guide](gui.md#the-preview-pane) describes narrow windows and the keys in full.
 
 ### Preview in the browser
 
