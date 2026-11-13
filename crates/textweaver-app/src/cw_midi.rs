@@ -107,7 +107,10 @@ pub fn listen(
                         while !stop.load(Ordering::SeqCst) {
                             std::thread::sleep(Duration::from_millis(20));
                         }
-                        drop(c);
+                        // Closed, not just dropped: midir's WinRT backend
+                        // has no Drop, so only close removes the message
+                        // handler and closes the port.
+                        let _ = c.close();
                     }
                     Err(e) => on_status(MidiStatus::Failed(name, e.to_string())),
                 }
