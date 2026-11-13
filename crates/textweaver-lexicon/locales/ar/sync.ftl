@@ -56,11 +56,6 @@ sync-arrived =
 sync-resumed = { $title }: استُؤنفت القراءة عند { $pct } بالمئة، من { $device }.
 sync-place-arrived = موضع { $device }: { $pct } بالمئة.
 sync-place-question = { $device } عند { $pct } بالمئة. الانتقال إليه؟ y أو n
-sync-suggestion-question =
-    { $n ->
-        [one] قد يكون هذا { $title } من { $device }، مع ملاحظة واحدة. استخدامها؟ y أو n
-       *[other] قد يكون هذا { $title } من { $device }، مع ملاحظات: { $n }. استخدامها؟ y أو n
-    }
 sync-went-to-place = موضع { $device }، { $pct } بالمئة.
 sync-kept-place = أُبقي هذا الموضع.
 sync-suggestion-accepted = تُستخدم ملاحظات { $device }.

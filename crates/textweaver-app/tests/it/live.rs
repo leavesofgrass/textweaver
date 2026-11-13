@@ -574,7 +574,7 @@ mod fed {
         let _ = r.app.tick(Instant::now());
         assert_eq!(r.app.live_waiting(), PAUSE_QUEUE_CAP);
         let _ = r.app.live_set_paused(false);
-        assert!(r.last_said().contains("5 older updates were left out"));
+        assert!(r.last_said().contains("5 older ones left out while paused"));
         // A whole log replaces everything queued before it.
         let _ = r.app.live_set_paused(true);
         r.send(r#"{"call": "W1"}"#);

@@ -1432,11 +1432,11 @@ mod tests {
         let full = Caps::WORD_EVENTS | Caps::PITCH | Caps::VOLUME;
         assert_eq!(
             capability_message(&en, full, Caps::PITCH | Caps::VOLUME).as_deref(),
-            Some("This voice does not report words, so the word highlight is estimated.")
+            Some("Word highlight estimated: this voice reports no words.")
         );
         assert_eq!(
             capability_message(&en, Caps::VOLUME, full).as_deref(),
-            Some("This voice reports each word, so the highlight follows it exactly.")
+            Some("Word highlight exact: this voice reports each word.")
         );
         assert_eq!(
             capability_message(&en, full, Caps::WORD_EVENTS).as_deref(),

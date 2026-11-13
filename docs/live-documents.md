@@ -417,10 +417,10 @@ textweaver says each change of state once, in words, and starts each message wit
   - "Refused: the broker does not accept MQTT 3.1.1." textweaver speaks only that version.
 - **"Unreachable: cannot connect to HOST:PORT: ..."** The broker could not be reached: "nothing is listening on that port", "no answer in time", or "no route to the host". textweaver keeps trying. Check the host, the port, that the broker runs, and that Tailscale or your network is up. Right after a first failed connection on a plain port, the message may add "If this port expects TLS, turn TLS on for this source."
 - **"No messages yet on TOPIC. If this lasts, check that the broker lets this account read it."** A broker may accept a subscription its access list forbids, and then send nothing, so textweaver cannot tell a silent topic from a forbidden one. It says this once, after `quiet_hint_seconds`.
-- **"The broker refused the topic TOPIC; it may not let this account read it."** The broker refused the subscription. Check the topic and the account's access.
-- **"N messages were left out: they came faster than they could be shown."** The source sent a flood. The log holds what was shown.
-- **"A message on TOPIC was left out: it is not text"** or **"too large."** Binary messages and those over 256 KiB are skipped.
-- **"The log is full at 20000 entries; newer entries are left out."** Close the source and open it again for a new log.
+- **"Topic refused: TOPIC. This account may not read it."** The broker refused the subscription. Check the topic and the account's access.
+- **"Left out N messages: they came too fast to show."** The source sent a flood. The log holds what was shown.
+- **"Left out, not text: N bytes on TOPIC."** or **"Left out, too large: N bytes on TOPIC."** Binary messages and those over 256 KiB are skipped.
+- **"Log full at 20000 entries; newer ones are left out."** Close the source and open it again for a new log.
 - **"NAME not opened: no password."** You cancelled the password prompt.
 - **"Live sources are not in this version of textweaver."** This build leaves out MQTT. A saved JSON log still opens.
 

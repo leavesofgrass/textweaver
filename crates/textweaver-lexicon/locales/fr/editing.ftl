@@ -203,7 +203,6 @@ edit-replace-with =
 common-recovery-write-failed = Impossible d'écrire la copie de récupération : { $error }. Enregistrez bientôt ; { -brand } continuera d'essayer.
 common-recovery-writing-again = La copie de récupération est en cours de réécriture.
 # $title is the document; $when is how long ago its work was saved.
-edit-recovery-offer = { -brand } s'est fermé avec des modifications non enregistrées de { $title }, enregistrées { $when }. Les récupérer maintenant ? Haut et Bas choisissent, Entrée confirme.
 edit-recovery-title = Récupérer le travail non enregistré de { $title } ?
 edit-recovery-yes = Oui, récupérer { $title } et continuer à modifier
 edit-recovery-no = Non, abandonner les modifications non enregistrées

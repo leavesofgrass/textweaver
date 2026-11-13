@@ -35,7 +35,6 @@ access-a-screen-reader = Um leitor de tela
 # On the first run with a screen reader and no mode chosen: hybrid mode is
 # used, not asked. $reader is the screen reader found (NVDA, JAWS), or
 # access-a-screen-reader; $key names the keys that change the mode.
-access-hybrid-inferred = { $reader } está em execução: textweaver lê os documentos em voz alta e deixa as mensagens para seu leitor de tela. { $key } muda isso.
 # The window's two modes, when the mode changes; $key changes it again.
 access-window-choice-reads-aloud = textweaver lê em voz alta
 access-window-choice-screen-reader = meu leitor de tela lê

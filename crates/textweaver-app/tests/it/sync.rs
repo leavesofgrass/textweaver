@@ -593,7 +593,8 @@ fn a_shared_isbn_is_asked_about_before_notes_are_shared() {
     lab.settle();
     let q = lab.app.pending_question().unwrap_or_default();
     assert!(
-        q.starts_with("This may be ") && q.contains("from laptop, with 1 note"),
+        q.starts_with("Use the note from laptop here? y or n. This may be ")
+            && q.contains(", with 1 note"),
         "{q}"
     );
     lab.app.dispatch(Command::Confirm(Confirm::No));

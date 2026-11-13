@@ -35,7 +35,6 @@ access-a-screen-reader = Ein Screenreader
 # On the first run with a screen reader and no mode chosen: hybrid mode is
 # used, not asked. $reader is the screen reader found (NVDA, JAWS), or
 # access-a-screen-reader; $key names the keys that change the mode.
-access-hybrid-inferred = { $reader } läuft: textweaver liest Dokumente vor und überlässt Meldungen Ihrem Screenreader. { $key } ändert das.
 # The window's two modes, when the mode changes; $key changes it again.
 access-window-choice-reads-aloud = textweaver liest vor
 access-window-choice-screen-reader = mein Screenreader liest

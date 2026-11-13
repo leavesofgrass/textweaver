@@ -39,13 +39,13 @@ live-paused = Updates paused. New entries wait until you resume.
 live-paused-status = updates paused
 live-stopped = { $name } stopped. The log stays open, read only.
 live-log-saved = Log saved as { $name } in { $folder }.
-live-log-save-failed = Cannot save the live log { $path }: { $error } Check that the logs folder can be written to; textweaver tries again in 10 seconds.
+live-log-save-failed = Could not save the live log: { $error } Trying again in 10 seconds. Log: { $path }.
 live-log-empty-not-saved = The log has no entries yet, so nothing was saved.
 live-log-nowhere = There is no folder to save the live log in.
 live-log-saved-already = This log was opened from { $path }; it is already saved.
-live-binary = A message on { $topic } was left out: it is not text ({ $len } bytes).
-live-too-large = A message on { $topic } was left out: it is too large ({ $len } bytes).
-live-full = The log is full at { $max } entries; newer entries are left out.
+live-binary = Left out, not text: { $len } bytes on { $topic }.
+live-too-large = Left out, too large: { $len } bytes on { $topic }.
+live-full = Log full at { $max } entries; newer ones are left out.
 live-connecting = Connecting to { $name }.
 live-reconnecting = Reconnecting to { $name }, attempt { $attempt }.
 live-connected = Connected to { $name }, encrypted.
@@ -69,7 +69,7 @@ live-resumed =
         [one] Updates resumed, 1 update applied.
        *[other] Updates resumed, { $count } updates applied.
     }
-live-resumed-dropped = Updates resumed, { $count } updates applied. { $dropped } older updates were left out while paused.
+live-resumed-dropped = Updates resumed, { $count } applied; { $dropped } older ones left out while paused.
 
 ## Beta 5: live sources' commands, the set-up steps, and new entries said.
 ## $name is a source's name, $topic an MQTT topic, $line an entry as one
@@ -82,11 +82,11 @@ menu-live-publish = Publish
 prompt-live-setup = Set up a live source
 prompt-save-live-source-file = Save live source as file
 live-failed = Cannot connect to { $name }: { $reason } No more tries; fix this, then open the source again.
-live-topic-refused = The broker refused the topic { $topic }; it may not let this account read it.
+live-topic-refused = Topic refused: { $topic }. This account may not read it.
 live-skipped =
     { $count ->
-        [one] 1 message was left out: they came faster than they could be shown.
-       *[other] { $count } messages were left out: they came faster than they could be shown.
+        [one] Left out 1 message: it came too fast to show.
+       *[other] Left out { $count } messages: they came too fast to show.
     }
 live-new-entries = { $line } { $count } new entries.
 live-unread-newest = { $count }. Newest: { $line }
@@ -221,7 +221,7 @@ live-broker-started-local = Broker on: { $addresses }, TLS, this computer only.
 live-broker-started = Broker on: { $addresses }, TLS.
 live-broker-started-plain-local = Broker on: { $addresses }, not encrypted, this computer only.
 live-broker-started-plain = Broker on: { $addresses }, not encrypted.
-live-broker-plain-warning = Warning: the broker is not encrypted, on a network that is not only this computer or Tailscale. Anyone there can read the messages and the passwords.
+live-broker-plain-warning = Not encrypted: anyone on this network can read the messages and passwords. Use TLS, or this computer or Tailscale only.
 live-broker-join-code = Join code: { $code }.
 live-broker-pin = Certificate pin: { $pin }.
 live-broker-not-running = No broker is running. Start your broker starts one.

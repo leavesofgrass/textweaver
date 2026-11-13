@@ -471,11 +471,11 @@ mod tests {
         let written = textweaver_app::written_text;
         assert_eq!(
             spoken(&welcome),
-            "Welcome to textweaver. Control O opens a document. Space starts and pauses reading, and Escape stops. F2 lists every command. F1 opens the help."
+            "Welcome to textweaver. Control O opens a document, F1 the help. Space plays and pauses, Escape stops, F2 lists every command."
         );
         assert_eq!(
             written(&welcome),
-            "Welcome to textweaver. Ctrl+O opens a document. Space starts and pauses reading, and Escape stops. F2 lists every command. F1 opens the help."
+            "Welcome to textweaver. Ctrl+O opens a document, F1 the help. Space plays and pauses, Escape stops, F2 lists every command."
         );
         let none = no_document_text(&app.catalog(), app.keymap());
         assert_eq!(

@@ -220,7 +220,7 @@ fn a_voice_without_word_events_is_announced() {
         ..AppConfig::for_tests()
     });
     let deadline = Instant::now() + Duration::from_secs(30);
-    while !said.any("does not report words") {
+    while !said.any("reports no words") {
         app.poll_speech();
         assert!(
             Instant::now() < deadline,
@@ -231,7 +231,7 @@ fn a_voice_without_word_events_is_announced() {
     }
     assert_eq!(
         said.last(),
-        "This voice does not report words, so the word highlight is estimated. Pitch cannot be changed with this voice."
+        "Word highlight estimated: this voice reports no words. Pitch cannot be changed with this voice."
     );
     assert!(!app.speech_capabilities().contains(Caps::WORD_EVENTS));
 }

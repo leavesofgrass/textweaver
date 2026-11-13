@@ -273,8 +273,6 @@ nav-position-mode = Modus { $mode }.
 
 ## Reading aloud.
 
-playback-caps-no-words = Diese Stimme meldet keine Wörter, daher wird die Wort-Hervorhebung geschätzt.
-playback-caps-words = Diese Stimme meldet jedes Wort, daher folgt die Hervorhebung genau.
 playback-caps-no-pitch = Die Tonhöhe kann bei dieser Stimme nicht geändert werden.
 playback-caps-no-volume = Die Lautstärke kann bei dieser Stimme nicht geändert werden.
 # The reading state on the title line, one word.

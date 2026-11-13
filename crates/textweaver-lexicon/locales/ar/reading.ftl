@@ -311,8 +311,6 @@ nav-position-mode = وضع { $mode }.
 
 ## القراءة بصوت عالٍ.
 
-playback-caps-no-words = هذا الصوت لا يبلّغ عن الكلمات، لذا يُقدَّر تمييز الكلمات تقديرًا.
-playback-caps-words = هذا الصوت يبلّغ عن كل كلمة، لذا يتبعها التمييز بدقة.
 playback-caps-no-pitch = لا يمكن تغيير حدة هذا الصوت.
 playback-caps-no-volume = لا يمكن تغيير مستوى هذا الصوت.
 # The reading state on the title line, one word.

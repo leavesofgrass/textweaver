@@ -7,3 +7,26 @@
 # textweaver-lexicon checks that each id is in English, is missing from at
 # least one language, and that every message a language lacks is listed.
 # See docs/dev/messages.md.
+access-hybrid-inferred
+edit-recovery-offer
+gui-crashed-saved
+gui-graphics-failed
+gui-setup-welcome-menus
+live-binary
+live-broker-plain-warning
+live-full
+live-log-save-failed
+live-resumed-dropped
+live-skipped
+live-too-large
+live-topic-refused
+opening-old-office
+opening-pdf-password
+playback-caps-no-words
+playback-caps-words
+restart-done-silent
+restart-no-engine
+speech-engine-fallback
+speech-engine-fallback-silent
+sync-suggestion-question
+tui-setup-welcome

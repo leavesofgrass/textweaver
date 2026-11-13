@@ -120,7 +120,7 @@ Deleting a note, a highlight, or a bookmark deletes it on the other computers to
 
 ### A document that may be the same book
 
-Two copies of a book with the same contents are recognized at once. If two computers each opened the book before they ever synced, each gave it an id of its own; once their files meet, the next time the book opens the two are joined into one, with both computers' notes, highlights, bookmarks, and places. Nothing is asked, and nothing is lost. A document that only shares a DOI or an ISBN with one on another computer, such as two chapters of one book, is never matched on its own; textweaver asks: "This may be Cells from laptop, with 4 notes. Use them? Y or N". Y shares that document's notes and places; N keeps the two apart and is remembered.
+Two copies of a book with the same contents are recognized at once. If two computers each opened the book before they ever synced, each gave it an id of its own; once their files meet, the next time the book opens the two are joined into one, with both computers' notes, highlights, bookmarks, and places. Nothing is asked, and nothing is lost. A document that only shares a DOI or an ISBN with one on another computer, such as two chapters of one book, is never matched on its own; textweaver asks: "Use the notes from laptop here? y or n. This may be Cells, with 4 notes." Y shares that document's notes and places; N keeps the two apart and is remembered.
 
 ### Problems
 

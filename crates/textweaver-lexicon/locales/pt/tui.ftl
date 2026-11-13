@@ -5,15 +5,11 @@
 # $wanted is the speech backend asked for, $backend the one used instead.
 tui-setup-backend-unavailable = O motor de fala { $wanted } não está disponível; usando { $backend }.
 tui-setup-speech-failed = A fala não pôde iniciar ({ $error }); executando em silêncio.
-speech-engine-fallback = { $failed } não pôde iniciar; { $engine } está falando no lugar.
-speech-engine-fallback-silent = { $failed } não pôde iniciar e nenhum outro motor de fala está disponível; { -brand } fica em silêncio.
 tui-setup-cannot-save = Não é possível salvar configurações ou posições: { $error } A leitura funciona. As alterações se perdem ao sair.
 tui-setup-keymap-ignored = Arquivo de teclas ignorado: { $error } As teclas padrão valem. Corrija o arquivo e reinicie.
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
-tui-setup-welcome = Bem-vindo ao { -brand }. { $open } abre um documento. { $play } inicia e pausa a leitura, e { $stop } a interrompe. { $palette } lista todos os comandos. { $help } abre a ajuda.
-gui-setup-welcome-menus = Bem-vindo ao { -brand }. { $open } abre um documento. { $play } lê e pausa, { $stop } interrompe. { $palette } lista todos os comandos, Alt ou { $menu } os menus. { $help } abre a ajuda.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = Nenhum documento está aberto. Pressione { $open } para abrir um, { $new } para um novo, ou { $help } para ajuda.

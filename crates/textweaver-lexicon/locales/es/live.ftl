@@ -39,13 +39,9 @@ live-paused = Actualizaciones en pausa. Las entradas nuevas esperan hasta que re
 live-paused-status = actualizaciones en pausa
 live-stopped = { $name } se detuvo. El registro sigue abierto, de solo lectura.
 live-log-saved = Registro guardado como { $name } en { $folder }.
-live-log-save-failed = No se puede guardar el registro en vivo { $path }: { $error } Compruebe que se puede escribir en la carpeta de registros; textweaver lo intenta de nuevo en 10 segundos.
 live-log-empty-not-saved = El registro todavía no tiene entradas, así que no se guardó nada.
 live-log-nowhere = No hay ninguna carpeta donde guardar el registro en vivo.
 live-log-saved-already = Este registro se abrió desde { $path }; ya está guardado.
-live-binary = Se omitió un mensaje en { $topic }: no es texto ({ $len } bytes).
-live-too-large = Se omitió un mensaje en { $topic }: es demasiado grande ({ $len } bytes).
-live-full = El registro está lleno con { $max } entradas; las entradas más nuevas se omiten.
 live-connecting = Conectando con { $name }.
 live-reconnecting = Volviendo a conectar con { $name }, intento { $attempt }.
 live-connected = Conectado con { $name }, cifrado.
@@ -69,7 +65,6 @@ live-resumed =
         [one] Actualizaciones reanudadas, 1 actualización aplicada.
        *[other] Actualizaciones reanudadas, { $count } actualizaciones aplicadas.
     }
-live-resumed-dropped = Actualizaciones reanudadas, { $count } actualizaciones aplicadas. Se omitieron { $dropped } actualizaciones anteriores durante la pausa.
 
 ## Beta 5: live sources' commands, the set-up steps, and new entries said.
 ## $name is a source's name, $topic an MQTT topic, $line an entry as one
@@ -82,12 +77,6 @@ menu-live-publish = Publicar
 prompt-live-setup = Configurar una fuente en vivo
 prompt-save-live-source-file = Guardar fuente como archivo
 live-failed = No se puede conectar con { $name }: { $reason } No habrá más intentos; corríjalo y vuelva a abrir la fuente.
-live-topic-refused = El broker rechazó el tema { $topic }; puede que no deje leerlo a esta cuenta.
-live-skipped =
-    { $count ->
-        [one] Se omitió 1 mensaje: llegaban más rápido de lo que podían mostrarse.
-       *[other] Se omitieron { $count } mensajes: llegaban más rápido de lo que podían mostrarse.
-    }
 live-new-entries = { $line } { $count } entradas nuevas.
 live-unread-newest = { $count }. La más reciente: { $line }
 live-not-in-build = Las fuentes en vivo no están en esta versión de { -brand }.
@@ -221,7 +210,6 @@ live-broker-started-local = Broker activo: { $addresses }, TLS, solo este equipo
 live-broker-started = Broker activo: { $addresses }, TLS.
 live-broker-started-plain-local = Broker activo: { $addresses }, sin cifrar, solo este equipo.
 live-broker-started-plain = Broker activo: { $addresses }, sin cifrar.
-live-broker-plain-warning = Aviso: el broker no está cifrado, en una red que no es solo este equipo ni Tailscale. Cualquiera en ella puede leer los mensajes y las contraseñas.
 live-broker-join-code = Código de acceso: { $code }.
 live-broker-pin = Pin del certificado: { $pin }.
 live-broker-not-running = No hay ningún broker en marcha. Iniciar su broker inicia uno.

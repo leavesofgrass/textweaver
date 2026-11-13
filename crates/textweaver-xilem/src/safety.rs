@@ -30,13 +30,12 @@ static SAVED_AFTER_TROUBLE: AtomicBool = AtomicBool::new(false);
 /// the listener's language before the window starts.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StartupMessages {
-    /// "The window could not start its graphics. The terminal reader,
-    /// textweaver, needs none."
+    /// "Could not start the textweaver app: its graphics failed. The
+    /// terminal reader, tw, needs none."
     pub graphics: String,
     /// "textweaver stopped after an internal error."
     pub crashed: String,
-    /// "Your place was saved, and unsaved edits will be offered for
-    /// recovery next time."
+    /// "Place saved. Unsaved edits are offered for recovery next time."
     pub crashed_saved: String,
 }
 
@@ -185,7 +184,7 @@ mod tests {
         let m = StartupMessages::from_catalog(&en);
         assert_eq!(
             m.graphics,
-            "The window could not start its graphics. The terminal reader, textweaver, needs none."
+            "Could not start the textweaver app: its graphics failed. The terminal reader, tw, needs none."
         );
         assert_eq!(
             m.after_crash(false),

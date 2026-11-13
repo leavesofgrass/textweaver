@@ -11,8 +11,6 @@ restart-already = Die Sprachausgabe wird bereits neu gestartet.
 # $error is the system's reason, in its own words.
 restart-failed = Die Sprachausgabe konnte nicht neu gestartet werden: { $error } Warten Sie kurz und versuchen Sie es dann erneut.
 restart-start-failed = Die Sprachausgabe konnte nicht neu gestartet werden: der Start ist fehlgeschlagen.
-restart-no-engine = Keine Sprachausgabe ist verfügbar; { -brand } bleibt stumm. Siehe Troubleshooting, No speech at all, in der Dokumentation.
-restart-done-silent = Sprachausgabe neu gestartet, aber keine Sprachausgabe ist verfügbar; { -brand } bleibt stumm.
 restart-done = Sprachausgabe neu gestartet.
 
 ## The voice manager's list.

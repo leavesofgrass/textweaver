@@ -11,8 +11,6 @@ restart-already = الكلام تجري إعادة تشغيله بالفعل.
 # $error is the system's reason, in its own words.
 restart-failed = تعذّرت إعادة تشغيل الكلام: { $error } انتظر قليلًا، ثم حاول مرة أخرى.
 restart-start-failed = تعذّرت إعادة تشغيل الكلام: فشل بدء تشغيله.
-restart-no-engine = لا يتوفر محرك كلام؛ يبقى { -brand } صامتًا. راجع Troubleshooting، No speech at all، في الوثائق.
-restart-done-silent = أُعيد تشغيل الكلام، لكن لا يتوفر محرك كلام؛ يبقى { -brand } صامتًا.
 restart-done = أُعيد تشغيل الكلام.
 
 ## قائمة مدير الأصوات.

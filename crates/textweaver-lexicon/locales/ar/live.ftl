@@ -39,13 +39,9 @@ live-paused = تم إيقاف التحديثات مؤقتًا. تنتظر الإ
 live-paused-status = التحديثات متوقفة مؤقتًا
 live-stopped = توقف { $name }. يبقى السجل مفتوحًا للقراءة فقط.
 live-log-saved = تم حفظ السجل باسم { $name } في { $folder }.
-live-log-save-failed = تعذر حفظ السجل المباشر { $path }: { $error } تحقّق من إمكانية الكتابة في مجلد السجلات؛ يعيد textweaver المحاولة بعد 10 ثوانٍ.
 live-log-empty-not-saved = لا توجد في السجل إدخالات بعد، لذا لم يُحفظ شيء.
 live-log-nowhere = لا يوجد مجلد لحفظ السجل المباشر فيه.
 live-log-saved-already = فُتح هذا السجل من { $path }؛ وهو محفوظ بالفعل.
-live-binary = تم تجاهل رسالة على { $topic }: ليست نصًا ({ $len } بايت).
-live-too-large = تم تجاهل رسالة على { $topic }: حجمها كبير جدًا ({ $len } بايت).
-live-full = السجل ممتلئ عند { $max } إدخال؛ يتم تجاهل الإدخالات الأحدث.
 live-connecting = جارٍ الاتصال بـ { $name }.
 live-reconnecting = إعادة الاتصال بـ { $name }، المحاولة { $attempt }.
 live-connected = متصل بـ { $name }، مشفر.
@@ -68,7 +64,6 @@ live-resumed =
         [0] استؤنفت التحديثات.
        *[other] استؤنفت التحديثات، وطُبق { $count } تحديث.
     }
-live-resumed-dropped = استؤنفت التحديثات، وطُبق { $count } تحديث. تم تجاهل { $dropped } تحديثات أقدم أثناء الإيقاف المؤقت.
 
 ## Beta 5: live sources' commands, the set-up steps, and new entries said.
 ## $name is a source's name, $topic an MQTT topic, $line an entry as one
@@ -81,12 +76,6 @@ menu-live-publish = النشر
 prompt-live-setup = إعداد مصدر مباشر
 prompt-save-live-source-file = حفظ المصدر المباشر في ملف
 live-failed = تعذر الاتصال بـ { $name }: { $reason } لا مزيد من المحاولات؛ أصلح ذلك ثم افتح المصدر مرة أخرى.
-live-topic-refused = رفض الوسيط الموضوع { $topic }؛ قد لا يسمح لهذا الحساب بقراءته.
-live-skipped =
-    { $count ->
-        [one] أُغفلت رسالة واحدة: كانت تصل أسرع مما يمكن عرضه.
-       *[other] أُغفلت { $count } رسائل: كانت تصل أسرع مما يمكن عرضه.
-    }
 live-new-entries = { $line } { $count } إدخالات جديدة.
 live-unread-newest = { $count }. الأحدث: { $line }
 live-not-in-build = المصادر المباشرة غير متاحة في هذا الإصدار من { -brand }.
@@ -219,7 +208,6 @@ live-broker-started-local = الوسيط يعمل: { $addresses }، TLS، هذا
 live-broker-started = الوسيط يعمل: { $addresses }، TLS.
 live-broker-started-plain-local = الوسيط يعمل: { $addresses }، غير مشفر، هذا الحاسوب فقط.
 live-broker-started-plain = الوسيط يعمل: { $addresses }، غير مشفر.
-live-broker-plain-warning = تحذير: الوسيط غير مشفر على شبكة ليست هذا الحاسوب أو Tailscale فقط. يمكن لأي شخص هناك قراءة الرسائل وكلمات المرور.
 live-broker-join-code = رمز الانضمام: { $code }.
 live-broker-pin = بصمة الشهادة: { $pin }.
 live-broker-not-running = لا وسيط يعمل. تشغيل وسيطك يبدأ واحدًا.

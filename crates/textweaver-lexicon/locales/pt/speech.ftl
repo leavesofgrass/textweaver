@@ -11,8 +11,6 @@ restart-already = A fala já está reiniciando.
 # $error is the system's reason, in its own words.
 restart-failed = Não foi possível reiniciar a fala: { $error } Aguarde um momento e tente de novo.
 restart-start-failed = Não foi possível reiniciar a fala: a inicialização falhou.
-restart-no-engine = Nenhum motor de fala está disponível; o { -brand } permanece silencioso. Veja Troubleshooting, No speech at all, na documentação.
-restart-done-silent = Fala reiniciada, mas nenhum motor de fala está disponível; o { -brand } permanece silencioso.
 restart-done = Fala reiniciada.
 
 ## The voice manager's list.
