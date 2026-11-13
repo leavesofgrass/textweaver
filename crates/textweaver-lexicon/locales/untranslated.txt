@@ -20,6 +20,9 @@ live-resumed-dropped
 live-skipped
 live-too-large
 live-topic-refused
+name-close-live-source
+name-open-live-source
+name-save-live-log
 opening-old-office
 opening-pdf-password
 playback-caps-no-words

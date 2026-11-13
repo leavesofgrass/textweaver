@@ -11,7 +11,7 @@ This guide is for the person who reads the live document. If you also run the br
 ## In brief
 
 1. Run **Set up a live source** (Tools, Live documents, or the command palette) and fill in its form: a name, the broker's host, encryption, port, topic, user name, and view. If the broker's owner sent you a live source file (`.twlive`), open it instead, check the form it fills, and press Enter.
-2. Run **Open live source**, choose the source, and press Enter. If it needs a password, textweaver asks once and keeps it in your system's credential store.
+2. Run **Open a live source**, choose the source, and press Enter. If it needs a password, textweaver asks once and keeps it in your system's credential store.
 3. Read the log. New entries arrive at the end and never move your place. Press `Alt+Shift+F6` to jump to the newest entry. A source that carries a shared document shows the document itself instead, and each new revision replaces it in place ([The document view](#the-document-view)).
 4. When you close the source, textweaver has already saved the entries as a JSON file.
 
@@ -167,7 +167,7 @@ The keys:
 
 textweaver writes the source to `settings.toml`. If it has a user name, textweaver then asks for the password in a masked prompt ([The password](#the-password)). Last, it offers to open the source now or later. The source's id comes from its name, in lowercase with hyphens between words ("Practice log" becomes `practice-log`), and a number is added if that id is taken. An id may hold only letters, digits, hyphens, and underscores. If another source already has the same name, textweaver says the new one was saved beside it.
 
-**Edit a live source** (Tools, Live documents) opens the same form, filled in with the open source, or with one you choose from a list. In the Open live source list, `F2` edits the source on the focused row, as `F2` edits a document's details in the library; `Escape` then brings the list back on the same row. Editing keeps everything the form does not show, such as the field mapping and `id_field`, and keeps the source's id, so its kept password still applies unless you change the user name.
+**Edit a live source** (Tools, Live documents) opens the same form, filled in with the open source, or with one you choose from a list. In the Open a live source list, `F2` edits the source on the focused row, as `F2` edits a document's details in the library; `Escape` then brings the list back on the same row. Editing keeps everything the form does not show, such as the field mapping and `id_field`, and keeps the source's id, so its kept password still applies unless you change the user name.
 
 ### A live source file
 
@@ -366,7 +366,7 @@ In the terminal reader, the status line carries each new or corrected entry, mea
 
 textweaver saves the log as a JSON file, so a crash or a closed window loses little.
 
-- **When:** at most every 10 seconds while the log runs, and when it closes. **Save live log now** writes it at once and says where.
+- **When:** at most every 10 seconds while the log runs, and when it closes. **Save the live log now** writes it at once and says where.
 - **Where:** the `logs` folder of textweaver's data folder, or `log_folder`. `tw settings path` prints the data folder. The folder is made when the first entry arrives.
 - **File name:** `live-log-` and the start time, `YYYY-MM-DD-HHMM`, in local time: `live-log-2026-10-26-2010.json`. A source's id comes first when it has one: `netlog-live-log-2026-10-26-2010.json`. If that name exists, textweaver adds `-2`, `-3`, and so on.
 - **What it holds:** the entries as received, with the time each arrived and the time it was last corrected, and the wrapper's heading line. Keys keep the order the sender used.
@@ -382,7 +382,7 @@ These keys work in the terminal reader and the textweaver app. On a Mac, use Opt
 - `Alt+Shift+F12`: switch between list and table.
 - `Alt+Shift+F1`: pause or resume updates.
 
-Every other command is in Tools, Live documents and in the command palette (F2). The menu itself holds Open live source, Set up a live source, Open a join link, Join from a QR image, Edit a live source and Close live source, then three submenus, then Save live log now, Save live source as file and Forget live source password. **Reading** holds the open document's commands: Say unread entries, Jump to newest entry, Switch list and table, Pause or resume updates, Speak new entries, Show changes of this field and Speak changes of this field. **Your broker** holds Start your broker, Stop your broker and the **Invite others** submenu: Show the join code, Copy the join code, Copy the join link and Show the join QR code. **Publish** holds Publish this document live, Stop publishing and Publish a check-in. In the live source form, `Tab` and `Shift+Tab` move between fields and `Up Arrow` and `Down Arrow` change a choice; in the Open live source list, `F2` edits the focused source. Close live source stops receiving; the log stays open, read only, and is saved. [The keyboard reference](keyboard.md) lists every key, and you can give any of these commands a key in `keymap.toml`.
+Every other command is in Tools, Live documents and in the command palette (F2). The menu itself holds Open a live source, Set up a live source, Open a join link, Join from a QR image, Edit a live source and Close the live source, then three submenus, then Save the live log now, Save live source as file and Forget live source password. **Reading** holds the open document's commands: Say unread entries, Jump to newest entry, Switch list and table, Pause or resume updates, Speak new entries, Show changes of this field and Speak changes of this field. **Your broker** holds Start your broker, Stop your broker and the **Invite others** submenu: Show the join code, Copy the join code, Copy the join link and Show the join QR code. **Publish** holds Publish this document live, Stop publishing and Publish a check-in. In the live source form, `Tab` and `Shift+Tab` move between fields and `Up Arrow` and `Down Arrow` change a choice; in the Open a live source list, `F2` edits the focused source. Close the live source stops receiving; the log stays open, read only, and is saved. [The keyboard reference](keyboard.md) lists every key, and you can give any of these commands a key in `keymap.toml`.
 
 In the textweaver app, a live document's buttons join the toolbar while it is open. [The textweaver app](gui.md#a-live-documents-buttons-and-status-bar) lists them and describes the status bar, which shows the unread count and the connection in words.
 
