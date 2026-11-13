@@ -21,6 +21,7 @@ access-info-not-text
 access-info-or
 access-info-sufficient
 access-info-summary
+captions-minute
 choice-gui-graphics-auto
 choice-gui-graphics-dx12
 choice-gui-graphics-gl

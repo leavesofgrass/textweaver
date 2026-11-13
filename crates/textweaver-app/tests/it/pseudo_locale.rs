@@ -186,3 +186,54 @@ fn every_message_closes_its_direction_marks() {
     problems.dedup();
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
+
+/// A caption file's minute headings come from the catalog, so they follow
+/// the interface language: in the pseudo-locale the heading is not the
+/// loader's built-in English, and the minute is still filled in.
+#[test]
+fn caption_minute_headings_follow_the_language() {
+    let (speech, _log) = recording_service().unwrap();
+    let mut config = AppConfig {
+        speech,
+        backend_name: "test-recording".into(),
+        ..AppConfig::for_tests()
+    };
+    config.settings.interface.language = "en-XA".into();
+    let mut app = App::new(config);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("talk.srt");
+    let cues = [
+        "1",
+        "00:00:01,000 --> 00:00:03,000",
+        "Good morning.",
+        "",
+        "2",
+        "00:05:10,000 --> 00:05:12,000",
+        "The next topic.",
+        "",
+    ];
+    std::fs::write(
+        &path,
+        cues.join(
+            "
+",
+        ),
+    )
+    .unwrap();
+    app.open(&path).unwrap();
+    let text = app.session().unwrap().doc.text().to_string();
+    assert!(text.contains("The next topic."), "{text:?}");
+    assert!(
+        !text.contains("Minute 5"),
+        "the heading is English: {text:?}"
+    );
+    assert!(
+        !text.contains("{n}"),
+        "the minute was not filled in: {text:?}"
+    );
+    let heading = text
+        .lines()
+        .find(|l| l.contains('5') && !l.contains("topic"))
+        .unwrap_or_else(|| panic!("no minute heading in {text:?}"));
+    assert!(heading.contains('5'), "{heading:?}");
+}

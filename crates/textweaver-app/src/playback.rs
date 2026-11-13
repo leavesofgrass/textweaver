@@ -436,7 +436,12 @@ impl App {
     }
 
     pub(crate) fn load_options(&self) -> textweaver_formats::LoadOptions {
-        load_options(&self.settings)
+        let mut options = load_options(&self.settings);
+        // A caption file's minute headings, in the reader's language. The
+        // loader puts the minute where `{n}` stands, and falls back to
+        // English if the words lack it.
+        options.minute_heading = self.msg_args("captions-minute", &args!["n" => "{n}"]);
+        options
     }
 
     /// Stops speech and forgets the reading state, without announcing.
