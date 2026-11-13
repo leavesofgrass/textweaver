@@ -24020,7 +24020,7 @@ SOFTWARE.
 
 Used by:
 
-- mathcat 0.7.6-rc.3, https://github.com/NSoiffer/MathCAT
+- mathcat 0.7.7, https://github.com/daisy/MathCAT
 
 ```text
 MIT License

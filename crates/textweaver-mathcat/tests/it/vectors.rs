@@ -1,6 +1,6 @@
 //! MathCAT's words for the star math vectors and a few student formulas,
-//! recorded from MathCAT 0.7.6-rc.3 (ADR-0029), with the offset map
-//! checked for every one.
+//! recorded from MathCAT 0.7.6-rc.3 and unchanged in 0.7.7 (ADR-0029),
+//! with the offset map checked for every one.
 //!
 //! When MathCAT is upgraded, these strings are expected to change: read
 //! the new wording, then record it here.
@@ -180,6 +180,7 @@ fn languages() {
         ("fr", "a sur b plus x au carré"),
         ("de", "a durch b plus x quadrat"),
         ("es", "a partido por b más x cuadrado"),
+        ("pt", "a sobre b mais x ao quadrado"),
         ("en", "eigh over b plus x squared"),
     ] {
         let o = Options {

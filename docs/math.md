@@ -181,7 +181,7 @@ What stays the same:
 What is different:
 
 - MathCAT reads the whole formula at once, so the highlight covers the whole formula while you hear any part of it.
-- MathCAT speaks in the document's language when it has rules for it: German, Greek, English, Spanish, Finnish, French, Hungarian, Indonesian, Norwegian (Bokmål), Polish, Russian, Swedish, Vietnamese, and Chinese. Any other language is read in English. textweaver's own math speech is English only.
+- MathCAT speaks in the document's language when it has rules for it: German, Greek, English, Spanish, Finnish, French, Hungarian, Indonesian, Norwegian (Bokmål), Polish, Portuguese, Russian, Swedish, Vietnamese, and Chinese. Any other language is read in English. textweaver's own math speech is English only.
 - MathCAT spells the letter "a" as "eigh", so the speech engine says the letter and not the word "a".
 - With `punctuation = "all"`, MathCAT's pauses are left out, so you do not hear "comma" inside a formula.
 

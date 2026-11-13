@@ -1,26 +1,28 @@
 # Vendored MathCAT
 
-A copy of [MathCAT](https://github.com/daisy/MathCAT) 0.7.6-rc.3 (DAISY; Neil Soiffer), the crates.io package `mathcat-0.7.6-rc.3.crate`, SHA-256 `e02ae55d13d1cab996bdb0ed0921011d1ba621868cf3d5d05afdd83d910b2bc8` (the checksum in `Cargo.lock`), with one fix for textweaver. The decision is [ADR-0036](../../docs/adr/0036-math-braille-and-navigation.md). Licence: MIT, as upstream (`LICENSE`).
+A copy of [MathCAT](https://github.com/daisy/MathCAT) 0.7.7 (DAISY; Neil Soiffer), the crates.io package `mathcat-0.7.7.crate`, SHA-256 `581e1d6d09391322b7827d5948349489ae5b58310f31b9cd2616ed3fefe6833a` (the checksum crates.io gives in a lock file), with its manifest trimmed for textweaver. The decision is [ADR-0036](../../docs/adr/0036-math-braille-and-navigation.md). Licence: MIT, as upstream (`LICENSE`), unchanged from 0.7.6-rc.3.
 
 ## Why
 
-textweaver builds MathCAT with its `no-unsafe` feature, because the workspace denies unsafe code. In that configuration MathCAT's `get_navigation_braille` panics whenever the part of a formula being explored is not the whole formula: [issue #827](https://github.com/daisy/MathCAT/issues/827), open on Monday, September 28, 2026, with no release that fixes it. Math braille on the display while exploring a formula needs that function.
+textweaver builds MathCAT with its `no-unsafe` feature, because the workspace denies unsafe code. In that configuration MathCAT 0.7.6-rc.3's `get_navigation_braille` panicked whenever the part of a formula being explored was not the whole formula: [issue #827](https://github.com/daisy/MathCAT/issues/827). textweaver vendored MathCAT to carry a fix for it.
+
+MathCAT 0.7.7 (October 21, 2026) fixes the issue itself: `copy_mathml` now takes the destination document and allocates the whole copy there, which is what textweaver's `copy_mathml_to` did. The issue was closed on Thursday, October 22, 2026. Since beta 6 the source part of the patch is dropped, and `src`, `Rules` and `build.rs` are the package's own, unchanged.
 
 ## textweaver's change
 
 `textweaver.patch` holds it as a unified diff against the crates.io package:
 
-- `src/interface.rs`: a new public `copy_mathml_to(mathml, doc)` copies an element into a given document, allocating every node of the copy there. `get_navigation_braille` uses it for the part it wraps in a new `<math>` element. Before, the copy was made in the original document and then appended to the new one; the unsafe backend tolerates that, but the no-unsafe backend's nodes are indices into their own document, so it read past the end of the new document's storage. `copy_mathml` keeps its behavior (a copy in the element's own document).
 - `Cargo.toml`: the three `[[test]]` targets are removed, because their files are not vendored (see "Left out").
 
-The upstream pull request text is kept outside the repository, for the owner to file. The regression test is `crates/textweaver-mathcat/tests/it/navigation.rs`: it fails with the crates.io package (the step into the fraction answers "MathCAT crash") and passes with this copy.
+The regression test is `crates/textweaver-mathcat/tests/it/navigation.rs`: it failed with the 0.7.6-rc.3 package (the step into the fraction answered "MathCAT crash") and passes with 0.7.7.
 
 ## Keeping it in step
 
-- The root `Cargo.toml` still pins `mathcat = "=0.7.6-rc.3"`, and `[patch.crates-io]` points it here. The workspace excludes this folder.
-- Before each merge of main, re-check issue #827. When a MathCAT release fixes it, pin that release, remove this folder and the `[patch.crates-io]` line, and read the recorded wording in `crates/textweaver-mathcat/tests/it/vectors.rs` and the braille snapshots again.
-- To check the copy: download the package above, check its SHA-256, unpack it, and apply `textweaver.patch` with `patch -p1`; `src` and `Rules` then match this folder exactly.
+- The root `Cargo.toml` pins `mathcat = "=0.7.7"`, and `[patch.crates-io]` points it here. The workspace excludes this folder, and `.gitattributes` keeps its line ends as published.
+- With issue #827 fixed upstream, this copy is no longer needed: the next step is to use the crates.io package directly, remove this folder and the `[patch.crates-io]` line, and drop the `.gitattributes` line and the references in ADR-0036. That touches files outside this folder, so it waits for the owner's go.
+- At each MathCAT upgrade, read the recorded wording in `crates/textweaver-mathcat/tests/it/vectors.rs` and the braille tests again, and compare the speech and braille of the math fixtures before and after.
+- To check the copy: download the package above, check its SHA-256, unpack it, and apply `textweaver.patch` with `patch -p1`; `src`, `Rules` and `build.rs` then match this folder exactly.
 
 ## Left out
 
-`tests/` (5.7 MB of MathCAT's own tests), `notes/`, `logo.png`, `AGENTS.md`, `_config.yml`, and the package's `Cargo.lock`. Everything the library and its build script use (`src/`, `Rules/`, `build.rs`) is here unchanged apart from the patch.
+`tests/` (MathCAT's own tests), `notes/`, the logo images (`logo.png`, `logo-inline.png`, `mathcat_logo_regular.png`), `AGENTS.md`, `_config.yml`, and the package's `Cargo.lock`. Everything the library and its build script use (`src/`, `Rules/`, `build.rs`) is here unchanged.
