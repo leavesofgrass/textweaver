@@ -12,6 +12,7 @@ textweaver is developed on Windows and tested on Linux in a Docker container. Th
 | espeak-ng, `libespeak-ng-dev` | 1.52.0 | `textweaver-speech/espeak` |
 | `libasound2-dev` | | `rodio` (audio playback for the engine hosts and tones) |
 | speech-dispatcher, `libspeechd-dev` | | `textweaver-speech/speechd` |
+| cmake | | the Opus encoder, libopus, builds from source ([Building](building.md#cmake-for-opus-audio-export)) |
 | pkg-config | | finds espeak-ng. There is no clang: the espeak feature's declarations are hand-written, and only the GUI (not built in the container) uses bindgen |
 | Python 3 | 3.13.5 | parity scripts, `tools/check_links.py`, `tools/gen_site_data.py` |
 | pandoc | 3.1.11.1 | the Pandoc fallback in `tw convert` and `textweaver-formats/pandoc` |
@@ -45,7 +46,7 @@ Build (or rebuild) the image:
 docker compose build dev
 ```
 
-The full check, as CI runs it on Linux. `scripts/dev-check.sh` runs every step of the check (formatting, clippy, the lean build, the tests with the sentinel, rustdoc, the pseudo-locale check, the generated files, the dependency direction, parity, the link and site checks, and `cargo deny` when cargo-deny is installed; the image does not carry it), with every feature ([Testing](testing.md#the-checks)):
+The full check, as CI runs it on Linux. `scripts/dev-check.sh` runs every step of the check (formatting, clippy, the lean build, the tests with the sentinel, rustdoc, the pseudo-locale check, the generated files, the dependency direction, parity, the link and site checks, and `cargo deny` when cargo-deny is installed; the image does not carry it, nor cargo-nextest, so `--fast` runs the tests with `cargo test` there), with every feature ([Testing](testing.md#the-checks)):
 
 ```bash
 docker compose run --rm -T dev bash scripts/dev-check.sh

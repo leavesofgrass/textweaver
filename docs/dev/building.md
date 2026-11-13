@@ -128,7 +128,7 @@ Grammar checking (the `grammar` feature) is on by default since Wave 7, in the t
 
 ### Live documents and the `mqtt` feature
 
-Live documents (beta 5) are behind the cargo feature `mqtt`, on by default in the app, the terminal reader, `tw` and the textweaver app, and in every release. It brings in `textweaver-mqtt` (the client), `textweaver-broker` (`tw broker`, and the broker inside the app), `textweaver-qr` (QR codes for join links), the system credential store (`textweaver-components/credentials`, through `keyring`) and, in the app, arboard's `image-data` feature for a clipboard image. It needs no build tool beyond what the rest of the workspace has, and TLS is the ring-backed rustls, so there is no OpenSSL.
+Live documents (beta 5) are behind the cargo feature `mqtt`, on by default in the textweaver app, the terminal reader and `tw`, and in every release. It brings in `textweaver-mqtt` (the client), `textweaver-broker` (`tw broker`, and the broker inside the app), `textweaver-qr` (QR codes for join links), the system credential store (`textweaver-components/credentials`, through `keyring`) and, in the app, arboard's `image-data` feature for a clipboard image. It needs no build tool beyond what the rest of the workspace has, and TLS is the ring-backed rustls, so there is no OpenSSL.
 
 Build without it with `--no-default-features` and the others you want (the `--features` lists in this guide, leaving out `mqtt`). The live commands are then hidden and say in words that live sources are not in this version; a JSON log that textweaver saved still opens.
 
@@ -151,7 +151,7 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 ## Repository layout
 
 - `crates/`: the Rust crates, one per job. [Architecture](architecture.md) describes each one, how they depend on each other, and how a document becomes speech.
-- `xtask/`: maintenance tasks, run as `cargo xtask bench`, `startup`, `soak`, `dist`, `gui-dist`, `appimage`, `release`, `listen`, `hosts`, `eci-host`, `sapi-host`, `regen`, `keyboard`, `deps`, `docs`, `settings-doc`, `notices`, `fuzz-seed`, and `parity`.
+- `xtask/`: maintenance tasks, run as `cargo xtask bench`, `startup`, `soak`, `frames`, `dist`, `gui-dist`, `appimage`, `release`, `release-assets`, `changelog`, `listen`, `hosts`, `eci-host`, `sapi-host`, `regen`, `keyboard`, `deps`, `affected`, `tools`, `sentinel`, `docs`, `settings-doc`, `notices`, `fuzz-seed`, and `parity`.
 - `scripts/`: installers, update, speech check, doctor, dev-check, and folder conversion.
 - `tools/`: helper programs, among them the link checker (`check_links.py`), the site data generator (`gen_site_data.py`), and the engine spikes.
 - `docs/`: user guides, contributor guides, the ADRs, and the interactive pages in `docs/site/`. Start at [the documentation index](../README.md).

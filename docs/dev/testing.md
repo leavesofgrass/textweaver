@@ -38,7 +38,7 @@ Every cargo call has `--locked`, so a change that would rewrite `Cargo.lock` fai
   - **settings reference**: [the settings reference](../settings-reference.md) matches the settings schema (as `cargo xtask settings-doc --check`). It builds the app crate's tests and runs their `settings_reference` module.
   - **keyboard**: [docs/keyboard.md](../keyboard.md) matches the keymap (as `cargo xtask keyboard --check`).
   - **site data**: the data embedded in the `docs/site` pages matches `cargo metadata`, the keymap, and the theme files (as `tools/gen_site_data.py --check`, run with `py -3` on Windows and `python3` elsewhere).
-  - **docs**: the ADR index and the Decisions list in [docs/README.md](../README.md#decisions) list every ADR once, in number order; the crate counts match `crates/`; every guide ends with a "See also" section and is linked from the index (as `cargo xtask docs --check`).
+  - **docs**: the ADR index and the Decisions list in [docs/README.md](../README.md#decisions) list every ADR once, in number order; the crate counts match `crates/`; every guide ends with a "See also" section and is linked from the index; no British spelling in the English messages, the README, CONTRIBUTING.md or the docs; the user guides name releases, not internal waves or dates; the theme count matches the theme files; every image has alternative text and a "Description:" line near it; and [What is new](../whats-new.md) says "Not yet released" under no version whose tag exists (as `cargo xtask docs --check`).
 
   Never edit a generated file by hand. After changing a key, a setting, a dependency, a crate, or the site's sources, run `cargo xtask regen` to rebuild them all, in the right order, and commit what changed. It rewrites the crate counts too, but an ADR list or a See also section it only reports, for you to fix by hand.
 
@@ -71,7 +71,7 @@ The fast check runs fmt and clippy on the set, the tests with `cargo nextest run
 
 **Running CI on a branch.** A push to a branch named `ci/<name>` runs CI and the GUI workflow as on `main`, and either can be started by hand on any branch (`gh workflow run ci.yml --ref ci/<name>`). Both workflows are read-only. Use it to see a merge result on real Linux, macOS and Windows runners before it reaches `main`: push the commit to `ci/<name>`, read the run, and ask the owner before removing the branch. This is the check that a green Windows run on your machine cannot give you.
 
-The writers' output is also checked by other tools, in `.github/workflows/second-tool.yml`. It runs weekly and on any change to the writers. The Markdown fixtures are converted to EPUB and PDF; each EPUB is checked with epubcheck 5.4.0, and each PDF with veraPDF 1.30.2 against the PDF/UA-1 profile. Both tools come from Maven Central, pinned and checked by SHA-256. Each line of the job summary starts with Pass, Fail, Allowed, or Warning, in words. A known warning that is accepted goes in `tools/second_tool_allowlist.txt`, with its reason.
+The writers' output is also checked by other tools, in `.github/workflows/second-tool.yml`. It runs weekly and on any change to the writers. The Markdown fixtures are converted to EPUB and PDF; each EPUB is checked with epubcheck 5.4.0 and with Ace by DAISY, and each PDF with veraPDF 1.30.2 against the PDF/UA-1 profile. epubcheck and veraPDF come from Maven Central, pinned and checked by SHA-256; Ace is locked, with integrity hashes, in `tools/ace/`. Each line of the job summary starts with Pass, Fail, Allowed, or Warning, in words. A known warning that is accepted goes in `tools/second_tool_allowlist.txt`, with its reason.
 
 **Running epubcheck and veraPDF locally.** You do not need Java installed: run both tools inside a throwaway Java container with Docker, the same way CI runs them, but without CI's Maven setup. First build `tw` and convert a fixture:
 
@@ -501,7 +501,7 @@ The results are in `target/braille/results.txt`. Keep `CARGO_TARGET_DIR` inside 
 
 - **espeak-ng** on Linux;
 - on Windows, a **SAPI 5** voice in the 64-bit host, a **OneCore** voice through SAPI 5, and a voice in the **32-bit host**, which it also starts on its own to list its voices;
-- **AVSpeech** on macOS 14 and macOS 15.
+- **AVSpeech** on macOS 15 (the macOS 14 runners were withdrawn).
 
 `tools/engines/check_export.py` checks each file. A step fails only when the engine could not export at all: the file or its report is missing, it holds no audio, or the export fell back to another engine. The rest measures rather than proves, so it is reported as Pass or Warning and never fails, until runs give each engine a baseline: the file's length against the timeline, its level, the speed, and word times for at least 90 percent of the words, rising and inside the audio. A file with no word times at all gets one Warning saying so; the Apple backends write their files that way today. A voice the runner image lacks (it has no 32-bit voice) is reported as "Skipped", with the voices it has, and passes. Only Microsoft voices and eSpeak are used on Windows (`tools/engines/pick_voice.py`).
 
@@ -565,7 +565,7 @@ Run "Screen-reader checks" (`a11y-tests.yml`) from the Actions tab, and choose a
 
 - **nvda** (Windows): Guidepup starts NVDA and records its spoken phrases. The summary's first line answers "can Guidepup drive NVDA against the textweaver app?" with "Answer: yes" or "Answer: no".
 - **orca** (Ubuntu, under Xvfb): the session is checked through AT-SPI events: the caret, the announcements, the focus. Orca runs beside it, and the report lists what it said at each step.
-- **voiceover** (macOS 14 and 15): the same with VoiceOver, if Guidepup can start it on the runner. If not, the setup log says why: the system version, System Integrity Protection, and whether AppleScript may drive VoiceOver.
+- **voiceover** (macOS 15): the same with VoiceOver, if Guidepup can start it on the runner. If not, the setup log says why: the system version, System Integrity Protection, and whether AppleScript may drive VoiceOver.
 
 The Orca session is standing: a failed must check fails its job. The NVDA and VoiceOver sessions are report-only: a failure shows in the summary but does not fail the job, whose result comes from building the GUI and installing the tools. ADR-0039 records why each check is standing or not. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`), for comparison with what a listener heard in their own session.
 
@@ -604,7 +604,7 @@ The gates added in this walk were broken the same way:
 
 ### The report-only steps
 
-Every step with `continue-on-error` has a comment with its reason and a review point, and `cargo test -p xtask` fails on one without (`xtask/src/workflows.rs`). The review point for all of them is the 0.1.0-alpha.9 readiness check. As of October 3, 2026:
+Every step with `continue-on-error` has a comment with its reason and a review point, and `cargo test -p xtask` fails on one without (`xtask/src/workflows.rs`). Each step's comment names the 0.1.0-alpha.9 readiness check as its review point; that release is long past, so the comments are due for a review. As of October 3, 2026:
 
 - **NVDA session (`a11y-tests.yml`): report-only.** Its "names the window or the document on focus" check has failed in every run; standing after three passing runs in a row (ADR-0039).
 - **VoiceOver setup, diagnostics, and session (`a11y-tests.yml`): report-only.** A hosted runner may not let VoiceOver be driven; the diagnostics only print facts.

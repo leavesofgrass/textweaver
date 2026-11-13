@@ -15,7 +15,7 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 - S9: keyboard only, no screen reader.
 - S10: Linux with Orca (optional).
 
-"Ignored" below means a test that holds a known defect: it runs with `cargo test -- --ignored`, and the fix removes the `#[ignore]`.
+"Ignored" below means a test that holds a known defect: it runs with `cargo test -- --ignored`, and the fix removes the `#[ignore]`. No test is ignored for a defect at the moment.
 
 ## Consistency
 
@@ -85,7 +85,7 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 
 - Test: `crates/textweaver-tui/tests/it/braille_first.rs`, counted in Braille cells with the uncontracted UEB counter `textweaver_tui::ui::braille_cells`: the title line, list rows, status messages in every language, `every_prompt_label_fits_a_braille_line` (every prompt the app opens) and `the_window_position_line_puts_its_key_facts_inside_forty_cells` (the window's status bar).
 - Test: `crates/textweaver-tui/tests/it/braille.rs` (the terminal's rows).
-- Ignored: `the_position_line_keeps_modified_inside_forty_cells_at_long_lines`. In edit mode at a three-digit line, "modified" ends at cell 41.
+- Test: `the_position_line_keeps_modified_inside_forty_cells_at_long_lines`. In edit mode at a three-digit line, "modified" ends inside 40 cells, in the app and the terminal reader alike.
 - Manual, session S7 on the Mantis Q40.
 
 **A8a. Snapshots in words.** Tests: `crates/textweaver-tui/tests/it/status_transcript.rs` backs up the status-line checks of sessions S2, S3 and S7 (the message, its first 40 characters, the cursor, a message said twice), and `crates/textweaver-xilem/tests/it/tree_snapshots.rs` backs up the dialog and form checks of session S3 (names, order and masked fields); see [Testing](testing.md). They do not replace the sessions.
@@ -103,7 +103,7 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 **V3. No control is clipped or outside the window; targets at least 24 by 24.**
 
 - Test: `no_control_leaves_the_window_at_any_review_size` in `window_tree.rs` (the window), and `no_dialog_control_leaves_a_small_window` in `dialogs.rs` (every dialog kind at 420 by 320 and at 683 by 384 at 200 percent).
-- Ignored: `the_voice_manager_fits_the_smallest_window`. The voice manager's controls leave a 420 by 320 window, so it is checked at the laptop size only.
+- Test: `the_voice_manager_fits_the_smallest_window` in `dialogs.rs`: the voice manager, in its compact layout, keeps every control inside a 420 by 320 window.
 
 **V4. Frame time.** Manual: the performance probe on the owner's machine; counts are gated, times reported.
 
