@@ -70,6 +70,10 @@ One piece of planned beta 4 work is set aside for later. It has no date. The res
 
 - **Live captions (CART):** receiving and sending streamed captions for deafblind readers, with discovery and pairing of devices. The broker it would use is in beta 5.
 
+## Beta 6
+
+Beta 6 is about trust and about the reading core. It repairs three security problems found in beta 5, makes the development loop cheaper and its checks match the ones CI runs, and clears up wording and documentation that disagreed with the program. It also works on the reading core: large documents and live logs, clear Piper speech at high rates, EPUB accessibility information, and spelling marks that a screen reader can find.
+
 ## Being built next
 
 - **Stabilization:** fixes from hands-on test sessions, a long soak test, a clean run of the nightly workflow, and native-speaker review of the German, French, Portuguese, and Arabic translations (English and Spanish are checked).
@@ -82,7 +86,7 @@ The 0.1 series ends with a feature-complete final alpha or beta. None of these i
 - Obsidian Bases.
 - Quick-open for feeds, Wikipedia, and PubMed.
 - More speech engines (Coqui, Festival, Qt Speech).
-- Pauses written as speech markup (SSML). Pauses after headings, paragraphs, and list items, and the break tag, already work.
+- Full SSML. Pauses after headings, paragraphs, and list items, and the break tag, already work.
 - AAC audio export, and a cover image for audiobooks.
 - A plugin system.
 - A guided first-run tour. Help, Quick start opens the quick start.
