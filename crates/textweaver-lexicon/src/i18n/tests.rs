@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 use super::*;
@@ -9,6 +9,36 @@ fn english_catalog_parses() {
     let text = ENGLISH;
     let c = Catalog::parse("en", text).unwrap_or_else(|e| panic!("locales/en: {e:?}"));
     assert!(c.ids().len() > 10);
+}
+
+/// Each language is a folder of files named by area. No message or term
+/// is defined in two of a language's files (the joined text would report
+/// it, but by its line in the whole language, not by file), and every
+/// language has English's file names, so a message has the same home in
+/// each.
+#[test]
+fn catalog_files_define_each_id_once() {
+    let en_names: Vec<&str> = FILES[0].1.iter().map(|(name, _)| *name).collect();
+    for (tag, files) in FILES {
+        let names: Vec<&str> = files.iter().map(|(name, _)| *name).collect();
+        assert_eq!(
+            names, en_names,
+            "locales/{tag} has other files than locales/en"
+        );
+        let mut home: HashMap<String, &str> = HashMap::new();
+        for (name, text) in *files {
+            let (messages, terms) =
+                parse::resource(text).unwrap_or_else(|e| panic!("locales/{tag}/{name}: {e:?}"));
+            let ids = messages
+                .into_keys()
+                .chain(terms.into_keys().map(|t| format!("-{t}")));
+            for id in ids {
+                if let Some(first) = home.insert(id.clone(), name) {
+                    panic!("locales/{tag}: {id} is defined in both {first} and {name}");
+                }
+            }
+        }
+    }
 }
 
 #[test]

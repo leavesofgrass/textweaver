@@ -2,7 +2,8 @@
 //! holds one `.ftl` file per area of the interface. This writes
 //! `catalogs.rs`, which embeds every file with `include_str!`, in sorted
 //! order, joined into one text per language (`EN_TEXT`), so the parser
-//! reads a language as one catalog.
+//! reads a language as one catalog, and listed file by file (`EN_FILES`)
+//! for the tests that check each file.
 
 use std::fmt::Write as _;
 use std::path::Path;
@@ -27,6 +28,18 @@ fn main() {
         files.sort();
         assert!(!files.is_empty(), "{} has no .ftl files", folder.display());
         let name = lang.to_ascii_uppercase();
+        writeln!(
+            out,
+            "/// The `{lang}` catalog's files: (name, text), sorted by name."
+        )
+        .unwrap();
+        writeln!(out, "#[cfg(test)]").unwrap();
+        writeln!(out, "const {name}_FILES: &[(&str, &str)] = &[").unwrap();
+        for f in &files {
+            let path = folder.join(f).display().to_string();
+            writeln!(out, "    ({f:?}, include_str!({path:?})),").unwrap();
+        }
+        writeln!(out, "];").unwrap();
         writeln!(
             out,
             "/// The `{lang}` catalog, its files joined in sorted order."

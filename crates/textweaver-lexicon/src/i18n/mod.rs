@@ -65,7 +65,7 @@ use parse::Part;
 pub use pseudo::bidi_problems;
 use pseudo::pseudo_text;
 
-// `EN_TEXT` and the same for each built-in translation:
+// `EN_TEXT`, `EN_FILES`, and the same for each built-in translation:
 // `build.rs` embeds every file in `locales/<lang>/`, sorted by name.
 include!(concat!(env!("OUT_DIR"), "/catalogs.rs"));
 
@@ -79,6 +79,18 @@ const BUILTIN: &[(&str, &str)] = &[
     ("de", DE_TEXT),
     ("pt", PT_TEXT),
     ("ar", AR_TEXT),
+];
+
+/// Every built-in language's files, (name, text), by language tag,
+/// English first: the tests check them one by one.
+#[cfg(test)]
+const FILES: &[(&str, &[(&str, &str)])] = &[
+    ("en", EN_FILES),
+    ("es", ES_FILES),
+    ("fr", FR_FILES),
+    ("de", DE_FILES),
+    ("pt", PT_FILES),
+    ("ar", AR_FILES),
 ];
 
 /// A language the interface is built with.
