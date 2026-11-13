@@ -72,7 +72,7 @@ One piece of planned beta 4 work is set aside for later. It has no date. The res
 
 ## Beta 6
 
-Beta 6 is about trust and about the reading core. It repairs three security problems found in beta 5, makes the development loop cheaper and its checks match the ones CI runs, and clears up wording and documentation that disagreed with the program. It also works on the reading core: large documents and live logs, clear Piper speech at high rates, EPUB accessibility information, and spelling marks that a screen reader can find.
+Beta 6 is about trust and about the reading core. It repairs three security problems found in beta 5 (the first group of that work is done: the broker's login limits and the join code's guessing budget, a browser preview that leaves out scripts by default, a question before a link to another computer, and private clipboard text for join codes), makes the development loop cheaper and its checks match the ones CI runs, and clears up wording and documentation that disagreed with the program. It also works on the reading core: large documents and live logs, clear Piper speech at high rates, EPUB accessibility information, and spelling marks that a screen reader can find.
 
 ## Being built next
 
