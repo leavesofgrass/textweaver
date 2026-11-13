@@ -14,7 +14,7 @@
 //!   `notes.20260925-140307.md`, then `notes.20260925-140307-2.md`.
 //! - Names come from whoever can write to the folder, so every name
 //!   textweaver writes (outputs and moved sources) is made plain first
-//!   ([`plain_name`]): letters, digits, `-`, `_` and `.` only.
+//!   (`plain_name`): letters, digits, `-`, `_` and `.` only.
 //! - Links (symbolic links, and on Windows junctions too) are never
 //!   followed: one in the folder could point at any file the person can
 //!   read. They are skipped and named in the log.

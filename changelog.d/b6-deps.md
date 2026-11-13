@@ -1,4 +1,4 @@
-### Security
+### Security and privacy
 
 - pulldown-cmark 0.13.5 to 0.13.6, for RUSTSEC-2026-0433: a Markdown file with deeply nested image wikilinks (`![[`) took time in the depth times the body, so it could hang a load. A hostile-input test loads 10,000 levels over a 1 MB body within 5 seconds.
 - calamine 0.36.1 to 0.38.0, for RUSTSEC-2026-0436 (a panic and an unbounded allocation in its compound-file reader). Spreadsheets load as before. zip 8 stays in the tree through harper-core and MathCAT, neither of which calls the affected extraction code.

@@ -1,4 +1,4 @@
-## Security and privacy
+### Security and privacy
 
 - `tw text`, `tw search` and `tw info` leave out control characters other than tab and line feed when standard output is a terminal, so a document cannot set the terminal's title or write the clipboard through an escape sequence; error lines on a terminal follow the same rule. Piped output is unchanged.
 - Web pages and reference lookups now send the same neutral User-Agent as every other request, `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, without textweaver's version. A workspace test fails on any other User-Agent in the sources.

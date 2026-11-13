@@ -1,4 +1,4 @@
-## Live documents
+### Security and privacy
 
 - textweaver's broker counts a login before checking its password, so a burst of wrong logins from one address gets no more answers than the five-failure lockout allows.
 - The broker caps connections per address: 8 still logging in and 16 logged in. At most 50 readers may join with a join code, and a join reader can no longer push another off by reusing its client id.
