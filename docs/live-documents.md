@@ -403,7 +403,7 @@ textweaver says each change of state once, in words, and starts each message wit
 
 - **"Connecting to NAME."** textweaver is trying. Nothing to do.
 - **"Connected to NAME, encrypted."** TLS is in use.
-- **"Connected to NAME over Tailscale, which encrypts the link."** The host is a Tailscale address or a `.ts.net` name. Plain MQTT is fine here.
+- **"Connected to NAME at a Tailscale-range address. If this is Tailscale, the link is encrypted."** The host is in the address range Tailscale uses, or has a `.ts.net` name. Some phone and internet providers use the same range, so textweaver cannot be sure: plain MQTT is fine here only if the address really is on your Tailscale network.
 - **"Connected to NAME. The connection is not encrypted."** Fine for a broker on your own computer or network. For a broker across the internet, set `tls`.
 - **"Reconnecting to NAME, attempt N."** The link dropped and textweaver is trying again, waiting longer after each failure, up to a minute.
 - **"Disconnected from NAME: ..."** The link was lost. This is the only assertive message. textweaver reconnects and subscribes again by itself.

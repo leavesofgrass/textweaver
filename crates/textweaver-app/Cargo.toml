@@ -50,6 +50,8 @@ grammar = ["dep:harper-core"]
 # brings Piper voice downloads and the Lexend download, the other uses of
 # HTTP in the reader.
 publish = [
+    # The preview server's token and nonce (crate::preview_server).
+    "dep:ring",
     "dep:textweaver-cite",
     "dep:textweaver-convert",
     "dep:textweaver-render",
@@ -86,6 +88,8 @@ mathcat = [
 
 [dependencies]
 textweaver-core.workspace = true
+# The system's random source, for the preview server (the `publish` feature).
+ring = { workspace = true, optional = true }
 textweaver-text.workspace = true
 textweaver-formats.workspace = true
 textweaver-speech.workspace = true

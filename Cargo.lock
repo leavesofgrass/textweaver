@@ -9848,6 +9848,7 @@ dependencies = [
  "midir",
  "pulldown-cmark",
  "regex",
+ "ring",
  "ropey",
  "rusqlite",
  "ruzstd",

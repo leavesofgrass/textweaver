@@ -91,10 +91,15 @@ pub struct PreviewServer {
 }
 
 /// A random secret for the address, and the nonce of each answer's
-/// reload script: 128 bits from the system's random hash keys. (ring's
-/// `SystemRandom` would be the better source, but the app crate does not
-/// link ring.)
+/// reload script: 128 bits from the system's random source, as 32 hex
+/// digits. If the system gives none, the answer falls back to the random
+/// hash keys the standard library seeds each process with.
 fn token() -> String {
+    use ring::rand::SecureRandom;
+    let mut bytes = [0u8; 16];
+    if ring::rand::SystemRandom::new().fill(&mut bytes).is_ok() {
+        return bytes.iter().map(|b| format!("{b:02x}")).collect();
+    }
     let mut out = String::new();
     for i in 0..2u64 {
         let mut h = RandomState::new().build_hasher();

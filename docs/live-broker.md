@@ -257,7 +257,7 @@ Each person in a tailnet is a user of it. A friend who is not in your tailnet ca
 
 To allow only the broker's port, use an access rule in your tailnet policy that accepts the shared users to that one port, for example the source `autogroup:shared` and the destination `100.64.0.10:1883`. Tailscale's rules are deny by default once an `acls` section exists. This rule is assembled from Tailscale's documentation and has not been tested as one rule, so test it. Avoid a source of `*`, which includes shared users.
 
-textweaver recognizes a Tailscale address (100.64.0.0/10 and fd7a:115c:a1e0::/48) or a name ending in `.ts.net`, and says "Connected over Tailscale, which encrypts the link" instead of warning that the link is not encrypted.
+textweaver recognizes an address in the range Tailscale uses (100.64.0.0/10 and fd7a:115c:a1e0::/48) or a name ending in `.ts.net`, and says "Connected to NAME at a Tailscale-range address. If this is Tailscale, the link is encrypted." Some phone and internet providers use the 100.64.0.0/10 range too, so the message does not promise encryption.
 
 ## Reaching the broker over 44Net
 

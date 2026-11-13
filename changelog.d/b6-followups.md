@@ -1,4 +1,4 @@
-## Live documents and help
+### Live documents
 
 - Join from a QR image reads the image on a helper thread, so a large or unusual image no longer holds up the interface. After a second it says "Reading the QR image." once; opening another dialog, or asking again, cancels the reading without a word.
 - A live source at a Tailscale-range address now says "Connected to NAME at a Tailscale-range address. If this is Tailscale, the link is encrypted." That range is also used by carriers, so textweaver no longer claims encryption it cannot confirm.
