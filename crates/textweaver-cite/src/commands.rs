@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use crate::error::{CiteError, Result};
 use crate::formats::{self, Format};
 use crate::library::{Layered, Library, ReferenceSource, plural};
-use crate::lookup::{Cache, HttpClient, Lookup};
+use crate::lookup::{Cache, HttpClient, Identifier, Lookup};
 use crate::pandoc::{Citation, CiteItem};
 use crate::render::{Formatter, OutputFormat};
 use crate::style::{CitationStyle, builtin_styles};
@@ -56,13 +56,19 @@ impl Context<'_> {
     }
 }
 
-/// `tw cite add DOI|ISBN`: looks the identifier up and adds it.
+/// `tw cite add DOI|ISBN|PMID:N`: looks the identifier up and adds it.
 pub fn add(ctx: &Context<'_>, identifier: &str) -> Result<String> {
+    add_identifier(ctx, &Identifier::parse(identifier)?)
+}
+
+/// [`add`] for an identifier already recognized (`tw cite add --pmid`
+/// gives a bare number as a PubMed ID).
+pub fn add_identifier(ctx: &Context<'_>, identifier: &Identifier) -> Result<String> {
     let mut lookup = Lookup::new(ctx.client);
     if let Some(dir) = &ctx.cache_dir {
         lookup = lookup.with_cache(Cache::new(dir));
     }
-    let reference = lookup.lookup(identifier)?;
+    let reference = lookup.identifier(identifier)?;
     let mut lib = ctx.load()?;
     let outcome = lib.add(reference);
     lib.save()?;

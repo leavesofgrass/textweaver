@@ -38,10 +38,16 @@ pub struct Args {
 /// `tw cite` subcommands.
 #[derive(clap::Subcommand, Debug)]
 pub enum CiteCommand {
-    /// Look up a DOI (doi.org) or ISBN (Open Library) and add it.
+    /// Look up a DOI (doi.org), ISBN (Open Library), or PubMed ID (PubMed)
+    /// and add it.
     Add {
-        /// A DOI such as 10.1038/nature12373, a doi.org link, or an ISBN.
+        /// A DOI such as 10.1038/nature12373, a doi.org link, an ISBN, or a
+        /// PubMed ID written as PMID 12345678.
         identifier: String,
+        /// The identifier is a PubMed ID, so a bare number such as 12345678
+        /// is looked up in PubMed.
+        #[arg(long)]
+        pmid: bool,
         /// Seconds to wait for an answer.
         #[arg(long, default_value_t = 15)]
         timeout: u64,
@@ -158,8 +164,20 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     };
     let out = match args.command {
         CiteCommand::Add {
-            identifier, json, ..
-        } => as_json(json, "added", commands::add(&ctx, &identifier)?)?,
+            identifier,
+            pmid,
+            json,
+            ..
+        } => {
+            let added = if pmid {
+                let id = textweaver_cite::Identifier::parse_pmid(&identifier)
+                    .map_err(textweaver_cite::CiteError::from)?;
+                commands::add_identifier(&ctx, &id)?
+            } else {
+                commands::add(&ctx, &identifier)?
+            };
+            as_json(json, "added", added)?
+        }
         CiteCommand::Import { file, json } => {
             as_json(json, "imported", commands::import(&ctx, &file)?)?
         }
