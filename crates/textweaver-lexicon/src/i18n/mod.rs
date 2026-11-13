@@ -43,8 +43,11 @@
 //!   message cannot reorder the text around it. [`bidi_problems`] checks
 //!   that a rendered string's direction marks are balanced.
 //! - Built in ([`LANGUAGES`], Wave 4, W4d): Spanish, French, German,
-//!   Portuguese, and Arabic, complete (a test checks), each falling back
-//!   to English for a message it lacks. A regional tag uses its language
+//!   Portuguese, and Arabic, each falling back to English for a message
+//!   it lacks. Each is complete, apart from the messages listed in
+//!   `locales/untranslated.txt`, which land in English first and wait for
+//!   the translation pass before a release (a test checks both ways, and
+//!   `cargo xtask release` stops while the list holds any id). A regional tag uses its language
 //!   (`es-MX`, `pt-BR`).
 //! - Other languages load from `<code>.ftl` files in the settings folder's
 //!   `locales`, falling back to English for any message they lack; a file

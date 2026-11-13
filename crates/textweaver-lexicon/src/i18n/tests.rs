@@ -209,12 +209,39 @@ fn check_keys(tag: &str, id: &str, parts: &[parse::Part], allowed: &BTreeSet<&st
     }
 }
 
-/// Every built-in translation is complete: a message added to locales/en needs
-/// its translations too (ADR-0030 says how), so no one hears English in
-/// the middle of their language.
+/// The messages allowed in English only until the translation pass:
+/// `locales/untranslated.txt`, one id per line, `#` starting a comment.
+const UNTRANSLATED: &str = include_str!("../../locales/untranslated.txt");
+
+/// The ids in a list such as [`UNTRANSLATED`]: one per line, without
+/// comments and blank lines.
+fn listed_ids(text: &str) -> Vec<&str> {
+    text.lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .collect()
+}
+
+/// Every built-in translation is complete, apart from the messages on the
+/// untranslated list: a message added to locales/en needs its translations
+/// or its id on the list (the owner's decision, Thursday, November 12,
+/// 2026: English first, then a translation pass before each release, which
+/// `cargo xtask release` enforces). The list holds no id that is
+/// translated everywhere, none that English lacks, and is sorted.
 #[test]
 fn built_in_translations_are_complete() {
     let en = Catalog::english();
+    let listed = listed_ids(UNTRANSLATED);
+    assert!(
+        listed.windows(2).all(|w| w[0] < w[1]),
+        "locales/untranslated.txt is not sorted, or lists an id twice"
+    );
+    let unknown: Vec<&str> = listed.iter().copied().filter(|id| !en.has(id)).collect();
+    assert!(
+        unknown.is_empty(),
+        "locales/untranslated.txt lists ids locales/en does not have: {unknown:?}"
+    );
+    let mut lacking = BTreeSet::new();
     for (tag, text) in BUILTIN {
         let c = Catalog::parse(tag, text).unwrap_or_else(|e| panic!("locales/{tag}: {e:?}"));
         let missing: Vec<&str> = en
@@ -222,12 +249,33 @@ fn built_in_translations_are_complete() {
             .into_iter()
             .filter(|id| !c.messages.contains_key(*id))
             .collect();
+        let unlisted: Vec<&str> = missing
+            .iter()
+            .copied()
+            .filter(|id| !listed.contains(id))
+            .collect();
         assert!(
-            missing.is_empty(),
-            "locales/{tag} lacks {} messages: {missing:?}",
-            missing.len()
+            unlisted.is_empty(),
+            "locales/{tag} lacks {} messages; translate them or list them in locales/untranslated.txt: {unlisted:?}",
+            unlisted.len()
         );
+        lacking.extend(missing.into_iter().map(str::to_owned));
     }
+    let done: Vec<&str> = listed
+        .iter()
+        .copied()
+        .filter(|id| !lacking.contains(*id))
+        .collect();
+    assert!(
+        done.is_empty(),
+        "translated in every language; take them off locales/untranslated.txt: {done:?}"
+    );
+}
+
+#[test]
+fn untranslated_list_reads_ids_only() {
+    let text = "# a comment\n\nabout-title\n  help-key  \n# more\n";
+    assert_eq!(listed_ids(text), ["about-title", "help-key"]);
 }
 
 /// Arabic, a built-in right-to-left language: every message closes the

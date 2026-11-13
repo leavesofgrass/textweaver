@@ -1,0 +1,9 @@
+# Messages in English only, for now: one message id per line, sorted.
+#
+# A message may land in English (locales/en) before its translations. Its
+# id goes here, and until the translation pass the other languages say it
+# in English. The pass translates every message listed and empties this
+# list; `cargo xtask release` stops while it holds any id. A test in
+# textweaver-lexicon checks that each id is in English, is missing from at
+# least one language, and that every message a language lacks is listed.
+# See docs/dev/messages.md.
