@@ -1073,10 +1073,12 @@ mod tests {
         let code = s.app.live_broker_join_code().unwrap();
         let mut r = Side::new();
         join_through_the_form(&mut r, port, &code, "netlog/checkins");
+        // The client count and the "Joined" message are two events, so wait
+        // for both: the count can arrive a tick before the message.
         until(&mut [&mut s, &mut r], "the reader", |v| {
             v[0].app.live_broker_words().as_deref() == Some("Broker on, 1 client")
+                && v[0].any("Joined: join.")
         });
-        assert!(s.any("Joined: join."), "{:?}", s.texts());
         s.act(ActionId::SendCheckIn);
         assert!(
             s.any("Check-in to this computer's broker, on netlog/checkins."),

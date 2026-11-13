@@ -17,7 +17,7 @@
 //!   one, or with no join link in it, it asks for an image file (PNG or
 //!   JPEG). The link read fills the live source form, as a pasted link
 //!   does, and Enter joins. The image is read on a helper thread
-//!   ([`QrJob`]), so a large or hostile image never holds up the
+//!   (`QrJob`), so a large or hostile image never holds up the
 //!   interface; the app's tick picks up what it read. After a second,
 //!   "Reading the QR image." is said once. Opening another dialog, or
 //!   asking again, cancels the reading, and it then says nothing.
