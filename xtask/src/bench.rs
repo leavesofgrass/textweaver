@@ -77,6 +77,13 @@
 //!   PDF): finding a document's sync id (ADR-0049) the first time, when the
 //!   whole file is hashed, and again, when it is unchanged; its time, the
 //!   hashing rate, and peak heap, which stays near the read buffer's size.
+//! - live log (`live-log`): a log view fed by a scripted source, at 2,000
+//!   and 10,000 entries: the whole log shown (`live_whole_N_ms`), one
+//!   entry added (`live_append_N`, 20 times) and the first entry
+//!   corrected (`live_correct_N`, 20 times), each from the message to the
+//!   open document changed.
+//! - replace: counting, the first match, a skip, one replacement
+//!   (`replace_one_ms`), and replacing all the rest.
 //!
 //! - pathological inputs (`pathological.rs`): one generated file per
 //!   loader with a 512 KB token, lists nested 200 deep, a 2,000-row
@@ -1399,6 +1406,13 @@ mod inner {
                 "replace: skip to the next match",
                 t.elapsed(),
             );
+            let t = Instant::now();
+            app.dispatch(Command::Choose(0));
+            r.time(
+                "replace_one_ms",
+                "replace: replace one and go to the next match",
+                t.elapsed(),
+            );
             // "Replace all the rest" (one undo step).
             let t = Instant::now();
             app.dispatch(Command::Choose(2));
@@ -1912,6 +1926,91 @@ mod inner {
         app.shutdown();
     }
 
+    /// Entry sizes of the live log measured by [`live_log`].
+    const LIVE_LOG_SIZES: [usize; 2] = [2_000, 10_000];
+    /// Updates timed per size and kind.
+    const LIVE_LOG_ROUNDS: usize = 20;
+
+    /// One live log entry, as a net logger sends it.
+    fn live_entry(i: usize, notes: &str) -> String {
+        format!(r#"{{"callsign": "K{i:05}X", "name": "Ada{i}", "notes": "{notes}"}}"#)
+    }
+
+    /// A live log fed by a scripted source, the reader in its middle: the
+    /// whole log of `n` entries in one message, then one new entry per
+    /// tick (`live_append_N`), then a correction of the first entry per
+    /// tick (`live_correct_N`), each from the message's arrival to the
+    /// open document changed.
+    fn live_log(home: &Path) -> Report {
+        use textweaver_app::live::{LiveOptions, ScriptedSource};
+        let mut r = Report {
+            name: "live-log".to_owned(),
+            values: Vec::new(),
+        };
+        println!("live-log (a log view fed by a scripted source)");
+        for n in LIVE_LOG_SIZES {
+            let (speech, _clock) = clock_service();
+            let mut app = new_app(home, speech);
+            let (source, feed) = ScriptedSource::new();
+            app.open_live_source(
+                Box::new(source),
+                LiveOptions {
+                    id: "bench".into(),
+                    title: "Bench log".into(),
+                    ..LiveOptions::default()
+                },
+            );
+            let whole: Vec<String> = (0..n).map(|i| live_entry(i, "")).collect();
+            feed.push_json("bench/log", &format!("[{}]", whole.join(",")));
+            let t = Instant::now();
+            app.tick(Instant::now());
+            r.time(
+                &format!("live_whole_{n}_ms"),
+                &format!("live log: the whole log of {n} entries shown"),
+                t.elapsed(),
+            );
+            app.dispatch(Command::GoTo(parse_go_to("50%").expect("50%")));
+            let mut appends = Vec::new();
+            alloc::reset_peak();
+            for k in 0..LIVE_LOG_ROUNDS {
+                feed.push_json("bench/log", &live_entry(n + k, "New."));
+                let t = Instant::now();
+                app.tick(Instant::now());
+                appends.push(t.elapsed());
+            }
+            r.samples(
+                &format!("live_append_{n}"),
+                &format!("live log: one entry added to {n}"),
+                &appends,
+            );
+            r.peak(
+                &format!("live_append_{n}_peak_mb"),
+                &format!("live log appends at {n} entries"),
+            );
+            let mut corrections = Vec::new();
+            for k in 0..LIVE_LOG_ROUNDS {
+                feed.push_json("bench/log", &live_entry(0, &format!("Correction {k}.")));
+                let t = Instant::now();
+                app.tick(Instant::now());
+                corrections.push(t.elapsed());
+            }
+            r.samples(
+                &format!("live_correct_{n}"),
+                &format!("live log: the first of {n} entries corrected"),
+                &corrections,
+            );
+            let entries = app.live_log().map_or(0, |l| l.len());
+            if entries != n + LIVE_LOG_ROUNDS {
+                println!(
+                    "  the log has {entries} entries, not {}",
+                    n + LIVE_LOG_ROUNDS
+                );
+            }
+            app.shutdown();
+        }
+        r
+    }
+
     /// Runs the benchmarks (the `bench-run` task).
     pub fn run_inner() -> anyhow::Result<()> {
         let args = super::Args::parse(&std::env::args().skip(2).collect::<Vec<_>>())?;
@@ -1973,6 +2072,23 @@ mod inner {
             }
             let _ = std::fs::remove_dir_all(&home);
             let rep = bench_doc(name, path, &home);
+            println!();
+            all.insert(
+                rep.name.clone(),
+                Value::Object(rep.values.into_iter().collect()),
+            );
+        }
+        // A live log at 2,000 and 10,000 entries, with the corpora.
+        if args.files.is_empty()
+            && only
+                .as_ref()
+                .is_none_or(|o| "live-log".contains(o.as_str()))
+        {
+            if !alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30)) {
+                println!("(other threads were still allocating after 30 s)");
+            }
+            let _ = std::fs::remove_dir_all(&home);
+            let rep = live_log(&home);
             println!();
             all.insert(
                 rep.name.clone(),

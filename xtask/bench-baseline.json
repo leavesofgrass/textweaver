@@ -3093,6 +3093,7 @@
     }
   },
   "policy": {
+    "reason": "Beta 6 (speed): startup is gated, its times may grow 50 percent like every other time on the CI runner; the run also reports live_whole_N_ms, live_append_N and live_correct_N for a live log of 2,000 and 10,000 entries, and replace_one_ms. Those keys have no Linux numbers yet: refresh the linux-x86_64 entry from the first Bench run on main (cargo xtask bench --quick --update-baseline --gate-times --reason ...).",
     "alloc_floor": 5000.0,
     "max_growth": 0.25,
     "max_improvement": 0.25,
@@ -3100,7 +3101,6 @@
     "node_floor": 100.0,
     "peak_floor_mb": 1.0,
     "report_only": [
-      "startup",
       "shutdown",
       "save_",
       "autosave",
