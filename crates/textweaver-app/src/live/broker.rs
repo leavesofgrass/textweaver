@@ -501,6 +501,10 @@ impl App {
                 );
                 self.tell(&m);
             }
+            BrokerEvent::JoinCodeOff { .. } => {
+                let m = self.msg("live-broker-join-off");
+                self.warn(&m);
+            }
             BrokerEvent::Listening { .. } | BrokerEvent::Stopped => {}
             other => {
                 // Lockouts, refused publishes, a full broker: the broker's

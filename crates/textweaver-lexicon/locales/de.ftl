@@ -5705,6 +5705,7 @@ live-broker-joined = Verbunden: { $user }.
 live-broker-left = Gegangen: { $user }.
 live-broker-refused = Anmeldung abgelehnt: { $user }, von { $address }.
 live-broker-event = Broker: { $event }
+live-broker-join-off = Beitrittscode aus: zu viele falsche Codes. Starten Sie den Broker neu, um einen neuen Code zu erhalten.
 live-send-too-large = die Nachricht hat { $len } Bytes; die Grenze ist { $max }.
 live-send-no-password = Nicht gesendet: Für { $name } ist kein Passwort gespeichert. Öffnen Sie die Quelle einmal, um es einzugeben.
 live-checkin-sent = Veröffentlicht: { $entry }, auf { $topic }.

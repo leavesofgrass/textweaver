@@ -3,6 +3,7 @@
 //! each matching reader a cheap clone through its own bounded queue.
 
 use std::collections::{BTreeMap, HashMap};
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{SyncSender, TrySendError};
@@ -10,6 +11,8 @@ use std::sync::mpsc::{SyncSender, TrySendError};
 use bytes::Bytes;
 use rumqttc::mqttbytes::QoS;
 use textweaver_mqtt::topic::matches;
+
+use textweaver_mqtt::JOIN_USER;
 
 use crate::Perms;
 
@@ -26,6 +29,9 @@ pub(crate) struct Outgoing {
 pub(crate) struct Client {
     pub(crate) client_id: String,
     pub(crate) user: String,
+    /// The address it came from, as the limiter keys it (an IPv6 address
+    /// by its /64).
+    pub(crate) addr: IpAddr,
     pub(crate) perms: Arc<Perms>,
     pub(crate) subs: Vec<(String, QoS)>,
     pub(crate) tx: SyncSender<Outgoing>,
@@ -47,6 +53,28 @@ pub(crate) struct Outcome {
     pub(crate) not_retained: bool,
 }
 
+/// Why [`Router::add`] turned a client away.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Refusal {
+    /// Another account is using the client id.
+    IdOfAnotherAccount,
+    /// Another join reader is using the client id. Join readers share one
+    /// user name, so a takeover would let one reader end another's
+    /// connection.
+    IdOfAnotherJoinReader,
+    /// The address has as many logged-in connections as it may.
+    AddressFull(usize),
+    /// As many join readers are logged in as may be.
+    JoinFull(usize),
+}
+
+/// The caps [`Router::add`] checks.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Caps {
+    pub(crate) per_addr: usize,
+    pub(crate) join: usize,
+}
+
 #[derive(Default)]
 pub(crate) struct Router {
     clients: HashMap<u64, Client>,
@@ -55,18 +83,39 @@ pub(crate) struct Router {
 
 impl Router {
     /// Adds a client. A client already using its client id is ended when
-    /// it is the same user's (an MQTT takeover); another user's client id
-    /// is refused, so one account cannot push another off.
-    pub(crate) fn add(&mut self, id: u64, client: Client) -> Result<(), Client> {
-        if let Some(old) = self
+    /// it is the same account's (an MQTT takeover); another account's
+    /// client id, or another join reader's, is refused, so nobody can push
+    /// another off. The caps are checked in the same step, so a burst of
+    /// logins cannot pass them.
+    pub(crate) fn add(&mut self, id: u64, client: Client, caps: Caps) -> Result<(), Refusal> {
+        let join = client.user == JOIN_USER;
+        let old = self
             .clients
-            .values()
-            .find(|c| c.client_id == client.client_id)
+            .iter()
+            .find(|(_, c)| c.client_id == client.client_id)
+            .map(|(k, c)| (*k, c.user == client.user));
+        match old {
+            Some(_) if join => return Err(Refusal::IdOfAnotherJoinReader),
+            Some((_, false)) => return Err(Refusal::IdOfAnotherAccount),
+            _ => {}
+        }
+        let taken_over = old.map(|(k, _)| k);
+        let others = |pred: &dyn Fn(&Client) -> bool| {
+            self.clients
+                .iter()
+                .filter(|(k, c)| Some(**k) != taken_over && pred(c))
+                .count()
+        };
+        if others(&|c| c.addr == client.addr) >= caps.per_addr {
+            return Err(Refusal::AddressFull(caps.per_addr));
+        }
+        if join && others(&|c| c.user == JOIN_USER) >= caps.join {
+            return Err(Refusal::JoinFull(caps.join));
+        }
+        if let Some(k) = taken_over
+            && let Some(c) = self.clients.get(&k)
         {
-            if old.user != client.user {
-                return Err(client);
-            }
-            old.kill.store(true, Ordering::SeqCst);
+            c.kill.store(true, Ordering::SeqCst);
         }
         self.clients.insert(id, client);
         Ok(())

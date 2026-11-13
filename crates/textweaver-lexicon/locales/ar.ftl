@@ -6088,6 +6088,7 @@ live-broker-joined = انضم: { $user }.
 live-broker-left = غادر: { $user }.
 live-broker-refused = رُفض تسجيل الدخول: { $user }، من { $address }.
 live-broker-event = الوسيط: { $event }
+live-broker-join-off = رمز الانضمام معطّل: رموز خاطئة كثيرة. أعد تشغيل الوسيط للحصول على رمز جديد.
 live-send-too-large = حجم الرسالة { $len } بايت؛ والحد { $max }.
 live-send-no-password = لم يُرسل: لا كلمة مرور محفوظة لـ { $name }. افتحه مرة لكتابة كلمة المرور.
 live-checkin-sent = نُشر: { $entry }، على { $topic }.

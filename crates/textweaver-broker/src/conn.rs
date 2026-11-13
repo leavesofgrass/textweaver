@@ -3,7 +3,7 @@
 //! breaks a rule, falls too far behind, or the broker stops.
 
 use std::io::{self, Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::net::{IpAddr, SocketAddr, TcpStream};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, sync_channel};
@@ -19,7 +19,7 @@ use rustls::{ServerConnection, StreamOwned};
 use textweaver_mqtt::topic::{filter_problem, name_problem};
 use textweaver_mqtt::{JOIN_USER, clean_text, ct_eq};
 
-use crate::router::{Client, Outgoing, min_qos};
+use crate::router::{Caps, Client, Outgoing, Refusal, min_qos};
 use crate::{BrokerEvent, Perms, Shared};
 
 /// How long a read waits before the thread checks the stop flag, its
@@ -35,8 +35,36 @@ const BATCH: usize = 256;
 pub(crate) trait Stream: Read + Write + Send {}
 impl<T: Read + Write + Send> Stream for T {}
 
-/// Serves one accepted connection to its end.
+/// The place a connection holds among its address's connections still
+/// logging in, given back at login or when the connection ends.
+pub(crate) struct Waiting<'a> {
+    shared: &'a Shared,
+    ip: IpAddr,
+    held: bool,
+}
+
+impl Waiting<'_> {
+    fn release(&mut self) {
+        if std::mem::take(&mut self.held) {
+            self.shared.release_waiting(self.ip);
+        }
+    }
+}
+
+impl Drop for Waiting<'_> {
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+
+/// Serves one accepted connection to its end. The listener has taken its
+/// place among its address's connections still logging in.
 pub(crate) fn serve(shared: &Arc<Shared>, tcp: TcpStream, peer: SocketAddr, id: u64) {
+    let mut waiting = Waiting {
+        shared,
+        ip: peer.ip(),
+        held: true,
+    };
     let _ = tcp.set_nodelay(true);
     if tcp
         .set_read_timeout(Some(TICK))
@@ -57,7 +85,7 @@ pub(crate) fn serve(shared: &Arc<Shared>, tcp: TcpStream, peer: SocketAddr, id: 
         },
         None => Box::new(tcp),
     };
-    session(shared, stream, peer, id);
+    session(shared, stream, peer, id, &mut waiting);
 }
 
 fn handshake(
@@ -94,7 +122,13 @@ impl Drop for Registered<'_> {
     }
 }
 
-fn session(shared: &Shared, mut stream: Box<dyn Stream>, peer: SocketAddr, id: u64) {
+fn session(
+    shared: &Shared,
+    mut stream: Box<dyn Stream>,
+    peer: SocketAddr,
+    id: u64,
+    waiting: &mut Waiting<'_>,
+) {
     let limits = &shared.limits;
     let max_packet = limits.max_payload + limits.max_topic + 16;
     let mut buf = BytesMut::with_capacity(1024);
@@ -123,7 +157,18 @@ fn session(shared: &Shared, mut stream: Box<dyn Stream>, peer: SocketAddr, id: u
         let _ = connack(&mut stream, ConnectReturnCode::RefusedProtocolVersion);
         return;
     }
-    let Some((user, perms)) = login(shared, &connect) else {
+    // Counted before the password is checked, so logins sent at once get
+    // no more answers than the failed-login limit allows. The rest are
+    // turned away unchecked, as "unavailable", which says nothing about
+    // the password.
+    let slot = shared.limiter().begin(peer.ip());
+    let Some(slot) = slot else {
+        let _ = connack(&mut stream, ConnectReturnCode::ServiceUnavailable);
+        return;
+    };
+    let logged_in = login(shared, &connect);
+    shared.end_login(peer.ip(), slot, logged_in.is_some());
+    let Some((user, perms)) = logged_in else {
         let tried = connect
             .login
             .as_ref()
@@ -134,7 +179,6 @@ fn session(shared: &Shared, mut stream: Box<dyn Stream>, peer: SocketAddr, id: u
             user: tried,
         });
         let _ = connack(&mut stream, ConnectReturnCode::NotAuthorized);
-        shared.fail(peer.ip());
         return;
     };
     let mut client_id = connect.client_id.clone();
@@ -153,25 +197,57 @@ fn session(shared: &Shared, mut stream: Box<dyn Stream>, peer: SocketAddr, id: u
     let (tx, rx) = sync_channel(limits.queue.max(1));
     let kill = Arc::new(AtomicBool::new(false));
     let perms = Arc::new(perms);
+    let addr = crate::limiter::key(peer.ip());
     let added = shared.router().add(
         id,
         Client {
             client_id: client_id.clone(),
             user: user.clone(),
+            addr,
             perms: perms.clone(),
             subs: Vec::new(),
             tx,
             kill: kill.clone(),
         },
+        Caps {
+            per_addr: limits.max_per_addr,
+            join: limits.max_join,
+        },
     );
-    if added.is_err() {
-        shared.emit(BrokerEvent::Problem(format!(
-            "Refused: {user} asked for client id {}, which another account is using.",
-            clean_text(&client_id, 64)
-        )));
-        let _ = connack(&mut stream, ConnectReturnCode::BadClientId);
+    if let Err(refusal) = added {
+        let (event, code) = match refusal {
+            Refusal::IdOfAnotherAccount => (
+                BrokerEvent::Problem(format!(
+                    "Refused: {user} asked for client id {}, which another account is using.",
+                    clean_text(&client_id, 64)
+                )),
+                ConnectReturnCode::BadClientId,
+            ),
+            Refusal::IdOfAnotherJoinReader => (
+                BrokerEvent::Problem(format!(
+                    "Refused: a join reader asked for client id {}, which another join reader is using.",
+                    clean_text(&client_id, 64)
+                )),
+                ConnectReturnCode::BadClientId,
+            ),
+            Refusal::AddressFull(max) => (
+                BrokerEvent::AddressFull {
+                    ip: addr,
+                    max,
+                    logged_in: true,
+                },
+                ConnectReturnCode::ServiceUnavailable,
+            ),
+            Refusal::JoinFull(max) => (
+                BrokerEvent::JoinFull { max },
+                ConnectReturnCode::ServiceUnavailable,
+            ),
+        };
+        shared.emit(event);
+        let _ = connack(&mut stream, code);
         return;
     }
+    waiting.release();
     let _registered = Registered { shared, id };
     if connack(&mut stream, ConnectReturnCode::Success).is_err() {
         return;
@@ -205,8 +281,14 @@ fn login(shared: &Shared, c: &Connect) -> Option<(String, Perms)> {
     let l = c.login.as_ref()?;
     if l.username == JOIN_USER {
         let (password, perms) = shared.join.as_ref()?;
-        return ct_eq(l.password.as_bytes(), password.expose().as_bytes())
-            .then(|| (JOIN_USER.to_string(), perms.clone()));
+        if shared.join_off.load(Ordering::SeqCst) {
+            return None;
+        }
+        if ct_eq(l.password.as_bytes(), password.expose().as_bytes()) {
+            return Some((JOIN_USER.to_string(), perms.clone()));
+        }
+        shared.join_wrong();
+        return None;
     }
     shared
         .accounts
@@ -488,10 +570,16 @@ pub(crate) fn fuzz(data: &[u8]) {
     let shared = SHARED.get_or_init(Shared::for_fuzz);
     let id = shared.next_id.fetch_add(1, Ordering::SeqCst);
     let peer = SocketAddr::from(([192, 0, 2, 1], 50_000));
+    let mut waiting = Waiting {
+        shared,
+        ip: peer.ip(),
+        held: false,
+    };
     session(
         shared,
         Box::new(FuzzStream(io::Cursor::new(data.to_vec()))),
         peer,
         id,
+        &mut waiting,
     );
 }

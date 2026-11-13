@@ -22,11 +22,16 @@
 //!   stay valid across restarts ([`stable_pin`]); with a join code, the
 //!   session has its own key, in memory only. Plain TCP only when asked,
 //!   and the broker says in words whether each address is loopback,
-//!   Tailscale, or something else, warning for the last.
+//!   Tailscale, or something else, warning for the last. A 100.64.0.0/10
+//!   address counts as Tailscale only when this computer has a Tailscale
+//!   network interface, since carriers use the same range.
 //! - **Caps** ([`BrokerLimits`]): clients, message size, topic length,
 //!   subscriptions per client, retained topics, and each reader's queue (a
-//!   reader that falls that far behind is dropped). Five failed logins a
-//!   minute from one address lock it out for five minutes.
+//!   reader that falls that far behind is dropped), connections per
+//!   address before and after login, and readers on the join code. Five
+//!   failed logins a minute from one address lock it out for five minutes,
+//!   counting logins still being checked; after 200 wrong join codes in a
+//!   session, the join code turns off.
 //! - **Status in words**: every [`BrokerEvent`] is one sentence, meaning
 //!   first, for a status line or a Braille display.
 
@@ -36,10 +41,11 @@ mod identity;
 mod limiter;
 mod router;
 
+use std::collections::HashMap;
 use std::fmt;
 use std::net::{IpAddr, SocketAddr, TcpListener};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -88,6 +94,16 @@ pub struct BrokerLimits {
     pub fail_window: Duration,
     /// How long an address stays locked out (300 s).
     pub lockout: Duration,
+    /// Connections from one address still logging in (8). IPv6 addresses
+    /// count by their /64.
+    pub max_waiting_per_addr: usize,
+    /// Logged-in connections from one address (16).
+    pub max_per_addr: usize,
+    /// Readers logged in with the join code at once (50).
+    pub max_join: usize,
+    /// Wrong join codes in one broker session before the join code turns
+    /// off (200). Accounts keep working.
+    pub join_budget: u32,
 }
 
 impl Default for BrokerLimits {
@@ -103,6 +119,10 @@ impl Default for BrokerLimits {
             max_fails: 5,
             fail_window: Duration::from_secs(60),
             lockout: Duration::from_secs(300),
+            max_waiting_per_addr: 8,
+            max_per_addr: 16,
+            max_join: 50,
+            join_budget: 200,
         }
     }
 }
@@ -151,7 +171,8 @@ impl BrokerConfig {
 pub enum Network {
     /// This computer only.
     Loopback,
-    /// A Tailscale address, whose WireGuard tunnel encrypts traffic.
+    /// A Tailscale address on a computer with a Tailscale interface, whose
+    /// WireGuard tunnel encrypts traffic.
     Tailscale,
     /// Every network this computer is on (0.0.0.0 or ::).
     Every,
@@ -160,17 +181,44 @@ pub enum Network {
 }
 
 impl Network {
-    /// The kind of network `ip` is on.
+    /// The kind of network `ip` is on. An address in Tailscale's ranges is
+    /// [`Network::Tailscale`] only when [`tailscale_interface`] finds a
+    /// Tailscale interface; otherwise it is [`Network::Other`], because
+    /// 100.64.0.0/10 is also carrier-grade NAT.
     pub fn of(ip: IpAddr) -> Network {
+        Network::classify(ip, || tailscale_interface() == Some(true))
+    }
+
+    /// [`Network::of`], with the interface check given.
+    fn classify(ip: IpAddr, has_tailscale: impl FnOnce() -> bool) -> Network {
         if ip.is_loopback() {
             Network::Loopback
-        } else if is_tailscale_addr(ip) {
+        } else if is_tailscale_addr(ip) && has_tailscale() {
             Network::Tailscale
         } else if ip.is_unspecified() {
             Network::Every
         } else {
             Network::Other
         }
+    }
+}
+
+/// Whether this computer has a Tailscale network interface: `Some(true)`
+/// or `Some(false)` where the broker can tell without a new dependency
+/// (Linux, from `/sys/class/net`, where Tailscale's interface is
+/// `tailscale0` or another name starting with `tailscale`), and `None`
+/// where it cannot (Windows and macOS, whose interface lists need system
+/// calls the broker does not make). Unknown counts as no interface.
+pub fn tailscale_interface() -> Option<bool> {
+    if cfg!(target_os = "linux") {
+        let entries = std::fs::read_dir("/sys/class/net").ok()?;
+        Some(entries.flatten().any(|e| {
+            e.file_name()
+                .to_str()
+                .is_some_and(|n| n.starts_with("tailscale"))
+        }))
+    } else {
+        None
     }
 }
 
@@ -230,6 +278,27 @@ pub enum BrokerEvent {
         /// The cap.
         max: usize,
     },
+    /// A connection or a login was turned away because its address has as
+    /// many as it may. Said once each time the address reaches the cap.
+    AddressFull {
+        /// The address (an IPv6 address by its /64).
+        ip: IpAddr,
+        /// The cap.
+        max: usize,
+        /// True for logged-in connections, false for ones still logging in.
+        logged_in: bool,
+    },
+    /// A join login was turned away: as many readers have joined as may.
+    JoinFull {
+        /// The cap.
+        max: usize,
+    },
+    /// Too many wrong join codes this session: the join code is off, and
+    /// only accounts can log in until the broker starts again.
+    JoinCodeOff {
+        /// The wrong codes counted.
+        wrong: u32,
+    },
     /// A retained message was not kept: the store is full.
     RetainedFull {
         /// The topic, cleaned.
@@ -263,6 +332,12 @@ impl fmt::Display for BrokerEvent {
                         "Listening: {addr}, TLS, on every network of this computer."
                     ),
                     (Network::Other, true) => write!(f, "Listening: {addr}, TLS."),
+                    (Network::Every | Network::Other, false) if is_tailscale_addr(addr.ip()) => {
+                        write!(
+                            f,
+                            "Warning: {addr} is plain, and no Tailscale interface was found, so the link may not be encrypted. Anyone on that network can read the messages and the passwords."
+                        )
+                    }
                     (Network::Every | Network::Other, false) => write!(
                         f,
                         "Warning: {addr} is plain and not on Tailscale. Anyone on that network can read the messages and the passwords."
@@ -301,6 +376,26 @@ impl fmt::Display for BrokerEvent {
                 f,
                 "Refused a connection: the broker has {max} clients, its limit."
             ),
+            BrokerEvent::AddressFull {
+                ip,
+                max,
+                logged_in: false,
+            } => write!(
+                f,
+                "Refused connections: {ip} has {max} still logging in, its limit."
+            ),
+            BrokerEvent::AddressFull {
+                ip,
+                max,
+                logged_in: true,
+            } => write!(f, "Refused a login: {ip} has {max} connections, its limit."),
+            BrokerEvent::JoinFull { max } => write!(
+                f,
+                "Refused a join login: {max} readers have joined with the code, its limit."
+            ),
+            BrokerEvent::JoinCodeOff { .. } => f.write_str(
+                "Join code off: too many wrong codes. Start the broker again for a new code.",
+            ),
             BrokerEvent::RetainedFull { topic } => write!(
                 f,
                 "Not kept: the retained message on {topic}, because the broker holds as many as it may."
@@ -334,6 +429,14 @@ impl Perms {
 
 type EventFn = Box<dyn Fn(BrokerEvent) + Send + Sync>;
 
+/// Connections from one address still logging in, and whether the broker
+/// has said the address reached its cap.
+#[derive(Debug, Default)]
+struct Waiting {
+    count: usize,
+    warned: bool,
+}
+
 /// State every thread shares.
 pub(crate) struct Shared {
     pub(crate) stop: AtomicBool,
@@ -343,6 +446,12 @@ pub(crate) struct Shared {
     pub(crate) tls: Option<Arc<rustls::ServerConfig>>,
     pub(crate) router: Mutex<Router>,
     pub(crate) limiter: Mutex<Limiter>,
+    /// Connections still logging in, per address key.
+    waiting: Mutex<HashMap<IpAddr, Waiting>>,
+    /// Wrong join codes this session.
+    pub(crate) join_wrong: AtomicU32,
+    /// Set when the join code turned off.
+    pub(crate) join_off: AtomicBool,
     pub(crate) active: AtomicUsize,
     pub(crate) next_id: AtomicU64,
     conns: Mutex<Vec<JoinHandle<()>>>,
@@ -368,11 +477,76 @@ impl Shared {
 
     /// Counts a failure from `ip`, and says so when it locks it out.
     pub(crate) fn fail(&self, ip: IpAddr) {
-        if self.limiter().fail(ip) {
-            self.emit(BrokerEvent::LockedOut {
-                ip,
-                minutes: self.limits.lockout.as_secs().div_ceil(60),
+        let locked = self.limiter().fail(ip);
+        if locked {
+            self.locked_out(ip);
+        }
+    }
+
+    /// Ends a login the limiter let through, and says so when its failure
+    /// locks the address out.
+    pub(crate) fn end_login(&self, ip: IpAddr, slot: limiter::Slot, ok: bool) {
+        let locked = self.limiter().end(slot, ok);
+        if locked {
+            self.locked_out(ip);
+        }
+    }
+
+    fn locked_out(&self, ip: IpAddr) {
+        self.emit(BrokerEvent::LockedOut {
+            ip,
+            minutes: self.limits.lockout.as_secs().div_ceil(60),
+        });
+    }
+
+    /// Counts a wrong join code, and turns the join code off, saying so
+    /// once, when the session's budget is spent.
+    pub(crate) fn join_wrong(&self) {
+        let wrong = self
+            .join_wrong
+            .fetch_add(1, Ordering::SeqCst)
+            .saturating_add(1);
+        if wrong >= self.limits.join_budget && !self.join_off.swap(true, Ordering::SeqCst) {
+            self.emit(BrokerEvent::JoinCodeOff { wrong });
+        }
+    }
+
+    /// Takes a place for a connection from `ip` that has not logged in
+    /// yet, or refuses when its address has as many as it may. Says so the
+    /// first time the address reaches the cap.
+    pub(crate) fn take_waiting(&self, ip: IpAddr) -> bool {
+        let k = limiter::key(ip);
+        let max = self.limits.max_waiting_per_addr;
+        let warn = {
+            let mut w = self.waiting.lock().unwrap_or_else(|p| p.into_inner());
+            let e = w.entry(k).or_default();
+            if e.count < max {
+                e.count += 1;
+                return true;
+            }
+            !std::mem::replace(&mut e.warned, true)
+        };
+        if warn {
+            self.emit(BrokerEvent::AddressFull {
+                ip: k,
+                max,
+                logged_in: false,
             });
+        }
+        false
+    }
+
+    /// Gives back a place [`Shared::take_waiting`] took.
+    pub(crate) fn release_waiting(&self, ip: IpAddr) {
+        let k = limiter::key(ip);
+        let mut w = self.waiting.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(e) = w.get_mut(&k) {
+            e.count = e.count.saturating_sub(1);
+            if e.count == 0 {
+                w.remove(&k);
+            } else if e.count < self.limits.max_waiting_per_addr {
+                e.warned = false;
+            }
         }
     }
 
@@ -417,6 +591,11 @@ impl Shared {
             max_subscriptions: 8,
             max_retained: 64,
             queue: 16,
+            // Fuzz input is all from one address and never ends: no
+            // lockout and no join budget, so every input reaches the code
+            // after the login.
+            max_fails: u32::MAX,
+            join_budget: u32::MAX,
             ..BrokerLimits::default()
         };
         Arc::new(Shared {
@@ -426,6 +605,9 @@ impl Shared {
                 limits.fail_window,
                 limits.lockout,
             )),
+            waiting: Mutex::new(HashMap::new()),
+            join_wrong: AtomicU32::new(0),
+            join_off: AtomicBool::new(false),
             limits,
             accounts,
             join: Some((
@@ -526,6 +708,9 @@ impl Broker {
                 limits.fail_window,
                 limits.lockout,
             )),
+            waiting: Mutex::new(HashMap::new()),
+            join_wrong: AtomicU32::new(0),
+            join_off: AtomicBool::new(false),
             limits,
             accounts: config.accounts,
             join,
@@ -673,6 +858,9 @@ fn accept_loop(shared: &Arc<Shared>, listener: &TcpListener) {
                     });
                     continue;
                 }
+                if !shared.take_waiting(peer.ip()) {
+                    continue;
+                }
                 shared.active.fetch_add(1, Ordering::SeqCst);
                 let id = shared.next_id.fetch_add(1, Ordering::SeqCst);
                 let s = shared.clone();
@@ -688,6 +876,7 @@ fn accept_loop(shared: &Arc<Shared>, listener: &TcpListener) {
                     Ok(t) => conns.push(t),
                     Err(e) => {
                         shared.active.fetch_sub(1, Ordering::SeqCst);
+                        shared.release_waiting(peer.ip());
                         shared.emit(BrokerEvent::Problem(format!(
                             "Problem: cannot start a thread for a client: {e}."
                         )));
@@ -726,26 +915,31 @@ mod tests {
 
     #[test]
     fn networks_are_named() {
-        assert_eq!(Network::of("127.0.0.1".parse().unwrap()), Network::Loopback);
-        assert_eq!(Network::of("::1".parse().unwrap()), Network::Loopback);
+        let of = |ip: &str, ts: bool| Network::classify(ip.parse().unwrap(), || ts);
+        assert_eq!(of("127.0.0.1", true), Network::Loopback);
+        assert_eq!(of("::1", true), Network::Loopback);
+        assert_eq!(of("100.101.1.2", true), Network::Tailscale);
+        assert_eq!(of("fd7a:115c:a1e0::5", true), Network::Tailscale);
         assert_eq!(
-            Network::of("100.101.1.2".parse().unwrap()),
-            Network::Tailscale
+            of("100.101.1.2", false),
+            Network::Other,
+            "a carrier's 100.64 address with no Tailscale interface"
         );
-        assert_eq!(Network::of("0.0.0.0".parse().unwrap()), Network::Every);
-        assert_eq!(Network::of("192.168.1.20".parse().unwrap()), Network::Other);
+        assert_eq!(of("0.0.0.0", true), Network::Every);
+        assert_eq!(of("192.168.1.20", true), Network::Other);
     }
 
     #[test]
     fn listening_lines_put_meaning_first() {
-        let line = |ip: &str, tls| {
+        let line_with = |ip: &str, tls, ts: bool| {
             BrokerEvent::Listening {
                 addr: SocketAddr::new(ip.parse().unwrap(), 1883),
                 tls,
-                network: Network::of(ip.parse().unwrap()),
+                network: Network::classify(ip.parse().unwrap(), || ts),
             }
             .to_string()
         };
+        let line = |ip: &str, tls| line_with(ip, tls, true);
         assert_eq!(
             line("127.0.0.1", true),
             "Listening: 127.0.0.1:1883, TLS, loopback only. Other computers cannot connect."
@@ -755,6 +949,46 @@ mod tests {
         assert_eq!(
             line("100.101.1.2", false),
             "Listening: 100.101.1.2:1883, plain, on Tailscale, which encrypts the link."
+        );
+        // No Tailscale interface: a 100.64 address keeps the warning.
+        assert_eq!(
+            line_with("100.64.1.1", false, false),
+            "Warning: 100.64.1.1:1883 is plain, and no Tailscale interface was found, so the link may not be encrypted. Anyone on that network can read the messages and the passwords."
+        );
+        assert_eq!(
+            line_with("100.64.1.1", true, false),
+            "Listening: 100.64.1.1:1883, TLS."
+        );
+    }
+
+    #[test]
+    fn new_refusals_put_meaning_first() {
+        let ip: IpAddr = "192.0.2.9".parse().unwrap();
+        assert_eq!(
+            BrokerEvent::AddressFull {
+                ip,
+                max: 8,
+                logged_in: false
+            }
+            .to_string(),
+            "Refused connections: 192.0.2.9 has 8 still logging in, its limit."
+        );
+        assert_eq!(
+            BrokerEvent::AddressFull {
+                ip,
+                max: 16,
+                logged_in: true
+            }
+            .to_string(),
+            "Refused a login: 192.0.2.9 has 16 connections, its limit."
+        );
+        assert_eq!(
+            BrokerEvent::JoinFull { max: 50 }.to_string(),
+            "Refused a join login: 50 readers have joined with the code, its limit."
+        );
+        assert_eq!(
+            BrokerEvent::JoinCodeOff { wrong: 200 }.to_string(),
+            "Join code off: too many wrong codes. Start the broker again for a new code."
         );
     }
 
