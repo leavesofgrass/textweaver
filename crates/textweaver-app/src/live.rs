@@ -263,14 +263,28 @@ impl App {
     /// [`live_apply`](Self::live_apply) with the document already loaded.
     pub(crate) fn live_replace(
         &mut self,
-        mut new: Document,
+        new: Document,
         place: Option<CharPos>,
     ) -> Option<Vec<EditOutcome>> {
-        let s = self.session.as_mut().filter(|s| s.live.is_some())?;
+        let s = self.session.as_ref().filter(|s| s.live.is_some())?;
         let outcomes: Vec<EditOutcome> = minimal_edits(&s.doc, &new)
             .iter()
             .map(Edit::outcome)
             .collect();
+        self.live_replace_by(new, outcomes, place)
+    }
+
+    /// [`live_replace`](Self::live_replace) when the edits from the open
+    /// document's text to `new`'s are known (an entry added or corrected,
+    /// crate::live::hub): `outcomes` in the order applied, each in the
+    /// coordinates the ones before it left.
+    pub(crate) fn live_replace_by(
+        &mut self,
+        mut new: Document,
+        outcomes: Vec<EditOutcome>,
+        place: Option<CharPos>,
+    ) -> Option<Vec<EditOutcome>> {
+        let s = self.session.as_mut().filter(|s| s.live.is_some())?;
         if outcomes.is_empty() {
             return None;
         }
@@ -316,6 +330,68 @@ impl App {
             .map(|p| fit(outcomes.iter().fold(p, |p, o| o.map_pos(p, Bias::After))));
         Some(outcomes)
     }
+}
+
+/// `old` with the chars `at` replaced by the chars `from` of `piece`, a
+/// part of the same Markdown parsed on its own, and the edit that does it.
+/// Markers inside `at` go and `piece`'s markers inside `from` come in
+/// their place; a list or a table holding `around` grows (or shrinks)
+/// with it; markers after `at` move. `None` when a marker other than a
+/// list or table reaches into `at` from outside, or a range is out of
+/// bounds: the caller loads the whole view instead.
+///
+/// For a corrected entry `at` and `around` are its range in `old`; for
+/// entries added at the end, `at` is the empty range at the end of the
+/// last entry, which is `around`.
+pub(crate) fn splice(
+    old: &Document,
+    at: CharRange,
+    around: CharRange,
+    piece: &Document,
+    from: CharRange,
+) -> Option<(Document, Edit)> {
+    use textweaver_core::MarkerKind;
+    if at.end.0 > old.len_chars() || from.end.0 > piece.len_chars() || at.start > at.end {
+        return None;
+    }
+    let inserted = piece.text().slice(from.start.0..from.end.0).to_string();
+    let delta = from.len() as isize - at.len() as isize;
+    let moved = |p: CharPos| CharPos(p.0.checked_add_signed(delta).unwrap_or(0));
+    let container = |k: MarkerKind| matches!(k, MarkerKind::List | MarkerKind::Table);
+    let mut markers = Vec::with_capacity(old.markers().len() + piece.markers().len());
+    for m in old.markers() {
+        let r = m.range;
+        let mut m = m.clone();
+        if container(m.kind) && r.contains_range(around) {
+            m.range.end = moved(r.end);
+        } else if !container(m.kind) && !at.is_empty() && at.contains_range(r) {
+            continue;
+        } else if r.end <= at.start {
+            // Before the edit: as it was.
+        } else if r.start >= at.end {
+            m.range = CharRange::new(moved(r.start), moved(r.end));
+        } else {
+            return None;
+        }
+        markers.push(m);
+    }
+    for m in piece.markers() {
+        // Inserting after `around`, an empty marker where `from` starts
+        // ends the entry before it, which `old` already has.
+        let before = at.is_empty() && m.range.is_empty() && m.range.start == from.start;
+        if container(m.kind) || !from.contains_range(m.range) || before {
+            continue;
+        }
+        let mut m = m.clone();
+        let shift = |p: CharPos| CharPos(p.0 - from.start.0 + at.start.0);
+        m.range = CharRange::new(shift(m.range.start), shift(m.range.end));
+        markers.push(m);
+    }
+    let mut text = old.text().clone();
+    text.remove(at.start.0..at.end.0);
+    text.insert(at.start.0, &inserted);
+    let edit = Edit::replace(at, inserted);
+    Some((Document::new(old.meta.clone(), text, markers), edit))
 }
 
 /// Maps `pos` across `o`; a position inside the replaced text keeps its

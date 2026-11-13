@@ -866,6 +866,42 @@ impl LiveLog {
         md
     }
 
+    /// Entries `entries` alone as Markdown in `view`, as [`render`]
+    /// shows them in the whole log: list items, or a table with the whole
+    /// log's headers and only these rows. A live document changed by one
+    /// entry parses this, not the whole log (crate::live::hub).
+    ///
+    /// [`render`]: Self::render
+    pub(crate) fn render_entries(
+        &self,
+        view: LogView,
+        labels: &LogLabels,
+        entries: &[usize],
+    ) -> String {
+        let mut md = String::new();
+        let cache = self.rendered(labels, 0..self.entries.len());
+        let part = |i: usize| cache.slots.get(i).and_then(Option::as_ref);
+        match view {
+            LogView::List => {
+                for r in entries.iter().filter_map(|&i| part(i)) {
+                    md.push_str("- ");
+                    md.push_str(&r.escaped);
+                    md.push('\n');
+                }
+            }
+            LogView::Table => {
+                let all: Vec<&Shown> = cache.slots.iter().flatten().map(|r| &r.shown).collect();
+                let body: Vec<&Shown> = entries
+                    .iter()
+                    .filter_map(|&i| part(i))
+                    .map(|r| &r.shown)
+                    .collect();
+                Self::render_table(&mut md, &all, &body, labels);
+            }
+        }
+        md
+    }
+
     /// A table: headers for the fields `all` the rows have, and a row for
     /// each of `rows`.
     fn render_table(md: &mut String, all: &[&Shown], rows: &[&Shown], labels: &LogLabels) {

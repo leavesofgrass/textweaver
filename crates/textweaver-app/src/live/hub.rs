@@ -24,6 +24,82 @@ use crate::app::App;
 use crate::command::Effect;
 use crate::nav::ReadAfter;
 
+/// The most entries changed in one update that are shown entry by entry;
+/// more, and the whole view is rendered and compared.
+const SPLICE_MAX: usize = 16;
+
+/// The open log document `doc` (showing `len_before` entries in `view`)
+/// changed to show `log` after the entries `touched` were added or
+/// corrected, without rendering or parsing the rest: each corrected entry
+/// is rendered and parsed on its own and replaces its line or row, and
+/// the entries added are parsed after the last one before them and go in
+/// at the end, as one edit. The markers come out as a parse of the whole
+/// view gives them (a property test checks it). Also returns the edits'
+/// outcomes, in the order applied. `None` when this does not apply (an
+/// empty log before, a table whose columns changed, too many entries):
+/// the caller renders the whole view.
+fn spliced_entries(
+    doc: &textweaver_text::Document,
+    log: &LiveLog,
+    view: LogView,
+    labels: &LogLabels,
+    len_before: usize,
+    mut touched: Vec<usize>,
+) -> Option<(textweaver_text::Document, Vec<textweaver_core::EditOutcome>)> {
+    touched.sort_unstable();
+    touched.dedup();
+    let len = log.len();
+    if len_before == 0 || len < len_before || touched.is_empty() || touched.len() > SPLICE_MAX {
+        return None;
+    }
+    let ranges = LiveLog::entry_ranges(doc, view);
+    if ranges.len() != len_before {
+        return None;
+    }
+    let header = |d: &textweaver_text::Document| -> Option<String> {
+        let row = d
+            .markers()
+            .iter()
+            .find(|m| m.kind == textweaver_core::MarkerKind::TableRow)?;
+        Some(d.slice(row.range))
+    };
+    let parse = |entries: &[usize]| -> Option<(textweaver_text::Document, Vec<textweaver_core::CharRange>)> {
+        let piece = load_markdown(&log.render_entries(view, labels, entries));
+        // A table's columns are the whole log's: the same header row, or
+        // every row changes.
+        if view == LogView::Table && header(&piece)? != header(doc)? {
+            return None;
+        }
+        let r = LiveLog::entry_ranges(&piece, view);
+        (r.len() == entries.len()).then_some((piece, r))
+    };
+    let mut doc = doc.clone();
+    let mut outcomes = Vec::new();
+    // Added at the end first, then corrections from the last up, so each
+    // range of the document as it was still holds when its turn comes.
+    if len > len_before {
+        let last = len_before - 1;
+        let entries: Vec<usize> = (last..len).collect();
+        let (piece, r) = parse(&entries)?;
+        // The entry before them, parsed with them, reads as it does now.
+        if piece.slice(r[0]) != doc.slice(ranges[last]) {
+            return None;
+        }
+        let from = textweaver_core::CharRange::new(r[0].end, r[r.len() - 1].end);
+        let at = textweaver_core::CharRange::empty(ranges[last].end);
+        let (next, edit) = super::splice(&doc, at, ranges[last], &piece, from)?;
+        outcomes.push(edit.outcome());
+        doc = next;
+    }
+    for &i in touched.iter().rev().filter(|&&i| i < len_before) {
+        let (piece, r) = parse(&[i])?;
+        let (next, edit) = super::splice(&doc, ranges[i], ranges[i], &piece, r[0])?;
+        outcomes.push(edit.outcome());
+        doc = next;
+    }
+    Some((doc, outcomes))
+}
+
 /// How often a running log is written to its JSON file, at most.
 pub const LOG_WRITE_INTERVAL: Duration = Duration::from_secs(10);
 
@@ -989,12 +1065,18 @@ impl App {
         let mut count = 0;
         let before = h.log.dropped;
         let head_before = h.log.head().0.clone();
+        let len_before = h.log.len();
+        // Every entry added or corrected, for showing only those.
+        let mut touched: Vec<usize> = Vec::new();
         for shape in shapes {
             whole |= shape.is_whole();
             let changed = h.log.apply_message(shape, &now);
             if let Some(&last) = changed.last() {
                 last_line = Some(h.log.line(last, &labels));
                 count += changed.len();
+            }
+            if !whole {
+                touched.extend(changed);
             }
         }
         let full = h.log.dropped > before && !h.full_said;
@@ -1016,8 +1098,21 @@ impl App {
             h.furthest = h.log.find_key(&k).or(h.furthest);
         }
         h.furthest = h.furthest.map(|i| i.min(h.log.len().saturating_sub(1)));
-        let md = h.log.render(h.view, &labels);
         let view = h.view;
+        // Entries added or corrected: only they are rendered and parsed,
+        // and the document changes by one edit each.
+        let by_entry = (!whole && !head_changed)
+            .then(|| {
+                let doc = &self.session.as_ref()?.doc;
+                spliced_entries(doc, &h.log, view, &labels, len_before, touched)
+            })
+            .flatten();
+        if let Some((new, outcomes)) = by_entry {
+            self.live_replace_by(new, outcomes, None);
+            self.live_said(say, last_line, count, full);
+            return true;
+        }
+        let md = h.log.render(h.view, &labels);
         let new = load_markdown(&md);
         // A whole log may reorder or drop entries: put the reader back on
         // theirs by its key, at the same offset.
@@ -1032,6 +1127,18 @@ impl App {
             Some(CharPos((r.start.0 + p.offset).min(r.end.0.max(r.start.0))))
         });
         self.live_replace(new, target);
+        self.live_said(say, last_line, count, full);
+        true
+    }
+
+    /// What [`live_take`](Self::live_take) says once the log is shown.
+    fn live_said(
+        &mut self,
+        say: Option<String>,
+        last_line: Option<String>,
+        count: usize,
+        full: bool,
+    ) {
         match (say, last_line) {
             // The answer to the user's own command (resuming): said now.
             (Some(text), _) if !text.is_empty() => self.tell(&text),
@@ -1045,7 +1152,6 @@ impl App {
             let m = self.msg_args("live-full", &args!["max" => MAX_ENTRIES]);
             self.warn(&m);
         }
-        true
     }
 
     /// Shows the log in `view`, keeping the reader on the same entry.

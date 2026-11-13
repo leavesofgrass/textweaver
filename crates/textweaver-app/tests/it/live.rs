@@ -237,17 +237,14 @@ fn a_document_that_is_not_live_is_never_changed() {
     assert_eq!(text(&app), "Plain.\n");
 }
 
-/// Time per update with a 500-entry log: an append, and a correction of
-/// the first entry. Printed for the spike report; the bound is loose so
-/// slow machines pass.
-#[test]
-fn five_hundred_entries_update_quickly() {
-    let (mut app, _, mut src) = rig(500);
+/// Time per update with a log of `n` entries: an append, a correction of
+/// the first entry, and the whole log resent, each the mean of `rounds`.
+fn update_times(n: usize, rounds: usize) -> [std::time::Duration; 3] {
+    let (mut app, _, mut src) = rig(n);
     let _ = app.dispatch(Command::SetCursor(at(&app, "K0250X")));
-    let rounds = 20;
     let started = Instant::now();
     for i in 0..rounds {
-        src.log.upsert(entry(500 + i, "New."));
+        src.log.upsert(entry(n + i, "New."));
         app.live_apply(&src.md(), None, None).expect("an edit");
     }
     let append = started.elapsed() / rounds as u32;
@@ -257,23 +254,39 @@ fn five_hundred_entries_update_quickly() {
         app.live_apply(&src.md(), None, None).expect("an edit");
     }
     let replace = started.elapsed() / rounds as u32;
+    assert_eq!(word_at(&app, app.session().unwrap().cursor), "K0250");
     // The whole log resent (a retained list): a correction at the top and
     // five new entries, which takes the line comparison.
     let started = Instant::now();
     for i in 0..rounds {
         src.log.upsert(entry(0, &format!("Resent {i}.")));
         for k in 0..5 {
-            src.log.upsert(entry(1000 + i * 5 + k, "New."));
+            src.log.upsert(entry(n + 1000 + i * 5 + k, "New."));
         }
         app.live_apply(&src.md(), None, None).expect("an edit");
     }
     let resend = started.elapsed() / rounds as u32;
     eprintln!(
-        "live_apply, {} chars: append {append:?}, replace first {replace:?}, resend {resend:?}",
+        "live_apply, {n} entries, {} chars: append {append:?}, replace first {replace:?}, resend {resend:?}",
         text(&app).chars().count()
     );
-    assert_eq!(word_at(&app, app.session().unwrap().cursor), "K0250");
+    // Past the comparison's size cap (a large log) the changed middle is
+    // one edit, and a place inside it keeps only its offset.
+    if n <= 1_000 {
+        assert_eq!(word_at(&app, app.session().unwrap().cursor), "K0250");
+    }
+    [append, replace, resend]
+}
+
+/// Time per update with a 500-entry log, and with a 10,000-entry one.
+/// Printed for the spike report; the bounds are loose so slow machines
+/// (and unoptimized test builds) pass.
+#[test]
+fn five_hundred_entries_update_quickly() {
+    let [append, replace, resend] = update_times(500, 20);
     assert!(append.as_millis() < 500 && replace.as_millis() < 500 && resend.as_millis() < 2000);
+    let [append, replace, resend] = update_times(10_000, 3);
+    assert!(append.as_secs() < 10 && replace.as_secs() < 10 && resend.as_secs() < 20);
 }
 
 // Beta 5, N1, N2 and N7: a source feeding the log view through the tick,
