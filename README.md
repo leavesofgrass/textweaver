@@ -19,7 +19,7 @@ Each release on the [releases page](https://github.com/leavesofgrass/textweaver/
 | macOS, Apple silicon and Intel | `macos-universal.zip` |
 | Windows, x86_64 | `windows-x86_64.zip` |
 
-Linux also has `.tar.gz` packages for systems where AppImages cannot run. Releases up to 0.1.0-alpha.9 distributed the app as separate downloads whose names end in `-gui`.
+Linux also has `.tar.gz` packages for systems where AppImages cannot run. Releases up to 0.1.0-alpha.9 distributed the app as separate downloads whose names end in `-gui`. <!-- history -->
 
 Each package is self-contained: unpack it, keep its files together, and run the program. Because the builds are not code-signed, each platform needs one first-run step:
 
@@ -55,7 +55,7 @@ textweaver records your position in each file and resumes there the next time yo
 ## What it does
 
 - **Reads aloud with an exact highlight.** The highlight follows each spoken word, with the engines you choose: ETI-Eloquence, Windows and Apple voices, eSpeak NG, Piper neural voices, DECtalk, and more ([Speech engines and voices](docs/speech.md)).
-- **Reads and writes your documents.** Word, PDF, EPUB, Markdown, HTML, and many other formats open directly, and edit mode adds typing echo, spell check, citations, and dictation ([Reading](docs/reading.md), [Writing and editing](docs/editing.md), [Converting documents](docs/converting.md)).
+- **Reads and writes your documents.** Word, PDF, EPUB, Markdown, HTML, caption files (SRT and WebVTT, read as transcripts), and many other formats open directly, and edit mode adds typing echo, spell check, citations, and dictation ([Reading](docs/reading.md), [Writing and editing](docs/editing.md), [Converting documents](docs/converting.md)).
 - **Follows links between documents.** Enter on a link to another local document opens it in textweaver, with Back and Forward as in a web browser ([Follow a link or a footnote](docs/reading.md#follow-a-link-or-a-footnote-enter-or-altshiftf)).
 - **Shows braille.** The Braille view in the app draws the line you are reading as braille dots, in uncontracted or contracted braille, for learning and teaching braille and for checking spacing. It is visual only: your screen reader and Braille display are not sent it ([The Braille view](docs/reading-aids.md#the-braille-view)).
 - **Works with Obsidian.** Notes read with their highlights, comments, task statuses, footnotes, and embeds; links resolve across the whole vault; properties, backlinks, unresolved links, tags, and canvases are lists you can open; and edit mode can insert wiki links, toggle tasks, and insert callouts ([Obsidian vaults](docs/vault.md), [Writing and editing](docs/editing.md#obsidian-notes-wiki-links-tasks-and-callouts)).
@@ -63,7 +63,7 @@ textweaver records your position in each file and resumes there the next time yo
 - **Helps you study and listen.** Reading aids (RSVP, bionic reading, a reading ruler, spacing, fonts), study cards that go to Anki and back, a reading queue and library, audio export to audiobooks with chapters, and sync through a folder you choose ([Reading aids](docs/reading-aids.md), [Notes](docs/notes.md), [The library](docs/library.md), [Audio export](docs/audio-export.md)).
 - **Reads live documents (an advanced feature).** Under Tools, Live documents, textweaver can follow an MQTT broker as a document that grows, such as a net log or a sensor's current values, with each new entry sent to a Braille display and left unspoken unless you turn speech on. It can also run a small broker of its own and publish a document or a check-in to it ([Live documents](docs/live-documents.md), [Running the broker for a live log](docs/live-broker.md)).
 
-The Braille view, link following, and the Obsidian and CW features above arrived in beta 4, and live documents in beta 5; [What is new](docs/whats-new.md) lists them.
+The Braille view, link following, and the Obsidian and CW features above arrived in beta 4, and live documents in beta 5; [What is new](docs/whats-new.md) lists them. <!-- history -->
 
 ## The terminal reader
 

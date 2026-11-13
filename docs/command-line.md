@@ -19,7 +19,7 @@
 | `textweaver convert essay.md --to html` | A command given to `textweaver` runs as `tw convert` does, so scripts written for earlier releases keep working. |
 | `tw` | The program started under the name `tw` is the terminal program. |
 
-On Linux and macOS `tw` is a link to `textweaver`. On Windows `tw.exe` is a small console program that starts `textweaver.exe --tw` with the same arguments and waits for it, passing on its exit status; `textweaver.exe` itself is a windowed program, which a terminal does not wait for, so use `tw` in terminals there. Releases up to beta 2 had a separate app, `textweaver-gui`, and `textweaver` was a second name for `tw` that opened the terminal reader.
+On Linux and macOS `tw` is a link to `textweaver`. On Windows `tw.exe` is a small console program that starts `textweaver.exe --tw` with the same arguments and waits for it, passing on its exit status; `textweaver.exe` itself is a windowed program, which a terminal does not wait for, so use `tw` in terminals there. Releases up to beta 2 had a separate app, `textweaver-gui`, and `textweaver` was a second name for `tw` that opened the terminal reader. <!-- history -->
 
 The reader's options go before the file: `tw --no-speech essay.md`, `tw --mode hybrid`, `tw --theme light essay.md`, `tw --backend espeak`, `tw --home DIR` and `tw --log`. They do not go with a command. A document whose name is also a command's name, such as a file called `convert`, opens with `tw open convert` or `tw ./convert`.
 

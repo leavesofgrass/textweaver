@@ -19,7 +19,7 @@ For other systems, see [Installing textweaver](install.md).
 
 ## What it opens
 
-Plain text, Markdown, HTML, PDF, EPUB, Word, PowerPoint, spreadsheets, and a number of other formats. Scanned pages are read through optical character recognition (OCR), which requires a download you approve first. [Converting documents](converting.md) lists the formats and explains OCR.
+Plain text, Markdown, HTML, PDF, EPUB, Word, PowerPoint, spreadsheets, lecture captions (SRT and WebVTT files, read as a transcript), and a number of other formats. Scanned pages are read through optical character recognition (OCR), which requires a download you approve first. [Converting documents](converting.md) lists the formats and explains OCR.
 
 ## Move around
 

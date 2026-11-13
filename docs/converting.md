@@ -300,7 +300,8 @@ On the sample documents, carta's output, read back by Pandoc, gave the same text
 
 textweaver reads these formats itself:
 
-- Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF. A PDF's links, comments, and filled-in form fields are read too. See [PDF files](#pdf-files).
+- Markdown, HTML, plain text, EPUB (with the book's own accessibility information, which `tw info` prints), Word (DOCX), and PDF. A PDF's links, comments, and filled-in form fields are read too. See [PDF files](#pdf-files).
+- Caption files, SubRip (SRT) and WebVTT (VTT), as transcripts: the words of the captions in paragraphs, with a heading every five minutes, and no cue numbers, times, or markup. See [Captions as transcripts](reading.md#captions-as-transcripts). `tw convert lecture.vtt --to md` writes the transcript as Markdown.
 - RTF (Rich Text Format): headings, lists, tables, footnotes, links, pictures' descriptions, and text in older code pages such as Cyrillic and Japanese.
 - OpenDocument text (ODT, OTT, and flat FODT), as LibreOffice and Google Docs save it: headings, numbered and bulleted lists, tables, footnotes, links, and pictures' descriptions.
 - LaTeX (TEX, LATEX, and LTX): sections, lists, tables, math, references, citations, and footnotes, and the files it includes from its own folder. See [LaTeX](#latex).

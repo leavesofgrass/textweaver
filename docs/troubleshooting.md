@@ -173,7 +173,7 @@ The [install guide](install.md) has the details.
 
 ### An antivirus program flags textweaver
 
-Some antivirus programs flag a textweaver program, such as `tw.exe` or `textweaver-host-x86.exe`, with a heuristic detection: a name that starts with `Gen:Heur`, `Heur`, or `HEUR`, or says "suspicious" or "generic". A heuristic detection means only that the program looks unusual to the scanner, not that it matched known malware. Small unsigned programs that start other copies of themselves and communicate with them over pipes, as textweaver's engine hosts do, are a common cause. Since 0.1.0-beta.3 the package ships fewer such programs: the separate host for each engine is gone, and the one host left is the 32-bit host.
+Some antivirus programs flag a textweaver program, such as `tw.exe` or `textweaver-host-x86.exe`, with a heuristic detection: a name that starts with `Gen:Heur`, `Heur`, or `HEUR`, or says "suspicious" or "generic". A heuristic detection means only that the program looks unusual to the scanner, not that it matched known malware. Small unsigned programs that start other copies of themselves and communicate with them over pipes, as textweaver's engine hosts do, are a common cause. Since 0.1.0-beta.3 the package ships fewer such programs: the separate host for each engine is gone, and the one host left is the 32-bit host. <!-- history -->
 
 1. Confirm that your copy is genuine by comparing the package's checksum with `SHA256SUMS.txt` from the release page (see [Checking a download](install.md#checking-a-download)). If they match, the files are those the release published.
 2. Report the false positive to your antivirus vendor. Most vendors provide a web form for this (search the vendor's site for "false positive" or "submit a sample"). Give the file name, the detection name, the textweaver version, and the place you downloaded it.
@@ -367,6 +367,18 @@ When you preview a document in your browser, textweaver leaves out its scripts a
 ### A link to a file on another computer asks first
 
 Following a link to a network share, such as `\\server\share\notes.md` or a `file://server/` address, asks "Open a file on another computer? y or n." and tells you your sign-in may be sent. On Windows even checking that the file exists sends the computer your sign-in, so textweaver asks before it looks. Answer **y** only for a computer you trust; anything else leaves the link alone. Opening such a path with the system's default program is refused with "Not opened: the file is on another computer."
+
+### Your screen reader does not announce spelling errors in the app
+
+The app marks misspelled words and Markdown lint problems in edit mode only, a moment after you stop typing, and only in documents up to a million characters.
+
+1. In NVDA, open its Document Formatting settings (**NVDA+Control+D**) and turn on the check box for spelling errors. Names differ between versions. NVDA then reports a spelling error, or a grammar error for a lint problem, as you move over the word. This has not yet been checked by ear.
+2. In JAWS, whether the app's spelling errors are announced is not confirmed. Search its Settings Center for "spelling".
+3. Whatever the screen reader, **Alt+M** and **Alt+Shift+M** move to the next and previous misspelled word and say it, and **Ctrl+F8** and **Ctrl+Shift+F8** do the same for lint problems. A screen reader's own "next spelling error" command does not work in the app. See [Spelling marks and text direction in the app](screen-readers.md#spelling-marks-and-text-direction-in-the-app).
+
+### A caption file reads as plain text
+
+A SubRip (`.srt`) or WebVTT (`.vtt`) file that has no caption times, no line holding `-->`, opens as plain text, and the document warns "This file has no caption times, so it is read as plain text." Check that the file is a caption file and not, for example, a transcript saved with the wrong extension. Advanced SubStation Alpha (`.ass`) files are not read as captions. See [Captions as transcripts](reading.md#captions-as-transcripts).
 
 ### A live source or the broker does not work
 

@@ -339,7 +339,7 @@ A prompt's `purpose` is one of these 38 purposes. The names are fixed: within pr
 - `export_settings`: the file to export settings to.
 - `import_settings`: the settings file to import.
 - `citation_locator`: the page for a citation being inserted; empty inserts none.
-- `reference_identifier`: a DOI or ISBN to look up and add.
+- `reference_identifier`: a DOI, ISBN, or PubMed ID (written `PMID 12345678`) to look up and add.
 - `import_references`: a BibTeX, RIS, or CSL-JSON file to import.
 - `template_title`: the title of a new document from a template.
 - `define_word`: a word to define.

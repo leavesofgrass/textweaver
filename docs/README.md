@@ -48,7 +48,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 ### Writing
 
 - [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, Obsidian wiki links, tasks, and callouts, Morse code keying, undo, saving, the outline, spell check, clipboard and Markdown paste, templates, find and replace with regular expressions, the preview pane, and tracked changes in Word files.
-- [Citations](citations.md): inserting citations while writing, `tw cite`, the reference library, DOI and ISBN lookup, and citation styles.
+- [Citations](citations.md): inserting citations while writing, `tw cite`, the reference library, DOI, ISBN, and PubMed ID lookup, and citation styles.
 - [Dictation](dictation.md): voice typing in edit mode, and `tw dictate`, turning speech in an audio file into text.
 
 ### Speech
@@ -61,7 +61,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ### Files, the library, and settings
 
-- [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more, including DAISY and BRF reading and the formats carta handles; exporting and previewing from inside the reader.
+- [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more, including DAISY, BRF, and caption file reading and the formats carta handles; exporting and previewing from inside the reader.
 - [The library](library.md): library folders, recent files, sync between computers, and importing from star.
 - [Optional components](components.md): the models, fonts, and voices textweaver downloads only when you agree; Manage optional components, the first-run list, `tw components`, installing from a file, and a mirror.
 - [Updates](updates.md): the daily check and Help, Check for updates; the question before downloading; how a download is checked and installed; and `tw update`.
@@ -89,7 +89,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [The crates](dev/architecture.md#the-crates): what each of the 43 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
-- [Fuzzing](../fuzz/README.md): the 43 cargo-fuzz targets, run by the nightly workflow when started by hand: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, the engine-host protocol, the update check's answers, clipboard bitmaps, Obsidian canvases, and the live document pieces (MQTT packets, the broker's packets, live source files, join links, and the join QR code reader).
+- [Fuzzing](../fuzz/README.md): the 44 cargo-fuzz targets, run by the nightly workflow when started by hand: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, email, and caption files among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, the engine-host protocol, the update check's answers, clipboard bitmaps, Obsidian canvases, and the live document pieces (MQTT packets, the broker's packets, live source files, join links, and the join QR code reader).
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licenses.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
@@ -132,7 +132,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
 - [ADR-0028: The Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes.
 - [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math speech engine, EPUB 3 MathML read as math, and what waits for math braille.
-- [ADR-0030: Interface translations](adr/0030-interface-translations.md): every message from the catalog, five built-in languages, right-to-left display, and a voice per language.
+- [ADR-0030: Interface translations](adr/0030-interface-translations.md): every message from the catalog, the built-in languages, right-to-left display, and a voice per language.
 - [ADR-0031: Native RTF, ODT, and Word revisions](adr/0031-native-rtf-odt-and-word-revisions.md): RTF and OpenDocument without Pandoc, comments as notes, tracked changes, and limits for zip packages.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and two held for later review.
 - [ADR-0033: The GUI after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the graphical version.
