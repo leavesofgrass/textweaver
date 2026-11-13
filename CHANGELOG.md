@@ -19,6 +19,9 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 
 - **Find and replace steps at once in large documents.** The replace loop finds the matches once and keeps them: a skip is a lookup, and a replacement moves the matches after it instead of searching the whole text again. "Match N of M" stays exact, including matches the replacement itself adds.
 - **Structure moves look up their marker directly.** Next heading, list or table, and the item counts said with them, find their marker by position instead of reading every marker of the document.
+- **MathCAT 0.7.7.** Math speech and math braille now use MathCAT 0.7.7 (October 21, 2026), with its new and revised language rules, its Unified English Braille updates and its Nemeth fix. The words textweaver records for its test formulas are unchanged in English, and Nemeth braille is unchanged. UEB math in contracted (grade 2) braille now marks grade 1 with symbol and word indicators where it used a grade 1 passage, so a formula no longer starts with the passage indicator and ends with the terminator.
+- **Math in Portuguese.** MathCAT 0.7.7 has Portuguese speech rules, so a document in Portuguese has its math read in Portuguese instead of English.
+- MathCAT's own release fixes the navigation braille crash in builds without unsafe code (issue #827), so textweaver's copy of MathCAT no longer carries a fix of its own.
 
 ### The app
 
@@ -26,6 +29,10 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 - **Settings that wait for a restart say so.** Changing Announcements, Follow the system theme or Graphics says "Used from the next start."; every such setting's help says it too, and the engine settings that need Restart speech say so in their help.
 - **The recovery snapshot is written as it is made.** Its JSON goes straight to the temporary file instead of being built in memory first, which lowers the peak memory of a large document's snapshot. The file is byte for byte what it was.
 - **The Windows color-scheme probe asks its two questions at once.** Dark mode and high contrast are read side by side, each still within half a second, so a busy machine waits for one answer, not two.
+- **Spelling and lint marks are in the accessibility tree.** In edit mode, each misspelled word and each Markdown lint problem is its own text run, marked invalid for spelling or for grammar, described in words ("Misspelled", "Writing suggestion"), and underlined as drawn (dotted, or double). Alt+M and Ctrl+F8 still find them too ([Spelling marks and text direction in the app](docs/screen-readers.md#spelling-marks-and-text-direction-in-the-app)).
+- **Right-to-left paragraphs are right to left in the accessibility tree.** A paragraph whose first letter is Arabic, Hebrew, or another right-to-left script now has right-to-left text runs, instead of every run being left to right; the text, its words, and the cursor stay in reading order.
+- **NVDA can report spelling and grammar errors in the app on Windows.** The misspelled words and Markdown lint problems that edit mode marks now reach UI Automation as spelling and grammar error annotations, which NVDA reports as you read with its Document Formatting setting for spelling errors on. textweaver's copy of AccessKit's Windows adapter answers UI Automation's annotation types for a piece of text ([Spelling marks and text direction in the app](docs/screen-readers.md#spelling-marks-and-text-direction-in-the-app)).
+- **Scrolling reaches the end of a very long document.** In the app, `j` and Shift+J used to stop at the end of the 120,000 characters the app holds around the cursor. They now go on to the document's first and last lines, keeping the text around the cursor, so the cursor and your screen reader's place stay where they were; the line numbers stay the document's. Moving the cursor brings the view back to it ([Scrolling and line numbers](docs/gui.md#scrolling-and-line-numbers)).
 
 ### The terminal reader
 
@@ -56,6 +63,11 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 - Known limits add the status bar's "Connected over Tailscale" wording, copied text in terminals that use OSC 52, and the browser preview's omissions.
 - The converting, accessibility, roadmap, graphical app, screen reader, JSON-RPC and broker guides say what changed in beta 6: the preview's sanitizing, QR images read on a helper thread with a size limit, and the next release's scope.
 - The developer guides match the second wave of beta 6: Writing messages (the area files, English first, the untranslated list and the release gate, the four new checks with what each counts, taking an id off a shrink-only list, and the reason fragments), architecture (the catalog folders and build script, the command registry and what a new command touches, the typed live errors, the live log's one-edit append, the streamed recovery snapshot), testing (the status transcript and dialog tree snapshots, the every-action and settings range tests, the bench gate's new keys and the Linux baseline to refresh), releasing (the translation pass before the release command), CONTRIBUTING and the good first issues (how to add a message and a command), the fragments page (links resolve from the repository root) and the documentation coverage page.
+- Messages quoted in the guides match the catalog after the wave 2 rewording: "Canceled." (not "Cancelled.") for the common closing message, the recovery question, "Updates resumed, 3 applied.", the first-run welcome and the graphics and crash messages in the app guide.
+- The terminal reader's closing messages ("Canceled.", "Settings closed.") are described where the reading and screen reader guides walk through lists.
+- The settings guide explains the restart notes ("Used from the next start.", "Restart speech to use a change.") and that the hybrid mode setting now records that hybrid mode was started, not asked; the troubleshooting guide no longer says textweaver offers hybrid mode.
+- The what is new page covers the beta 6 message rewording, the closing messages, restart notes, the Graphics setting, translated connection errors, faster find and replace and live logs, and the removed first-run question.
+- Known limits, the accessibility statement and the README say that 124 new or reworded messages are in English in the other five languages until the translation pass.
 
 ### For contributors
 
@@ -105,6 +117,14 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 - rusqlite 0.37.0 to 0.41.1, for RUSTSEC-2026-0459: the SQLite that rusqlite builds in (now 3.54.1, through libsqlite3-sys 0.39.1) could return stale bytes from memory when it opened a database together with a crafted write-ahead log whose page size differed. textweaver uses SQLite only to read and write Anki packages, entirely in memory, so the exposure was small; Anki import and export work as before. The 0.40 line still bundled an affected SQLite, so 0.41 is the lowest fixed release.
 - AccessKit's October 25, 2026 patch releases: accesskit 0.25.2, accesskit_consumer 0.39.2, accesskit_windows 0.35.2 (vendored again, with textweaver's shortcut-key change applied unchanged), accesskit_unix 0.24.1, accesskit_macos 0.27.2 and accesskit_winit 0.34.2. They keep the content of password fields from screen readers. tokio moves to 1.54.1, which accesskit_unix 0.24.1 requires.
 - async-executor 1.14.0, which was yanked, to 1.14.1 (Linux builds, through the keyring's D-Bus library).
+- **ammonia 4.1.9.** The library that cleans HTML for the browser preview and for sanitized conversion had a flaw: embedded SVG or MathML could carry markup past it (RUSTSEC-2026-0533). textweaver now uses the fixed release.
+- **The conversion test matrix covers caption files.** Every built-in loader must have a fixture there; the new SRT and WebVTT loader has one.
+
+### Documents and formats
+
+- **An EPUB says how accessible it is.** The book's own accessibility metadata (EPUB Accessibility 1.0 and 1.1) is read on opening, and the document overview and `tw info` give it in words, verdict first: "Accessibility: screen reader friendly, per the publisher.", then the summary, access modes, what is enough to read it, features, hazards, conformance claim and certifier, one fact a line; a book with none says "No accessibility information given." `tw info --json` has it as `accessibility` ([An EPUB's accessibility information](docs/reading.md#an-epubs-accessibility-information)).
+- **Caption files open as transcripts.** SubRip (`.srt`) and WebVTT (`.vtt`) files read as paragraphs, a new one where the speaker changes or after a pause, with WebVTT voice names said once ("Ada Example:"), a heading every five minutes ("Minute 5"), and no cue numbers, times or markup read aloud. Roll-up captions are read once, and a damaged cue is still read ([Captions as transcripts](docs/reading.md#captions-as-transcripts)).
+- **`tw cite add` takes a PubMed ID.** `tw cite add PMID 12345678`, or a bare number with `--pmid`, looks the article up in PubMed through NCBI's E-utilities, sending only the number, and keeps the PMID and PMCID with the reference. The Alt+B lookup in the reader takes the same form. A bare short number is never guessed to be one: the message says how to give it ([Add an article by PubMed ID](docs/citations.md#add-an-article-by-pubmed-id)).
 
 ## [0.1.0-beta.5] - 2026-10-29
 

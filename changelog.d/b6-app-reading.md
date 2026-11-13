@@ -1,3 +1,0 @@
-### The app
-- **Spelling and lint marks are in the accessibility tree.** In edit mode, each misspelled word and each Markdown lint problem is its own text run, marked invalid for spelling or for grammar, described in words ("Misspelled", "Writing suggestion"), and underlined as drawn (dotted, or double). Alt+M and Ctrl+F8 still find them too ([Spelling marks and text direction in the app](docs/screen-readers.md#spelling-marks-and-text-direction-in-the-app)).
-- **Right-to-left paragraphs are right to left in the accessibility tree.** A paragraph whose first letter is Arabic, Hebrew, or another right-to-left script now has right-to-left text runs, instead of every run being left to right; the text, its words, and the cursor stay in reading order.
