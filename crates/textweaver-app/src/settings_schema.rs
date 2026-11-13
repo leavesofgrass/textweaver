@@ -35,8 +35,12 @@
 use serde_json::{Map, Value};
 use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
-use textweaver_store::Settings;
+use textweaver_speech::pauses::MAX_PAUSE_MS;
 use textweaver_store::settings_io::settings_to_json;
+use textweaver_store::{
+    CW_MAX_WPM, CW_MIN_WPM, CW_PRACTICE_DELAY_MS, CW_PRACTICE_GROUP, CW_PRACTICE_GROUPS,
+    CW_PRACTICE_THRESHOLD, CW_TONE_RANGE_HZ, DISPLAY_CELLS_RANGE, PREVIEW_DELAY_RANGE_MS, Settings,
+};
 
 use crate::app::{App, ListKind};
 use crate::command::{Effect, PromptPurpose};
@@ -421,21 +425,21 @@ pub const INFO: &[Info] = &[
         "speech.pause_heading_ms",
         "Pause after headings",
         "Silence after a heading, shorter at faster rates. 0 turns it off.",
-        (0.0, 3000.0, 50.0),
+        (0.0, MAX_PAUSE_MS as f64, 50.0),
         "milliseconds",
     ),
     number(
         "speech.pause_paragraph_ms",
         "Pause after paragraphs",
         "Silence after a paragraph, shorter at faster rates. 0 turns it off.",
-        (0.0, 3000.0, 50.0),
+        (0.0, MAX_PAUSE_MS as f64, 50.0),
         "milliseconds",
     ),
     number(
         "speech.pause_list_item_ms",
         "Pause after list items",
         "Silence after a list item, shorter at faster rates. 0 turns it off.",
-        (0.0, 3000.0, 50.0),
+        (0.0, MAX_PAUSE_MS as f64, 50.0),
         "milliseconds",
     ),
     toggle(
@@ -524,21 +528,21 @@ pub const INFO: &[Info] = &[
         "speech.cw.wpm",
         "CW character speed",
         "How fast each Morse character is sent, in words per minute. While CW is the engine, the rate keys change it by one, and the effective speed with it.",
-        (5.0, 50.0, 1.0),
+        (CW_MIN_WPM as f64, CW_MAX_WPM as f64, 1.0),
         "words per minute",
     ),
     number(
         "speech.cw.effective_wpm",
         "CW effective speed",
         "The overall speed, set by stretching the gaps between characters and words (Farnsworth spacing). At or above the character speed, the spacing is standard.",
-        (5.0, 50.0, 1.0),
+        (CW_MIN_WPM as f64, CW_MAX_WPM as f64, 1.0),
         "words per minute",
     ),
     number(
         "speech.cw.tone_hz",
         "CW tone",
         "The pitch of sent Morse code. The pitch keys move it by semitones. The sidetone heard while keying has its own pitch, CW sidetone pitch.",
-        (200.0, 1500.0, 10.0),
+        (CW_TONE_RANGE_HZ.0 as f64, CW_TONE_RANGE_HZ.1 as f64, 10.0),
         "hertz",
     ),
     number(
@@ -562,28 +566,36 @@ pub const INFO: &[Info] = &[
         "speech.cw.practice_threshold",
         "CW practice pass mark",
         "The score in a Koch practice round, in percent, that adds the next character. The Koch method uses 90.",
-        (50.0, 100.0, 5.0),
+        (
+            CW_PRACTICE_THRESHOLD.0 as f64,
+            CW_PRACTICE_THRESHOLD.1 as f64,
+            5.0,
+        ),
         "percent",
     ),
     number(
         "speech.cw.practice_group",
         "CW practice group size",
         "How many characters each practice group has.",
-        (2.0, 10.0, 1.0),
+        (CW_PRACTICE_GROUP.0 as f64, CW_PRACTICE_GROUP.1 as f64, 1.0),
         "characters",
     ),
     number(
         "speech.cw.practice_groups",
         "CW practice round length",
         "How many groups a practice round has. After the last, the round's score is said and kept.",
-        (1.0, 50.0, 1.0),
+        (
+            CW_PRACTICE_GROUPS.0 as f64,
+            CW_PRACTICE_GROUPS.1 as f64,
+            1.0,
+        ),
         "groups",
     ),
     number(
         "speech.cw.practice_delay_ms",
         "CW practice start delay",
         "The quiet before each group is sent. It comes after the time textweaver's own spoken messages are expected to take.",
-        (0.0, 5000.0, 250.0),
+        (0.0, CW_PRACTICE_DELAY_MS as f64, 250.0),
         "milliseconds",
     ),
     choice(
@@ -610,7 +622,7 @@ pub const INFO: &[Info] = &[
         "speech.cw.sidetone_hz",
         "CW sidetone pitch",
         "The pitch of the tone heard while keying Morse code. It is apart from the CW tone of sent Morse, and a change is heard at once, even while keying.",
-        (200.0, 1500.0, 10.0),
+        (CW_TONE_RANGE_HZ.0 as f64, CW_TONE_RANGE_HZ.1 as f64, 10.0),
         "hertz",
     ),
     number(
@@ -1177,7 +1189,11 @@ pub const INFO: &[Info] = &[
         "braille.display_cells",
         "Braille display cells",
         "How many cells your Braille display has. The Braille view shows this many cells at a time.",
-        (8.0, 120.0, 1.0),
+        (
+            DISPLAY_CELLS_RANGE.0 as f64,
+            DISPLAY_CELLS_RANGE.1 as f64,
+            1.0,
+        ),
         "cells",
     ),
     toggle(
@@ -1482,7 +1498,11 @@ pub const INFO: &[Info] = &[
         "preview.pane_delay_ms",
         "Preview pause",
         "How long typing must pause before a preview that follows your typing is rewritten.",
-        (100.0, 3000.0, 50.0),
+        (
+            PREVIEW_DELAY_RANGE_MS.0 as f64,
+            PREVIEW_DELAY_RANGE_MS.1 as f64,
+            50.0,
+        ),
         "milliseconds",
     ),
     toggle(
@@ -3727,6 +3747,59 @@ mod tests {
                 _ => {}
             }
         }
+    }
+
+    /// Every number's range is the store's: a value one step (or a hundred
+    /// steps) past either end that the store's `validate` corrects comes
+    /// back as the schema's
+    /// bound (a clamp) or the default (a reset, as for the MIDI channel),
+    /// so the screen and the store can never disagree on a limit. A value
+    /// the key's type cannot hold (below zero or above 65,535 for a port)
+    /// is refused by the type itself, which is a bound too. Many keys are
+    /// not range-checked by the store at all; they pass unchanged.
+    #[test]
+    fn number_ranges_are_the_stores() {
+        /// Ranges the screen keeps narrower than the store on purpose,
+        /// each with its reason.
+        const NARROWER_ON_SCREEN: &[(&str, &str)] = &[(
+            "reading_aids.font.size_pt",
+            "the dialog and the size keys stop at 72 points; settings.toml takes up to 144 (docs/reading-aids.md)",
+        )];
+        let schema = SettingsSchema::generate();
+        let mut wrong = Vec::new();
+        for s in &schema.settings {
+            let SettingKind::Number { min, max, step, .. } = s.kind else {
+                continue;
+            };
+            if NARROWER_ON_SCREEN.iter().any(|(p, _)| *p == s.path) {
+                continue;
+            }
+            let probes = [
+                (max + step, max),
+                (max + 100.0 * step, max),
+                (min - step, min),
+                (min - 100.0 * step, min),
+            ];
+            for (past, bound) in probes {
+                let mut tree = json(&Settings::default());
+                set(&mut tree, &s.path, number_value(past, step, &s.default));
+                let Ok(mut back) = serde_json::from_value::<Settings>(Value::Object(tree)) else {
+                    continue;
+                };
+                back.validate();
+                let got = get(&json(&back), &s.path).and_then(Value::as_f64);
+                let near =
+                    |want: f64| got.is_some_and(|g| (g - want).abs() <= 1e-4 * want.abs().max(1.0));
+                let default = s.default.as_f64();
+                if !near(past) && !near(bound) && !default.is_some_and(near) {
+                    wrong.push(format!("{} = {past}: {got:?}, not {bound}", s.path));
+                }
+            }
+        }
+        assert!(
+            wrong.is_empty(),
+            "the schema and the store disagree: {wrong:#?}"
+        );
     }
 
     /// Every choice is a value the store accepts.
