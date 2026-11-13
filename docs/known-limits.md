@@ -31,7 +31,7 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 
 - **The Braille view is for looking, not for a Braille display.** It draws braille dots on the screen in the textweaver app, for learning and teaching, and sends nothing to a display or to a screen reader. In the terminal reader it shows Unicode braille in self-voicing mode only.
 - **Contracted braille needs liblouis.** Without it, the Braille view and BRF files from the reader show uncontracted braille and say so ([The Braille view](reading-aids.md#the-braille-view)).
-- **The print line under contracted braille is approximate.** liblouis does not say which print each cell came from, so textweaver pairs them word by word; a contraction that takes shape only at the end of a word is shown over the whole word.
+- **The print line under contracted braille is approximate when liblouis's library cannot be loaded.** The print line is exact when textweaver finds liblouis's library beside the `lou_translate` program. Without it, the program alone does not say which print each cell came from, so textweaver pairs them word by word, and a contraction that takes shape only at the end of a word is shown over the whole word.
 
 ## Live documents
 
