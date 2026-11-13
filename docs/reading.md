@@ -659,7 +659,7 @@ verbosity = "normal"
 There are three levels. Each one says everything the level below it says.
 
 - `"low"`: only what you need. Errors, the ends of the document, the text you moved to, and answers to what you asked (your position, the rate, a search result). A move to a heading says just the heading text: "Methods".
-- `"normal"` (the default): adds structure names and state changes. The same move says "Heading level 2: Methods". You also hear "Paused.", "Stopped.", "Cancelled.", and "Speech Cursor off."
+- `"normal"` (the default): adds structure names and state changes. The same move says "Heading level 2: Methods". You also hear "Paused.", "Stopped.", "Canceled.", and "Speech Cursor off."
 - `"high"`: adds the line and percentage to every move, and the title and mode to Where am I. The same move says "Heading level 2, line 12, 4 percent: Methods". You also hear "Done reading." when the document ends. Continuous reading says "link" before a link, "strikethrough" before struck-out text, and "highlighted" before highlighted text, such as an Obsidian note's `==highlight==`.
 
 Announcements never interrupt reading, except errors. While reading, they go to the status line.
@@ -794,6 +794,8 @@ The guides are divided into sections the first time you search, and the result i
 
 In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list."; with `cursor = "status"` the status line keeps the item after it, such as "End of list. 12 of 12, Conclusion", so your Braille display still shows where you are. **F1** or **Alt+End** says the list's introduction again (its name, how many items it has, and the keys it takes), then the item you are on, such as "3 of 12". **Alt+'** says the last message again.
 
+Closing a list in the terminal reader replaces the status line with a closing message, such as "Canceled." or "Settings closed.", so a Braille display never keeps the closed list's last row. Speech still follows the interface announcements: at the minimal level the closing message is shown but not spoken.
+
 ## Turn single-key shortcuts off: F9
 
 Speech recognition, dictation, and switch or scanning keyboards can type a letter by accident, and a letter such as `h` or `.` is a command in textweaver. To prevent this, press **F9**. You hear "Single-key shortcuts off." Press it again to turn them back on.
@@ -812,7 +814,7 @@ Some commands have only single keys, such as next table. Run those from the comm
 Press **Ctrl+Q**. textweaver asks "Quit textweaver? y or n". (In the classic preset, **q** and **Shift+Q** quit too, after the same question.)
 
 - Press **y** to quit. Your place is saved.
-- Press **n**, **a**, or **Escape** to stay. You hear "Cancelled."
+- Press **n**, **a**, or **Escape** to stay. You hear "Canceled."
 - Any other key repeats the question.
 
 If you are editing and have unsaved changes, textweaver asks whether to save them first. See [Writing and editing](editing.md).

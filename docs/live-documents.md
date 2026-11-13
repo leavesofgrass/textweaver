@@ -82,7 +82,7 @@ New entries are added at the end of the document. Your cursor, selection, bookma
 - The unread count is the number of entries after the furthest entry you have reached. The title line and the status bar show it ("3 unread") in place of a position that would change with every entry.
 - **Say unread entries** (`Alt+Shift+F5`) says the count and the newest entry.
 - **Jump to newest entry** (`Alt+Shift+F6`) moves to the last entry and says it.
-- **Pause or resume updates** (`Alt+Shift+F1`) holds new messages while you read a stretch undisturbed. Up to 1,000 messages wait, and a whole log replaces the ones that waited. On resuming, textweaver applies them as one change and says how many ("Updates resumed, 3 updates applied.").
+- **Pause or resume updates** (`Alt+Shift+F1`) holds new messages while you read a stretch undisturbed. Up to 1,000 messages wait, and a whole log replaces the ones that waited. On resuming, textweaver applies them as one change and says how many ("Updates resumed, 3 applied.").
 
 A live document is read only. Edit mode is refused in words. textweaver saves no reading position for it, adds it to no library or recent list, and never syncs it. Save writes the JSON log (see [The JSON log](#the-json-log)).
 

@@ -117,7 +117,7 @@ By default textweaver speaks for itself. When a screen reader is also running, c
 2. In **hybrid** mode your screen reader handles messages, typing echo, and cursor moves, while textweaver reads documents aloud. **Screen reader** mode silences textweaver entirely.
 3. To try a mode for one run, start with `--mode hybrid` or `--mode screen-reader`; `--no-speech` is equivalent to screen reader mode.
 
-On its first run with a screen reader, textweaver offers hybrid mode once. [Using textweaver with a screen reader](screen-readers.md) explains the modes and the screen reader settings that help.
+On its first run with a screen reader, textweaver starts in hybrid mode and says so once; it does not ask. [Using textweaver with a screen reader](screen-readers.md) explains the modes and the screen reader settings that help.
 
 ### The wrong voice speaks
 

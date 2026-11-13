@@ -16,7 +16,7 @@ The program opens the app unless it is asked for the terminal program: with `--t
 
 With no document, the app opens empty and says which key opens one (Ctrl+O), at every announcement level except off.
 
-The first time textweaver runs (when no settings exist yet), the app speaks a short welcome naming the five keys that get you reading: open, play and pause, stop, the command palette, and help. On Windows it also names the keys that show the hidden menu bar (Alt or F10). The hint that no document is open follows. After that come at most three steps, one at a time, each of which Escape skips:
+The first time textweaver runs (when no settings exist yet), the app speaks a short welcome naming the five keys that get you reading: open and help first, then play and pause, stop, and the command palette. On Windows it ends with the keys that show the hidden menu bar (Alt or F10). The hint that no document is open follows. After that come at most three steps, one at a time, each of which Escape skips:
 
 1. The language list, offered only when the system's language is not one of the six that textweaver speaks; when it is, textweaver uses it without asking.
 2. The screen reader arrangement. If a screen reader is running, textweaver reads documents aloud and leaves its messages to the screen reader. It states this in one sentence, together with the key that changes it, and never asks.
@@ -108,7 +108,7 @@ The app has the same menus as the terminal reader, built from the same list of c
 - **macOS:** the menu bar at the top of the screen, with each command's key as its keyboard shortcut. VoiceOver reaches it with Control+Option+M.
 - **Linux:** F10 shows the menus as a list inside the app, as the terminal does: "Menus, 1 of 7, File". Enter or Right opens a menu, a letter moves to the item with that letter, Enter runs a command, Left or Backspace goes back up, and Escape closes.
 
-**Hiding the menu bar (Windows).** The menu bar is hidden by default and occupies no space until you call for it; the first-run welcome says so ("Alt or F10 the menus"). To keep it visible, turn off "Hide the menu bar" in Settings, under Toolbars and panels (`auto_hide_menu = false` in `[gui]`); a value you saved earlier is kept. Alt, F10, or Alt with a menu's letter shows the bar and enters it as before, so NVDA and JAWS still announce "menu bar" or the menu's name, and the bar hides again, silently, when the menu closes. Every Alt key the keymap uses still works, and the bar appears briefly when you press Alt for one of those keys. Close any open dialog before using the menus. The setting has no effect on Linux, where the menus are already the F10 list and take no room, or on macOS, whose menu bar is at the top of the screen.
+**Hiding the menu bar (Windows).** The menu bar is hidden by default and occupies no space until you call for it; the first-run welcome says so ("Alt or F10 shows the menus"). To keep it visible, turn off "Hide the menu bar" in Settings, under Toolbars and panels (`auto_hide_menu = false` in `[gui]`); a value you saved earlier is kept. Alt, F10, or Alt with a menu's letter shows the bar and enters it as before, so NVDA and JAWS still announce "menu bar" or the menu's name, and the bar hides again, silently, when the menu closes. Every Alt key the keymap uses still works, and the bar appears briefly when you press Alt for one of those keys. Close any open dialog before using the menus. The setting has no effect on Linux, where the menus are already the F10 list and take no room, or on macOS, whose menu bar is at the top of the screen.
 
 ### The context menu
 
@@ -133,7 +133,7 @@ The other commands that ask for a file use the system's file chooser too, each t
 
 Commands that ask for a folder use the system's folder chooser, titled with what the folder is for: audio export's "Another folder", the folders of a batch conversion, and the sync folder (Set up sync). It starts in the document's folder.
 
-When a chooser closes, focus returns to the document, or moves to the next step of the command (the batch's formats, the sync computer's name). Escape cancels and says "Cancelled." If a chooser cannot open, textweaver says so and asks another way: a file's path in the one-line prompt (with F4 for the file browser), or a folder in the file browser's list.
+When a chooser closes, focus returns to the document, or moves to the next step of the command (the batch's formats, the sync computer's name). Escape cancels and says "Canceled." If a chooser cannot open, textweaver says so and asks another way: a file's path in the one-line prompt (with F4 for the file browser), or a folder in the file browser's list.
 
 ## Text size and font
 

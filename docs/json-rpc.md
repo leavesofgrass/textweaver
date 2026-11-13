@@ -370,7 +370,7 @@ Errors: `-32602` "No action" and the id, for an id that does not exist, and "con
 
 - `answer` takes `text` (string, required): the text typed into the open prompt. For a Go to prompt, for example, `"5"` goes to line 5.
 - `choose` takes `index` (number, required): the item of the open list to pick, starting at 0.
-- `cancel` takes no parameters. It closes the open prompt or list, or answers no to a waiting yes-or-no question. You hear "Cancelled."
+- `cancel` takes no parameters. It closes the open prompt or list, or answers no to a waiting yes-or-no question. You hear "Canceled."
 
 Each returns `{status, effects}`, the same as `action` without `pending`.
 
