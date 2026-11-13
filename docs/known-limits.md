@@ -26,6 +26,8 @@ See [the accessibility statement](accessibility.md) for the full record.
 These limits apply to the textweaver app (`textweaver`). The terminal reader does not have them, unless stated.
 
 - **The mouse wheel stops near the cursor in a very long document.** It scrolls within the text the app holds around the cursor, about 120,000 characters; `j` and Shift+J scroll on to the document's ends ([Scrolling and line numbers](gui.md#scrolling-and-line-numbers)).
+- **Highlight names do not reach NVDA or JAWS in the app.** The app draws each highlight name in its own color and shape and gives its accessibility tree the name in words on the text it covers, but the Windows adapter has no way to pass that note to UI Automation, which has no text attribute for a free-text note on a range of text. NVDA and JAWS on Windows therefore say nothing about a highlight's name while you read. The highlights list says each highlight's name.
+- **Spelling and grammar marks in the app have not been heard by ear.** In edit mode they reach UI Automation as spelling and grammar errors, which NVDA reports with its Document Formatting setting for spelling errors on. This was checked by computer only. Whether JAWS announces them is not confirmed, and a run's description ("Misspelled", "Writing suggestion") does not reach either screen reader on Windows. Use Alt+M and Ctrl+F8 to move between marks ([Spelling marks and text direction in the app](screen-readers.md#spelling-marks-and-text-direction-in-the-app)).
 
 ## Braille
 

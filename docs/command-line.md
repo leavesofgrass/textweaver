@@ -92,7 +92,9 @@ An EPUB that gives none prints "No accessibility information given." With `--jso
 
 ## The data folder
 
-textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw` and `tw open` (the reader), `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `notes`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `summarize`, `changes`, `sync`, `serve`, `components` and `broker`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.
+textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw` and `tw open` (the reader), `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `notes`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `study`, `summarize`, `changes`, `sync`, `serve`, `components`, `update` and `broker`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.
+
+With a command, give `--home` after the command's name, as in `tw components list --home D:/x`, not before it. `tw --home D:/x components list` is refused as a mistake in the command, because the options before a command's name are the reader's, which do not go with a command. Some commands with actions, such as `tw broker`, `tw notes` and `tw study`, take `--home` on each action; put it after the action. For the reader alone, `--home` goes before the file, with the other reader options.
 
 ## Questions
 
