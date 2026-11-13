@@ -13,13 +13,15 @@
 //!    time, keeps an empty `[Unreleased]` above it, and adds the link.
 //! 4. Updates the version examples in the release guide, the install guide,
 //!    and the workflows.
-//! 5. Runs the checks CI runs (fmt, clippy, tests, the keyboard and
-//!    dependency checks), unless `--no-checks`.
+//! 5. Runs every check `scripts/dev-check` runs in a full run (on Windows
+//!    `dev-check.ps1`, elsewhere `dev-check.sh`), unless `--no-checks`. The
+//!    script is the one list of steps, so the release checks what a batch
+//!    is checked with.
 //! 6. Commits and makes the annotated tag `vX.Y.Z`. Nothing is pushed.
 //!
 //! `--dry-run` changes nothing: it prints what the release would do and the
-//! date it would use, and reports a dirty tree or another branch without
-//! stopping.
+//! date it would use, reports a dirty tree or another branch without
+//! stopping, and lists the check steps (the script's own `--dry-run`).
 //!
 //! `cargo xtask release X.Y.Z --listened` records an optional listening
 //! check instead: it writes today's date, from the machine, and the
@@ -292,9 +294,14 @@ pub fn run() -> anyhow::Result<()> {
         }
         println!("would run: cargo update -w");
         if args.checks {
-            for c in checks() {
-                println!("would run: cargo {}", c.join(" "));
-            }
+            let (program, script) = checks();
+            println!(
+                "would run: {program} {}, with these steps:",
+                script.join(" ")
+            );
+            let mut dry = script.clone();
+            dry.push("--dry-run");
+            run_checks(&root, program, &dry)?;
         }
         println!("would commit \"Release {}\" and tag {tag}", args.version);
         println!(
@@ -312,10 +319,8 @@ pub fn run() -> anyhow::Result<()> {
 
     // 5. Checks.
     if args.checks {
-        for c in checks() {
-            let c: Vec<&str> = c.iter().map(String::as_str).collect();
-            cargo(&root, &c)?;
-        }
+        let (program, script) = checks();
+        run_checks(&root, program, &script)?;
     }
 
     // 6. Commit and tag.
@@ -514,39 +519,44 @@ fn left_behind(grep: &str) -> Vec<String> {
         .collect()
 }
 
-/// The checks CI runs, as cargo arguments.
-fn checks() -> Vec<Vec<String>> {
-    let features = if cfg!(target_os = "linux") {
-        "--all-features"
+/// The checks: `scripts/dev-check` in a full run, as a program and its
+/// arguments. The script is the one list of steps, shared with the batch
+/// check, so a release is checked as a batch is.
+fn checks() -> (&'static str, Vec<&'static str>) {
+    if cfg!(windows) {
+        (
+            "powershell",
+            vec![
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "scripts/dev-check.ps1",
+            ],
+        )
     } else {
-        "--features=textweaver-speech/omnivox"
-    };
-    let v = |s: &[&str]| s.iter().map(|x| (*x).to_owned()).collect::<Vec<_>>();
-    vec![
-        v(&["fmt", "--all", "--check"]),
-        v(&[
-            "clippy",
-            "--workspace",
-            "--exclude",
-            "textweaver-xilem",
-            "--all-targets",
-            "--locked",
-            features,
-            "--",
-            "-D",
-            "warnings",
-        ]),
-        v(&[
-            "test",
-            "--workspace",
-            "--exclude",
-            "textweaver-xilem",
-            "--locked",
-            features,
-        ]),
-        v(&["xtask", "keyboard", "--check"]),
-        v(&["xtask", "deps", "--check"]),
-    ]
+        ("bash", vec!["scripts/dev-check.sh"])
+    }
+}
+
+/// Runs the check script. After the version bump its `cargo xtask` steps
+/// rebuild xtask, and on Windows the running xtask (this program) cannot
+/// be overwritten, so the script builds into a target folder of its own.
+fn run_checks(root: &Path, program: &str, args: &[&str]) -> anyhow::Result<()> {
+    println!("{program} {}", args.join(" "));
+    let status = Command::new(program)
+        .current_dir(root)
+        .args(args)
+        .env(
+            "CARGO_TARGET_DIR",
+            crate::eci::target_dir(root).join("release-check"),
+        )
+        .status()
+        .with_context(|| format!("running {program}"))?;
+    if !status.success() {
+        bail!("the checks failed ({status}); the summary above names the steps");
+    }
+    Ok(())
 }
 
 /// `path` relative to `root`, with forward slashes.
@@ -912,15 +922,6 @@ fn cargo(root: &Path, args: &[&str]) -> anyhow::Result<()> {
     println!("cargo {}", args.join(" "));
     let mut cmd = Command::new(cargo);
     cmd.current_dir(root).args(args);
-    // `cargo xtask ...` rebuilds xtask after the version bump, and on
-    // Windows the running xtask (this program) cannot be overwritten, so
-    // the nested run builds into a target folder of its own.
-    if args.first() == Some(&"xtask") {
-        cmd.env(
-            "CARGO_TARGET_DIR",
-            crate::eci::target_dir(root).join("release-xtask"),
-        );
-    }
     let status = cmd.status().context("running cargo")?;
     if !status.success() {
         bail!("cargo {} failed ({status})", args.join(" "));

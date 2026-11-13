@@ -191,7 +191,7 @@ fn tasks_toggle_and_cycle_with_their_status_said() {
     r.act(ActionId::CycleTaskStatus);
     r.act(ActionId::CycleTaskStatus);
     assert_eq!(r.text(), "- [-] milk\nbread\n");
-    assert_eq!(r.status(), "Cancelled.");
+    assert_eq!(r.status(), "Canceled.");
     // A plain line becomes a task; the caret moves with its text.
     r.send(Command::GoTo(textweaver_app::text::GoTo::Char(CharPos(13))));
     r.act(ActionId::ToggleTask);

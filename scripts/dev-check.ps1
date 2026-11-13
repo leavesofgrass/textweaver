@@ -30,6 +30,10 @@
     parity    cargo xtask parity (word and sentence parity with star)
     deny      cargo deny check (licenses, advisories, duplicates, sources),
               skipped when cargo-deny is not installed
+    links     py -3 tools\check_links.py (relative links and anchors in the
+              docs resolve), skipped when Python 3 is not installed
+    site-a11y py -3 tools\check_site_a11y.py (static accessibility checks
+              of the docs\site pages), skipped when Python 3 is not installed
     hosts32   cargo build -p textweaver-host -p textweaver-eci
               -p textweaver-sapi -p textweaver-dectalk -p textweaver-espeak
               --bins --target i686-pc-windows-msvc (the combined 32-bit

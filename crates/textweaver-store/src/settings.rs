@@ -1607,8 +1607,8 @@ pub struct AccessibilitySettings {
     /// caret, the chosen item) or `status` (the status line, so "read
     /// current line" repeats the last message).
     pub cursor: CursorPlacement,
-    /// Set once textweaver has asked, on a run with a screen reader, whether
-    /// to use hybrid mode; it asks only once.
+    /// Set once textweaver has found a screen reader at startup and switched
+    /// to hybrid mode, which it does only while the mode was never chosen.
     pub hybrid_offered: bool,
     /// How much textweaver announces about itself: `auto` (follows the
     /// mode), `off`, `minimal`, `normal`, or `full`.

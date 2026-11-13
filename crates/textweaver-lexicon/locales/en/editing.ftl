@@ -182,7 +182,7 @@ edit-task-status =
         [done] Checked.
         [open] Not checked.
         [in-progress] In progress.
-        [cancelled] Cancelled.
+        [cancelled] Canceled.
         [forwarded] Forwarded.
         [important] Important.
         [question] Question.

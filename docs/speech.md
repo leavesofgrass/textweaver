@@ -63,7 +63,7 @@ tw backends
 It prints one line per engine: its id and name, whether it is available here, its priority, and what it supports. The line also states where the word highlight's timing comes from. "Word timing from the engine" means the engine reports where each word falls (Piper's comes from the voice model itself); "Word timing estimated" means textweaver paces the highlight. The engine the automatic choice picks says "Chosen automatically". For example:
 
 ```text
-eci: ETI-Eloquence. Available. Priority 1000. Supports word highlighting, pause, pitch, volume, audio files, tones, and reads numbers and abbreviations itself. Word timing from the engine. Chosen automatically.
+eci: Eloquence (OpenEVV, direct). Available. Priority 1000. Supports word highlighting, pause, pitch, volume, audio files, tones, and reads numbers and abbreviations itself. Word timing from the engine. Chosen automatically.
 ```
 
 For use in a script, print JSON, which includes the automatic choice as `auto`:

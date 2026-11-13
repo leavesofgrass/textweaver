@@ -767,7 +767,7 @@ actions! {
         "Check or uncheck the task on the current line, or make the line a task",
         gui ["e:Ctrl+Enter"], term ["e:Ctrl+L"], shared [];
     CycleTaskStatus = "cycle_task_status", Editing,
-        "Move the task on the current line to its next status: in progress, done, cancelled, forwarded, important, question",
+        "Move the task on the current line to its next status: in progress, done, canceled, forwarded, important, question",
         gui [], term [], shared [];
     InsertCallout = "insert_callout", Editing,
         "Insert a callout of a type you choose; selected lines become its text",

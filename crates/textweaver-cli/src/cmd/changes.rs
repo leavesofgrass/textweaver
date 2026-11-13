@@ -4,7 +4,8 @@
 //! `--json` prints the changes and comments as the loaders recorded them.
 //! `tw changes accept FILE` or `tw changes reject FILE` with `--out FILE`
 //! writes the document with every change decided (the older spellings,
-//! `--accept-all` and `--reject-all`, still work, hidden, through beta 1): Markdown (`.md`), plain text (`.txt`), HTML,
+//! `--accept-all` and `--reject-all`, still work and are hidden from
+//! `--help`): Markdown (`.md`), plain text (`.txt`), HTML,
 //! or a writer's format (`.docx`, `.epub`, `.pdf`, `.brf`), leaving the
 //! original alone. With `--in-place` instead, a Word file is changed
 //! itself (`textweaver_writers::docx_update`): a copy of the original is
@@ -32,16 +33,16 @@ pub struct Args {
     /// Print JSON instead of one row per line.
     #[arg(long)]
     pub json: bool,
-    /// The old spelling of `tw changes accept FILE`, kept hidden through
-    /// beta 1.
+    /// The old spelling of `tw changes accept FILE`, still accepted and
+    /// hidden from `--help`.
     #[arg(long, hide = true, conflicts_with_all = ["reject_all", "json"])]
     pub accept_all: bool,
-    /// The old spelling of `tw changes reject FILE`, kept hidden through
-    /// beta 1.
+    /// The old spelling of `tw changes reject FILE`, still accepted and
+    /// hidden from `--help`.
     #[arg(long, hide = true, conflicts_with = "json")]
     pub reject_all: bool,
-    /// With the old --accept-all or --reject-all, kept hidden through
-    /// beta 1: the file to write.
+    /// With the old --accept-all or --reject-all, still accepted and
+    /// hidden from `--help`: the file to write.
     #[arg(
         long = "out",
         short = 'o',
@@ -50,8 +51,8 @@ pub struct Args {
         hide = true
     )]
     pub output: Option<PathBuf>,
-    /// With the old --accept-all or --reject-all, kept hidden through
-    /// beta 1: change the Word file itself.
+    /// With the old --accept-all or --reject-all, still accepted and
+    /// hidden from `--help`: change the Word file itself.
     #[arg(long, hide = true)]
     pub in_place: bool,
     /// Use the settings under this folder instead of the usual place.

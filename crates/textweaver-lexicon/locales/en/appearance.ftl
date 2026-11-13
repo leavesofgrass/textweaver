@@ -18,7 +18,7 @@ themes-below-aa =
        *[other] Below AA: { $count } checks fall short.
     }
 
-## Accessibility modes and the first-run question.
+## Accessibility modes and the first-run step for a screen reader.
 
 # Said when the accessibility mode changes; $mode is the new mode's id.
 access-mode-changed =
@@ -27,10 +27,6 @@ access-mode-changed =
         [screen-reader] Screen reader mode. textweaver is silent; your screen reader reads the status line.
        *[hybrid] Hybrid mode. textweaver reads documents aloud; your screen reader speaks messages and typing.
     }
-# Yes to the first-run question; $key names the keys that change the mode.
-access-hybrid-chosen = Hybrid mode. textweaver reads documents aloud; your screen reader speaks messages and typing. { $key } changes the mode.
-# No to the first-run question; $key names the keys that change the mode.
-access-hybrid-declined = Staying in self-voicing mode. { $key } changes the mode.
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-a-screen-reader = A screen reader
 # On the first run with a screen reader and no mode chosen: hybrid mode is

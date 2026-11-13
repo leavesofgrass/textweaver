@@ -42,8 +42,10 @@ pub enum CiteCommand {
     /// and add it.
     Add {
         /// A DOI such as 10.1038/nature12373, a doi.org link, an ISBN, or a
-        /// PubMed ID written as PMID 12345678.
-        identifier: String,
+        /// PubMed ID written as PMID 12345678 (quotes are not needed: the
+        /// words are joined with a space).
+        #[arg(required = true, num_args = 1.., value_name = "IDENTIFIER")]
+        identifier: Vec<String>,
         /// The identifier is a PubMed ID, so a bare number such as 12345678
         /// is looked up in PubMed.
         #[arg(long)]
@@ -169,6 +171,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             json,
             ..
         } => {
+            let identifier = identifier.join(" ");
             let added = if pmid {
                 let id = textweaver_cite::Identifier::parse_pmid(&identifier)
                     .map_err(textweaver_cite::CiteError::from)?;
@@ -271,4 +274,46 @@ fn as_json(json: bool, action: &str, message: String) -> anyhow::Result<String> 
         "action": action,
         "message": message,
     }))?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Args, CiteCommand};
+    use textweaver_cite::Identifier;
+
+    #[derive(clap::Parser)]
+    struct Tw {
+        #[command(flatten)]
+        args: Args,
+    }
+
+    /// The identifier `tw cite add ARGS...` looks up, joined as `run` joins it.
+    fn identifier(argv: &[&str]) -> Identifier {
+        use clap::Parser as _;
+        let argv = ["cite", "add"].iter().chain(argv).copied();
+        let tw = Tw::try_parse_from(argv).unwrap();
+        let CiteCommand::Add { identifier, .. } = tw.args.command else {
+            panic!("not add");
+        };
+        Identifier::parse(&identifier.join(" ")).unwrap()
+    }
+
+    /// The three PubMed forms the messages teach all parse: two words,
+    /// one word with a colon, and the space form in quotes.
+    #[test]
+    fn a_pubmed_id_may_be_two_words_or_one() {
+        let pmid = Identifier::Pmid("12345678".into());
+        assert_eq!(identifier(&["PMID", "12345678"]), pmid);
+        assert_eq!(identifier(&["PMID:12345678"]), pmid);
+        assert_eq!(identifier(&["PMID 12345678"]), pmid);
+    }
+
+    /// A DOI is still one argument, and options after it still parse.
+    #[test]
+    fn a_doi_still_works() {
+        assert_eq!(
+            identifier(&["10.1038/nature12373", "--json"]),
+            Identifier::Doi("10.1038/nature12373".into())
+        );
+    }
 }

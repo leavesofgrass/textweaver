@@ -354,7 +354,7 @@ Only the speech engine's own settings are listed here: the voice, rate and pitch
              textweaver writes these itself, such as a question already asked.              They are in the file, but not on the settings screen.
 
 - `display.theme_explicit`: default off (`false`). Theme picked. Set when you pick a theme; it stops following the system. On or off: `true` or `false`. Syncs between computers.
-- `accessibility.hybrid_offered`: default off (`false`). Hybrid mode offered. Set once textweaver has asked whether to use hybrid mode. On or off: `true` or `false`. Stays on this computer.
+- `accessibility.hybrid_offered`: default off (`false`). Hybrid mode offered. Set once textweaver has found a screen reader at startup and switched to hybrid mode. It does this only while the mode was never chosen. On or off: `true` or `false`. Stays on this computer.
 - `interface.recent_settings`: default an empty list. Recently changed settings. The settings changed last on the settings screen, listed at its top. Text; empty means not set. Stays on this computer.
 - `gui.window`: default not set. Window place and size. Where the window was and how large, kept on this computer and never synced. Text; empty means not set. Stays on this computer.
 - `gui.last_version`: default not set. Version last run. The version of the textweaver app last run on this computer, so it says Updated to once after an update. Never synced. Text; empty means not set. Stays on this computer.

@@ -1106,7 +1106,7 @@ pub const INFO: &[Info] = &[
     internal(
         "accessibility.hybrid_offered",
         "Hybrid mode offered",
-        "Set once textweaver has asked whether to use hybrid mode.",
+        "Set once textweaver has found a screen reader at startup and switched to hybrid mode. It does this only while the mode was never chosen.",
     ),
     // [export]
     choice(
