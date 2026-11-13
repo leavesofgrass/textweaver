@@ -594,7 +594,7 @@ fn autosave_snapshot_is_offered_after_a_crash() {
     };
     assert!(title.contains("crash.md"), "{title}");
     assert_eq!(items.len(), 2);
-    assert!(r.said.any("unsaved changes"));
+    assert!(r.said.any("Recover unsaved edits to"));
     r.send(Command::Choose(0));
     assert!(r.app.is_editing());
     assert!(r.app.is_dirty());

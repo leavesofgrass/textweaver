@@ -488,7 +488,7 @@ mod fed {
         });
         let _ = r.app.tick(Instant::now());
         assert!(
-            r.said_any("it is not text (12 bytes)"),
+            r.said_any("Left out, not text: 12 bytes"),
             "{:?}",
             r.last_said()
         );
