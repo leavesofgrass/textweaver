@@ -35,7 +35,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 ### Reading
 
 - [Reading and moving around](reading.md): opening files, reading aloud, moving by unit, following links to other documents, Speech Cursor, find, go to, and history.
-- [Keyboard reference](keyboard.md): every key in the terminal and the GUI, generated from the keymap.
+- [Keyboard reference](keyboard.md): every key in the terminal reader and the app, generated from the keymap.
 - [The textweaver app (graphical version)](gui.md): starting it, what is on screen, the menus, buttons and panels, its keys, scrolling and line numbers, announcements, and the reading aids it draws.
 - [The app in pictures](window-in-pictures.md): eight pictures of the graphical version, each with a text description of what it shows.
 - [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts; the named highlight palette; links between notes and graph exports; and study cards, the self-test, and recall prompts.
@@ -81,7 +81,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [CONTRIBUTING.md](../CONTRIBUTING.md): what textweaver is for, setting up, the checks, accessibility expectations, commit style, and how to propose a change.
 - [Good first issues](dev/good-first-issues.md): small, well-scoped tasks for a first contribution, each with where to look and how to check it.
 - [Writing messages](dev/messages.md): the style guide for everything textweaver says and shows, and the tests that keep it.
-- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, the lean reader, the helper scripts, and the repository layout.
+- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the app, the lean reader, the helper scripts, and the repository layout.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [The polish checklist and its tests](dev/checklist-tests.md): each row of the consistency, accessibility, visual, and documentation checklist, with the test that holds it or the owner's session that covers it.
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
@@ -89,7 +89,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [The crates](dev/architecture.md#the-crates): what each of the 43 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
-- [Fuzzing](../fuzz/README.md): the 39 cargo-fuzz targets, run by the nightly workflow when started by hand: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, the engine-host protocol, and the live document pieces (MQTT packets, the broker's packets, live source files, and the join QR code reader).
+- [Fuzzing](../fuzz/README.md): the 43 cargo-fuzz targets, run by the nightly workflow when started by hand: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, the engine-host protocol, the update check's answers, clipboard bitmaps, Obsidian canvases, and the live document pieces (MQTT packets, the broker's packets, live source files, join links, and the join QR code reader).
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licenses.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.

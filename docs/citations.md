@@ -79,7 +79,7 @@ Updated reference kucsko2013, which was already in the library. Kucsko and other
 
 ### What is sent over the network
 
-Only the DOI is sent. textweaver makes one secure (HTTPS) request to `https://doi.org/` followed by the DOI and asks for the answer as CSL-JSON. The request identifies itself as coming from textweaver; no file, name, or other information about you is sent.
+Only the DOI is sent. textweaver makes one secure (HTTPS) request to `https://doi.org/` followed by the DOI and asks for the answer as CSL-JSON. The request carries textweaver's one neutral User-Agent, `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, without a version number; no file, name, or other information about you is sent.
 
 ### Wait longer for a slow connection
 

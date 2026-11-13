@@ -53,7 +53,7 @@ You hear "Details of", the document's title, then "Tab moves, Enter saves, Escap
 
 - **Tab** moves to the next field and **Shift+Tab** to the previous one, wrapping from the last field to the first. You hear the field's label and value, such as "Author: Ada Example", or "Author: blank" for an empty field. Text you have typed in a field is kept when you leave it.
 - **Enter**, from any field, saves every field you changed. You hear "Details saved:" and the names of the fields, such as "Details saved: Title, Author." If nothing changed you hear "Details not changed."
-- **Escape** closes the form without saving, and you hear "Cancelled. Details not changed."
+- **Escape** closes the form without saving, and you hear "Canceled. Details not changed."
 
 A DOI or ISBN may be entered in any of its usual forms: `10.1000/xyz`, `doi:10.1000/XYZ`, a `https://doi.org/` link, or an ISBN with or without hyphens. A value that is not a valid DOI or ISBN is not saved; you hear, for example, "Not a DOI: 10.10/x. Fix it or clear it.", and the form reopens on that field.
 
@@ -128,7 +128,7 @@ recent_limit = 20
 
 A row gives the title, how far into the document the place lies, the computer that saved the place (this computer, when it saved it), and how long ago it was saved. **Enter** opens the document, which resumes according to `[sync] position_policy` (see [Syncing between computers](sync.md#a-place-from-another-computer)).
 
-Only documents present on this computer are listed; one you read solely on another computer and do not have here is omitted. The places saved by your other computers count only with sync on; without it, the list shows this computer's own places. When there is nothing to list you hear "Nothing to continue: no places saved."
+Only documents present on this computer are listed; one you read solely on another computer and do not have here is omitted. The places saved by your other computers count only with sync on; without it, the list shows this computer's own places. When there is nothing to list you hear "No places yet. Reading saves your place."
 
 From the command line:
 
@@ -137,7 +137,7 @@ tw library continue
 tw library continue --json
 ```
 
-`--continue` prints the same rows, each followed by its path on the next line. With `--json`, each document has its `path`, `title`, `pct`, the `device` name, `this_computer`, and `when_ms` (when the place was saved, in milliseconds since 1970, UTC).
+`tw library continue` prints the same rows, each followed by its path on the next line. With `--json`, each document has its `path`, `title`, `pct`, the `device` name, `this_computer`, and `when_ms` (when the place was saved, in milliseconds since 1970, UTC).
 
 ## The reading queue
 
@@ -218,7 +218,7 @@ Every `tw library` form prints JSON instead with `--json`:
 tw library search mitochondria --json
 ```
 
-Options can be combined: `--add` and `--search` in one command add the folder and then search.
+Each subcommand takes `--json`, and `--home DIR` to use another set of files.
 
 ## The older place sync through a library folder
 

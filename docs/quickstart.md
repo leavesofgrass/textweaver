@@ -10,7 +10,7 @@ textweaver is one program with two forms that share the same documents, keys, se
 2. Windows, the app: unzip `textweaver-VERSION-windows-x86_64.zip` and run `textweaver.exe`. Because the program is not code-signed, Windows warns on first launch; choose "More info", then "Run anyway".
 3. macOS and Linux, the app: unpack the package and open `textweaver.app` on a Mac, or run the AppImage on Linux. See [Installing textweaver](install.md#the-app).
 4. The terminal reader is the same program. Open a terminal in the package folder and type `tw QUICKSTART.md` (in PowerShell, `.\tw QUICKSTART.md` until the folder is on your PATH). On Linux, run the AppImage with `--tw` first: `./textweaver-*-linux-x86_64.AppImage --tw QUICKSTART.md`. `textweaver --tw QUICKSTART.md` is equivalent to `tw`; `textweaver QUICKSTART.md` opens the file in the app instead.
-5. On first launch the app asks up to four questions: the interface language; who speaks, if a screen reader is running; which optional components to download; and whether textweaver may check for updates once a day. Each can be skipped, and nothing is downloaded without your consent. The terminal reader asks the same questions.
+5. The first launch has at most three skippable steps, the same in the app and the terminal reader. The interface language is shown as a list only when your system's language is not one of the six built in; otherwise it is put into effect without a question. If a screen reader is running, textweaver does not ask: it starts in hybrid mode and says so once, with the key that changes it. Then a list of optional components appears with nothing chosen, and its last row asks whether textweaver may check for updates once a day. Escape skips a step, and nothing is downloaded without your consent.
 
 ## Hear a document
 
@@ -44,7 +44,7 @@ textweaver records your place in each document and returns to it the next time y
 
 ## Who speaks
 
-If you use a screen reader, decide whether textweaver or the screen reader reads documents aloud. **Alt+Shift+A** switches between "textweaver reads aloud" and "my screen reader reads". Avoiding duplicate speech is the main reason to choose deliberately; [Using textweaver with a screen reader](screen-readers.md) describes the modes.
+If you use a screen reader, decide whether textweaver or the screen reader reads documents aloud. **Alt+Shift+A** cycles through self-voicing (textweaver reads aloud), hybrid (textweaver reads documents and your screen reader speaks messages), and screen reader mode (your screen reader reads). Avoiding duplicate speech is the main reason to choose deliberately; [Using textweaver with a screen reader](screen-readers.md) describes the modes.
 
 ## See also
 
