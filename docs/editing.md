@@ -322,7 +322,7 @@ textweaver checks spelling against a list of 225,038 English words (SCOWL, sizes
 - **Alt+M**: the next misspelled word. **Alt+Shift+M**: the previous one. You hear the word, then its letters: "recieve. r e c i e v e." In edit mode the word is selected, so typing replaces it. These keys also work while reading.
 - **Alt+J**: suggestions for the misspelled word at the cursor, closest first, then "Add recieve to your word list" and "Leave it as it is". In edit mode, **Enter** on a suggestion replaces the word; that is one undo step.
 - When you save, textweaver says how many possible misspellings are left, for example "3 possible misspellings." At high verbosity it also says "No misspellings."
-- In the textweaver app, edit mode also marks each misspelled word on screen with a dotted underline, and in the accessibility tree as a spelling error described as "Misspelled". On Windows, screen readers do not announce that mark yet; see [Spelling marks and text direction in the app](screen-readers.md#spelling-marks-and-text-direction-in-the-app).
+- In the textweaver app, edit mode also marks each misspelled word on screen with a dotted underline, and in the accessibility tree as a spelling error described as "Misspelled". On Windows it reaches UI Automation as a spelling error, which NVDA reports as you read with its Document Formatting setting for spelling errors on; see [Spelling marks and text direction in the app](screen-readers.md#spelling-marks-and-text-direction-in-the-app).
 
 The checker skips code, math, link addresses, web and e-mail addresses, citation keys such as `[@doe2020]`, raw HTML, front matter, words containing digits, words in capitals (acronyms such as NASA), words with internal capitals (such as iPhone), and single letters.
 

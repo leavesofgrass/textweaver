@@ -1,0 +1,2 @@
+### The app
+- **NVDA can report spelling and grammar errors in the app on Windows.** The misspelled words and Markdown lint problems that edit mode marks now reach UI Automation as spelling and grammar error annotations, which NVDA reports as you read with its Document Formatting setting for spelling errors on. textweaver's copy of AccessKit's Windows adapter answers UI Automation's annotation types for a piece of text ([Spelling marks and text direction in the app](docs/screen-readers.md#spelling-marks-and-text-direction-in-the-app)).
