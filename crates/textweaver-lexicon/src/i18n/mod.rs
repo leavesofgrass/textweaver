@@ -27,7 +27,11 @@
 //! # Languages
 //!
 //! - `en`: English, complete: every message the code asks for is in
-//!   `locales/en.ftl` (a test scans the sources).
+//!   one of the files in `locales/en/` (a test scans the sources). Each
+//!   language is a folder of files named by area (`live.ftl`,
+//!   `settings.ftl`), the same names in every language; `build.rs`
+//!   embeds them, joined in sorted order, and a test checks that no id
+//!   is defined in two of them.
 //! - `en-XA`: a pseudo-locale for testing coverage. Every message comes
 //!   out accented, a third longer, and in `⟦ ⟧` brackets, so a string
 //!   shown without brackets was never looked up in a catalog, and layouts
@@ -39,8 +43,11 @@
 //!   message cannot reorder the text around it. [`bidi_problems`] checks
 //!   that a rendered string's direction marks are balanced.
 //! - Built in ([`LANGUAGES`], Wave 4, W4d): Spanish, French, German,
-//!   Portuguese, and Arabic, complete (a test checks), each falling back
-//!   to English for a message it lacks. A regional tag uses its language
+//!   Portuguese, and Arabic, each falling back to English for a message
+//!   it lacks. Each is complete, apart from the messages listed in
+//!   `locales/untranslated.txt`, which land in English first and wait for
+//!   the translation pass before a release (a test checks both ways, and
+//!   `cargo xtask release` stops while the list holds any id). A regional tag uses its language
 //!   (`es-MX`, `pt-BR`).
 //! - Other languages load from `<code>.ftl` files in the settings folder's
 //!   `locales`, falling back to English for any message they lack; a file
@@ -61,16 +68,32 @@ use parse::Part;
 pub use pseudo::bidi_problems;
 use pseudo::pseudo_text;
 
-/// The English catalog's source.
-const ENGLISH: &str = include_str!("../../locales/en.ftl");
+// `EN_TEXT`, `EN_FILES`, and the same for each built-in translation:
+// `build.rs` embeds every file in `locales/<lang>/`, sorted by name.
+include!(concat!(env!("OUT_DIR"), "/catalogs.rs"));
+
+/// The English catalog's source: the files in `locales/en/`, joined.
+const ENGLISH: &str = EN_TEXT;
 
 /// The built-in translations' sources, by language tag.
 const BUILTIN: &[(&str, &str)] = &[
-    ("es", include_str!("../../locales/es.ftl")),
-    ("fr", include_str!("../../locales/fr.ftl")),
-    ("de", include_str!("../../locales/de.ftl")),
-    ("pt", include_str!("../../locales/pt.ftl")),
-    ("ar", include_str!("../../locales/ar.ftl")),
+    ("es", ES_TEXT),
+    ("fr", FR_TEXT),
+    ("de", DE_TEXT),
+    ("pt", PT_TEXT),
+    ("ar", AR_TEXT),
+];
+
+/// Every built-in language's files, (name, text), by language tag,
+/// English first: the tests check them one by one.
+#[cfg(test)]
+const FILES: &[(&str, &[(&str, &str)])] = &[
+    ("en", EN_FILES),
+    ("es", ES_FILES),
+    ("fr", FR_FILES),
+    ("de", DE_FILES),
+    ("pt", PT_FILES),
+    ("ar", AR_FILES),
 ];
 
 /// A language the interface is built with.
@@ -263,9 +286,9 @@ impl Catalog {
         static EN: OnceLock<Arc<Catalog>> = OnceLock::new();
         EN.get_or_init(|| {
             Arc::new(Catalog::parse("en", ENGLISH).unwrap_or_else(|errors| {
-                // A test keeps en.ftl valid; never fail at run time.
+                // A test keeps locales/en valid; never fail at run time.
                 for e in &errors {
-                    log::error!("en.ftl: {e}");
+                    log::error!("locales/en: {e}");
                 }
                 Catalog::empty("en")
             }))
@@ -347,7 +370,7 @@ impl Catalog {
             let mut c = Catalog::parse(tag, text).unwrap_or_else(|errors| {
                 // A test keeps every built-in catalog valid.
                 for e in &errors {
-                    log::error!("{tag}.ftl: {e}");
+                    log::error!("locales/{tag}: {e}");
                 }
                 Catalog::empty(tag)
             });

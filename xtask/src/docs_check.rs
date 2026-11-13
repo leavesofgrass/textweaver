@@ -12,7 +12,7 @@
 //!   `docs/dev/architecture.md` matches `crates/`; every guide in
 //!   `docs/*.md` ends with a "See also" section and is linked from
 //!   `docs/README.md`; and US English: no British spelling from
-//!   [`BRITISH`] in the English messages (`en.ftl`, values only), `README.md`,
+//!   [`BRITISH`] in the English messages (`locales/en`, values only), `README.md`,
 //!   `CONTRIBUTING.md`, or `docs/` (outside the history and research
 //!   records, code, and link targets). The user guides (`docs/*.md`, not
 //!   `docs/dev`) name releases, not internal waves or dates ([`dated_words`]);
@@ -228,8 +228,12 @@ pub fn check(root: &Path) -> anyhow::Result<Vec<String>> {
             problems.extend(british_spellings(&rel, &read(&rel)?, false));
         }
     }
-    let ftl = "crates/textweaver-lexicon/locales/en.ftl";
-    problems.extend(british_spellings(ftl, &read(ftl)?, true));
+    for name in file_names(&root.join("crates/textweaver-lexicon/locales/en"))? {
+        if name.ends_with(".ftl") {
+            let ftl = format!("crates/textweaver-lexicon/locales/en/{name}");
+            problems.extend(british_spellings(&ftl, &read(&ftl)?, true));
+        }
+    }
 
     // The guides.
     for name in file_names(&root.join("docs"))? {

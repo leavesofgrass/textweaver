@@ -10,13 +10,13 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::ENGLISH;
 
-/// Every message in en.ftl as (id, value): continuation lines joined with
+/// Every message in locales/en as (id, value): continuation lines joined with
 /// a line break, terms and comments left out.
 fn messages() -> Vec<(String, String)> {
     messages_in(ENGLISH)
 }
 
-/// Every message in one catalog's text, as [`messages`] reads en.ftl.
+/// Every message in one catalog's text, as [`messages`] reads locales/en.
 fn messages_in(catalog: &str) -> Vec<(String, String)> {
     let mut out: Vec<(String, String)> = Vec::new();
     let mut open = false;

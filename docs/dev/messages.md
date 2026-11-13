@@ -2,7 +2,7 @@
 
 How to write the words textweaver says and shows: status messages, questions, errors, labels, setting helps, and button descriptions. The rules come from the messages that already work best, read aloud and on a 40-cell Braille display.
 
-Every message lives in the message catalog, `crates/textweaver-lexicon/locales/`, with the same id in all six languages (`en.ftl`, `ar.ftl`, `de.ftl`, `es.ftl`, `fr.ftl`, `pt.ftl`). English is the source. A setting's label and help also live in `INFO` in `crates/textweaver-app/src/settings_schema.rs`, and a command's help in `crates/textweaver-keymap/src/action.rs`; tests keep each pair equal, so change both, then run `cargo xtask regen` for the generated references.
+Every message lives in the message catalog, `crates/textweaver-lexicon/locales/`: one folder per language (`en`, `ar`, `de`, `es`, `fr`, `pt`), each holding the same files, one per area of the interface (`live.ftl`, `reading.ftl`, `settings.ftl`, and so on). A message has the same id, in the same area file, in every language. English is the source; [Translations](#translations) says how the other languages follow it. A setting's label and help also live in `INFO` in `crates/textweaver-app/src/settings_schema.rs`, and a command's help in `crates/textweaver-keymap/src/action.rs`; tests keep each pair equal, so change both, then run `cargo xtask regen` for the generated references.
 
 The style tests are in `crates/textweaver-lexicon/src/i18n/style_tests.rs`. A new message that breaks a rule the tests check fails the test, which names the rule's number below. Two lists of exceptions remain in the file: the setting helps whose first sentence is still longer than fifteen words (`LONG_FIRST_SENTENCE`, which may only shrink; when you fix a help, take its id off the list, and the test fails if you forget), and the three "Could not open" messages whose reason is the next step. The list of messages allowed to repeat a sentence is empty.
 
@@ -87,7 +87,7 @@ The key fact is in cells 1 to 40. A prompt label plus eight typed letters fits. 
 
 Checked:
 
-- Every id the code uses is in `en.ftl`, every id in `en.ftl` is used, and every translation has exactly English's ids, only English's variables, and plural keys its language uses (`crates/textweaver-lexicon/src/i18n/tests.rs`).
+- Every id the code uses is in `locales/en`, every id there is used, no id is defined in two files of one language, and every translation has only English's ids (all of them, apart from the untranslated list), only English's variables, and plural keys its language uses (`crates/textweaver-lexicon/src/i18n/tests.rs`).
 - The pseudo-locale run fails on any English left outside the catalog (`crates/textweaver-app/tests/it/pseudo_locale.rs`).
 - Settings labels and helps equal `INFO`; command helps equal the keymap's.
 - Of the style rules above, on the English catalog (`style_tests.rs`): stacked verbs (rule 1), the next step of an error (rule 2, in all six languages), the end of a question (rule 3), hex color codes (rule 6), the one-word list and duplicate sentences (rule 7), and the short first sentence of a setting help and the short button hints (rule 11, the hints in all six languages).
@@ -97,7 +97,12 @@ Not checked yet, so a reviewer reads for them: meaning first, casing, punctuatio
 
 ## Translations
 
-Write English first. Then add the same id to the five other catalogs, in the same place. If you cannot translate, copy the English and say so in your pull request; a maintainer finds a translator. Translations go through a native-speaker review before a release.
+English comes first, and translation is a pass of its own before each release.
+
+- **Where a new message goes.** Add it to the area file that fits in `locales/en/`, beside the messages it belongs with. A feature with many messages of its own may start a new area file: create it in all six folders under the same name, since a test requires every language to have English's file names. Until it is translated, a language's copy may hold only its header comment. No id may be defined in two files of one language; a test names both files.
+- **Translating now or later.** If you can translate, add the message to the same file in the five other folders. If not, add its id to `locales/untranslated.txt` (one id per line, in sorted order) and leave the other languages alone: until the pass, they say the message in English. Do not copy the English into the other languages, since a copy counts as translated and drops off the list.
+- **The translation pass.** Before each release, the messages on the list are translated into all five languages, and their ids come off the list. `cargo xtask release` stops while the list holds any id and says how many; a dry run lists it as a problem. Translations go through a native-speaker review before a release.
+- **What the tests check.** `built_in_translations_are_complete` fails when a language lacks a message that is not on the list, when the list names a message that is translated everywhere or that English does not have, and when the list is out of order. The pseudo-locale tests (`en-XA` and `ar-XB`) are built from English, so they still cover every message, translated or not.
 
 The commands of `tw` that print for a person on a terminal, such as `tw broker`, `tw publish`, `tw join-qr` and `tw cw`, print English only and are not in the catalog; what the app and the terminal reader say about live documents, the broker, publishing and joining is in all six catalogs. When a message needs a secret (a password, a join code, a join link), write the message so it names the secret and never holds it: "Join link copied." and "Join code: 16 characters, hidden.".
 

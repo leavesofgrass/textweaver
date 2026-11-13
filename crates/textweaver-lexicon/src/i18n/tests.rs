@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 use super::*;
@@ -7,8 +7,38 @@ use crate::model::Pos;
 #[test]
 fn english_catalog_parses() {
     let text = ENGLISH;
-    let c = Catalog::parse("en", text).unwrap_or_else(|e| panic!("en.ftl: {e:?}"));
+    let c = Catalog::parse("en", text).unwrap_or_else(|e| panic!("locales/en: {e:?}"));
     assert!(c.ids().len() > 10);
+}
+
+/// Each language is a folder of files named by area. No message or term
+/// is defined in two of a language's files (the joined text would report
+/// it, but by its line in the whole language, not by file), and every
+/// language has English's file names, so a message has the same home in
+/// each.
+#[test]
+fn catalog_files_define_each_id_once() {
+    let en_names: Vec<&str> = FILES[0].1.iter().map(|(name, _)| *name).collect();
+    for (tag, files) in FILES {
+        let names: Vec<&str> = files.iter().map(|(name, _)| *name).collect();
+        assert_eq!(
+            names, en_names,
+            "locales/{tag} has other files than locales/en"
+        );
+        let mut home: HashMap<String, &str> = HashMap::new();
+        for (name, text) in *files {
+            let (messages, terms) =
+                parse::resource(text).unwrap_or_else(|e| panic!("locales/{tag}/{name}: {e:?}"));
+            let ids = messages
+                .into_keys()
+                .chain(terms.into_keys().map(|t| format!("-{t}")));
+            for id in ids {
+                if let Some(first) = home.insert(id.clone(), name) {
+                    panic!("locales/{tag}: {id} is defined in both {first} and {name}");
+                }
+            }
+        }
+    }
 }
 
 #[test]
@@ -120,9 +150,12 @@ fn a_user_file_goes_over_the_built_in_translation() {
 fn built_in_translations_are_valid() {
     let en = Catalog::english();
     for (tag, text) in BUILTIN {
-        let c = Catalog::parse(tag, text).unwrap_or_else(|e| panic!("{tag}.ftl: {e:?}"));
+        let c = Catalog::parse(tag, text).unwrap_or_else(|e| panic!("locales/{tag}: {e:?}"));
         for id in c.ids() {
-            assert!(en.has(id), "{tag}.ftl has {id}, which en.ftl does not");
+            assert!(
+                en.has(id),
+                "locales/{tag} has {id}, which locales/en does not"
+            );
             // `$unit` is the key of the noun a message names (heading,
             // sentence), which the code passes beside it so a language can
             // make words agree with it; English does not need it.
@@ -134,7 +167,7 @@ fn built_in_translations_are_valid() {
                 .collect();
             assert!(
                 extra.is_empty(),
-                "{tag}.ftl: {id} uses {extra:?}, which the code does not give it"
+                "locales/{tag}: {id} uses {extra:?}, which the code does not give it"
             );
         }
         let allowed: BTreeSet<&str> = (0..200).map(|n| plural::category(tag, n).name()).collect();
@@ -168,7 +201,7 @@ fn check_keys(tag: &str, id: &str, parts: &[parse::Part], allowed: &BTreeSet<&st
             for (key, v) in variants {
                 assert!(
                     !CATEGORIES.contains(&key.as_str()) || allowed.contains(key.as_str()),
-                    "{tag}.ftl: {id} has a variant [{key}] that {tag} never chooses"
+                    "locales/{tag}: {id} has a variant [{key}] that {tag} never chooses"
                 );
                 check_keys(tag, id, v, allowed);
             }
@@ -176,25 +209,73 @@ fn check_keys(tag: &str, id: &str, parts: &[parse::Part], allowed: &BTreeSet<&st
     }
 }
 
-/// Every built-in translation is complete: a message added to en.ftl needs
-/// its translations too (ADR-0030 says how), so no one hears English in
-/// the middle of their language.
+/// The messages allowed in English only until the translation pass:
+/// `locales/untranslated.txt`, one id per line, `#` starting a comment.
+const UNTRANSLATED: &str = include_str!("../../locales/untranslated.txt");
+
+/// The ids in a list such as [`UNTRANSLATED`]: one per line, without
+/// comments and blank lines.
+fn listed_ids(text: &str) -> Vec<&str> {
+    text.lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .collect()
+}
+
+/// Every built-in translation is complete, apart from the messages on the
+/// untranslated list: a message added to locales/en needs its translations
+/// or its id on the list (the owner's decision, Thursday, November 12,
+/// 2026: English first, then a translation pass before each release, which
+/// `cargo xtask release` enforces). The list holds no id that is
+/// translated everywhere, none that English lacks, and is sorted.
 #[test]
 fn built_in_translations_are_complete() {
     let en = Catalog::english();
+    let listed = listed_ids(UNTRANSLATED);
+    assert!(
+        listed.windows(2).all(|w| w[0] < w[1]),
+        "locales/untranslated.txt is not sorted, or lists an id twice"
+    );
+    let unknown: Vec<&str> = listed.iter().copied().filter(|id| !en.has(id)).collect();
+    assert!(
+        unknown.is_empty(),
+        "locales/untranslated.txt lists ids locales/en does not have: {unknown:?}"
+    );
+    let mut lacking = BTreeSet::new();
     for (tag, text) in BUILTIN {
-        let c = Catalog::parse(tag, text).unwrap_or_else(|e| panic!("{tag}.ftl: {e:?}"));
+        let c = Catalog::parse(tag, text).unwrap_or_else(|e| panic!("locales/{tag}: {e:?}"));
         let missing: Vec<&str> = en
             .ids()
             .into_iter()
             .filter(|id| !c.messages.contains_key(*id))
             .collect();
+        let unlisted: Vec<&str> = missing
+            .iter()
+            .copied()
+            .filter(|id| !listed.contains(id))
+            .collect();
         assert!(
-            missing.is_empty(),
-            "{tag}.ftl lacks {} messages: {missing:?}",
-            missing.len()
+            unlisted.is_empty(),
+            "locales/{tag} lacks {} messages; translate them or list them in locales/untranslated.txt: {unlisted:?}",
+            unlisted.len()
         );
+        lacking.extend(missing.into_iter().map(str::to_owned));
     }
+    let done: Vec<&str> = listed
+        .iter()
+        .copied()
+        .filter(|id| !lacking.contains(*id))
+        .collect();
+    assert!(
+        done.is_empty(),
+        "translated in every language; take them off locales/untranslated.txt: {done:?}"
+    );
+}
+
+#[test]
+fn untranslated_list_reads_ids_only() {
+    let text = "# a comment\n\nabout-title\n  help-key  \n# more\n";
+    assert_eq!(listed_ids(text), ["about-title", "help-key"]);
 }
 
 /// Arabic, a built-in right-to-left language: every message closes the
@@ -281,7 +362,7 @@ fn every_part_of_speech_has_a_name() {
 
 /// The English catalog is complete: every message id the workspace's
 /// sources ask for (`tr("id")`, `fmt("id", ...)`, `msg("id"...)`) is in
-/// en.ftl, and every message in en.ftl is used somewhere.
+/// `locales/en`, and every message there is used somewhere.
 #[test]
 fn english_is_complete() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -312,10 +393,7 @@ fn english_is_complete() {
     }
     let en = Catalog::english();
     let missing: Vec<&String> = used.iter().filter(|id| !en.has(id)).collect();
-    assert!(
-        missing.is_empty(),
-        "missing from locales/en.ftl: {missing:?}"
-    );
+    assert!(missing.is_empty(), "missing from locales/en: {missing:?}");
     let unused: Vec<&str> = en
         .ids()
         .into_iter()
@@ -327,7 +405,7 @@ fn english_is_complete() {
         .collect();
     assert!(
         unused.is_empty(),
-        "in locales/en.ftl but never used: {unused:?}"
+        "in locales/en but never used: {unused:?}"
     );
 }
 
