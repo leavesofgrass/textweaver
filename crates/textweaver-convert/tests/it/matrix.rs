@@ -55,6 +55,7 @@ const FIXTURES: &[(&str, &str, usize)] = &[
     ("canvas", "fixtures/b4/board.canvas", 3),
     ("mathml", "fixtures/o/growth.mml", 0),
     ("svg", "fixtures/o/chart.svg", 0),
+    ("captions", "fixtures/captions/lecture.srt", 1),
     #[cfg(feature = "carta")]
     ("carta", "fixtures/k1/sample.org", 1),
 ];

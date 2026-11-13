@@ -7111,7 +7111,7 @@ Used by:
 
 Used by:
 
-- ammonia 4.1.8, https://github.com/rust-ammonia/ammonia
+- ammonia 4.1.9, https://github.com/rust-ammonia/ammonia
 - anstream 1.0.0, https://github.com/rust-cli/anstyle.git
 - anstyle-parse 1.0.0, https://github.com/rust-cli/anstyle.git
 - anstyle-query 1.1.5, https://github.com/rust-cli/anstyle.git
