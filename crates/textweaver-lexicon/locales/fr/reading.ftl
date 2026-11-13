@@ -262,6 +262,8 @@ nav-position = Ligne { $line } sur { $lines }, { $pct } pour cent.
 nav-position-word = Mot { $word } sur { $words }.
 nav-position-heading = Sous le titre { $heading }.
 nav-position-mode = Mode { $mode }.
+playback-caps-no-words = Surlignage des mots estimé : cette voix ne signale pas les mots.
+playback-caps-words = Surlignage des mots exact : cette voix signale chaque mot.
 
 ## Reading aloud.
 

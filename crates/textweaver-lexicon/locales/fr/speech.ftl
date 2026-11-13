@@ -11,6 +11,8 @@ restart-already = La synthèse vocale est déjà en cours de redémarrage.
 # $error is the system's reason, in its own words.
 restart-failed = Impossible de redémarrer la synthèse vocale : { $error } Patientez un instant, puis réessayez.
 restart-start-failed = Impossible de redémarrer la synthèse vocale : le démarrage a échoué.
+restart-no-engine = Aucun moteur vocal disponible ; { -brand } reste silencieux. Le guide Troubleshooting, section No speech at all, donne les vérifications.
+restart-done-silent = Synthèse vocale redémarrée, mais silencieuse : aucun moteur n'est disponible.
 restart-done = Synthèse vocale redémarrée.
 
 ## The voice manager's list.
