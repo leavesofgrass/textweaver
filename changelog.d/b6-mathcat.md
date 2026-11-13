@@ -1,0 +1,4 @@
+### Reading and speech
+- **MathCAT 0.7.7.** Math speech and math braille now use MathCAT 0.7.7 (October 21, 2026), with its new and revised language rules, its Unified English Braille updates and its Nemeth fix. The words textweaver records for its test formulas are unchanged in English, and Nemeth braille is unchanged. UEB math in contracted (grade 2) braille now marks grade 1 with symbol and word indicators where it used a grade 1 passage, so a formula no longer starts with the passage indicator and ends with the terminator.
+- **Math in Portuguese.** MathCAT 0.7.7 has Portuguese speech rules, so a document in Portuguese has its math read in Portuguese instead of English.
+- MathCAT's own release fixes the navigation braille crash in builds without unsafe code (issue #827), so textweaver's copy of MathCAT no longer carries a fix of its own.
