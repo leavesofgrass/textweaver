@@ -531,8 +531,6 @@ pub struct App {
     /// The accessibility mode in effect (`[accessibility] mode`, or
     /// `--mode` for this run).
     pub(crate) access_mode: AccessMode,
-    /// The first-run question about hybrid mode, waiting for y or n.
-    pub(crate) pending_hybrid: Option<String>,
     /// Continuous reading on the status line (screen-reader mode).
     pub(crate) screen_say_all: Option<crate::access::ScreenSayAll>,
     /// Authoring and navigation state (structure while editing, outline,
@@ -740,7 +738,6 @@ impl App {
             details_form: None,
             details_load: None,
             access_mode,
-            pending_hybrid: None,
             screen_say_all: None,
             authoring: crate::authoring_state::Authoring::default(),
             math_explore: None,
@@ -821,7 +818,6 @@ impl App {
     /// [`Command::Confirm`].
     pub fn confirmation_pending(&self) -> bool {
         self.pending_confirm.is_some()
-            || self.pending_hybrid.is_some()
             || self.pending_import.is_some()
             || self.pending_disk.is_some()
             || self.pending_list_delete.is_some()
@@ -846,9 +842,6 @@ impl App {
     pub fn destructive_question(&self) -> Option<crate::command::DestructiveVerb> {
         use crate::command::DestructiveVerb as V;
         use crate::disk::DiskQuestion;
-        if self.pending_hybrid.is_some() {
-            return None;
-        }
         if let Some(q) = &self.pending_disk {
             return match q {
                 DiskQuestion::Overwrite { .. } | DiskQuestion::SaveAsOver { .. } => {
@@ -912,9 +905,6 @@ impl App {
     /// Answers a pending confirmation.
     fn confirm(&mut self, answer: crate::command::Confirm) -> Vec<Effect> {
         use crate::command::Confirm;
-        if self.pending_hybrid.is_some() {
-            return self.confirm_hybrid(answer);
-        }
         if self.pending_disk.is_some() {
             return self.confirm_disk(answer);
         }

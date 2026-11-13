@@ -25,10 +25,6 @@ access-mode-changed =
         [screen-reader] وضع قارئ الشاشة. textweaver صامت؛ قارئ شاشتك يقرأ سطر الحالة.
        *[hybrid] الوضع المختلط. يقرأ textweaver المستندات بصوت عالٍ؛ قارئ شاشتك ينطق الرسائل والكتابة.
     }
-# Yes to the first-run question; $key names the keys that change the mode.
-access-hybrid-chosen = الوضع المختلط. يقرأ textweaver المستندات بصوت عالٍ؛ قارئ شاشتك ينطق الرسائل والكتابة. { $key } يغيّر الوضع.
-# No to the first-run question; $key names the keys that change the mode.
-access-hybrid-declined = البقاء في وضع النطق الذاتي. { $key } يغيّر الوضع.
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-a-screen-reader = قارئ شاشة
 # On the first run with a screen reader and no mode chosen: hybrid mode is

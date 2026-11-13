@@ -35,7 +35,6 @@ use textweaver_text::units::unit_at;
 use textweaver_text::{NavOptions, navigate};
 
 use crate::app::App;
-use crate::command::{Confirm, Effect};
 use crate::playback::{Playback, ReadKind};
 
 /// The routing mode for the `[accessibility] mode` setting.
@@ -371,58 +370,26 @@ impl App {
         true
     }
 
-    // ---- The first-run question ----
+    // ---- The first-run step ----
 
-    /// True when the first-run question about hybrid mode has not been
-    /// asked yet and the mode was never chosen: then it is worth checking
-    /// for a screen reader ([`textweaver_a11y::detect::detect`]).
+    /// True when the first-run step for a screen reader
+    /// ([`infer_hybrid`](Self::infer_hybrid)) has not run yet and the mode
+    /// was never chosen: then it is worth checking for a screen reader
+    /// ([`textweaver_a11y::detect::detect`]).
     pub fn hybrid_offer_due(&self) -> bool {
         let a = &self.settings.accessibility;
         !a.hybrid_offered
             && a.mode == textweaver_store::AccessMode::SelfVoicing
             && self.access_mode == AccessMode::SelfVoicing
-            && self.pending_hybrid.is_none()
     }
 
-    /// The question waiting for a yes or no, if any: the first-run question
-    /// or an action's confirmation ("Quit textweaver? y or n"). The TUI keeps
-    /// it on the status line.
+    /// The question waiting for a yes or no, if any: an action's
+    /// confirmation ("Quit textweaver? y or n") or a sync question. The TUI
+    /// keeps it on the status line.
     pub fn pending_question(&self) -> Option<String> {
-        self.pending_hybrid
-            .clone()
-            .or_else(|| {
-                self.pending_confirm
-                    .and_then(|a| self.confirmation_question(a))
-            })
+        self.pending_confirm
+            .and_then(|a| self.confirmation_question(a))
             .or_else(|| self.sync_pending_question())
-    }
-
-    /// The answer to the first-run question.
-    pub(crate) fn confirm_hybrid(&mut self, answer: Confirm) -> Vec<Effect> {
-        let key = self.keys(textweaver_keymap::ActionId::CycleAccessMode);
-        match answer {
-            Confirm::Yes => {
-                self.pending_hybrid = None;
-                self.access_mode = AccessMode::Hybrid;
-                self.settings.accessibility.mode = textweaver_store::AccessMode::Hybrid;
-                self.settings.accessibility.hybrid_offered = true;
-                self.settings_dirty = true;
-                let msg = self.msg_args("access-hybrid-chosen", &args!["key" => key.as_str()]);
-                self.tell(&msg);
-            }
-            Confirm::No => {
-                self.pending_hybrid = None;
-                self.settings.accessibility.hybrid_offered = true;
-                self.settings_dirty = true;
-                let msg = self.msg_args("access-hybrid-declined", &args!["key" => key.as_str()]);
-                self.tell(&msg);
-            }
-            Confirm::Repeat => {
-                let q = self.pending_hybrid.clone().unwrap_or_default();
-                self.ask(&q);
-            }
-        }
-        vec![Effect::Redraw]
     }
 
     // ---- Continuous reading on the status line ----

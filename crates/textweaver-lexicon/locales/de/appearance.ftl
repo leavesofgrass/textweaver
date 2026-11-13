@@ -16,7 +16,7 @@ themes-below-aa =
        *[other] Unter AA: { $count } Prüfungen verfehlen den Wert.
     }
 
-## Accessibility modes and the first-run question.
+## Accessibility modes and the first-run step for a screen reader.
 
 # Said when the accessibility mode changes; $mode is the new mode's id.
 access-mode-changed =
@@ -25,10 +25,6 @@ access-mode-changed =
         [screen-reader] Screenreader-Modus. textweaver ist stumm; Ihr Screenreader liest die Statuszeile.
        *[hybrid] Hybrid-Modus. textweaver liest Dokumente vor; Ihr Screenreader spricht Meldungen und Tippen.
     }
-# Yes to the first-run question; $key names the keys that change the mode.
-access-hybrid-chosen = Hybrid-Modus. textweaver liest Dokumente vor; Ihr Screenreader spricht Meldungen und Tippen. { $key } wechselt den Modus.
-# No to the first-run question; $key names the keys that change the mode.
-access-hybrid-declined = Bleibt im Selbstsprechend-Modus. { $key } wechselt den Modus.
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-a-screen-reader = Ein Screenreader
 # On the first run with a screen reader and no mode chosen: hybrid mode is
