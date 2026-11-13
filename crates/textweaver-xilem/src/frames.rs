@@ -25,7 +25,10 @@
 //! Options: `--frames-aids` turns every reading aid on first (bionic
 //! reading, difficult words, syllables, the ruler with its band, text
 //! spacing, and RSVP); `--frames-preview` reads in edit mode with the
-//! preview pane open; `--scale` sets the scale (1 is 100 percent).
+//! preview pane open, and `--frames-marks` with it also marks the
+//! misspelled words and the lint problems, each its own text runs, as edit
+//! mode does once typing pauses; `--scale` sets the scale (1 is 100
+//! percent).
 //!
 //! Not included: rasterizing on the GPU, which depends on the graphics
 //! card, the UI thread's wait for it, and the platform's accessibility
@@ -75,6 +78,9 @@ pub struct FrameOptions {
     pub aids: bool,
     /// Read in edit mode with the preview pane open (B1-p1).
     pub preview: bool,
+    /// With `preview`: mark the misspelled words and the lint problems as
+    /// edit mode does after a pause (their own text runs).
+    pub marks: bool,
     /// Theme name (the saved theme otherwise).
     pub theme: Option<String>,
 }
@@ -92,6 +98,7 @@ impl FrameOptions {
             scale: 1.0,
             aids: false,
             preview: false,
+            marks: false,
             theme: None,
         }
     }
@@ -233,6 +240,13 @@ pub fn measure(opts: &FrameOptions) -> Result<FrameReport, String> {
     }
     let mut refresher = Refresher::default();
     refresher.refresh(&app, &mut harness);
+    if opts.preview && opts.marks {
+        let (misspelled, lint) = (app.misspelled_ranges(), app.lint_ranges());
+        harness.edit_widget(DOC, |mut d| {
+            crate::document::DocumentView::set_misspelled(&mut d, misspelled);
+            crate::document::DocumentView::set_lint(&mut d, lint);
+        });
+    }
     let doc_id = harness.get_widget(DOC).id();
     harness.focus_on(Some(doc_id));
     let _ = harness.redraw();

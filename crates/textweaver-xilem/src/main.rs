@@ -148,6 +148,10 @@ struct Args {
     /// For --measure-frames: read in edit mode with the preview pane open.
     #[arg(long, hide = true)]
     frames_preview: bool,
+    /// For --measure-frames with --frames-preview: also mark the misspelled
+    /// words and the lint problems, as edit mode does after a pause.
+    #[arg(long, hide = true)]
+    frames_marks: bool,
     /// For --measure-frames: also write the report as JSON to this file.
     #[arg(long, value_name = "PATH", hide = true)]
     frames_json: Option<PathBuf>,
@@ -271,6 +275,7 @@ fn run() {
             o.scale = args.scale;
             o.aids = args.frames_aids;
             o.preview = args.frames_preview;
+            o.marks = args.frames_marks;
             o.theme = args.theme.clone();
             if let Err(e) = textweaver_xilem::frames::run(&o, args.frames_json.as_deref()) {
                 console::report_error(&e, true);
@@ -440,6 +445,7 @@ mod tests {
             "--review-screenshots",
             "--measure-frames",
             "--frames-aids",
+            "--frames-marks",
             "--frames-json",
         ] {
             assert!(!help.contains(hidden), "{hidden} is in --help");
