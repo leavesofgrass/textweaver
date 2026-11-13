@@ -10,6 +10,8 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 
 - Join from a QR image reads the image on a helper thread, so a large or unusual image no longer holds up the interface. After a second it says "Reading the QR image." once; opening another dialog, or asking again, cancels the reading without a word.
 - A live source at a Tailscale-range address now says "Connected to NAME at a Tailscale-range address. If this is Tailscale, the link is encrypted." That range is also used by carriers, so textweaver no longer claims encryption it cannot confirm.
+- **Connection errors are said in one language.** Why a live source is down (not authorized, unreachable, a TLS or pin failure, a settings error, and the rest) is now said from the message catalog, so the whole announcement is in the reader's language once the new messages are translated. In English the words are the same as before, except that the five reasons ending in the system's own error now end with what to do next.
+- **Join link errors are said in one language,** in the join form and when joining from a QR image. A join code of one character now says "1 character". In the QR reader, an error in the code reads like the other link errors, without a "Join code error:" lead-in. `tw join-qr` prints the same lines as before.
 
 ### Security and privacy
 
@@ -49,6 +51,16 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 - The keyboard reference no longer says the textweaver app lists the keyboard shortcuts with F3: F3 is Find next in both frontends, and shows or hides the text in a secret field.
 - The reading guide says that following a link to a file on another computer asks first, because Windows may send your sign-in to that computer.
 - The developer guides match the beta 6 tooling: testing (the check tiers, the fast check, CI on a `ci/` branch, the new hostile-input tests), releasing (the workflow's jobs in order, the dry run's hand-off test, the pre-tag steps), Docker (the distro check's Arch step), building, architecture (`ring` in the app, the QR helper thread, the broker's new limits), the message style guide (what its tests really check), CONTRIBUTING, the scripts and fuzz pages, the fragments page and the documentation coverage page.
+- The quick start describes the first launch as it is: at most three steps, the language list only for an unsupported system language, hybrid mode started and said once when a screen reader runs, and the components list with the updates question as its last row. Alt+Shift+A is described as cycling three modes.
+- The library guide uses the real command names (`tw library continue`, `tw library add`) instead of option forms that no longer exist, and quotes the messages as the app says them ("Canceled. Details not changed." and "No places yet. Reading saves your place.").
+- The sync guide lists the folders whose browser preview keeps raw HTML among the machine settings that never sync.
+- The index counts 43 fuzz targets and names the four new ones' subjects (update answers, clipboard bitmaps, canvases, join links); it says "the app" for the graphical version.
+- The citations and updates guides say that every request carries the one neutral User-Agent, without a version.
+- The what is new page has a section for the next release, with the wave 1 security and trust changes a reader would notice.
+- The privacy page and the security policy describe the sanitized browser preview and its trusted folders, the question before a link to another computer, join codes copied as private clipboard text, the one neutral User-Agent, what a join code resists, and how the broker's key is protected on each system.
+- The troubleshooting page covers "Join code off: too many wrong codes", the broker's lockout and connection caps, "Raw HTML left out of the preview", a refused large QR image, and the question before a link to a network share.
+- Known limits add the status bar's "Connected over Tailscale" wording, copied text in terminals that use OSC 52, and the browser preview's omissions.
+- The converting, accessibility, roadmap, graphical app, screen reader, JSON-RPC and broker guides say what changed in beta 6: the preview's sanitizing, QR images read on a helper thread with a size limit, and the next release's scope.
 
 ### For contributors
 
@@ -63,6 +75,31 @@ In short: beta 6 starts with hardening what beta 5 opened up. textweaver's own b
 - Every action in every workflow is pinned to a full commit SHA, with its tag in a comment.
 - The release workflow's dry run also tests the hand-off to the publish jobs, and keeps the packages for them. The macOS jobs run on `macos-15`, since GitHub withdrew the `macos-14` runners, and the distro check does a full upgrade on Arch before it installs anything, printing the package manager's last lines when an install fails.
 - `cargo xtask docs --check` fails when the What is new page still calls a tagged release "Not yet released".
+- **The message catalogs are split by area.** Each language is now a folder, `crates/textweaver-lexicon/locales/<lang>/`, of 28 files named by area of the interface (`live.ftl`, `reading.ftl`, `settings.ftl`, and so on), the same names in every language. A build script embeds them, so lookups are unchanged: every language's messages were compared before and after, and are identical. A test refuses an id defined in two files of one language, naming both, and a language whose file names differ from English's.
+- **English first, then a translation pass.** A message may land in English only, with its id in `locales/untranslated.txt`; the other languages say it in English until the pass. The completeness test now checks that every missing translation is listed, and that the list names nothing translated everywhere and nothing English lacks. `cargo xtask release` stops, in words, while the list holds any id. [Writing messages](docs/dev/messages.md#translations) explains where a new message goes and how the pass works.
+- **The status line and the dialogs are checked in words.** A status-line transcript of the terminal reader, one line per step of a scripted walk, records each message, its length, whether its key fact is within the first 40 characters, where the cursor is, and whether it repeats. Accessibility tree snapshots record every dialog and form in the textweaver app, one node per line. A changed message or label shows as one changed line in review; `TEXTWEAVER_UPDATE_SNAPSHOTS=1` writes them again on purpose. A masked field is asserted to be a password field whose secret never reaches the tree.
+- A command a module registers with `App::register_handler` now runs its handler before the app's own command table, so a feature adds its commands in its own file and never edits `app.rs`. A command that a lean build leaves out is registered as not in this build (`App::register_command` with `Availability::NotInThisBuild`), which replaces the separate list of commands that need the MQTT client.
+- A settings test now checks every number setting against the store: a value one step past either end of the range the settings screen shows comes back clamped to that same bound. The schema takes the CW, pause, Braille display and preview limits from the store's constants instead of repeating them.
+- Removed declarations that did nothing: the unused workspace dependency `live-region`, the empty features `paperback` (formats) and `tts-crate` (speech), and two unused announcement helpers.
+- The `mod` lines and the `pub use` block of `textweaver-app`'s `lib.rs` are sorted by name, and a test keeps them sorted, so new modules no longer all land at the end of the list.
+
+### Reading and speech
+
+- **Find and replace steps at once in large documents.** The replace loop finds the matches once and keeps them: a skip is a lookup, and a replacement moves the matches after it instead of searching the whole text again. "Match N of M" stays exact, including matches the replacement itself adds.
+- **Structure moves look up their marker directly.** Next heading, list or table, and the item counts said with them, find their marker by position instead of reading every marker of the document.
+- **A live log stays quick as it grows.** Each entry's line is rendered once and kept until the entry changes, and an entry added or corrected changes the open document by one edit, rendered and parsed on its own, instead of the whole log rendered, parsed and compared. A whole log sent again, and switching between the list and the table, still take the full path. The reader's place never moves.
+- **The recovery snapshot is written as it is made.** Its JSON goes straight to the temporary file instead of being built in memory first, which lowers the peak memory of a large document's snapshot. The file is byte for byte what it was.
+- **The Windows color-scheme probe asks its two questions at once.** Dark mode and high contrast are read side by side, each still within half a second, so a busy machine waits for one answer, not two.
+- **The benchmark gate covers more.** It now times a live log of 2,000 and 10,000 entries and one replacement step, and gates the start of `tw` like any other time.
+
+### The terminal reader
+
+- **Messages put the key fact first.** Twenty messages heard often now lead with the outcome or the question: "Hybrid mode: NVDA speaks messages, textweaver reads documents.", "Speaking with eSpeak NG: Piper could not start.", "Recover unsaved edits to essay.md?", "Left out, too large: ...", "Word highlight estimated: this voice reports no words." The welcome names Open and Help before the reading keys.
+- **Closing a list says so on the status line.** Escape from the outline, Settings, the bookmarks or any other list now replaces the status line with "Canceled." or "Settings closed.", so a Braille display no longer shows the closed list's last row. Speech still follows the interface announcements.
+- **Settings that wait for a restart say so.** Changing Announcements, Follow the system theme or Graphics says "Used from the next start."; every such setting's help says it too, and the engine settings that need Restart speech say so in their help.
+- **Graphics is a setting.** The graphics API the app draws with is in Settings, Toolbars and panels, kept on this computer and never synced.
+- **Clearer names and status.** Live documents has "Open a live source", "Close the live source" and "Save the live log now"; the status bar says "Connected, Tailscale range" rather than claiming Tailscale for any address in its range.
+- **For contributors:** style tests now check that a question comes first, that no message holds a symbol in any language, and that a status message's first clause fits 40 characters with no lead-in, each with a list that may only shrink. The unused first-run question is gone.
 
 ## [0.1.0-beta.5] - 2026-10-29
 
