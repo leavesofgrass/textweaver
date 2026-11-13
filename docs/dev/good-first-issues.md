@@ -1,6 +1,6 @@
 # Good first issues
 
-Small, well-scoped tasks for a first contribution. Each one says what to change, where to look, and how to check it. They were checked against the code on Thursday, November 12, 2026; if one has been done since, the code will show it.
+Small, well-scoped tasks for a first contribution. Each one says what to change, where to look, and how to check it. They were checked against the code on Friday, November 13, 2026; if one has been done since, the code will show it.
 
 Before you start:
 
@@ -17,7 +17,7 @@ Sizes: small is a few hours; medium is about a day.
 
 Size: small.
 
-Every document loader has a fuzz target except the plain-text loader. That loader decides a file's encoding (a byte order mark, then UTF-8, then Windows-1252), which is exactly the kind of code fuzzing is good at.
+Almost every document loader has a fuzz target, caption files included. The plain-text loader has none (nor has the braille file loader, which needs liblouis). The plain-text loader decides a file's encoding (a byte order mark, then UTF-8, then Windows-1252), which is exactly the kind of code fuzzing is good at.
 
 - Where: copy a short target such as `fuzz/fuzz_targets/rtf.rs` to `fuzz/fuzz_targets/text.rs`, loading the bytes with the hint `txt` through `textweaver_fuzz::load_checked`. Add a `[[bin]]` entry in `fuzz/Cargo.toml`, the target to the list in `fuzz/README.md`, `text` to the matrix in `.github/workflows/nightly.yml`, and seeds (`fixtures/sample.txt`) in `xtask/src/fuzz_seed.rs`.
 - How to check: `cargo +nightly fuzz run text -- -max_total_time=60` runs without a crash. Fuzzing needs a nightly toolchain and cargo-fuzz; `fuzz/README.md` shows how to run it in Docker instead.

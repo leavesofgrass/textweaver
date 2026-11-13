@@ -1,6 +1,6 @@
 # Fuzzing textweaver
 
-This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders, the settings and keyboard files, the saved state, the sync folder's records, the engine-host protocol, the MQTT packets and payloads of live sources, join links and their QR codes, the update check's answers, clipboard bitmaps, and the parsers a student's own writing goes through: math, citations, themes, the lexicon, Obsidian vaults, and JSON-RPC requests. It is its own Cargo workspace, so the main build, `cargo test`, and the regular CI jobs never build it; the Nightly workflow does.
+This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders (caption files and Obsidian canvases among them), the settings and keyboard files, the saved state, the sync folder's records, the engine-host protocol, the MQTT packets and payloads of live sources, join links and their QR codes, the update check's answers, clipboard bitmaps, and the parsers a student's own writing goes through: math, citations, themes, the lexicon, Obsidian vaults, and JSON-RPC requests. It is its own Cargo workspace, so the main build, `cargo test`, and the regular CI jobs never build it; the Nightly workflow does.
 
 Each target feeds random input to one part of textweaver. A loader may refuse the input with an error, but it must never panic, and a document it returns must have every marker inside its text, in order. The checks are in `src/lib.rs`.
 
