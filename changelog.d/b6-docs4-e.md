@@ -1,4 +1,0 @@
-### Documentation
-- The README's first steps now say which keys differ on a Mac, and the security policy says that `install-linux.sh --release` also checks downloads against `SHA256SUMS.txt` and that five failed logins within a minute lock an address.
-- The contributing guide describes every workflow's real triggers: the generated-files job, the weekly engine and second-tool runs, the screen-reader checks that also run when their files change, and the nightly workflow's "weekly" option.
-- The developer guides match the code: the architecture guide's crate dependencies, xtask tasks, GUI announcements and 25 settings sections; the testing guide's docs check, Ace and macOS 15 runners; the releasing guide's clean-container check and bundled licenses; the building, Docker and third-party data guides; and the polish checklist, whose two known defects are fixed.
