@@ -151,6 +151,10 @@ pub(crate) struct LiveWire {
     /// Publishes waiting on helper threads.
     #[cfg(feature = "mqtt")]
     pub(crate) jobs: Vec<super::broker::SendJob>,
+    /// The QR image being read on a helper thread (crate::live::qr):
+    /// replacing or clearing it cancels it.
+    #[cfg(feature = "mqtt")]
+    pub(crate) qr_job: Option<super::qr::QrJob>,
     /// Stands in for the MQTT client (tests).
     #[cfg(feature = "mqtt")]
     connector: Option<Connector>,
@@ -922,7 +926,9 @@ mod tests {
         let assertive = Some(Priority::Assertive);
         assert_eq!(r.priority_of("The connection is not encrypted."), polite);
         assert_eq!(
-            r.priority_of("over Tailscale, which encrypts the link"),
+            r.priority_of(
+                "at a Tailscale-range address. If this is Tailscale, the link is encrypted."
+            ),
             polite
         );
         assert_eq!(

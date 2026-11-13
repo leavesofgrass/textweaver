@@ -16,7 +16,11 @@
 //! - **Join from a QR image** reads the image on the clipboard; without
 //!   one, or with no join link in it, it asks for an image file (PNG or
 //!   JPEG). The link read fills the live source form, as a pasted link
-//!   does, and Enter joins.
+//!   does, and Enter joins. The image is read on a helper thread
+//!   ([`QrJob`]), so a large or hostile image never holds up the
+//!   interface; the app's tick picks up what it read. After a second,
+//!   "Reading the QR image." is said once. Opening another dialog, or
+//!   asking again, cancels the reading, and it then says nothing.
 //!
 //! The link holds the join code. It is shown only in the view, on
 //! request, and copied only by Copy: never said, logged, saved in
@@ -111,18 +115,106 @@ pub struct JoinQrView {
 }
 
 #[cfg(feature = "mqtt")]
+pub(crate) use imp::QrJob;
+
+#[cfg(feature = "mqtt")]
 mod imp {
+    use std::mem::Discriminant;
     use std::path::PathBuf;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::mpsc::{self, Receiver, TryRecvError};
+    use std::time::{Duration, Instant};
 
     use textweaver_lexicon::args;
     use textweaver_mqtt::JoinLink;
     use textweaver_qr::QrError;
 
     use super::{JoinQrView, QrModules, QrRow};
-    use crate::app::{App, ListKind};
+    use crate::app::{App, ListKind, Mode};
     use crate::clipboard_image::ClipboardImage;
     use crate::command::{Effect, PromptPurpose};
     use crate::live::wire::LiveList;
+
+    /// How long a QR image may take to read before "Reading the QR image."
+    /// is said (once).
+    pub(crate) const READING_NOTICE: Duration = Duration::from_secs(1);
+
+    /// Where a QR image came from.
+    #[derive(Clone, Debug)]
+    pub(crate) enum QrFrom {
+        /// The clipboard: without a join link, the file prompt follows.
+        Clipboard,
+        /// A file the person named.
+        File(PathBuf),
+    }
+
+    /// Which dialog is shown: the mode, the prompt, and the kind of list.
+    type DialogShown = (Mode, Option<PromptPurpose>, Option<Discriminant<ListKind>>);
+
+    /// A QR image being read on a helper thread (security L9). Dropping it
+    /// cancels it: the thread then sends nothing, and nothing is said.
+    pub(crate) struct QrJob {
+        rx: Receiver<Result<Vec<String>, QrError>>,
+        pub(super) cancel: Arc<AtomicBool>,
+        pub(crate) started: Instant,
+        said_reading: bool,
+        from: QrFrom,
+        /// The dialog shown when it started: another one cancels it.
+        dialog: DialogShown,
+    }
+
+    impl std::fmt::Debug for QrJob {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("QrJob")
+                .field("from", &self.from)
+                .field("said_reading", &self.said_reading)
+                .finish_non_exhaustive()
+        }
+    }
+
+    impl QrJob {
+        /// A reading from the clipboard whose result `rx` brings (tests).
+        #[cfg(test)]
+        pub(crate) fn for_test(rx: Receiver<Result<Vec<String>, QrError>>) -> QrJob {
+            QrJob {
+                rx,
+                cancel: Arc::default(),
+                started: Instant::now(),
+                said_reading: false,
+                from: QrFrom::Clipboard,
+                dialog: (Mode::Browse, None, None),
+            }
+        }
+    }
+
+    impl Drop for QrJob {
+        fn drop(&mut self) {
+            self.cancel.store(true, Ordering::Relaxed);
+        }
+    }
+
+    /// What a QR image holds: an image file's bytes or pixels.
+    enum QrInput {
+        Clipboard(ClipboardImage),
+        File(PathBuf),
+    }
+
+    impl QrInput {
+        fn decode(&self) -> Result<Vec<String>, QrError> {
+            match self {
+                QrInput::Clipboard(ClipboardImage::Encoded(bytes)) => {
+                    textweaver_qr::decode_bytes(bytes)
+                }
+                QrInput::Clipboard(ClipboardImage::Rgba {
+                    width,
+                    height,
+                    pixels,
+                }) => textweaver_qr::decode_rgba(*width, *height, pixels),
+                QrInput::File(path) => textweaver_qr::decode_file(path),
+            }
+        }
+    }
 
     /// The code for `link`, its quiet zone included.
     fn modules(link: &JoinLink) -> Result<QrModules, QrError> {
@@ -299,43 +391,107 @@ mod imp {
         /// form; else (no image, or no join link in it, said why) the
         /// prompt for an image file.
         pub fn live_join_from_qr_image(&mut self) -> Vec<Effect> {
+            // Asking again cancels the reading before.
+            self.live_wire.qr_job = None;
             if let Some(image) = self.clipboard_image() {
-                let read = match &image {
-                    ClipboardImage::Encoded(bytes) => textweaver_qr::decode_bytes(bytes),
-                    ClipboardImage::Rgba {
-                        width,
-                        height,
-                        pixels,
-                    } => textweaver_qr::decode_rgba(*width, *height, pixels),
-                };
-                drop(image);
-                match self.live_link_from(read) {
-                    Ok(link) => {
-                        let intro = self.msg("live-qr-intro-clipboard");
-                        return self.live_form_from_link(&link, &intro);
-                    }
-                    Err(reason) => {
-                        let m =
-                            self.msg_args("live-qr-clipboard-no-link", &args!["reason" => reason]);
-                        self.tell(&m);
-                    }
-                }
+                return self.live_qr_start(QrInput::Clipboard(image), QrFrom::Clipboard);
             }
             self.prompt(PromptPurpose::JoinQrImage)
         }
 
-        /// The answer to the image file prompt: the link in its QR code
-        /// fills the form; else why not, in words.
-        pub(crate) fn answer_join_qr_image(&mut self, text: &str) -> Vec<Effect> {
-            let typed = text.trim().trim_matches('"');
-            if typed.is_empty() {
-                let m = self.msg("common-cancelled");
-                self.note(&m);
-                return vec![Effect::Redraw];
+        /// Which dialog is shown now, if any.
+        fn live_dialog_shown(&self) -> DialogShown {
+            (
+                self.mode,
+                (self.mode == Mode::Prompt).then_some(self.prompt_purpose),
+                self.list.as_ref().map(std::mem::discriminant),
+            )
+        }
+
+        /// Reads `input` on a helper thread; the tick picks up what it
+        /// read ([`App::live_qr_tick`]).
+        fn live_qr_start(&mut self, input: QrInput, from: QrFrom) -> Vec<Effect> {
+            let (tx, rx) = mpsc::channel();
+            let cancel = Arc::new(AtomicBool::new(false));
+            let stop = Arc::clone(&cancel);
+            let wake = self.waker_slot();
+            let spawned = std::thread::Builder::new()
+                .name("textweaver-qr-read".into())
+                .spawn(move || {
+                    if stop.load(Ordering::Relaxed) {
+                        return;
+                    }
+                    let read = input.decode();
+                    if !stop.load(Ordering::Relaxed) && tx.send(read).is_ok() {
+                        wake.wake();
+                    }
+                });
+            if let Err(e) = spawned {
+                let reason = self.live_qr_reason(&QrError::Io(e));
+                return self.live_qr_read(from, Err(reason));
             }
-            let path = PathBuf::from(typed);
-            match self.live_link_from(textweaver_qr::decode_file(&path)) {
-                Ok(link) => {
+            self.live_wire.qr_job = Some(QrJob {
+                rx,
+                cancel,
+                started: Instant::now(),
+                said_reading: false,
+                from,
+                dialog: self.live_dialog_shown(),
+            });
+            vec![Effect::Redraw]
+        }
+
+        /// The QR image being read (from [`App::live_broker_tick`]): what
+        /// it holds once read; "Reading the QR image." once after a
+        /// second; nothing, and the reading cancelled, once another dialog
+        /// opened.
+        pub(crate) fn live_qr_tick(&mut self, now: Instant) -> Vec<Effect> {
+            let Some(job) = &self.live_wire.qr_job else {
+                return Vec::new();
+            };
+            let shown = self.live_dialog_shown();
+            let any_shown = shown.0.is_prompt() || shown.2.is_some();
+            if any_shown && shown != job.dialog {
+                self.live_wire.qr_job = None;
+                return Vec::new();
+            }
+            let read = match job.rx.try_recv() {
+                Ok(read) => read.map_err(|e| self.live_qr_reason(&e)),
+                Err(TryRecvError::Disconnected) => Err(self.msg("live-qr-unreadable")),
+                Err(TryRecvError::Empty) => {
+                    if job.said_reading
+                        || now.saturating_duration_since(job.started) < READING_NOTICE
+                    {
+                        return Vec::new();
+                    }
+                    if let Some(job) = self.live_wire.qr_job.as_mut() {
+                        job.said_reading = true;
+                    }
+                    let m = self.msg("live-qr-reading");
+                    self.say_progress(&m);
+                    return vec![Effect::Redraw];
+                }
+            };
+            let from = job.from.clone();
+            self.live_wire.qr_job = None;
+            self.live_qr_read(from, read)
+        }
+
+        /// What an image read from `from` held: its join link fills the
+        /// form; else why not, in words, and after the clipboard the file
+        /// prompt.
+        fn live_qr_read(&mut self, from: QrFrom, read: Result<Vec<String>, String>) -> Vec<Effect> {
+            match (from, self.live_link_in(read)) {
+                (QrFrom::Clipboard, Ok(link)) => {
+                    let intro = self.msg("live-qr-intro-clipboard");
+                    self.live_form_from_link(&link, &intro)
+                }
+                (QrFrom::Clipboard, Err(reason)) => {
+                    let m = self.msg_args("live-qr-clipboard-no-link", &args!["reason" => reason]);
+                    self.tell(&m);
+                    self.prompt(PromptPurpose::JoinQrImage)
+                }
+                (QrFrom::File(path), Ok(link)) => {
                     let file = path.file_name().map_or_else(
                         || path.display().to_string(),
                         |n| n.to_string_lossy().into_owned(),
@@ -343,7 +499,7 @@ mod imp {
                     let intro = self.msg_args("live-qr-intro-file", &args!["file" => file]);
                     self.live_form_from_link(&link, &intro)
                 }
-                Err(reason) => {
+                (QrFrom::File(_), Err(reason)) => {
                     let m = self.msg_args("live-qr-no-link", &args!["reason" => reason]);
                     self.error(&m);
                     vec![Effect::Redraw]
@@ -351,10 +507,25 @@ mod imp {
             }
         }
 
+        /// The answer to the image file prompt: the link in its QR code
+        /// fills the form; else why not, in words.
+        pub(crate) fn answer_join_qr_image(&mut self, text: &str) -> Vec<Effect> {
+            self.live_wire.qr_job = None;
+            let typed = text.trim().trim_matches('"');
+            if typed.is_empty() {
+                let m = self.msg("common-cancelled");
+                self.note(&m);
+                return vec![Effect::Redraw];
+            }
+            let path = PathBuf::from(typed);
+            self.live_qr_start(QrInput::File(path.clone()), QrFrom::File(path))
+        }
+
         /// The first join link among the texts read from an image, or why
-        /// there is none, as a sentence that never holds a code.
-        fn live_link_from(&self, read: Result<Vec<String>, QrError>) -> Result<JoinLink, String> {
-            let texts = read.map_err(|e| self.live_qr_reason(&e))?;
+        /// there is none (already in words), as a sentence that never holds
+        /// a code.
+        fn live_link_in(&self, read: Result<Vec<String>, String>) -> Result<JoinLink, String> {
+            let texts = read?;
             let mut bad = None;
             for text in &texts {
                 match JoinLink::find(text) {
@@ -428,10 +599,15 @@ mod app_tests {
     //! loopback only, never a real broker, never audio, never the real
     //! clipboard (a `FakeClipboard`), and files only in a temporary folder.
 
+    use std::sync::Arc;
+    use std::sync::atomic::Ordering;
+    use std::time::{Duration, Instant};
+
     use textweaver_a11y::{LogAnnouncer, Shared};
     use textweaver_keymap::{ActionId, Frontend, Keymap, Platform};
     use textweaver_store::Paths;
 
+    use super::imp::READING_NOTICE;
     use super::*;
     use crate::clipboard::{ClipboardContents, FakeClipboard};
     use crate::clipboard_image::ClipboardImage;
@@ -444,6 +620,8 @@ mod app_tests {
         said: Shared<LogAnnouncer>,
         clip: FakeClipboard,
         tmp: tempfile::TempDir,
+        /// Rings when a helper thread has finished.
+        wake: std::sync::mpsc::Receiver<()>,
     }
 
     impl Side {
@@ -462,12 +640,34 @@ mod app_tests {
             });
             let clip = FakeClipboard::new();
             app.set_clipboard(Box::new(clip.clone()));
+            let (waker, wake) = crate::channel_waker();
+            app.set_waker(Some(waker));
             Side {
                 app,
                 said,
                 clip,
                 tmp,
+                wake,
             }
+        }
+
+        /// Ticks until the QR image being read is done, as a frontend does
+        /// when woken; no fixed sleeps, and a time limit.
+        fn read_qr(&mut self) {
+            let deadline = Instant::now() + Duration::from_secs(60);
+            loop {
+                self.app.tick(Instant::now());
+                if self.app.live_wire.qr_job.is_none() {
+                    return;
+                }
+                let left = deadline.saturating_duration_since(Instant::now());
+                assert!(!left.is_zero(), "the QR image was never read");
+                let _ = self.wake.recv_timeout(left);
+            }
+        }
+
+        fn count(&self, needle: &str) -> usize {
+            self.texts().iter().filter(|t| t.contains(needle)).count()
         }
 
         fn texts(&self) -> Vec<String> {
@@ -684,6 +884,7 @@ mod app_tests {
         // An image on the clipboard: read at once.
         r.clip.set_image(Some(ClipboardImage::Encoded(png.clone())));
         r.act(ActionId::JoinFromQrImage);
+        r.read_qr();
         assert!(
             r.any("Join from the QR code on the clipboard."),
             "{:?}",
@@ -704,6 +905,7 @@ mod app_tests {
             .unwrap();
         r.clip.set_image(Some(ClipboardImage::Encoded(other)));
         r.act(ActionId::JoinFromQrImage);
+        r.read_qr();
         assert!(
             r.any(
                 "No join link in the clipboard image: The QR code holds something else. Choose an image file."
@@ -720,6 +922,7 @@ mod app_tests {
         std::fs::write(&file, &png).unwrap();
         r.app
             .dispatch(Command::Answer(file.to_string_lossy().into_owned()));
+        r.read_qr();
         assert!(
             r.any("Join from the QR code in phone-photo.png."),
             "{:?}",
@@ -743,6 +946,7 @@ mod app_tests {
         std::fs::write(&blank, "not an image").unwrap();
         r.app
             .dispatch(Command::Answer(blank.to_string_lossy().into_owned()));
+        r.read_qr();
         assert!(
             r.any("No join link: The image could not be read"),
             "{:?}",
@@ -750,6 +954,88 @@ mod app_tests {
         );
         r.never_said(&code);
         r.app.shutdown();
+    }
+
+    /// A QR code image holding `text`, as PNG bytes.
+    fn png_of(text: &str) -> Vec<u8> {
+        textweaver_qr::encode(text).unwrap().to_png(4).unwrap()
+    }
+
+    /// The image is read off the interface thread: the action returns at
+    /// once, and the link reaches the form through the tick. Asking again
+    /// cancels the first reading, which then says nothing.
+    #[test]
+    fn the_qr_image_is_read_on_a_helper_thread_and_asking_again_cancels() {
+        let mut host = Side::new(Frontend::Gui);
+        host.act(ActionId::StartBroker);
+        let link = host.link();
+        host.app.shutdown();
+
+        let mut r = Side::new(Frontend::Gui);
+        r.clip
+            .set_image(Some(ClipboardImage::Encoded(png_of(&link))));
+        r.act(ActionId::JoinFromQrImage);
+        assert!(r.app.live_wire.qr_job.is_some());
+        assert!(!r.any("Join from the QR code"), "{:?}", r.texts());
+        r.act(ActionId::JoinFromQrImage);
+        r.read_qr();
+        assert_eq!(r.count("Join from the QR code on the clipboard."), 1);
+        assert_eq!(
+            r.app.prompt_model().unwrap().purpose,
+            PromptPurpose::LiveSetup
+        );
+        r.app.shutdown();
+    }
+
+    /// Opening another dialog while the image is read cancels the reading:
+    /// nothing is said, and the dialog stays.
+    #[test]
+    fn another_dialog_cancels_the_reading_and_nothing_is_said() {
+        let mut r = Side::new(Frontend::Gui);
+        r.clip
+            .set_image(Some(ClipboardImage::Encoded(png_of("textweaver"))));
+        r.act(ActionId::JoinFromQrImage);
+        let cancel = Arc::clone(&r.app.live_wire.qr_job.as_ref().unwrap().cancel);
+        r.act(ActionId::CommandPalette);
+        let before = r.texts().len();
+        r.read_qr();
+        assert!(
+            cancel.load(Ordering::Relaxed),
+            "the helper was told to stop"
+        );
+        r.app.tick(Instant::now());
+        assert_eq!(r.texts().len(), before, "{:?}", r.texts());
+        assert!(!r.any("No join link"), "{:?}", r.texts());
+        assert_eq!(
+            r.app.prompt_model().unwrap().purpose,
+            PromptPurpose::CommandPalette
+        );
+    }
+
+    /// A reading that takes more than a second says so once, then the
+    /// result follows through the tick.
+    #[test]
+    fn a_slow_reading_says_so_once() {
+        let mut r = Side::new(Frontend::Gui);
+        let (tx, rx) = std::sync::mpsc::channel();
+        r.app.live_wire.qr_job = Some(QrJob::for_test(rx));
+        r.app.tick(Instant::now());
+        assert!(!r.any("Reading the QR image."));
+        // Started more than a second ago.
+        let earlier = Instant::now().checked_sub(READING_NOTICE + Duration::from_millis(10));
+        r.app.live_wire.qr_job.as_mut().unwrap().started = earlier.unwrap();
+        r.app.tick(Instant::now());
+        r.app.tick(Instant::now());
+        assert_eq!(r.count("Reading the QR image."), 1, "{:?}", r.texts());
+        tx.send(Ok(vec!["textweaver".to_owned()])).unwrap();
+        r.app.tick(Instant::now());
+        assert!(r.app.live_wire.qr_job.is_none());
+        assert!(
+            r.any("No join link in the clipboard image: The QR code holds something else."),
+            "{:?}",
+            r.texts()
+        );
+        assert_eq!(r.count("Reading the QR image."), 1);
     }
 
     #[test]

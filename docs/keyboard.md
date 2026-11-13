@@ -55,9 +55,10 @@ Where JAWS differs:
 
 ## Help keys
 
-- `?` in browse mode lists the keyboard shortcuts in both frontends; the GUI also opens that list with F3.
+- `?` in browse mode lists the keyboard shortcuts in both frontends; the Help menu and the command palette have the list too.
 - F1 opens the help in both frontends.
-- In the terminal, F3 is Find next and F4 Find previous, as in star's terminal reader, so the terminal's keyboard list is on `?` only.
+- F3 is Find next in both frontends, as in other Windows programs and star's terminal reader. Find previous is `Shift+F3` in the textweaver app and `F4` in the terminal.
+- In a secret field, F3 shows what you typed or hides it again, in both frontends.
 
 ## Modes and layers
 

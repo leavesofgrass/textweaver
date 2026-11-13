@@ -450,10 +450,10 @@ impl App {
         }
     }
 
-    /// Says what the broker reported and what the helper threads sent
-    /// (from [`App::tick`]).
+    /// Says what the broker reported, what the helper threads sent, and
+    /// what a QR image held once read (from [`App::tick`]).
     pub(crate) fn live_broker_tick(&mut self) -> Vec<Effect> {
-        let mut effects = Vec::new();
+        let mut effects = self.live_qr_tick(std::time::Instant::now());
         let events: Vec<BrokerEvent> = self
             .live_wire
             .broker
