@@ -922,7 +922,9 @@ mod tests {
         let assertive = Some(Priority::Assertive);
         assert_eq!(r.priority_of("The connection is not encrypted."), polite);
         assert_eq!(
-            r.priority_of("over Tailscale, which encrypts the link"),
+            r.priority_of(
+                "at a Tailscale-range address. If this is Tailscale, the link is encrypted."
+            ),
             polite
         );
         assert_eq!(
