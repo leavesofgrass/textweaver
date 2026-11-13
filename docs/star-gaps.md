@@ -9,7 +9,7 @@ Each item has a status:
 - **missing**: not done yet. See the [roadmap](roadmap.md) for what is planned next.
 - **dropped**: out of scope on purpose.
 
-Of the 45 items below that carry a status, 34 are done, 6 are partly done, none is missing and 5 are dropped.
+Of the 46 items below that carry a status, 35 are done, 6 are partly done, none is missing and 5 are dropped.
 
 This page is kept current as features land; see [CHANGELOG.md](../CHANGELOG.md) for when each one shipped.
 
@@ -34,6 +34,7 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Better PDF reading order:** removing running headers, footers, and page numbers, and marking captions. Status: done. Captions are marked by pattern ("Figure 3.", "Table 2:"), in English, Spanish, French, German, Portuguese, and Arabic ([ADR-0010](adr/0010-pdf-loader.md), [ADR-0048](adr/0048-pdf-annotations-links-and-forms.md)).
 - **Archives:** ZIP and TAR, with 7z. Opening one lists its readable files, and `book.zip!inner.pdf` opens a file inside. Status: done. RAR is not planned.
 - **Opening a web page by URL.** Status: done.
+- **Caption files as transcripts** (SRT and WebVTT). star did not read them either, but a lecture's captions are often a student's only transcript. Status: done. The cues are read as paragraphs, with the speakers' names, a heading every five minutes, and no times or cue numbers ([Captions as transcripts](reading.md#captions-as-transcripts)).
 - **PPTX:** slide titles become headings, speaker notes follow each slide, and images get descriptions. Status: done.
 - **Offline dictionary:** WordNet definitions, synonyms, and pronunciation, plus a custom glossary. Status: done: your glossary, then Open English WordNet through morphy, with CMUdict pronunciations respelled for reading aloud, all offline (Ctrl+Shift+D or Alt+E, and `tw define`; see [reading.md](reading.md#define-a-word-ctrlshiftd-or-alte)).
 - **Spell check in edit mode.** Status: done, on the built-in SCOWL list with a personal word list: next and previous misspelling, spelled aloud, suggestions, and a count on save. See [editing.md](editing.md#spelling).

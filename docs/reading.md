@@ -91,6 +91,7 @@ The reader opens these formats itself:
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
 - Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.
+- Captions: `.srt` and `.vtt`, read as a transcript ([Captions as transcripts](#captions-as-transcripts)).
 
 The [converting guide](converting.md#formats-textweaver-reads) says what is read from each format. A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an audio file, or an old Word `.doc`. The message says what the file looks like, for example: "report.bin is not a text file; it looks like a program. textweaver cannot read it as text."
 
@@ -122,6 +123,17 @@ The layout rules are heuristics, so poetry, tables and forms may come out with l
 **Without liblouis**, the file opens as braille: the same headings, paragraphs and pages, but each cell shown as a Unicode braille pattern, which a Braille display renders as dots. textweaver says so when the file opens, and how to fix it. On Windows it offers to fetch liblouis for you (it asks first; see [Optional components](components.md)). On Linux and macOS, install your distribution's `liblouis` package, which provides `lou_translate`. Then open the file again.
 
 Only braille files that are distributed in the clear are read. Protected talking books, such as the audio books of NLS BARD, are not opened: textweaver does not touch any library's protection or terms.
+
+### Captions as transcripts
+
+A lecture's captions are often the only transcript a student has. A SubRip (`.srt`) or WebVTT (`.vtt`) caption file opens as a transcript: the words of the captions, joined into paragraphs, with no cue numbers, times, or markup read aloud.
+
+- **Paragraphs.** A new paragraph starts where the speaker changes, after a pause of more than four seconds between captions, and at the end of a sentence once a paragraph is about 120 words long, so a talk with no pauses still has paragraphs to move by.
+- **Speakers.** When the captions name who is speaking, with WebVTT voice tags, the name is read once where that speaker starts: "Ada Example: Good morning." The `>>` that broadcast captions put before a new speaker starts a new paragraph and is not read.
+- **Time.** Every five minutes of the recording there is a heading, "Minute 5", "Minute 10", and so on, so the heading keys move through the talk by time, and the outline (**Alt+O**) lists the minutes. A long silence goes straight to the heading of the minute where the talk starts again.
+- **What is left out.** Italics, bold, colors, positions, the WebVTT header and its notes and style blocks, and caption numbers. Captions that repeat the line before, as automatic captions often do while they scroll, are read once.
+
+A caption file with a damaged time is still read, in its place. A file with no caption times at all is read as plain text, and the document says so. Caption files open from the file browser and the open dialog, and `tw text lecture.vtt` prints the transcript. The headings' words are English for now.
 
 ## What the screen shows
 

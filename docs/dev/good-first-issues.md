@@ -24,17 +24,7 @@ Every document loader has a fuzz target except the plain-text loader. That loade
 
 ## Reading documents
 
-Obsidian callouts of every type, SVG drawings inline in HTML, and JSON files as an outline were all built in Wave 6 ([ADR-0044](../adr/0044-obsidian-json-svg-and-content-mathml.md)); see [CHANGELOG.md](../../CHANGELOG.md).
-
-### Subtitle files as transcripts
-
-Size: medium.
-
-textweaver writes SRT and WebVTT subtitles with its audio export, but cannot read them: a `.srt` or `.vtt` file opens as plain text, with every cue number and timestamp read aloud. A lecture's captions are often the only transcript a student has.
-
-- Where: a new loader in `crates/textweaver-formats/src/`, registered in `Registry::with_builtins` in `lib.rs`; `crates/textweaver-formats/src/json.rs` is a recent loader to learn the shape from, and `crates/textweaver-export/src/cues.rs` writes both subtitle formats and shows their shape.
-- Read the cue text as paragraphs. Leave out cue numbers, and keep the start time out of the spoken text (a heading every few minutes, such as "5 minutes", is one way to make time navigable).
-- How to check: `cargo test -p textweaver-formats`, with a small fixture in `fixtures/` and a test that the text has no timestamps in it.
+Obsidian callouts of every type, SVG drawings inline in HTML, and JSON files as an outline were all built in Wave 6 ([ADR-0044](../adr/0044-obsidian-json-svg-and-content-mathml.md)), and caption files read as transcripts in beta 6 ([Captions as transcripts](../reading.md#captions-as-transcripts)); see [CHANGELOG.md](../../CHANGELOG.md).
 
 ## The command palette and keys
 

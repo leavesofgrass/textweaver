@@ -76,6 +76,7 @@ These limits apply to the textweaver app (`textweaver`). The terminal reader doe
 
 - **Translating a document** is not offered.
 - **RAR archives** do not open. ZIP, TAR, and 7z do. Extract a RAR archive first; the message says so.
+- **Caption files** (SRT and WebVTT) are read for their words: positions, colors, and WebVTT regions are left out, the time is said only by the heading every five minutes, and Advanced SubStation Alpha (`.ass`) files, which textweaver writes, are not read.
 - **An EPUB's accessibility information** is what its publisher claims. textweaver says it but does not check it against the book.
 - **Scanned pages** are read by OCR, and OCR makes mistakes. Check anything important against the original.
 - **Very large images are not read by OCR.** An image with a side over 20,000 pixels, or more than 150 million pixels in all, is refused before it is decoded, from the size its header declares. Scale it down or split it first.

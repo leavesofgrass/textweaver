@@ -9,6 +9,7 @@ mod archives;
 mod brf;
 mod c3;
 mod c5;
+mod captions;
 mod documents;
 mod epub_access;
 mod epub_mathml;
