@@ -768,7 +768,11 @@ mod textweaver_annotation_tests {
         if inner.vt == VT_UNKNOWN {
             let mixed = unsafe { UiaGetReservedMixedAttributeValue() }.unwrap();
             let got = unsafe { inner.Anonymous.punkVal.as_ref() }.cloned();
-            assert_eq!(got, Some(mixed), "an unknown value that is not the mixed value");
+            assert_eq!(
+                got,
+                Some(mixed),
+                "an unknown value that is not the mixed value"
+            );
             return Value::Mixed;
         }
         assert_eq!(inner.vt, VT_ARRAY | VT_I4);
