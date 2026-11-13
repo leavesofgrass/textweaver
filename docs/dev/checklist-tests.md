@@ -33,10 +33,10 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 - Known defects: none. The `KNOWN` list in the test is empty, and `the_known_list_defects_are_fixed` runs the whole sweep with no exceptions. A defect the sweep finds is added to `KNOWN` with the action and the start of the failure text, and taken off when its fix lands.
 - Manual, session S3.
 
-**C3. Every message has a level, a catalog entry in six languages, keys from the keymap, and its key fact first.**
+**C3. Every message has a level, a catalog entry in six languages (or its id on the untranslated list until the translation pass), keys from the keymap, and its key fact first.**
 
 - Test: `crates/textweaver-xilem/tests/it/announcements.rs` (every app message has a level); `crates/textweaver-app/tests/it/pseudo_locale.rs` and `crates/textweaver-app/tests/it/keys_from_keymap.rs`; the catalog style tests named in [Writing messages](messages.md).
-- Test: the key fact first, `crates/textweaver-tui/tests/it/braille_first.rs`.
+- Test: the key fact first, `crates/textweaver-tui/tests/it/braille_first.rs`; in the catalog, `status_messages_lead_within_forty_characters` (the first clause counts at most 40 characters, since the owner reads computer Braille, one cell for each character) and `status_messages_start_with_the_fact` (no lead-in), both in `style_tests.rs`; and the status-line transcript, `crates/textweaver-tui/tests/it/status_transcript.rs`.
 
 **C4. Every label has one case style, an ellipsis only before a chooser, the name equal to the label without the key, and the label in the name.**
 
