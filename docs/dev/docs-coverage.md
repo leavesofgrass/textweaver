@@ -147,22 +147,22 @@ Each change merged in wave 1 of beta 6, and the guide that should cover it, open
 
 ## Beta 6, wave 2, checked on Friday, November 13, 2026
 
-Each change merged in wave 2 of beta 6, and the guide that should cover it, opened and read against the changelog's Unreleased section and the code. "Not found" means the guide was opened and does not say it; the gap is open, unless the user guides' sweep, which ran at the same time, has fixed it since.
+Each change merged in wave 2 of beta 6, and the guide that should cover it, opened and read against the changelog's Unreleased section and the code. The marks below were checked again after the user guides' sweep, which ran at the same time, was merged.
 
 - Twenty often-heard messages put the key fact first (the hybrid mode sentence, "Speaking with Y: X could not start.", "Recover unsaved edits to ...", "Left out, too large: ...", "Word highlight estimated: this voice reports no words."): screen-readers.md, troubleshooting.md, editing.md, live-documents.md, speech.md. Pass.
-- Closing a list replaces the status line with "Canceled." or "Settings closed.": screen-readers.md, gui.md and quickstart.md. Not found.
-- Settings that wait for a restart say "Used from the next start." and say so in their help: settings.md names the restart for individual settings ("from the next start") but does not quote the message or say that every such setting's help carries it. Not found. The message is in settings-reference.md, generated.
+- Closing a list replaces the status line with "Canceled." or "Settings closed.": reading.md, screen-readers.md. Pass.
+- Settings that wait for a restart say "Used from the next start." and say so in their help: settings.md, and settings-reference.md (generated). Pass.
 - Graphics is a setting (Toolbars and panels, kept on this computer): settings.md, gui.md. Pass.
 - Live documents commands "Open a live source", "Close the live source" and "Save the live log now": live-documents.md, keyboard.md (generated). Pass.
 - The status bar says "Connected, Tailscale range": gui.md. Pass.
 - Why a live source is down is said in the reader's language, with the system's own words in English: live-documents.md, troubleshooting.md, known-limits.md. Pass.
-- Join link errors are said in the reader's language, a one-character join code says "1 character", and the QR reader's errors have no "Join code error:" lead-in: live-documents.md. Not found.
-- Find and replace keeps its matches while it steps: editing.md describes the steps, which are unchanged, and says nothing of speed. Not found.
-- A live log stays quick as it grows, one edit for an added or corrected entry: live-documents.md. Not found.
-- The recovery snapshot is streamed: editing.md describes recovery and says nothing of memory. Not found.
-- The Windows color-scheme probe asks both questions at once: themes.md, settings.md. Not found.
+- Join link errors are said in the reader's language: known-limits.md (what is and is not translated), live-documents.md. Pass. The two small wording changes ("1 character", no "Join code error:" lead-in) are in the changelog only, which is enough.
+- Find and replace keeps its matches while it steps: whats-new.md ("Faster in large documents"). Pass. editing.md describes the steps, which are unchanged.
+- A live log stays quick as it grows: whats-new.md. Pass.
+- The recovery snapshot is streamed: whats-new.md (less memory for a large document's recovery copy). Pass. Nothing a reader does changes.
+- The Windows color-scheme probe asks both questions at once: the changelog only. No guide needs it: nothing a reader does or hears changes.
 - The first-run hybrid mode question is gone: screen-readers.md, quickstart.md. Pass (both say the mode is started and said once).
-- What is new records wave 2's visible changes: whats-new.md. Not found; its beta 6 summary says "More beta 6 work is still to come".
+- What is new records wave 2's visible changes: whats-new.md. Pass.
 - Contributor changes (catalogs by area, English first and the untranslated list, the release gate, four message checks, the command registry, the every-action and settings range tests, the status transcript and dialog tree snapshots, typed live errors, the streamed snapshot, new bench keys, link checks of fragments): dev/messages.md, dev/architecture.md, dev/testing.md, dev/checklist-tests.md, dev/releasing.md, dev/good-first-issues.md, CONTRIBUTING.md, changelog.d/README.md, site/architecture.html. Pass, after fix.
 
 ## Still open
