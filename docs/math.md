@@ -152,7 +152,7 @@ Where these settings apply:
 
 ## Hear math with MathCAT
 
-MathCAT is the math engine NVDA and JAWS use. textweaver can speak math with it instead of its own wording, in two styles:
+MathCAT is the math engine NVDA and JAWS use. textweaver includes MathCAT 0.7.7 and can speak math with it instead of its own wording, in two styles:
 
 - ClearSpeak: the style of the ClearSpeak rules used in classrooms and on tests. For example, `\sqrt{x}` is "the square root of x".
 - SimpleSpeak: shorter, with "end fraction" and "end root" where the structure needs them.
