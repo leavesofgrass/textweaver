@@ -705,7 +705,9 @@ fn write_snapshot(
             None => return Ok(false),
         }
     }
-    autosave::write_snapshot(dir, &snapshot.to_snapshot())?;
+    // A rope chunk at a time: neither the whole text nor its JSON is built
+    // in memory (the file is byte for byte the same).
+    autosave::write_pending_snapshot(dir, snapshot)?;
     Ok(true)
 }
 
