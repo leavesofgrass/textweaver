@@ -337,11 +337,12 @@ sha2 = "0.10"
 sha1 = "0.10"
 
 # Wave 4, Agent W4c1: MathCAT math speech (ADR-0029), behind the speech
-# crate's `mathcat` feature. Pinned exactly: 0.7.6 has no final release.
+# crate's `mathcat` feature. Pinned exactly (0.7.7 since beta 6), because
+# a new release changes the recorded words and braille.
 # `include-zip` embeds MathCAT's rules, zipped at build time from the
 # crate's own Rules folder (nothing is downloaded). `no-unsafe` builds its
 # XML and XPath forks without unsafe code.
-mathcat = { version = "=0.7.6-rc.3", default-features = false, features = ["include-zip", "no-unsafe"] }
+mathcat = { version = "=0.7.7", default-features = false, features = ["include-zip", "no-unsafe"] }
 
 # Wave 4, Agent W4g: authoring extras (ADR-0032). Each is behind a
 # feature of the crate that uses it, and the lean reader links none.
@@ -549,8 +550,9 @@ parley = { path = "third_party/xilem/parley" }
 # shortcut given to UI Automation as AcceleratorKey, so screen readers can
 # say a button's key (ADR-0033, third_party/accesskit_windows/TEXTWEAVER.md).
 accesskit_windows = { path = "third_party/accesskit_windows" }
-# Wave 5, Agent W5c4: MathCAT 0.7.6-rc.3 with the fix for issue #827
-# (GetNavigationBraille panicked in no-unsafe builds), so math braille and
-# navigation work with `unsafe_code = "deny"` (ADR-0036,
-# third_party/mathcat/TEXTWEAVER.md). The version above stays pinned.
+# Wave 5, Agent W5c4: MathCAT vendored for the fix for issue #827
+# (GetNavigationBraille panicked in no-unsafe builds). Since beta 6 the copy
+# is MathCAT 0.7.7, which fixes the issue itself; only the manifest's test
+# targets are trimmed (ADR-0036, third_party/mathcat/TEXTWEAVER.md). The
+# version above stays pinned.
 mathcat = { path = "third_party/mathcat" }
