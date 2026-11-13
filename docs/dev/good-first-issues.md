@@ -7,6 +7,7 @@ Before you start:
 - Read [CONTRIBUTING.md](../../CONTRIBUTING.md), and set up a build with [Building](building.md).
 - Open an issue for the task you pick, or comment on one that exists, and say you are working on it. That way two people do not do the same work, and a maintainer can answer questions before you write code.
 - Every task here must work with a screen reader and a Braille display. Where a task adds something the user hears, the message goes in the message catalog, in English, in the area file under `crates/textweaver-lexicon/locales/en/`. Translate it into the other five languages if you can; if you cannot, add its id to `crates/textweaver-lexicon/locales/untranslated.txt` and say so in your pull request. The other languages then show the English text until the translation pass before a release ([Messages](messages.md)).
+- Where a task adds a command, it lives in its own module and registers a handler with `App::register_handler`, so `app.rs` is not edited. Add the command to `crates/textweaver-keymap/src/action.rs` (id, category, default key, help), give it a place in `crates/textweaver-app/src/menu.rs`, and add its `name-` and `action-` messages to the catalog; `every_action_is_handled` fails if the handler is missing. [Architecture](architecture.md) describes the registry.
 
 Sizes: small is a few hours; medium is about a day.
 
