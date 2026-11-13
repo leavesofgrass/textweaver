@@ -92,6 +92,7 @@ The reader opens these formats itself:
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
 - Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.
 - Captions: `.srt` and `.vtt`, read as a transcript ([Captions as transcripts](#captions-as-transcripts)).
+- Data and drawings: JSON and JSON Lines (`.json`, `.jsonl`, `.ndjson`), Jupyter notebooks (`.ipynb`), SVG drawings (`.svg`), and MathML formulas (`.mml`, `.mathml`), described in the [converting guide](converting.md#formats-textweaver-reads).
 
 The [converting guide](converting.md#formats-textweaver-reads) says what is read from each format. A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an audio file, or an old Word `.doc`. The message says what the file looks like, for example: "report.bin is not a text file; it looks like a program. textweaver cannot read it as text."
 
@@ -163,7 +164,7 @@ In hybrid and screen-reader modes, the screen is laid out for a Braille display,
 The keyboard shortcuts list (`?`) leads every row with the command's short name, then its key: "Find next, F3". The name always fits a 40-cell line, and so does the whole row for all but a few keys with two modifiers. With the Braille-first layout the row reads just like that; otherwise the key is drawn at the right edge.
 
 - **Type to filter**, as in Settings. The list keeps the commands whose name, keys, group, or menu hold every word you typed, and says how many match: "12 of 226 commands match." Backspace takes letters off.
-- **F1** on a row says what the command does, with all its keys: "Find next: F3 or Ctrl+G. Find the next match. Search".
+- **F1** on a row says what the command does, with all its keys: "Find next: F3 or n. Find the next match. Search".
 - **Page Down** and **Page Up** move to the next and previous group (Reading, Navigation, Search, and so on). Entering a group says its name and how many commands it has first, then the row.
 - **Enter** runs the command, and **Escape** closes the list.
 
@@ -654,7 +655,7 @@ While textweaver reads, the spoken word is highlighted on screen. The highlight 
 These settings are in the `[highlight]` section of `settings.toml`:
 
 - `enabled` (default `true`): highlight the spoken text at all.
-- `granularity` (default `"word"`): `"word"` highlights the word, `"sentence"` the whole sentence, and `"both"` the sentence with the word inside it.
+- `granularity` (default `"both"`): `"both"` highlights the sentence with the word inside it, `"word"` only the word, and `"sentence"` only the whole sentence.
 - `lead_words` (default `1`): where the highlight sits, from -5 to 5. At 1 it is on the word you hear. At 2 it runs one word ahead; at 0, one word behind. It moves only the drawn highlight, never your saved place.
 - `speed` (default `1.0`): from 0.5 to 1.5. It speeds up or slows down the highlight for engines that do not report words, where textweaver estimates the timing.
 
